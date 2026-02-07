@@ -23,12 +23,19 @@ class AuthController extends Controller
     {
         $this->authService->login(
             employeeNo: $request->string('employee_no')->toString(),
-            password: $request->string('password')->toString(),
+            password: $request->input('password'),
             remember: (bool) $request->boolean('remember')
         );
 
-        return redirect()->route('dashboard');
+        $user = auth()->user();
+
+        if ($user->hasRole('admin')) {
+            return redirect()->route('dashboard'); // tu dashboard ya decide vista admin
+        }
+
+        return redirect()->route('dashboard'); // igual, el dashboard decide label_room
     }
+
 
     public function logout(): RedirectResponse
     {

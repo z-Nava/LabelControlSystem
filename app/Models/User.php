@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\Shift;
 
 class User extends Authenticatable
 {
@@ -16,6 +17,7 @@ class User extends Authenticatable
         'password',
         'is_active',
         'last_login_at',
+        'shift_id',
     ];
 
     protected $hidden = [
@@ -37,4 +39,19 @@ class User extends Authenticatable
     {
         return $this->roles()->where('name', $roleName)->exists();
     }
+
+    public function shift()
+    {
+        return $this->belongsTo(Shift::class);
+    }
+
+    public function getShiftLabelAttribute(): ?string
+    {
+        if (!$this->shift) {
+            return null;
+        }
+
+        return 'Shift ' . $this->shift->code;
+    }
+
 }

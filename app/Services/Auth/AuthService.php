@@ -2,6 +2,12 @@
 
 namespace App\Services\Auth;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
 class AuthService
 {
     public function login(string $employeeNo, ?string $password = null, bool $remember = false): void
@@ -31,12 +37,11 @@ class AuthService
             ]);
         }
 
-        // 🔹 Caso OPERADOR (label_room) → sin contraseña
+        // Caso OPERADOR (label_room) → sin contraseña
         if ($user->hasRole('label_room')) {
             Auth::login($user, $remember);
-        }
-        // 🔹 Caso ADMIN → con contraseña
-        else {
+        } else {
+            // Caso ADMIN → con contraseña
             if (!$password) {
                 RateLimiter::hit($throttleKey, 60);
 
@@ -70,4 +75,16 @@ class AuthService
         $user->forceFill(['last_login_at' => now()])->save();
     }
 
+    public function logout(): void
+    {
+        Auth::logout();
+
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+    }
+
+    private function throttleKey(string $employeeNo): string
+    {
+        return Str::lower(trim($employeeNo)) . '|' . request()->ip();
+    }
 }
