@@ -27,6 +27,11 @@
                 <div class="font-semibold">Bitácora</div>
                 <div class="text-sm text-slate-600 mt-1">Eventos: print/reprint/rework, cambios.</div>
             </a>
+
+            <a href="{{ route('production_lines.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Production Lines</div>
+                <div class="text-sm text-slate-600 mt-1">Catálogo de líneas (MXC007, MXMR003...).</div>
+            </a>
         </div>
     </div>
 @endsection
