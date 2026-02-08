@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductionLineController;
 use App\Http\Controllers\OracleJobController;
 use App\Http\Controllers\MasterRequestController;
+use App\Http\Controllers\MasterPrintController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -39,7 +40,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
         Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
 
+        Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
+        Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
+        Route::get('/master-print-batches/{batch}/pdf', [MasterPrintController::class, 'pdf'])->name('master_print_batches.pdf');
+
         Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
+
+
     });
 
     Route::middleware('role_any:admin,label_room')->group(function () {

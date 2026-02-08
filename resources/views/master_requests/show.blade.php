@@ -17,6 +17,19 @@
         </div>
     </div>
 
+    <a href="{{ route('master_requests.print.create', $mr->id) }}"
+        class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
+        Imprimir
+    </a>
+
+    @if(session('pdf_url'))
+        <a href="{{ session('pdf_url') }}" target="_blank"
+        class="ml-2 rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+            Abrir PDF
+        </a>
+    @endif
+
+
     <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border p-4">
             <div class="text-xs text-slate-500">Líder</div>
