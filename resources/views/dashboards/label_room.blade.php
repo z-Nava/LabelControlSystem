@@ -13,7 +13,7 @@
                 <div class="text-sm opacity-90 mt-1">Rating / Serial / Shipping</div>
             </a>
 
-            <a href="#" class="rounded-2xl bg-slate-900 text-white p-6 hover:bg-slate-800 transition">
+            <a href="{{ route('master_requests.create') }}" class="rounded-2xl bg-slate-900 text-white p-6 hover:bg-slate-800 transition">
                 <div class="text-lg font-semibold">Nueva requisición Master</div>
                 <div class="text-sm opacity-90 mt-1">Folios, parciales, std pack</div>
             </a>

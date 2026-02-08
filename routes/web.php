@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductionLineController;
 use App\Http\Controllers\OracleJobController;
+use App\Http\Controllers\MasterRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -33,6 +34,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Label Room-only (operación)
     Route::middleware('role:label_room')->group(function () {
         Route::get('/label-room', function () { return 'Label Room Area'; })->name('labelroom.home');
+
+        Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
+        Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
+        Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
+
+        Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
     });
 
     Route::middleware('role_any:admin,label_room')->group(function () {
