@@ -27,6 +27,22 @@
                 <div class="text-lg font-semibold">Entregas / Recepción</div>
                 <div class="text-sm text-slate-600 mt-1">Cerrar requisiciones y evitar reclamos</div>
             </a>
+
+            <a href="{{ route('oracle_jobs.index') }}"
+            class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Consultar Jobs</div>
+                <div class="text-sm text-slate-600 mt-1">
+                    Buscar jobs para requisiciones
+                </div>
+            </a>
+
+            <a href="{{ route('oracle_jobs.import_view') }}"
+            class="rounded-2xl bg-red-600 text-white p-5 hover:bg-red-500 transition">
+                <div class="font-semibold">Cargar Excel Oracle</div>
+                <div class="text-sm opacity-90 mt-1">
+                    Actualizar información de jobs
+                </div>
+            </a>
         </div>
     </div>
 @endsection

@@ -32,6 +32,22 @@
                 <div class="font-semibold">Production Lines</div>
                 <div class="text-sm text-slate-600 mt-1">Catálogo de líneas (MXC007, MXMR003...).</div>
             </a>
+
+            <a href="{{ route('oracle_jobs.index') }}"
+                class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Oracle Jobs</div>
+                <div class="text-sm text-slate-600 mt-1">
+                    Fuente central de producción (Excel)
+                </div>
+            </a>
+
+            <a href="{{ route('oracle_jobs.import_view') }}"
+                class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Importar Oracle Jobs</div>
+                <div class="text-sm text-slate-600 mt-1">
+                    Cargar archivo Excel desde Oracle
+                </div>
+            </a>
         </div>
     </div>
 @endsection
