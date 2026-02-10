@@ -7,6 +7,11 @@
             <h1 class="text-2xl font-semibold text-slate-900">Nueva requisición Master</h1>
             <p class="text-slate-600 mt-1">Captura la requisición del papel y autollenamos con Oracle Jobs.</p>
         </div>
+
+        <a href="{{ route('dashboard')}}"
+           class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+            Volver
+        </a>
     </div>
 
     @if ($errors->any())
