@@ -48,7 +48,7 @@
     .logo{ font-size: 34px; font-weight: 900; color:#c00000; font-style: italic; line-height:1; padding-left:6mm; }
 
     /* Fonts */
-    .job-label{ font-size: 34px; font-weight: 800; }
+    .job-label{ font-size: 25px; font-weight: 800; }
     .job-top{ font-size: 26px; font-weight: 800; }
     .job-bar{ font-size: 34px; font-weight: 800; }
 
