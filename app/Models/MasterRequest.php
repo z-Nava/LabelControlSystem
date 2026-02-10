@@ -57,6 +57,6 @@ class MasterRequest extends Model
 
     public function printBatches(): HasMany
     {
-        return $this->hasMany(MasterPrintBatch::class);
+        return $this->hasMany(MasterPrintBatch::class, 'master_request_id');
     }
 }

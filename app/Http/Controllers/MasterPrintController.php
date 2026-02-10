@@ -52,12 +52,18 @@ class MasterPrintController extends Controller
         return redirect()
             ->route('master_requests.show', $master_request)
             ->with('success', "Batch creado (#{$batch->id}). Listo para imprimir.")
+            ->with('batch_id', $batch->id)
             ->with('pdf_url', route('master_print_batches.pdf', $batch));
     }
 
     public function pdf(MasterPrintBatch $batch)
     {
         // Por ahora solo retornamos vista simple (luego lo convertimos a PDF real)
-        return $this->service->renderPdf($batch);
+        return $this->service->downloadPdf($batch);
+    }
+
+    public function print(MasterPrintBatch $batch)
+    {
+        return $this->service->renderPrintable($batch);
     }
 }

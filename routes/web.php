@@ -44,6 +44,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
         Route::get('/master-print-batches/{batch}/pdf', [MasterPrintController::class, 'pdf'])->name('master_print_batches.pdf');
 
+        Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
 
 
