@@ -118,7 +118,7 @@ class MasterPrintService
 
         $pdf = app('dompdf.wrapper');
         $pdf->loadView('master_print.templates.assembly', $data + ['mode' => 'pdf']);
-        $pdf->setPaper('letter', 'portrait');
+        $pdf->setPaper('letter', 'landscape');
 
         return $pdf->download($fileName);
     }
@@ -139,12 +139,49 @@ class MasterPrintService
         ]);
 
         $mr = $batch->masterRequest;
-        $folios = $batch->items->map(fn ($i) => $i->folio)->sortBy('folio_number')->values();
+
+        $items = $batch->items
+            ->map(fn ($i) => $i->folio)
+            ->sortBy('folio_number')
+            ->values();
 
         $oracle = \App\Models\OracleJob::query()
             ->where('job_number', $mr->job_assembly)
             ->first();
 
-        return compact('batch', 'mr', 'folios', 'oracle');
+        // Construimos "sheets" (1 hoja por folio) para NO usar @php en Blade
+        $sheets = $items->map(function ($folio) use ($mr, $oracle) {
+            $folioNo = str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT);
+
+            $job = (string) ($mr->job_assembly ?? '');
+            $np  = (string) ($oracle?->assembly ?? '');
+            $desc = (string) ($oracle?->part_description ?? '');
+
+            $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
+
+            return [
+                'leader' => (string) $mr->leader_name,
+                'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
+                'line'   => (string) ($mr->line?->code ?? ''),
+                'model' => (string) ($mr->job_description ?? ''),
+
+                
+                'date'   => optional($mr->request_date)->format('d/m/Y'),
+                'folio_id'   => $folio->id,
+                'folio_no'   => $folioNo,
+                'job'        => $job,
+                'np'         => $np,
+                'desc'       => $desc,
+                'lote'       => $lote,
+
+                // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
+                'subinventory' => 'WIP',
+                'local'        => 'SMARKET-1',
+                'qty_pallet'   => (string) ($mr->std_pack_qty ?? ''),
+            ];
+        })->values();
+
+        return compact('batch', 'mr', 'oracle', 'sheets');
     }
+
 }

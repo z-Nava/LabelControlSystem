@@ -22,13 +22,6 @@
         Imprimir
     </a>
 
-    @if(session('pdf_url'))
-        <a href="{{ session('pdf_url') }}" target="_blank"
-        class="ml-2 rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
-            Abrir PDF
-        </a>
-    @endif
-
     @if(session('batch_id'))
         <a href="{{ route('master_print_batches.print', session('batch_id')) }}" target="_blank"
         class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">

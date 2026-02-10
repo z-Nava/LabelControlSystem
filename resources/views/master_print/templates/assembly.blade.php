@@ -1,213 +1,268 @@
 <!doctype html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <title>Master - Ensamble</title>
+  <meta charset="utf-8">
+  <title>Master - Ensamble</title>
 
-    <style>
-        /* ====== PAGE ====== */
-        @page { size: letter landscape; margin: 10mm; }
-        html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color:#000; }
+  <style>
+    @page { size: letter landscape; margin: 8mm; }
 
-        /* En navegador se ve centrado; en DomPDF ignora algunas cosas pero se mantiene bien */
-        body { background: #f3f4f6; }
-        .page { background:#fff; border: 2px solid #000; border-radius: 16px; overflow: hidden; }
+    :root{
+      --sheet-w: 258mm; /* 279.4 - 20mm márgenes */
+      --b: 1px;
 
-        /* Cada folio = 1 hoja */
-        .sheet { width: 100%; }
-        .sheet + .sheet { page-break-before: always; margin-top: 0; }
+      --gray:  #d9d9d9;
+      --cream: #fff2cc;
+      --peach: #fbe5d6;
+    }
 
-        /* ====== TABLE GRID ====== */
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; }
+    html, body { margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; color:#000; }
+    body { background:#f3f4f6; }
+    .no-wrap{ white-space:nowrap; }
+    .sheet { width: var(--sheet-w); margin: 0 auto; }
+    .sheet + .sheet { page-break-before: always; }
 
-        /* Colores */
-        .bg-gray  { background:#d9d9d9; }
-        .bg-cream { background:#fff2cc; }
+    .page{
+      background:#fff;
+      border: var(--b) solid #000;
+      overflow:hidden;
+    }
 
-        /* Texto */
-        .center { text-align: center; }
-        .right  { text-align: right; }
-        .bold   { font-weight: 700; }
+    table{ width:100%; border-collapse:collapse; table-layout:fixed; page-break-inside: avoid; }
+    td{ border: var(--b) solid #000; padding:0; vertical-align:middle; page-break-inside: auto;}
 
-        .title { font-size: 18px; letter-spacing: .5px; font-weight: 800; }
-        .logo  { font-size: 26px; font-weight: 900; color:#c00000; font-style: italic; line-height: 1; }
+    * { box-sizing: border-box; }
+    
+    tr { page-break-inside: avoid; }    
 
-        .big-number { font-size: 26px; font-weight: 800; }
-        .mid-number { font-size: 18px; font-weight: 800; }
-        .small { font-size: 12px; }
-        .xs    { font-size: 11px; }
+    .center{ text-align:center; }
+    .left{ text-align:left; }
+    .bold{ font-weight:700; }
 
-        /* “Barcode” estilo Excel (por ahora texto con asteriscos)
-           Si luego metes una fuente Code39, aquí la aplicamos. */
-        .barcode {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: .5px;
-            /* font-family: 'Free3of9', 'Libre Barcode 39', Arial, sans-serif; */
-        }
-        .barcode-mid {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: .5px;
-        }
+    .bg-gray{ background: var(--gray); }
+    .bg-cream{ background: var(--cream); }
+    .bg-peach{ background: var(--peach); }
 
-        /* Alturas (ajustadas a tu screenshot) */
-        .h-42 { height: 42px; }
-        .h-38 { height: 38px; }
-        .h-50 { height: 50px; }
-        .h-120 { height: 120px; }
-        .h-95 { height: 95px; }
-        .h-70 { height: 70px; }
+    /* Header */
+    .title{ font-size: 22px; font-weight: 800; letter-spacing:.4px; }
+    .logo{ font-size: 34px; font-weight: 900; color:#c00000; font-style: italic; line-height:1; padding-left:6mm; }
 
-        /* Para que los bloques de abajo se vean como Excel */
-        .no-pad { padding: 0; }
-        .cell-pad { padding: 6px 8px; }
+    /* Fonts */
+    .job-label{ font-size: 34px; font-weight: 800; }
+    .job-top{ font-size: 26px; font-weight: 800; }
+    .job-bar{ font-size: 34px; font-weight: 800; }
 
-        /* Print helper (solo navegador) */
-        @media print {
-            body { background:#fff; }
-            .page { border: 2px solid #000; border-radius: 0; }
-        }
-    </style>
+    .np-top{ font-size: 34px; font-weight: 800; }
+    .np-desc{ font-size: 11px; }
+    .np-bar{ font-size: 44px; font-weight: 800; }
+
+    .lote-top{ font-size: 30px; font-weight: 800; }
+    .lote-bar{ font-size: 32px; font-weight: 800; }
+
+    .sub-mid{ font-size: 18px; font-weight: 800; }
+    .sub-bar{ font-size: 34px; font-weight: 800; }
+
+    /* Heights (ajustables en mm) */
+    .h-header{ height: 12mm; }
+    .h-top1{ height: 14mm; }
+    .h-top2{ height: 14mm; }
+    .h-top3{ height: 10mm; }
+
+    .h-np{ height: 55mm; }
+
+    .h-subh{ height: 10mm; }
+    .h-sub1{ height: 16mm; }
+    .h-sub2{ height: 18mm; }
+
+    .h-foot-h{ height: 10mm; }
+    .h-foot{ height: 36mm; }
+
+    @media print{
+      body{ background:#fff; }
+      .sheet{ margin:0; }
+    }
+
+    .logo, .title, .job-label, .job-top, .job-bar,
+    .np-top, .np-bar, .lote-top, .lote-bar,
+    .sub-bar { line-height: 1; }
+  </style>
 </head>
-
 <body>
 
-@foreach($folios as $folio)
-    @php
-        // NOTA: si no quieres @php en la vista, dímelo y lo movemos al Service/ViewModel.
-        // Aquí lo dejo mínimo (solo para variables derivadas del folio).
-        $folioNo = str_pad((string)$folio->folio_number, 2, '0', STR_PAD_LEFT);
+@foreach($sheets as $s)
+  <div class="sheet">
+    <div class="page">
+      <table>
+        <!-- GRID FIJO: 15 columnas (suman 259.4mm) -->
+        <colgroup>
+        <col style="width:17.5mm"><!-- 1 -->
+        <col style="width:17.5mm"><!-- 2 -->
+        <col style="width:17.5mm"><!-- 3 -->
+        <col style="width:17.5mm"><!-- 4 -->
+        <col style="width:17.5mm"><!-- 5 -->
+        <col style="width:14.32mm"><!-- 6 -->
+        <col style="width:14.32mm"><!-- 7 -->
+        <col style="width:19.09mm"><!-- 8 -->
+        <col style="width:19.09mm"><!-- 9 -->
+        <col style="width:17.5mm"><!-- 10 -->
+        <col style="width:17.5mm"><!-- 11 -->
+        <col style="width:16.7mm"><!-- 12 -->
+        <col style="width:16.7mm"><!-- 13 -->
+        <col style="width:17.5mm"><!-- 14 -->
+        <col style="width:17.82mm"><!-- 15 -->
+        </colgroup>
 
-        $job = (string)($mr->job_assembly ?? '');
-        $np  = (string)optional($oracle)->assembly;
-        $desc = (string)optional($oracle)->part_description;
+        <!-- HEADER -->
+        <tr class="h-header">
+          <td colspan="4" class="left">
+            <div class="logo">Milwaukee</div>
+          </td>
+          <td colspan="11" class="center">
+            <div class="title">PRODUCTO TERMINADO - ENSAMBLE</div>
+          </td>
+        </tr>
 
-        // Lote = JOB-XX
-        $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
+        <!-- ROW 1: Líder / Turno / Job / Fecha(label) -->
+        <tr class="h-top1">
+          <td colspan="2" class="bg-gray bold center">Líder:</td>
+          <td colspan="3" class="bg-cream"></td>
 
-        // Campos “constantes” como en el formato actual (luego los hacemos configurables si quieres)
-        $subinventory = 'WIP';
-        $local = 'SMARKET-1';
-        $qtyPallet = (string)($mr->std_pack_qty ?? '');
-    @endphp
+          <td colspan="1" class="bg-gray bold center">Turno:</td>
+          <td colspan="1" class="bg-cream center bold">{{ $s['shift'] ?? '' }}</td>
 
-    <div class="sheet">
-        <div class="page">
-            <table>
-                <!-- HEADER -->
-                <tr class="h-42">
-                    <td style="width:18%;" class="center no-pad">
-                        <div class="cell-pad">
-                            <div class="logo">Milwaukee</div>
-                        </div>
-                    </td>
-                    <td style="width:82%;" colspan="9" class="center bold title">
-                        PRODUCTO TERMINADO - ENSAMBLE
-                    </td>
-                </tr>
+          <td colspan="2" rowspan="2" class="bg-gray center">
+            <div class="job-label">Job</div>
+          </td>
 
-                <!-- ROW: Líder / Turno / Job / Fecha -->
-                <tr class="h-38">
-                    <td class="bg-gray bold" style="width:12%;">Líder:</td>
-                    <td class="bg-cream" style="width:26%;">{{ $mr->leader_name }}</td>
+          <td colspan="4" class="bg-peach center">
+            <div class="job-top">{{ $s['job'] ?? '' }}</div>
+          </td>
 
-                    <td class="bg-gray bold" style="width:10%;">Turno:</td>
-                    <td class="bg-cream" style="width:10%;">{{ optional($mr->shift)->code ?? optional($mr->shift)->name }}</td>
+          <td colspan="2" class="bg-gray bold center">Fecha:</td>
+        </tr>
 
-                    <td class="bg-gray bold center" style="width:8%;">Job</td>
-                    <td class="bg-cream center" style="width:18%;">
-                        <div class="barcode-mid">*</div>
-                        <div class="big-number">{{ $mr->job_assembly }}</div>
-                        <div class="barcode-mid">*{{ $mr->job_assembly }}*</div>
-                    </td>
+        <!-- ROW 2: Línea / Job barcode / Fecha(value) -->
+        <tr class="h-top2">
+          <td colspan="2" class="bg-gray bold center">Línea:</td>
+          <td colspan="5" class="center bold">{{ $s['line'] ?? '' }}</td>
 
-                    <td class="bg-gray bold" style="width:8%;">Fecha:</td>
-                    <td class="bg-cream" style="width:8%;">{{ optional($mr->request_date)->format('d/m/Y') }}</td>
+          <td colspan="4" class="center">
+            <div class="job-bar">*{{ $s['job'] ?? '' }}*</div>
+          </td>
 
-                    <td style="width:0%;" class="no-pad" colspan="2"></td>
-                </tr>
+          <!-- Fecha value (grande crema, como Excel) -->
+          <td colspan="2" rowspan="2" class="bg-cream center bold">{{ $s['date'] ?? '' }}</td>
+        </tr>
 
-                <!-- ROW: Línea / Modelo / Folio -->
-                <tr class="h-38">
-                    <td class="bg-gray bold">Línea:</td>
-                    <td class="center bold">{{ optional($mr->line)->code ?? '' }}</td>
+        <!-- ROW 3: Modelo / Folio (sin recuadro extra) -->
+        <tr class="h-top3">
+            <td colspan="2" class="bg-gray bold center">Modelo:</td>
+            <td colspan="5" class="center bold">{{ $s['model'] ?? '' }}</td>
 
-                    <td class="bg-gray bold">Modelo:</td>
-                    <td class="center bold">{{ $mr->job_description ?? '' }}</td>
+            <td colspan="2" class="bg-gray bold center">Folio:</td>
+            <!-- Aquí “absorbo” el espacio extra para eliminar el cuadrito -->
+            <td colspan="4" class="center bold">{{ $s['folio_no'] ?? '' }}</td>
 
-                    <td class="bg-gray bold">Folio:</td>
-                    <td class="center">{{ $folioNo }}</td>
+            <!-- Fecha value (sigue igual) -->
+            <td colspan="2" class="bg-cream center bold">{{ $s['date'] ?? '' }}</td>
+        </tr>
 
-                    <td colspan="4" class="bg-cream"></td>
-                </tr>
 
-                <!-- BLOQUE NP ENSAMBLE / LOTE -->
-                <tr class="h-120">
-                    <td class="bg-gray bold" style="width:12%;">Np Ensamble:</td>
+        <!-- BLOQUE NP / LOTE -->
+        <!-- BLOQUE NP / LOTE (Lote más ancho y NP mejor separado) -->
+<tr class="h-np">
+  <!-- NP label -->
+  <td colspan="2" class="bg-gray bold center">Np Ensamble:</td>
 
-                    <td colspan="5" class="center">
-                        <div class="mid-number">{{ $np }}</div>
-                        <div class="xs" style="margin-top:4px;">{{ $desc }}</div>
-                        <div class="barcode" style="margin-top:8px;">*{{ $np }}*</div>
-                    </td>
+  <!-- NP data (ahora en 3 filas bien separadas) -->
+  <td colspan="8" style="padding:0;">
+    <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+      <tr style="height: 16mm;">
+        <td class="center" style="border:0;">
+          <div class="np-top">{{ $s['np'] ?? '' }}</div>
+        </td>
+      </tr>
+      <tr style="height: 12mm;">
+        <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0; padding: 0 3mm;">
+          <div class="np-desc">{{ $s['desc'] ?? '' }}</div>
+        </td>
+      </tr>
+      <tr style="height: 32mm;">
+        <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;">
+          <div class="np-bar">*{{ $s['np'] ?? '' }}*</div>
+        </td>
+      </tr>
+    </table>
+  </td>
 
-                    <td class="bg-gray bold center" style="width:8%;">Lote</td>
-                    <td colspan="3" class="center">
-                        <div class="mid-number">{{ $lote }}</div>
-                        <div class="barcode-mid" style="margin-top:10px;">*{{ $lote }}*</div>
-                    </td>
-                </tr>
+        <!-- Lote label -->
+        <td colspan="2" class="bg-gray bold center">Lote</td>
 
-                <!-- SUBINVENTORY / LOCAL / CANTIDAD / OBS -->
-                <tr class="h-38">
-                    <td colspan="2" class="bg-gray bold center">Subinventory:</td>
-                    <td colspan="2" class="bg-gray bold center">Local:</td>
-                    <td colspan="2" class="bg-gray bold center">Cantidad en pallet:</td>
-                    <td colspan="4" class="bg-gray bold center">Observaciones:</td>
-                </tr>
-
-                <tr class="h-70">
-                    <td colspan="2" class="center">
-                        <div class="small">{{ $subinventory }}</div>
-                        <div class="barcode-mid" style="margin-top:6px;">*{{ $subinventory }}*</div>
-                    </td>
-
-                    <td colspan="2" class="center">
-                        <div class="small">{{ $local }}</div>
-                        <div class="barcode-mid" style="margin-top:6px;">*{{ $local }}*</div>
-                    </td>
-
-                    <td colspan="2" class="center">
-                        <div class="small">{{ $qtyPallet }}</div>
-                        <div class="barcode-mid" style="margin-top:6px;">*{{ $qtyPallet }}*</div>
-                    </td>
-
-                    <td colspan="4"></td>
-                </tr>
-
-                <!-- FIRMAS -->
-                <tr class="h-50">
-                    <td colspan="3" class="bg-gray bold center">LIBERACION IPQC</td>
-                    <td colspan="3" class="bg-gray bold center">LIBERACION OQC</td>
-                    <td colspan="4" class="bg-gray bold center">PRODUCTION SUPPORT</td>
-                </tr>
-
-                <tr class="h-95">
-                    <td colspan="3"></td>
-                    <td colspan="3"></td>
-                    <td colspan="4"></td>
-                </tr>
+        <!-- Lote data (MÁS ANCHO: colspan 3) -->
+        <td colspan="3" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+            <tr style="height: 24mm;">
+                <td class="center" style="border:0;">
+                <div class="lote-top">{{ $s['lote'] ?? '' }}</div>
+                </td>
+            </tr>
+            <tr style="height: 36mm;">
+                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;">
+                <div class="lote-bar">*{{ $s['lote'] ?? '' }}*</div>
+                </td>
+            </tr>
             </table>
-        </div>
+        </td>
+        </tr>
+
+
+        <!-- SUB/LOCAL/QTY/OBS HEADER -->
+        <tr class="h-subh">
+          <td colspan="4" class="bg-gray bold center">Subinventory:</td>
+          <td colspan="4" class="bg-gray bold center">Local:</td>
+          <td colspan="3" class="bg-gray bold center">Cantidad en pallet:</td>
+          <td colspan="4" class="bg-gray bold center">Observaciones:</td>
+        </tr>
+
+        <!-- SUB/LOCAL/QTY/OBS row values -->
+        <tr class="h-sub1">
+          <td colspan="4" class="center">{{ $s['subinventory'] ?? '' }}</td>
+          <td colspan="4" class="center">{{ $s['local'] ?? '' }}</td>
+          <td colspan="3" class="center">{{ $s['qty_pallet'] ?? '' }}</td>
+          <td colspan="4"></td>
+        </tr>
+
+        <!-- SUB/LOCAL/QTY/OBS row barcodes -->
+        <tr class="h-sub2">
+          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['subinventory'] ?? '' }}*</div></td>
+          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['local'] ?? '' }}*</div></td>
+          <td colspan="3" class="center"><div class="sub-bar">*{{ $s['qty_pallet'] ?? '' }}*</div></td>
+          <td colspan="4"></td>
+        </tr>
+
+        <!-- FOOTER TITLES -->
+        <tr class="h-foot-h">
+          <td colspan="5" class="bg-gray bold center">LIBERACION IPQC</td>
+          <td colspan="5" class="bg-gray bold center">LIBERACION OQC</td>
+          <td colspan="5" class="bg-gray bold center">PRODUCTION SUPPORT</td>
+        </tr>
+
+        <!-- FOOTER EMPTY -->
+        <tr class="h-foot">
+          <td colspan="5"></td>
+          <td colspan="5"></td>
+          <td colspan="5"></td>
+        </tr>
+
+      </table>
     </div>
+  </div>
 @endforeach
 
 @if(($mode ?? null) === 'print')
-    <script>
-        window.addEventListener('load', () => window.print());
-    </script>
+  <script>
+    window.addEventListener('load', () => window.print());
+  </script>
 @endif
 
 </body>
