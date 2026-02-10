@@ -10,9 +10,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-
 class MasterPrintService
 {
+    public function __construct(
+        private readonly MasterRequestStatusService $statusService
+    ) {}
+
     public function createBatch(
         MasterRequest $masterRequest,
         array $folioIds,
@@ -25,6 +28,13 @@ class MasterPrintService
         return DB::transaction(function () use (
             $masterRequest, $folioIds, $batchType, $copies, $reason, $printedByUserId, $printedByName
         ) {
+            $masterRequest->refresh();
+
+            if ($masterRequest->status === 'cancelled') {
+                throw ValidationException::withMessages([
+                    'batch_type' => 'No se puede imprimir: la requisición está cancelada.',
+                ]);
+            }
 
             // Solo folios de ESTA requisición
             $folios = MasterRequestFolio::query()
@@ -71,6 +81,9 @@ class MasterPrintService
                 ->whereIn('id', $folios->pluck('id'))
                 ->update(['status' => 'printed']);
 
+            // ✅ Recalcular status del master_request
+            $this->statusService->recalculate($masterRequest);
+
             return $batch;
         });
     }
@@ -86,7 +99,6 @@ class MasterPrintService
         $mr = $batch->masterRequest;
         $folios = $batch->items->map(fn($i) => $i->folio)->sortBy('folio_number');
 
-        // Aquí seleccionaremos el template según request_type
         $view = match ($mr->request_type) {
             'assembly' => 'master_print.pdf.assembly',
             'batteries_assembly' => 'master_print.pdf.batteries_assembly',
@@ -111,8 +123,7 @@ class MasterPrintService
         return $pdf->download($fileName);
     }
 
-
-    public function renderPrintable(MasterPrintBatch $batch): \Illuminate\View\View
+    public function renderPrintable(MasterPrintBatch $batch): View
     {
         $data = $this->buildMasterEnsambleData($batch);
 
@@ -130,12 +141,10 @@ class MasterPrintService
         $mr = $batch->masterRequest;
         $folios = $batch->items->map(fn ($i) => $i->folio)->sortBy('folio_number')->values();
 
-        // Resolver OracleJob por job_assembly (ajusta el namespace si tu modelo se llama diferente)
         $oracle = \App\Models\OracleJob::query()
             ->where('job_number', $mr->job_assembly)
             ->first();
 
         return compact('batch', 'mr', 'folios', 'oracle');
     }
-
 }
