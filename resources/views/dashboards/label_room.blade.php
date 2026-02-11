@@ -18,6 +18,11 @@
                 <div class="text-sm opacity-90 mt-1">Folios, parciales, std pack</div>
             </a>
 
+            <a href="{{ route('master_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
+                <div class="text-lg font-semibold">Requisiciones pendientes</div>
+                <div class="text-sm text-slate-600 mt-1">Retomar impresión de requisiciones guardadas</div>
+            </a>
+
             <a href="#" class="rounded-2xl border p-6 hover:shadow transition">
                 <div class="text-lg font-semibold">Reimprimir / Retrabajo</div>
                 <div class="text-sm text-slate-600 mt-1">Por folio o serial exacto</div>

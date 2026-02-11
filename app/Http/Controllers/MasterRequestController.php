@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ProductionLine;
 use App\Models\Shift;
 use App\Services\Masters\MasterRequestService;
+use App\Models\MasterRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,6 +15,44 @@ class MasterRequestController extends Controller
     public function __construct(private readonly MasterRequestService $service)
     {
     }
+
+    public function index(Request $request): View
+    {
+        $status = (string) $request->query('status', 'pending');
+        $q = trim((string) $request->query('q', ''));
+
+        $masterRequests = MasterRequest::query()
+            ->with(['line', 'shift'])
+            ->withCount([
+                'folios as total_folios',
+                'folios as printed_folios' => fn ($query) => $query->where('status', 'printed'),
+            ])
+            ->when($status === 'pending', fn ($query) => $query->whereIn('status', ['requested', 'in_progress']))
+            ->when($status === 'completed', fn ($query) => $query->where('status', 'completed'))
+            ->when($status === 'cancelled', fn ($query) => $query->where('status', 'cancelled'))
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('id', $q)
+                        ->orWhere('leader_name', 'like', "%{$q}%")
+                        ->orWhere('job_assembly', 'like', "%{$q}%")
+                        ->orWhere('job_packaging', 'like', "%{$q}%")
+                        ->orWhere('po_number', 'like', "%{$q}%");
+                });
+            })
+            ->latest('request_date')
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('master_requests.index', [
+            'masterRequests' => $masterRequests,
+            'filters' => [
+                'status' => $status,
+                'q' => $q,
+            ],
+        ]);
+    }
+
 
     public function create(): View
     {
@@ -64,7 +103,7 @@ class MasterRequestController extends Controller
 
     public function show($id): View
     {
-        $mr = \App\Models\MasterRequest::with(['line','shift','folios'])->findOrFail($id);
+        $mr = MasterRequest::with(['line','shift','folios'])->findOrFail($id);
 
         return view('master_requests.show', compact('mr'));
     }

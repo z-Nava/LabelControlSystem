@@ -36,6 +36,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:label_room')->group(function () {
         Route::get('/label-room', function () { return 'Label Room Area'; })->name('labelroom.home');
 
+        Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
         Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
         Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
         Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');

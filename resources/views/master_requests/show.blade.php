@@ -15,16 +15,19 @@
                 {{ $mr->line?->code }} · Turno {{ $mr->shift?->code }} · {{ $mr->request_date?->format('Y-m-d') }}
             </p>
         </div>
-        <a href="{{ route('master_requests.create')}}"
-                class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
-                Volver
-            </a>
     </div>
 
-    <a href="{{ route('master_requests.print.create', $mr->id) }}"
-        class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
-        Imprimir
-    </a>
+    <div class="mt-4 flex items-center gap-2">
+        <a href="{{ route('master_requests.print.create', $mr->id) }}"
+            class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
+            Imprimir
+        </a>
+
+        <a href="{{ route('master_requests.index')}}"
+            class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+            Ver requisiciones
+        </a>
+    </div>
 
     @if(session('batch_id'))
         <a href="{{ route('master_print_batches.print', session('batch_id')) }}" target="_blank"
