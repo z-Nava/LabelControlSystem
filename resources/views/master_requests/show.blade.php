@@ -29,6 +29,7 @@
         </a>
     </div>
 
+     <div class="mt-4 flex items-center gap-2">
     @if(session('batch_id'))
         <a href="{{ route('master_print_batches.print', session('batch_id')) }}" target="_blank"
         class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
@@ -40,7 +41,7 @@
             Descargar PDF
         </a>
     @endif
-
+</div>
 
     <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border p-4">
