@@ -114,10 +114,13 @@ class MasterPrintService
     {
         $data = $this->buildMasterEnsambleData($batch);
 
-        $fileName = "master_batch_{$batch->id}_ensamble.pdf";
+        $suffix = $this->resolveTemplateSuffix($batch->masterRequest?->request_type);
+        $fileName = "master_batch_{$batch->id}_{$suffix}.pdf";
+
+        $templateView = $this->resolveTemplateView($batch->masterRequest?->request_type);
 
         $pdf = app('dompdf.wrapper');
-        $pdf->loadView('master_print.templates.assembly', $data + ['mode' => 'pdf']);
+        $pdf->loadView($templateView, $data + ['mode' => 'pdf']);
         $pdf->setPaper('letter', 'landscape');
 
         return $pdf->download($fileName);
@@ -127,7 +130,23 @@ class MasterPrintService
     {
         $data = $this->buildMasterEnsambleData($batch);
 
-        return view('master_print.templates.assembly', $data + ['mode' => 'print']);
+        return view($this->resolveTemplateView($batch->masterRequest?->request_type), $data + ['mode' => 'print']);
+    }
+
+    protected function resolveTemplateView(?string $requestType): string
+    {
+        return match ($requestType) {
+            'batteries_assembly' => 'master_print.templates.batteries_assembly',
+            default => 'master_print.templates.assembly',
+        };
+    }
+
+    protected function resolveTemplateSuffix(?string $requestType): string
+    {
+        return match ($requestType) {
+            'batteries_assembly' => 'ensamble_baterias',
+            default => 'ensamble',
+        };
     }
 
     protected function buildMasterEnsambleData(MasterPrintBatch $batch): array
@@ -163,7 +182,7 @@ class MasterPrintService
                 'leader' => (string) $mr->leader_name,
                 'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
                 'line'   => (string) ($mr->line?->code ?? ''),
-                'model' => (string) ($mr->job_description ?? ''),
+                'model' => (string) ($mr->job_description ?? $oracle?->job_description ?? ''),
 
                 
                 'date'   => optional($mr->request_date)->format('d/m/Y'),
