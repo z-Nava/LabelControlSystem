@@ -137,6 +137,7 @@ class MasterPrintService
     {
         return match ($requestType) {
             'batteries_assembly' => 'master_print.templates.batteries_assembly',
+            'motors_molding' => 'master_print.templates.motors_molding',
             default => 'master_print.templates.assembly',
         };
     }
@@ -145,6 +146,7 @@ class MasterPrintService
     {
         return match ($requestType) {
             'batteries_assembly' => 'ensamble_baterias',
+            'motors_molding' => 'motores_moldeo',
             default => 'ensamble',
         };
     }
@@ -176,6 +178,8 @@ class MasterPrintService
             $np  = (string) ($oracle?->assembly ?? '');
             $desc = (string) ($oracle?->part_description ?? '');
 
+            $isMotors = ($mr->request_type ?? '') === 'motors_molding';
+
             $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
 
             return [
@@ -192,11 +196,12 @@ class MasterPrintService
                 'np'         => $np,
                 'desc'       => $desc,
                 'lote'       => $lote,
+                'revision'   => (string) ($oracle?->bom_revision ?? ''),
 
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
                 'subinventory' => 'WIP',
-                'local'        => 'SMARKET-1',
-                'qty_pallet'   => (string) ($mr->std_pack_qty ?? ''),
+                'local'        => $isMotors ? 'WIP-MOTORS' : 'SMARKET-1',
+                'qty_pallet'   => (string) ($mr->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();
 
