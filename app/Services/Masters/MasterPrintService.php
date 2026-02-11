@@ -9,6 +9,7 @@ use App\Models\MasterRequestFolio;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Models\OracleJob;
 
 class MasterPrintService
 {
@@ -138,6 +139,7 @@ class MasterPrintService
         return match ($requestType) {
             'batteries_assembly' => 'master_print.templates.batteries_assembly',
             'motors_molding' => 'master_print.templates.motors_molding',
+            'assembly_packaging' => 'master_print.templates.assembly_packaging',
             default => 'master_print.templates.assembly',
         };
     }
@@ -147,6 +149,7 @@ class MasterPrintService
         return match ($requestType) {
             'batteries_assembly' => 'ensamble_baterias',
             'motors_molding' => 'motores_moldeo',
+            'assembly_packaging' => 'ensamble_empaque',
             default => 'ensamble',
         };
     }
@@ -166,46 +169,61 @@ class MasterPrintService
             ->sortBy('folio_number')
             ->values();
 
-        $oracle = \App\Models\OracleJob::query()
+        $oracle = OracleJob::query()
             ->where('job_number', $mr->job_assembly)
             ->first();
 
+        $oraclePackaging = OracleJob::query()
+            ->where('job_number', $mr->job_packaging)
+            ->first();
+
         // Construimos "sheets" (1 hoja por folio) para NO usar @php en Blade
-        $sheets = $items->map(function ($folio) use ($mr, $oracle) {
+        $sheets = $items->map(function ($folio) use ($mr, $oracle, $oraclePackaging) {
             $folioNo = str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT);
 
             $job = (string) ($mr->job_assembly ?? '');
+            $jobPackaging = (string) ($mr->job_packaging ?? '');
             $np  = (string) ($oracle?->assembly ?? '');
+            $npPackaging = (string) ($oraclePackaging?->assembly ?? '');
             $desc = (string) ($oracle?->part_description ?? '');
+            $descPackaging = (string) ($oraclePackaging?->part_description ?? '');
 
             $isMotors = ($mr->request_type ?? '') === 'motors_molding';
+            $isAssemblyPackaging = ($mr->request_type ?? '') === 'assembly_packaging';
 
             $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
+            $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : ('-' . $folioNo);
 
             return [
                 'leader' => (string) $mr->leader_name,
                 'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
                 'line'   => (string) ($mr->line?->code ?? ''),
-                'model' => (string) ($mr->job_description ?? $oracle?->job_description ?? ''),
+                'model' => (string) ($mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? ''),
 
                 
                 'date'   => optional($mr->request_date)->format('d/m/Y'),
                 'folio_id'   => $folio->id,
                 'folio_no'   => $folioNo,
                 'job'        => $job,
+                'job_packaging' => $jobPackaging,
                 'np'         => $np,
+                'np_packaging' => $npPackaging,
                 'desc'       => $desc,
+                'desc_packaging' => $descPackaging,
                 'lote'       => $lote,
+                'lote_packaging' => $lotePackaging,
                 'revision'   => (string) ($oracle?->bom_revision ?? ''),
+                'po_number'  => (string) ($mr->po_number ?? ''),
+                'destination' => (string) ($mr->destination ?? ''),
 
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
                 'subinventory' => 'WIP',
-                'local'        => $isMotors ? 'WIP-MOTORS' : 'SMARKET-1',
+                'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($mr->line?->code ?? '') : 'SMARKET-1'),
                 'qty_pallet'   => (string) ($mr->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();
 
-        return compact('batch', 'mr', 'oracle', 'sheets');
+        return compact('batch', 'mr', 'oracle', 'oraclePackaging', 'sheets');
     }
 
 }
