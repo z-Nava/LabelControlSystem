@@ -23,9 +23,9 @@
                 <div class="text-sm text-slate-600 mt-1">Retomar impresión de requisiciones guardadas</div>
             </a>
 
-            <a href="#" class="rounded-2xl border p-6 hover:shadow transition">
+            <a href="{{ route('master_reprints.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
                 <div class="text-lg font-semibold">Reimprimir / Retrabajo</div>
-                <div class="text-sm text-slate-600 mt-1">Por folio o serial exacto</div>
+                <div class="text-sm text-slate-600 mt-1">Vista general por job para hojas master</div>
             </a>
 
             <a href="#" class="rounded-2xl border p-6 hover:shadow transition">
