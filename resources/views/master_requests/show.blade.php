@@ -23,6 +23,11 @@
             Imprimir
         </a>
 
+        <a href="{{ route('master_requests.reprints.index', $mr->id) }}"
+            class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+            Historial impresión
+        </a>
+
         <a href="{{ route('master_requests.index')}}"
             class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
             Ver requisiciones

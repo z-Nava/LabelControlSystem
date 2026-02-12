@@ -9,11 +9,17 @@
                 Requisición #{{ $mr->id }} · {{ $mr->line?->code }} · Turno {{ $mr->shift?->code }}
             </p>
         </div>
+       <div class="flex items-center gap-2">
+            <a href="{{ route('master_requests.reprints.index', $mr->id) }}"
+               class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+                Historial
+            </a>
 
-        <a href="{{ route('master_requests.show', $mr->id) }}"
-           class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
-            Volver
-        </a>
+            <a href="{{ route('master_requests.show', $mr->id) }}"
+               class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+                Volver
+            </a>
+        </div>
     </div>
 
     @if ($errors->any())
