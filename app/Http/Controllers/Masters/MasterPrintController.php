@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Masters;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Masters\StoreMasterPrintBatchRequest;
 use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;

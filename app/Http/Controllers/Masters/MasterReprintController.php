@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Masters;
 
+use App\Http\Controllers\Controller;
 use App\Models\MasterRequest;
 use App\Services\Masters\MasterReprintService;
 use Illuminate\Http\Request;
