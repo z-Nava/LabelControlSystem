@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Masters\StoreMasterPrintBatchRequest;
 use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 use App\Services\Masters\MasterPrintService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MasterPrintController extends Controller
@@ -17,23 +17,24 @@ class MasterPrintController extends Controller
 
     public function create(MasterRequest $master_request): View
     {
-        $mr = $master_request->load(['line','shift','folios' => fn($q) => $q->orderBy('folio_number')]);
+        $mr = $master_request->load([
+            'line',
+            'shift',
+            'folios' => fn ($q) => $q->orderBy('folio_number'),
+        ]);
 
         return view('master_print.create', compact('mr'));
     }
 
-    public function store(Request $request, MasterRequest $master_request): RedirectResponse
+    public function store(StoreMasterPrintBatchRequest $request, MasterRequest $master_request): RedirectResponse
     {
-        $data = $request->validate([
-            'batch_type' => ['required', 'in:print,reprint,rework'],
-            'reason' => ['nullable', 'string', 'max:500'],
-            'copies' => ['required', 'integer', 'min:1', 'max:20'],
-            'folio_ids' => ['required', 'array', 'min:1'],
-            'folio_ids.*' => ['integer', 'exists:master_request_folios,id'],
-        ]);
+        $data = $request->validated();
 
         // reason obligatorio si es reprint/rework
-        if (in_array($data['batch_type'], ['reprint','rework'], true) && empty(trim((string)($data['reason'] ?? '')))) {
+        if (
+            in_array($data['batch_type'], ['reprint', 'rework'], true)
+            && empty(trim((string) ($data['reason'] ?? '')))
+        ) {
             return back()
                 ->withErrors(['reason' => 'El motivo es obligatorio para reimpresión o retrabajo.'])
                 ->withInput();
@@ -46,7 +47,7 @@ class MasterPrintController extends Controller
             copies: (int) $data['copies'],
             reason: $data['reason'] ?? null,
             printedByUserId: auth()->id(),
-            printedByName: auth()->user()->name
+            printedByName: (string) auth()->user()?->name
         );
 
         return redirect()
@@ -58,7 +59,6 @@ class MasterPrintController extends Controller
 
     public function pdf(MasterPrintBatch $batch)
     {
-        // Por ahora solo retornamos vista simple (luego lo convertimos a PDF real)
         return $this->service->downloadPdf($batch);
     }
 
