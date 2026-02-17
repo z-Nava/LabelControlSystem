@@ -4,12 +4,13 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductionLineController;
 use App\Http\Controllers\OracleJobController;
-use App\Http\Controllers\MasterRequestController;
-use App\Http\Controllers\MasterPrintController;
-use App\Http\Controllers\MasterReprintController;
+use App\Http\Controllers\Masters\MasterRequestController;
+use App\Http\Controllers\Masters\MasterPrintController;
+use App\Http\Controllers\Masters\MasterReprintController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    Route::get('/', function () { return redirect()->route('login'); });
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 });
