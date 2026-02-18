@@ -32,8 +32,7 @@
     td{ border: var(--b) solid #000; padding:0; vertical-align:middle; page-break-inside: auto;}
 
     * { box-sizing: border-box; }
-    
-    tr { page-break-inside: avoid; }    
+    tr { page-break-inside: avoid; }
 
     .center{ text-align:center; }
     .left{ text-align:left; }
@@ -85,6 +84,23 @@
     .logo, .title, .job-label, .job-top, .job-bar,
     .np-top, .np-bar, .lote-top, .lote-bar,
     .sub-bar { line-height: 1; }
+
+    /* ====== CAMBIOS DEL DIFF ====== */
+    .page{ border-radius: 2.5mm; box-shadow: 0 2mm 6mm rgba(0,0,0,.08); }
+    td{ padding: 1.2mm; }
+    .bg-gray{ background: linear-gradient(180deg, #ececec 0%, #d9d9d9 100%); }
+    .bg-cream{ background: #fff8d9; }
+    .bg-peach{ background: #fde8dc; }
+    .title{ letter-spacing: .8px; }
+
+    .barcode{ width: 100%; max-height: 14mm; display:block; margin: 0 auto; }
+    .barcode--sm{ max-height: 10mm; }
+    .barcode--lg{ max-height: 18mm; }
+    .barcode-empty{ min-height: 6mm; display:flex; align-items:center; justify-content:center; color:#666; font-size:10px; }
+
+    @media print{
+      .page{ box-shadow:none; border-radius: 0; }
+    }
   </style>
 </head>
 <body>
@@ -148,6 +164,7 @@
 
           <td colspan="4" class="center">
             <div class="job-bar">*{{ $s['job'] ?? '' }}*</div>
+            <div class="job-bar"><svg class="barcode" data-value="{{ $s['job'] ?? '' }}"></svg></div>
           </td>
 
           <!-- Fecha value (grande crema, como Excel) -->
@@ -160,61 +177,58 @@
             <td colspan="5" class="center bold">{{ $s['model'] ?? '' }}</td>
 
             <td colspan="2" class="bg-gray bold center">Folio:</td>
-            <!-- Aquí “absorbo” el espacio extra para eliminar el cuadrito -->
             <td colspan="4" class="center bold">{{ $s['folio_no'] ?? '' }}</td>
 
-            <!-- Fecha value (sigue igual) -->
             <td colspan="2" class="bg-cream center bold">{{ $s['date'] ?? '' }}</td>
         </tr>
 
-
-        <!-- BLOQUE NP / LOTE -->
         <!-- BLOQUE NP / LOTE (Lote más ancho y NP mejor separado) -->
-<tr class="h-np">
-  <!-- NP label -->
-  <td colspan="2" class="bg-gray bold center">Np Ensamble:</td>
+        <tr class="h-np">
+          <!-- NP label -->
+          <td colspan="2" class="bg-gray bold center">Np Ensamble:</td>
 
-  <!-- NP data (ahora en 3 filas bien separadas) -->
-  <td colspan="8" style="padding:0;">
-    <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-      <tr style="height: 16mm;">
-        <td class="center" style="border:0;">
-          <div class="np-top">{{ $s['np'] ?? '' }}</div>
-        </td>
-      </tr>
-      <tr style="height: 12mm;">
-        <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0; padding: 0 3mm;">
-          <div class="np-desc">{{ $s['desc'] ?? '' }}</div>
-        </td>
-      </tr>
-      <tr style="height: 32mm;">
-        <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;">
-          <div class="np-bar">*{{ $s['np'] ?? '' }}*</div>
-        </td>
-      </tr>
-    </table>
-  </td>
-
-        <!-- Lote label -->
-        <td colspan="2" class="bg-gray bold center">Lote</td>
-
-        <!-- Lote data (MÁS ANCHO: colspan 3) -->
-        <td colspan="3" style="padding:0;">
+          <!-- NP data -->
+          <td colspan="8" style="padding:0;">
             <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-            <tr style="height: 24mm;">
+              <tr style="height: 16mm;">
                 <td class="center" style="border:0;">
-                <div class="lote-top">{{ $s['lote'] ?? '' }}</div>
+                  <div class="np-top">{{ $s['np'] ?? '' }}</div>
                 </td>
-            </tr>
-            <tr style="height: 36mm;">
+              </tr>
+              <tr style="height: 12mm;">
+                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0; padding: 0 3mm;">
+                  <div class="np-desc">{{ $s['desc'] ?? '' }}</div>
+                </td>
+              </tr>
+              <tr style="height: 32mm;">
                 <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;">
-                <div class="lote-bar">*{{ $s['lote'] ?? '' }}*</div>
+                  <div class="np-bar">*{{ $s['np'] ?? '' }}*</div>
+                  <div class="np-bar"><svg class="barcode" data-value="{{ $s['np'] ?? '' }}"></svg></div>
                 </td>
-            </tr>
+              </tr>
             </table>
-        </td>
-        </tr>
+          </td>
 
+          <!-- Lote label -->
+          <td colspan="2" class="bg-gray bold center">Lote</td>
+
+          <!-- Lote data (colspan 3) -->
+          <td colspan="3" style="padding:0;">
+            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+              <tr style="height: 24mm;">
+                <td class="center" style="border:0;">
+                  <div class="lote-top">{{ $s['lote'] ?? '' }}</div>
+                </td>
+              </tr>
+              <tr style="height: 36mm;">
+                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;">
+                  <div class="lote-bar">*{{ $s['lote'] ?? '' }}*</div>
+                  <div class="lote-bar"><svg class="barcode" data-value="{{ $s['lote'] ?? '' }}"></svg></div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
         <!-- SUB/LOCAL/QTY/OBS HEADER -->
         <tr class="h-subh">
@@ -234,9 +248,21 @@
 
         <!-- SUB/LOCAL/QTY/OBS row barcodes -->
         <tr class="h-sub2">
-          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['subinventory'] ?? '' }}*</div></td>
-          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['local'] ?? '' }}*</div></td>
-          <td colspan="3" class="center"><div class="sub-bar">*{{ $s['qty_pallet'] ?? '' }}*</div></td>
+          <td colspan="4" class="center">
+            <div class="sub-bar">*{{ $s['subinventory'] ?? '' }}*</div>
+            <div class="sub-bar"><svg class="barcode" data-value="{{ $s['subinventory'] ?? '' }}"></svg></div>
+          </td>
+
+          <td colspan="4" class="center">
+            <div class="sub-bar">*{{ $s['local'] ?? '' }}*</div>
+            <div class="sub-bar"><svg class="barcode" data-value="{{ $s['local'] ?? '' }}"></svg></div>
+          </td>
+
+          <td colspan="3" class="center">
+            <div class="sub-bar">*{{ $s['qty_pallet'] ?? '' }}*</div>
+            <div class="sub-bar"><svg class="barcode" data-value="{{ $s['qty_pallet'] ?? '' }}"></svg></div>
+          </td>
+
           <td colspan="4"></td>
         </tr>
 
@@ -258,6 +284,29 @@
     </div>
   </div>
 @endforeach
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
+<script>
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.barcode[data-value]').forEach((barcodeEl) => {
+      const value = (barcodeEl.dataset.value || '').trim();
+      if (!value) {
+        barcodeEl.outerHTML = '<div class="barcode-empty">Sin código</div>';
+        return;
+      }
+
+      const normalized = value.toUpperCase();
+      JsBarcode(barcodeEl, normalized, {
+        format: 'CODE39',
+        displayValue: false,
+        margin: 0,
+        width: 1.4,
+        height: 44,
+        background: '#ffffff'
+      });
+    });
+  });
+</script>
 
 @if(($mode ?? null) === 'print')
   <script>
