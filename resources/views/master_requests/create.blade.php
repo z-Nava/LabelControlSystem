@@ -2,14 +2,14 @@
 
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
-    <div class="flex items-start justify-between">
+    <div class="flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Nueva requisición Master</h1>
             <p class="text-slate-600 mt-1">Captura la requisición del papel y autollenamos con Oracle Jobs.</p>
         </div>
 
         <a href="{{ route('dashboard')}}"
-           class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
+           class="shrink-0 rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
             Volver
         </a>
     </div>
@@ -20,135 +20,241 @@
         </div>
     @endif
 
-    <form class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4" method="POST" action="{{ route('master_requests.store') }}">
+    {{-- Resumen rápido --}}
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div class="rounded-xl border bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Fecha</div>
+            <div id="previewDate" class="font-semibold text-slate-900">—</div>
+        </div>
+        <div class="rounded-xl border bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Línea / Turno</div>
+            <div id="previewLineShift" class="font-semibold text-slate-900">—</div>
+        </div>
+        <div class="rounded-xl border bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Job(s)</div>
+            <div id="previewJobs" class="font-semibold text-slate-900">—</div>
+        </div>
+        <div class="rounded-xl border bg-slate-50 p-3">
+            <div class="text-xs text-slate-500">Tipo de Master</div>
+            <div id="previewType" class="font-semibold text-slate-900">—</div>
+        </div>
+    </div>
+
+    <form class="mt-6 space-y-4" method="POST" action="{{ route('master_requests.store') }}">
         @csrf
 
-        <div>
-            <label class="text-sm text-slate-600">Fecha</label>
-            <input name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}"
-                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-        </div>
+        {{-- 1) DATOS GENERALES --}}
+        <details open class="group rounded-2xl border">
+            <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-slate-900">1) Datos generales</div>
+                    <div class="text-xs text-slate-500">Fecha, semana, línea, turno y líder.</div>
+                </div>
+                <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
+            </summary>
 
-        <div>
-            <label class="text-sm text-slate-600">Semana</label>
-            <input name="week" type="number" min="1" max="53" value="{{ old('week', now()->weekOfYear) }}"
-                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-        </div>
+            <div class="border-t p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="text-sm text-slate-600">Fecha</label>
+                    <input id="requestDate" name="request_date" type="date"
+                           value="{{ old('request_date', now()->toDateString()) }}"
+                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                </div>
 
-        <div>
-            <label class="text-sm text-slate-600">Línea</label>
-            <select name="line_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                <option value="">Selecciona...</option>
-                @foreach($lines as $line)
-                    <option value="{{ $line->id }}" @selected(old('line_id') == $line->id)>{{ $line->code }} - {{ $line->name }}</option>
-                @endforeach
-            </select>
-        </div>
+                <div>
+                    <label class="text-sm text-slate-600">Semana</label>
+                    <input name="week" type="number" min="1" max="53"
+                           value="{{ old('week', now()->weekOfYear) }}"
+                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                </div>
 
-        <div>
-            <label class="text-sm text-slate-600">Turno</label>
-            <select name="shift_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                <option value="">Selecciona...</option>
-                @foreach($shifts as $shift)
-                    <option value="{{ $shift->id }}" @selected(old('shift_id') == $shift->id)>{{ $shift->code }} - {{ $shift->name }}</option>
-                @endforeach
-            </select>
-        </div>
+                <div>
+                    <label class="text-sm text-slate-600">Línea</label>
+                    <select id="lineSelect" name="line_id"
+                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                        <option value="">Selecciona...</option>
+                        @foreach($lines as $line)
+                            <option value="{{ $line->id }}" @selected(old('line_id') == $line->id)>
+                                {{ $line->code }} - {{ $line->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-        <div>
-            <label class="text-sm text-slate-600">Líder</label>
-            <input name="leader_name" value="{{ old('leader_name') }}"
-                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-        </div>
+                <div>
+                    <label class="text-sm text-slate-600">Turno</label>
+                    <select id="shiftSelect" name="shift_id"
+                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                        <option value="">Selecciona...</option>
+                        @foreach($shifts as $shift)
+                            <option value="{{ $shift->id }}" @selected(old('shift_id') == $shift->id)>
+                                {{ $shift->code }} - {{ $shift->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-        <div>
-            <label class="text-sm text-slate-600">Tipo de Master</label>
-            <select name="request_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                <option value="">Selecciona...</option>
-                <option value="assembly" @selected(old('request_type')=='assembly')>HOJA MASTER - ENSAMBLE</option>
-                <option value="batteries_assembly" @selected(old('request_type')=='batteries_assembly')>HOJA MASTER - ENSAMBLE BATERÍAS</option>
-                <option value="assembly_packaging" @selected(old('request_type')=='assembly_packaging')>HOJA MASTER - ENSAMBLE Y EMPAQUE</option>
-                <option value="motors_molding" @selected(old('request_type')=='motors_molding')>HOJA MASTER - MOTORES Y MOLDEO</option>
-            </select>
-        </div>
-
-        <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="text-sm text-slate-600">Job Ensamble</label>
-                <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-                <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-1"></p>
+                <div class="md:col-span-2">
+                    <label class="text-sm text-slate-600">Líder</label>
+                    <input name="leader_name" value="{{ old('leader_name') }}"
+                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                </div>
             </div>
+        </details>
 
-            <div>
-                <label class="text-sm text-slate-600">Job Empaque (si aplica)</label>
-                <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-                <p id="jobPackagingHint" class="text-xs text-slate-500 mt-1"></p>
-            </div>
-        </div>
+        {{-- 2) TIPO MASTER --}}
+        <details open class="group rounded-2xl border">
+            <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-slate-900">2) Tipo de Master</div>
+                    <div class="text-xs text-slate-500">Define el template que se imprimirá.</div>
+                </div>
+                <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
+            </summary>
 
-        <div>
-            <label class="text-sm text-slate-600">Custom PO</label>
-            <input id="poNumber" name="po_number" value="{{ old('po_number') }}"
-                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-        </div>
-
-        <div>
-            <label class="text-sm text-slate-600">Destino (Ship Code)</label>
-            <input id="destination" name="destination" value="{{ old('destination') }}"
-                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-        </div>
-
-        <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="text-sm text-slate-600">Folios del</label>
-                <input name="folios_from" type="number" min="1" value="{{ old('folios_from') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-            </div>
-
-            <div>
-                <label class="text-sm text-slate-600">al</label>
-                <input name="folios_to" type="number" min="1" value="{{ old('folios_to') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-            </div>
-
-            <div>
-                <label class="text-sm text-slate-600">Std pack (pzas/pallet)</label>
-                <input name="std_pack_qty" type="number" min="1" value="{{ old('std_pack_qty') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-            </div>
-
-            <div>
-                <label class="text-sm text-slate-600">Tipo</label>
-                <select name="kind" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                    <option value="new" @selected(old('kind','new')=='new')>Nuevo</option>
-                    <option value="reposition" @selected(old('kind')=='reposition')>Reposición</option>
+            <div class="border-t p-4">
+                <label class="text-sm text-slate-600">Tipo de Master</label>
+                <select id="requestType" name="request_type"
+                        class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                    <option value="">Selecciona...</option>
+                    <option value="assembly" @selected(old('request_type')=='assembly')>HOJA MASTER - ENSAMBLE</option>
+                    <option value="batteries_assembly" @selected(old('request_type')=='batteries_assembly')>HOJA MASTER - ENSAMBLE BATERÍAS</option>
+                    <option value="assembly_packaging" @selected(old('request_type')=='assembly_packaging')>HOJA MASTER - ENSAMBLE Y EMPAQUE</option>
+                    <option value="motors_molding" @selected(old('request_type')=='motors_molding')>HOJA MASTER - MOTORES Y MOLDEO</option>
                 </select>
+                <p class="text-xs text-slate-500 mt-2">
+                    Tip: si seleccionas “Ensamble y Empaque”, captura ambos jobs.
+                </p>
             </div>
-        </div>
+        </details>
 
-        <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="text-sm text-slate-600">Folio parcial (opcional)</label>
-                <input name="partial_folio" type="number" min="1" value="{{ old('partial_folio') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+        {{-- 3) JOBS (ORACLE) --}}
+        <details open class="group rounded-2xl border">
+            <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-slate-900">3) Jobs (Oracle)</div>
+                    <div class="text-xs text-slate-500">Captura Job(s) y autollenamos información.</div>
+                </div>
+                <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
+            </summary>
+
+            <div class="border-t p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-xl border bg-slate-50 p-3">
+                    <label class="text-sm text-slate-700 font-medium">Job Ensamble</label>
+                    <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"
+                           class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                           placeholder="Ej: 393383">
+                    <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-2"></p>
+                </div>
+
+                <div class="rounded-xl border bg-slate-50 p-3">
+                    <label class="text-sm text-slate-700 font-medium">Job Empaque (si aplica)</label>
+                    <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"
+                           class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                           placeholder="Opcional">
+                    <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>
+                </div>
+
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-slate-600">Custom PO</label>
+                        <input id="poNumber" name="po_number" value="{{ old('po_number') }}"
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                               placeholder="Se autollenará si Oracle lo trae">
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-slate-600">Destino (Ship Code)</label>
+                        <input id="destination" name="destination" value="{{ old('destination') }}"
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                               placeholder="Se autollenará si Oracle lo trae">
+                    </div>
+                </div>
             </div>
+        </details>
 
-            <div>
-                <label class="text-sm text-slate-600">Pzas pallet parcial (opcional)</label>
-                <input name="partial_qty" type="number" min="1" value="{{ old('partial_qty') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+        {{-- 4) FOLIOS Y CANTIDADES --}}
+        <details open class="group rounded-2xl border">
+            <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-slate-900">4) Folios y cantidades</div>
+                    <div class="text-xs text-slate-500">Rango de folios, std pack y tipo (nuevo/reposición).</div>
+                </div>
+                <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
+            </summary>
+
+            <div class="border-t p-4 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="text-sm text-slate-600">Folios del</label>
+                        <input name="folios_from" type="number" min="1" value="{{ old('folios_from') }}"
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-slate-600">al</label>
+                        <input name="folios_to" type="number" min="1" value="{{ old('folios_to') }}"
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-slate-600">Std pack (pzas/pallet)</label>
+                        <input name="std_pack_qty" type="number" min="1" value="{{ old('std_pack_qty') }}"
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-slate-600">Tipo</label>
+                        <select name="kind"
+                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+                            <option value="new" @selected(old('kind','new')=='new')>Nuevo</option>
+                            <option value="reposition" @selected(old('kind')=='reposition')>Reposición</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border bg-slate-50 p-3">
+                    <div class="text-sm font-semibold text-slate-800">Parcial (opcional)</div>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Úsalo cuando el último pallet no está completo (folio y piezas parciales).
+                    </p>
+
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm text-slate-600">Folio parcial</label>
+                            <input name="partial_folio" type="number" min="1" value="{{ old('partial_folio') }}"
+                                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                        </div>
+
+                        <div>
+                            <label class="text-sm text-slate-600">Pzas pallet parcial</label>
+                            <input name="partial_qty" type="number" min="1" value="{{ old('partial_qty') }}"
+                                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </details>
 
-        <div class="md:col-span-2">
-            <label class="text-sm text-slate-600">Notas</label>
-            <textarea name="notes" rows="3"
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('notes') }}</textarea>
-        </div>
+        {{-- 5) EXTRAS --}}
+        <details class="group rounded-2xl border">
+            <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
+                <div>
+                    <div class="font-semibold text-slate-900">5) Extras</div>
+                    <div class="text-xs text-slate-500">Notas internas / observaciones.</div>
+                </div>
+                <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
+            </summary>
 
-        <div class="md:col-span-2">
+            <div class="border-t p-4">
+                <label class="text-sm text-slate-600">Notas</label>
+                <textarea name="notes" rows="3"
+                          class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('notes') }}</textarea>
+            </div>
+        </details>
+
+        {{-- ACCIONES --}}
+        <div class="pt-2">
             <button class="w-full rounded-xl bg-red-600 text-white py-3 font-semibold hover:bg-red-500 transition">
                 Guardar requisición Master
             </button>
@@ -160,17 +266,47 @@
 (function () {
     const lookupUrl = @json(route('oracle.lookup_job'));
 
-    const jobAssembly = document.getElementById('jobAssembly');
+    const requestDate  = document.getElementById('requestDate');
+    const lineSelect   = document.getElementById('lineSelect');
+    const shiftSelect  = document.getElementById('shiftSelect');
+    const requestType  = document.getElementById('requestType');
+
+    const jobAssembly  = document.getElementById('jobAssembly');
     const jobPackaging = document.getElementById('jobPackaging');
 
-    const poNumber = document.getElementById('poNumber');
-    const destination = document.getElementById('destination');
+    const poNumber     = document.getElementById('poNumber');
+    const destination  = document.getElementById('destination');
 
-    const hintA = document.getElementById('jobAssemblyHint');
-    const hintP = document.getElementById('jobPackagingHint');
+    const hintA        = document.getElementById('jobAssemblyHint');
+    const hintP        = document.getElementById('jobPackagingHint');
+
+    const previewDate      = document.getElementById('previewDate');
+    const previewLineShift = document.getElementById('previewLineShift');
+    const previewJobs      = document.getElementById('previewJobs');
+    const previewType      = document.getElementById('previewType');
 
     let timerA = null;
     let timerP = null;
+
+    function getSelectedText(sel) {
+        if (!sel || !sel.selectedOptions || !sel.selectedOptions[0]) return '';
+        return sel.selectedOptions[0].textContent.trim();
+    }
+
+    function refreshPreview() {
+        previewDate.textContent = requestDate?.value || '—';
+
+        const lineTxt  = getSelectedText(lineSelect);
+        const shiftTxt = getSelectedText(shiftSelect);
+        previewLineShift.textContent = (lineTxt || shiftTxt) ? `${lineTxt || '—'} · ${shiftTxt || '—'}` : '—';
+
+        const ja = (jobAssembly?.value || '').trim();
+        const jp = (jobPackaging?.value || '').trim();
+        previewJobs.textContent = (ja || jp) ? [ja, jp].filter(Boolean).join(' / ') : '—';
+
+        const rt = (requestType?.value || '').trim();
+        previewType.textContent = rt ? rt.replaceAll('_',' ') : '—';
+    }
 
     async function lookup(jobNumber) {
         const url = new URL(lookupUrl, window.location.origin);
@@ -180,50 +316,67 @@
         return await res.json();
     }
 
+    function setHint(el, type, msg) {
+        el.className = 'text-xs mt-2 ' + (type === 'ok' ? 'text-emerald-700' : type === 'warn' ? 'text-amber-700' : 'text-slate-500');
+        el.textContent = msg || '';
+    }
+
     async function handleAssembly() {
         const v = (jobAssembly.value || '').trim();
-        if (!v) { hintA.textContent = ''; return; }
+        refreshPreview();
+        if (!v) { setHint(hintA, 'muted', ''); return; }
 
+        setHint(hintA, 'muted', 'Buscando en Oracle…');
         const data = await lookup(v);
 
         if (!data.found) {
-            hintA.textContent = 'No encontrado en Oracle Jobs.';
+            setHint(hintA, 'warn', 'No encontrado en Oracle Jobs.');
             return;
         }
 
-        hintA.textContent = `NP: ${data.assembly || '-'} | ${data.part_description || ''}`;
+        setHint(hintA, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
 
-        // Autollenar destino y PO (solo si están vacíos para no pisar manual)
         if (!destination.value) destination.value = data.ship_code || '';
         if (!poNumber.value) poNumber.value = data.ttl_cust_po || '';
+        refreshPreview();
     }
 
     async function handlePackaging() {
         const v = (jobPackaging.value || '').trim();
-        if (!v) { hintP.textContent = ''; return; }
+        refreshPreview();
+        if (!v) { setHint(hintP, 'muted', ''); return; }
 
+        setHint(hintP, 'muted', 'Buscando en Oracle…');
         const data = await lookup(v);
 
         if (!data.found) {
-            hintP.textContent = 'No encontrado en Oracle Jobs.';
+            setHint(hintP, 'warn', 'No encontrado en Oracle Jobs.');
             return;
         }
 
-        hintP.textContent = `NP: ${data.assembly || '-'} | ${data.part_description || ''}`;
+        setHint(hintP, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
 
         if (!destination.value) destination.value = data.ship_code || '';
         if (!poNumber.value) poNumber.value = data.ttl_cust_po || '';
+        refreshPreview();
     }
 
-    jobAssembly.addEventListener('input', () => {
+    jobAssembly?.addEventListener('input', () => {
         clearTimeout(timerA);
         timerA = setTimeout(handleAssembly, 350);
     });
 
-    jobPackaging.addEventListener('input', () => {
+    jobPackaging?.addEventListener('input', () => {
         clearTimeout(timerP);
         timerP = setTimeout(handlePackaging, 350);
     });
+
+    [requestDate, lineSelect, shiftSelect, requestType, jobAssembly, jobPackaging].forEach((el) => {
+        el?.addEventListener('change', refreshPreview);
+        el?.addEventListener('input', refreshPreview);
+    });
+
+    refreshPreview();
 })();
 </script>
 @endsection
