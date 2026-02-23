@@ -4,240 +4,350 @@
   <meta charset="utf-8">
   <title>Master - Ensamble y Empaque</title>
 
+  @vite('resources/css/app.css')
+
   <style>
     @page { size: letter landscape; margin: 8mm; }
-
-    :root{
-      --sheet-w: 258mm;
-      --b: 1px;
-
-      --gray: #d9d9d9;
-      --cream: #fff2cc;
-      --peach: #fbe5d6;
-      --yellow: #fff200;
-    }
-
-    html, body { margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; color:#000; }
-    body { background:#f3f4f6; }
-    .sheet { width: var(--sheet-w); margin: 0 auto; }
+    body { margin:0; }
+    .sheet { width: 258mm; margin: 0 auto; }
     .sheet + .sheet { page-break-before: always; }
-
-    .page{ background:#fff; border: var(--b) solid #000; overflow:hidden; }
-
-    table{ width:100%; border-collapse:collapse; table-layout:fixed; page-break-inside: avoid; }
-    td{ border: var(--b) solid #000; padding:0; vertical-align:middle; page-break-inside: auto; }
-
-    * { box-sizing: border-box; }
-    tr { page-break-inside: avoid; }
-
-    .center{ text-align:center; }
-    .left{ text-align:left; }
-    .bold{ font-weight:700; }
-
-    .bg-gray{ background: var(--gray); }
-    .bg-cream{ background: var(--cream); }
-    .bg-peach{ background: var(--peach); }
-    .bg-yellow{ background: var(--yellow); }
-
-    .title{ font-size: 22px; font-weight: 800; letter-spacing:.4px; }
-    .logo{ font-size: 34px; font-weight: 900; color:#c00000; font-style: italic; line-height:1; padding-left:6mm; }
-    .destino{ font-size: 16px; font-weight: 700; }
-    .ob-title{ font-size: 44px; font-weight: 800; letter-spacing: .6px; }
-
-    .job-label{ font-size: 22px; font-weight: 800; }
-    .job-top{ font-size: 42px; font-weight: 400; line-height: 1; }
-    .job-bar{ font-size: 54px; font-weight: 500; line-height: 1; }
-
-    .po-top{ font-size: 44px; font-weight: 800; line-height: 1; }
-    .po-bar{ font-size: 52px; font-weight: 500; line-height: 1; }
-
-    .np-top{ font-size: 42px; font-weight: 800; line-height: 1; }
-    .np-desc{ font-size: 11px; line-height: 1.1; padding: 0 3mm; }
-    .np-bar{ font-size: 52px; font-weight: 500; line-height: 1; }
-
-    .lote-title{ font-size: 50px; font-weight: 800; line-height: 1.05; }
-    .lote-top{ font-size: 42px; font-weight: 400; line-height: 1; }
-    .lote-bar{ font-size: 60px; font-weight: 500; line-height: 1; }
-
-    .sub-mid{ font-size: 54px; font-weight: 400; line-height: 1; }
-    .sub-bar{ font-size: 66px; font-weight: 500; line-height: 1; }
-
-    .h-header{ height: 12mm; }
-    .h-top1{ height: 13mm; }
-    .h-top2{ height: 13mm; }
-    .h-top3{ height: 11mm; }
-    .h-np-a{ height: 28mm; }
-    .h-np-b{ height: 28mm; }
-    .h-subh{ height: 10mm; }
-    .h-sub1{ height: 16mm; }
-    .h-sub2{ height: 18mm; }
-    .h-foot-h{ height: 10mm; }
-    .h-foot{ height: 36mm; }
-
-    @media print{
-      body{ background:#fff; }
-      .sheet{ margin:0; }
-    }
+    table, tr, td { page-break-inside: avoid; }
   </style>
 </head>
-<body>
+
+<body class="bg-slate-100 print:bg-white">
 
 @foreach($sheets as $s)
-  <div class="sheet">
-    <div class="page">
-      <table>
+  <div class="sheet py-2">
+    <div class="bg-white border border-black rounded-[2.5mm] print:rounded-none shadow-sm print:shadow-none overflow-hidden">
+      <table class="w-full border-collapse table-fixed">
+
+        <!-- GRID FIJO: 15 columnas -->
         <colgroup>
           <col style="width:17.5mm"><col style="width:17.5mm"><col style="width:17.5mm"><col style="width:17.5mm"><col style="width:17.5mm">
           <col style="width:14.32mm"><col style="width:14.32mm"><col style="width:19.09mm"><col style="width:19.09mm">
           <col style="width:17.5mm"><col style="width:17.5mm"><col style="width:16.7mm"><col style="width:16.7mm"><col style="width:17.5mm"><col style="width:17.82mm">
         </colgroup>
 
-        <tr class="h-header">
-          <td colspan="3" class="left"><div class="logo">Milwaukee</div></td>
-          <td colspan="8" class="center"><div class="title">PRODUCTO TERMINADO - ENSAMBLE Y EMPAQUE</div></td>
-          <td colspan="2" class="bg-gray center"><div class="destino">Destino</div></td>
-          <td colspan="2" class="bg-yellow center"><div class="ob-title">OB EXCELLENCE</div></td>
-        </tr>
+        @php
+          $cell  = 'border border-black align-middle';
+          $pad   = 'p-[1.2mm]';
 
-        <tr class="h-top1">
-          <td colspan="2" class="bg-gray bold center">Líder:</td>
-          <td colspan="3" class="bg-cream center bold">{{ $s['leader'] ?? '' }}</td>
+          $gray  = 'bg-gradient-to-b from-slate-100 to-slate-300';
+          $cream = 'bg-[#fff8d9]';
+          $peach = 'bg-[#fde8dc]';
+          $yellow= 'bg-[#fff200]';
+        @endphp
 
-          <td colspan="1" class="bg-gray bold center">Turno:</td>
-          <td colspan="1" class="bg-cream center bold">{{ $s['shift'] ?? '' }}</td>
-
-          <td colspan="2" rowspan="2" class="bg-gray center"><div class="job-label">Job Ensamble:</div></td>
-
-          <td colspan="4" class="bg-peach center"><div class="job-top">{{ $s['job'] ?? '' }}</div></td>
-
-          <td colspan="2" class="bg-gray bold center">Fecha:</td>
-        </tr>
-
-        <tr class="h-top2">
-          <td colspan="2" class="bg-gray bold center">Línea:</td>
-          <td colspan="5" class="center">{{ $s['line'] ?? '' }}</td>
-
-          <td colspan="4" class="center"><div class="job-bar">*{{ $s['job'] ?? '' }}*</div></td>
-
-          <td colspan="2" rowspan="2" class="bg-cream center"></td>
-        </tr>
-
-        <tr class="h-top3">
-          <td colspan="2" class="bg-gray bold center">Modelo:</td>
-          <td colspan="5" class="center">{{ $s['model'] ?? '' }}</td>
-
-          <td colspan="2" class="bg-gray bold center">Folio:</td>
-          <td colspan="4" class="center">{{ $s['folio_no'] ?? '' }}</td>
-
-          <td colspan="2" class="bg-gray bold center">Custom PO</td>
-          <td colspan="2" class="center"><div class="po-top">{{ $s['po_number'] ?? '' }}</div></td>
-        </tr>
-
-        <tr class="h-np-a">
-          <td colspan="2" class="bg-gray bold center">Np Ensamble:</td>
-
-          <td colspan="8" style="padding:0;">
-            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-              <tr style="height: 10mm;">
-                <td class="center" style="border:0;"><div class="np-top">{{ $s['np'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 8mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-desc">{{ $s['desc'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 14mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-bar">*{{ $s['np'] ?? '' }}*</div></td>
-              </tr>
-            </table>
+        <!-- HEADER -->
+        <tr style="height:12mm">
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-left">
+            <div class="text-[34px] font-black italic leading-none text-[#c00000] pl-[6mm]">Milwaukee</div>
           </td>
 
-          <td colspan="2" class="bg-gray center"><div class="lote-title">Lote<br>Ensamble:</div></td>
+          <td colspan="9" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-extrabold tracking-[.8px] leading-none">
+              PRODUCTO TERMINADO - ENSAMBLE Y EMPAQUE
+            </div>
+          </td>
 
-          <td colspan="3" style="padding:0;">
-            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-              <tr style="height: 12mm;">
-                <td class="center" style="border:0;"><div class="lote-top">{{ $s['lote'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 16mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="lote-bar">*{{ $s['lote'] ?? '' }}*</div></td>
-              </tr>
-            </table>
+          <!-- DESTINO (solo etiqueta como en imagen) -->
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center">
+            <div class="text-[16px] font-bold leading-none">Destino</div>
+          </td>
+
+          <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $yellow }} text-center">
+            <div class="text-[18px] font-extrabold leading-none">OB EXCELLENCE</div>
           </td>
         </tr>
 
-        <tr class="h-np-b">
-          <td colspan="2" class="bg-gray bold center">Np Empaque:</td>
-
-          <td colspan="8" style="padding:0;">
-            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-              <tr style="height: 10mm;">
-                <td class="center" style="border:0;"><div class="np-top">{{ $s['np_packaging'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 8mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-desc">{{ $s['desc_packaging'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 14mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-bar">*{{ $s['np_packaging'] ?? '' }}*</div></td>
-              </tr>
-            </table>
+        <!-- ROW 1: Líder / Turno / Job Ensamble / Fecha -->
+        <tr style="height:13mm">
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Líder:</td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $cream }} text-center font-bold">
+            {{ $s['leader'] ?? '' }}
           </td>
 
-          <td colspan="2" class="bg-gray center"><div class="lote-title">Lote<br>Empaque:</div></td>
+          <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Turno:</td>
+          <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $cream }} text-center font-bold">
+            {{ $s['shift'] ?? '' }}
+          </td>
 
-          <td colspan="3" style="padding:0;">
-            <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
-              <tr style="height: 12mm;">
-                <td class="center" style="border:0;"><div class="lote-top">{{ $s['lote_packaging'] ?? '' }}</div></td>
-              </tr>
-              <tr style="height: 16mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="lote-bar">*{{ $s['lote_packaging'] ?? '' }}*</div></td>
-              </tr>
-            </table>
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-extrabold">
+            Job Ensamble:
+          </td>
+
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $peach }} text-center">
+            <div class="text-[18px] font-semibold leading-none">{{ $s['job'] ?? '' }}</div>
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['job'] ?? '' }}"></svg>
+          </td>
+
+          <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Fecha:</td>
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $cream }} text-center font-bold">
+            {{ $s['date'] ?? '' }}
           </td>
         </tr>
 
-        <tr class="h-subh">
-          <td colspan="4" class="bg-gray bold center">Subinventory:</td>
-          <td colspan="4" class="bg-gray bold center">Local:</td>
-          <td colspan="3" class="bg-gray bold center">Cantidad en pallet:</td>
-          <td colspan="4" class="bg-gray bold center">Observaciones:</td>
+        <!-- ROW 2: Línea / Job Empaque / Custom PO -->
+        <tr style="height:13mm">
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Línea:</td>
+          <td colspan="5" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['line'] ?? '' }}</div>
+          </td>
+
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-extrabold">
+            Job Empaque:
+          </td>
+
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $peach }} text-center">
+            <div class="text-[18px] font-semibold leading-none">{{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}</div>
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}"></svg>
+          </td>
+
+          <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Custom PO</td>
+          <td colspan="2" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[18px] font-semibold leading-none">{{ $s['po_number'] ?? '' }}</div>
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['po_number'] ?? '' }}"></svg>
+          </td>
         </tr>
 
-        <tr class="h-sub1">
-          <td colspan="4" class="center"><div class="sub-mid">{{ $s['subinventory'] ?? '' }}</div></td>
-          <td colspan="4" class="center"><div class="sub-mid">{{ $s['local'] ?? '' }}</div></td>
-          <td colspan="3" class="center"><div class="sub-mid">{{ $s['qty_pallet'] ?? '' }}</div></td>
-          <td colspan="4"></td>
+        <!-- ROW 3: Modelo / Folio -->
+        <tr style="height:11mm">
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Modelo:</td>
+          <td colspan="5" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['model'] ?? '' }}</div>
+          </td>
+
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Folio:</td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['folio_no'] ?? '' }}</div>
+          </td>
+
+          <!-- Bloque derecho vacío como el template de la imagen -->
+          <td colspan="3" class="{{ $cell }} {{ $pad }}"></td>
         </tr>
 
-        <tr class="h-sub2">
-          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['subinventory'] ?? '' }}*</div></td>
-          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['local'] ?? '' }}*</div></td>
-          <td colspan="3" class="center"><div class="sub-bar">*{{ $s['qty_pallet'] ?? '' }}*</div></td>
-          <td colspan="4"></td>
+        <!-- BLOQUE NP ENSAMBLE -->
+        <tr style="height:28mm">
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Np Ensamble:</td>
+
+          <td colspan="10" class="{{ $cell }} p-0">
+            <div class="h-full flex flex-col">
+              <div class="h-[7mm] flex items-center justify-center">
+                <div class="text-[22px] font-semibold leading-none">{{ $s['np'] ?? '' }}</div>
+              </div>
+
+              <div class="h-[7mm] border-t border-black flex items-center justify-center px-[3mm]">
+                <div class="text-[11px] leading-tight text-center line-clamp-2 break-words">
+                  {{ $s['desc'] ?? '' }}
+                </div>
+              </div>
+
+              <div class="flex-1 border-t border-black flex flex-col items-center justify-center px-[1mm]">
+                <svg class="js-barcode block w-full mt-[.6mm]"
+                     data-format="CODE39"
+                     data-height="42"
+                     data-width="1.15"
+                     data-margin="2"
+                     data-value="{{ $s['np'] ?? '' }}"></svg>
+              </div>
+            </div>
+          </td>
+
+          <td colspan="3" class="{{ $cell }} p-0">
+            <div class="h-full flex flex-col">
+              <div class="h-1/2 {{ $gray }} border-b border-black flex items-center justify-center">
+                <div class="text-[16px] font-bold leading-tight text-center">
+                  Lote<br>Ensamble:
+                </div>
+              </div>
+
+              <div class="flex-1 flex flex-col items-center justify-center px-[1mm]">
+                <div class="text-[18px] font-semibold leading-none">{{ $s['lote'] ?? '' }}</div>
+                <svg class="js-barcode block w-full mt-[.6mm]"
+                     data-format="CODE39"
+                     data-height="40"
+                     data-width="1.05"
+                     data-margin="2"
+                     data-value="{{ $s['lote'] ?? '' }}"></svg>
+              </div>
+            </div>
+          </td>
         </tr>
 
-        <tr class="h-foot-h">
-          <td colspan="4" class="bg-gray bold center">LIBERACION IPQC</td>
-          <td colspan="4" class="bg-gray bold center">LIBERACION OQC</td>
-          <td colspan="4" class="bg-gray bold center">PRODUCTION SUPPORT</td>
-          <td colspan="3" class="bg-gray bold center">ALMACÉN:</td>
+        <!-- BLOQUE NP EMPAQUE -->
+        <tr style="height:28mm">
+          <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Np Empaque:</td>
+
+          <td colspan="10" class="{{ $cell }} p-0">
+            <div class="h-full flex flex-col">
+              <div class="h-[7mm] flex items-center justify-center">
+                <div class="text-[22px] font-semibold leading-none">{{ $s['np_packaging'] ?? '' }}</div>
+              </div>
+
+              <div class="h-[7mm] border-t border-black flex items-center justify-center px-[3mm]">
+                <div class="text-[11px] leading-tight text-center line-clamp-2 break-words">
+                  {{ $s['desc_packaging'] ?? '' }}
+                </div>
+              </div>
+
+              <div class="flex-1 border-t border-black flex flex-col items-center justify-center px-[1mm]">
+                <svg class="js-barcode block w-full mt-[.6mm]"
+                     data-format="CODE39"
+                     data-height="42"
+                     data-width="1.15"
+                     data-margin="2"
+                     data-value="{{ $s['np_packaging'] ?? '' }}"></svg>
+              </div>
+            </div>
+          </td>
+
+          <td colspan="3" class="{{ $cell }} p-0">
+            <div class="h-full flex flex-col">
+              <div class="h-1/2 {{ $gray }} border-b border-black flex items-center justify-center">
+                <div class="text-[16px] font-bold leading-tight text-center">
+                  Lote<br>Empaque:
+                </div>
+              </div>
+
+              <div class="flex-1 flex flex-col items-center justify-center px-[1mm]">
+                <div class="text-[18px] font-semibold leading-none">{{ $s['lote_packaging'] ?? '' }}</div>
+                <svg class="js-barcode block w-full mt-[.6mm]"
+                     data-format="CODE39"
+                     data-height="40"
+                     data-width="1.05"
+                     data-margin="2"
+                     data-value="{{ $s['lote_packaging'] ?? '' }}"></svg>
+              </div>
+            </div>
+          </td>
         </tr>
 
-        <tr class="h-foot">
-          <td colspan="4"></td>
-          <td colspan="4"></td>
-          <td colspan="4"></td>
-          <td colspan="3"></td>
+        <!-- SUB/LOCAL/QTY/OBS HEADER -->
+        <tr style="height:10mm">
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Subinventory:</td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Local:</td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Cantidad en pallet:</td>
+          <td colspan="6" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Observaciones:</td>
         </tr>
+
+        <!-- VALUES -->
+        <tr style="height:16mm">
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['subinventory'] ?? '' }}</div>
+          </td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['local'] ?? '' }}</div>
+          </td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center">
+            <div class="text-[22px] font-medium leading-none">{{ $s['qty_pallet'] ?? '' }}</div>
+          </td>
+          <td colspan="6" class="{{ $cell }} {{ $pad }}"></td>
+        </tr>
+
+        <!-- BARCODES (con texto grande *VALOR* como imagen) -->
+        <tr style="height:18mm">
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center px-[1mm]">
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['subinventory'] ?? '' }}"></svg>
+          </td>
+
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center px-[1mm]">
+
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['local'] ?? '' }}"></svg>
+          </td>
+
+          <td colspan="3" class="{{ $cell }} {{ $pad }} text-center px-[1mm]">
+            <svg class="js-barcode block w-full mt-[.6mm]"
+                 data-format="CODE39"
+                 data-height="42"
+                 data-width="1.15"
+                 data-margin="2"
+                 data-value="{{ $s['qty_pallet'] ?? '' }}"></svg>
+          </td>
+
+          <td colspan="6" class="{{ $cell }} {{ $pad }}"></td>
+        </tr>
+
+        <!-- FOOTER TITLES -->
+        <tr style="height:10mm">
+          <td colspan="4" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">LIBERACION IPQC</td>
+          <td colspan="4" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">LIBERACION OQC</td>
+          <td colspan="4" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">PRODUCTION SUPPORT</td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">ALMACÉN:</td>
+        </tr>
+
+        <!-- FOOTER EMPTY -->
+        <tr style="height:36mm">
+          <td colspan="4" class="{{ $cell }} {{ $pad }}"></td>
+          <td colspan="4" class="{{ $cell }} {{ $pad }}"></td>
+          <td colspan="4" class="{{ $cell }} {{ $pad }}"></td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }}"></td>
+        </tr>
+
       </table>
     </div>
   </div>
 @endforeach
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
+<script>
+  function renderBarcodes() {
+    document.querySelectorAll('svg.js-barcode[data-value]').forEach((el) => {
+      const raw = (el.dataset.value || '').trim();
+      if (!raw) {
+        el.outerHTML = '<div class="text-[10px] text-slate-500 flex items-center justify-center min-h-[6mm]">Sin código</div>';
+        return;
+      }
+
+      const value  = raw.toUpperCase();
+      const format = el.dataset.format || 'CODE39';
+      const height = Number(el.dataset.height || 42);
+      const width  = Number(el.dataset.width  || 1.15);
+      const margin = Number(el.dataset.margin || 2);
+
+      JsBarcode(el, value, {
+        format,
+        displayValue: false,
+        margin,
+        width,
+        height,
+        background: '#ffffff'
+      });
+    });
+  }
+
+  window.addEventListener('load', renderBarcodes);
+</script>
+
 @if(($mode ?? null) === 'print')
-  <script>
-    window.addEventListener('load', () => window.print());
-  </script>
+<script>
+  window.addEventListener('load', () => window.print());
+</script>
 @endif
 
 </body>
