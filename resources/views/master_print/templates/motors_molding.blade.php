@@ -78,7 +78,7 @@
     }
   </style>
 </head>
-<body>
+<body data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
 
 @foreach($sheets as $s)
   <div class="sheet">
@@ -211,12 +211,7 @@
     </div>
   </div>
 @endforeach
-
-@if(($mode ?? null) === 'print')
-  <script>
-    window.addEventListener('load', () => window.print());
-  </script>
-@endif
+@vite('resources/js/app.js')
 
 </body>
 </html>

@@ -111,19 +111,5 @@
         </div>
     </form>
 </div>
-
-<script>
-(function () {
-    const selectAllBtn = document.getElementById('selectAll');
-    const clearAllBtn = document.getElementById('clearAll');
-
-    selectAllBtn.addEventListener('click', () => {
-        document.querySelectorAll('input[name="folio_ids[]"]').forEach(cb => cb.checked = true);
-    });
-
-    clearAllBtn.addEventListener('click', () => {
-        document.querySelectorAll('input[name="folio_ids[]"]').forEach(cb => cb.checked = false);
-    });
-})();
-</script>
+@vite('resources/js/app.js')
 @endsection

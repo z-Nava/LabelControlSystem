@@ -20,7 +20,9 @@
   </style>
 </head>
 
-<body class="bg-slate-100 print:bg-white">
+<body class="bg-slate-100 print:bg-white"
+      data-render-barcode="1"
+      data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
 
 @foreach($sheets as $s)
   <div class="sheet py-2">
@@ -228,39 +230,6 @@
 
 {{-- JsBarcode (barcodejs) --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
-<script>
-  function renderBarcodes() {
-    document.querySelectorAll('svg.js-barcode[data-value]').forEach((el) => {
-      const raw = (el.dataset.value || '').trim();
-      if (!raw) {
-        el.outerHTML = '<div class="text-[10px] text-slate-500 flex items-center justify-center min-h-[6mm]">Sin código</div>';
-        return;
-      }
-
-      const value = raw.toUpperCase();
-      const format = el.dataset.format || 'CODE39';
-      const height = Number(el.dataset.height || 44);
-      const width  = Number(el.dataset.width  || 1.4);
-
-      JsBarcode(el, value, {
-        format,
-        displayValue: false,
-        margin: 0,
-        width,
-        height,
-        background: '#ffffff'
-      });
-    });
-  }
-
-  window.addEventListener('load', renderBarcodes);
-</script>
-
-@if(($mode ?? null) === 'print')
-<script>
-  window.addEventListener('load', () => window.print());
-</script>
-@endif
-
+@vite('resources/js/app.js')
 </body>
 </html>

@@ -40,7 +40,11 @@
         </div>
     </div>
 
-    <form class="mt-6 space-y-4" method="POST" action="{{ route('master_requests.store') }}">
+     <form id="masterRequestCreate"
+          data-lookup-url="{{ route('oracle.lookup_job') }}"
+          class="mt-6 space-y-4"
+          method="POST"
+          action="{{ route('master_requests.store') }}">
         @csrf
 
         {{-- 1) DATOS GENERALES --}}
@@ -72,7 +76,7 @@
                     <label class="text-sm text-slate-600">Línea</label>
                     <select id="lineSelect" name="line_id"
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                        <option value="">Selecciona...</option>
+                        <option value="">Selecciona linea...</option>
                         @foreach($lines as $line)
                             <option value="{{ $line->id }}" @selected(old('line_id') == $line->id)>
                                 {{ $line->code }} - {{ $line->name }}
@@ -85,7 +89,7 @@
                     <label class="text-sm text-slate-600">Turno</label>
                     <select id="shiftSelect" name="shift_id"
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                        <option value="">Selecciona...</option>
+                        <option value="">Selecciona turno...</option>
                         @foreach($shifts as $shift)
                             <option value="{{ $shift->id }}" @selected(old('shift_id') == $shift->id)>
                                 {{ $shift->code }} - {{ $shift->name }}
@@ -261,122 +265,5 @@
         </div>
     </form>
 </div>
-
-<script>
-(function () {
-    const lookupUrl = @json(route('oracle.lookup_job'));
-
-    const requestDate  = document.getElementById('requestDate');
-    const lineSelect   = document.getElementById('lineSelect');
-    const shiftSelect  = document.getElementById('shiftSelect');
-    const requestType  = document.getElementById('requestType');
-
-    const jobAssembly  = document.getElementById('jobAssembly');
-    const jobPackaging = document.getElementById('jobPackaging');
-
-    const poNumber     = document.getElementById('poNumber');
-    const destination  = document.getElementById('destination');
-
-    const hintA        = document.getElementById('jobAssemblyHint');
-    const hintP        = document.getElementById('jobPackagingHint');
-
-    const previewDate      = document.getElementById('previewDate');
-    const previewLineShift = document.getElementById('previewLineShift');
-    const previewJobs      = document.getElementById('previewJobs');
-    const previewType      = document.getElementById('previewType');
-
-    let timerA = null;
-    let timerP = null;
-
-    function getSelectedText(sel) {
-        if (!sel || !sel.selectedOptions || !sel.selectedOptions[0]) return '';
-        return sel.selectedOptions[0].textContent.trim();
-    }
-
-    function refreshPreview() {
-        previewDate.textContent = requestDate?.value || '—';
-
-        const lineTxt  = getSelectedText(lineSelect);
-        const shiftTxt = getSelectedText(shiftSelect);
-        previewLineShift.textContent = (lineTxt || shiftTxt) ? `${lineTxt || '—'} · ${shiftTxt || '—'}` : '—';
-
-        const ja = (jobAssembly?.value || '').trim();
-        const jp = (jobPackaging?.value || '').trim();
-        previewJobs.textContent = (ja || jp) ? [ja, jp].filter(Boolean).join(' / ') : '—';
-
-        const rt = (requestType?.value || '').trim();
-        previewType.textContent = rt ? rt.replaceAll('_',' ') : '—';
-    }
-
-    async function lookup(jobNumber) {
-        const url = new URL(lookupUrl, window.location.origin);
-        url.searchParams.set('job_number', jobNumber);
-
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
-        return await res.json();
-    }
-
-    function setHint(el, type, msg) {
-        el.className = 'text-xs mt-2 ' + (type === 'ok' ? 'text-emerald-700' : type === 'warn' ? 'text-amber-700' : 'text-slate-500');
-        el.textContent = msg || '';
-    }
-
-    async function handleAssembly() {
-        const v = (jobAssembly.value || '').trim();
-        refreshPreview();
-        if (!v) { setHint(hintA, 'muted', ''); return; }
-
-        setHint(hintA, 'muted', 'Buscando en Oracle…');
-        const data = await lookup(v);
-
-        if (!data.found) {
-            setHint(hintA, 'warn', 'No encontrado en Oracle Jobs.');
-            return;
-        }
-
-        setHint(hintA, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
-
-        if (!destination.value) destination.value = data.ship_code || '';
-        if (!poNumber.value) poNumber.value = data.ttl_cust_po || '';
-        refreshPreview();
-    }
-
-    async function handlePackaging() {
-        const v = (jobPackaging.value || '').trim();
-        refreshPreview();
-        if (!v) { setHint(hintP, 'muted', ''); return; }
-
-        setHint(hintP, 'muted', 'Buscando en Oracle…');
-        const data = await lookup(v);
-
-        if (!data.found) {
-            setHint(hintP, 'warn', 'No encontrado en Oracle Jobs.');
-            return;
-        }
-
-        setHint(hintP, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
-
-        if (!destination.value) destination.value = data.ship_code || '';
-        if (!poNumber.value) poNumber.value = data.ttl_cust_po || '';
-        refreshPreview();
-    }
-
-    jobAssembly?.addEventListener('input', () => {
-        clearTimeout(timerA);
-        timerA = setTimeout(handleAssembly, 350);
-    });
-
-    jobPackaging?.addEventListener('input', () => {
-        clearTimeout(timerP);
-        timerP = setTimeout(handlePackaging, 350);
-    });
-
-    [requestDate, lineSelect, shiftSelect, requestType, jobAssembly, jobPackaging].forEach((el) => {
-        el?.addEventListener('change', refreshPreview);
-        el?.addEventListener('input', refreshPreview);
-    });
-
-    refreshPreview();
-})();
-</script>
+@vite('resources/js/app.js')
 @endsection

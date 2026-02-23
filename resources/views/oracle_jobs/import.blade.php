@@ -38,44 +38,5 @@
     </form>
 </div>
 
-<script>
-(function () {
-  const dropZone = document.getElementById('dropZone');
-  const fileInput = document.getElementById('fileInput');
-  const fileName = document.getElementById('fileName');
-  const submitBtn = document.getElementById('submitBtn');
-
-  function setFile(file) {
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
-    fileName.textContent = file.name;
-    submitBtn.disabled = false;
-  }
-
-  dropZone.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
-  });
-
-  ['dragenter','dragover'].forEach(evt => {
-    dropZone.addEventListener(evt, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      dropZone.classList.add('border-red-600');
-    });
-  });
-
-  ['dragleave','drop'].forEach(evt => {
-    dropZone.addEventListener(evt, (e) => {
-      e.preventDefault(); e.stopPropagation();
-      dropZone.classList.remove('border-red-600');
-    });
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
-  });
-})();
-</script>
+@vite('resources/js/app.js')
 @endsection
