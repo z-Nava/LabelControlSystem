@@ -21,7 +21,7 @@
 </head>
 
 <body class="bg-slate-100 print:bg-white"
-      data-render-barcode="1"
+      data-render-barcodes="1"
       data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
 
 @foreach($sheets as $s)
@@ -69,7 +69,9 @@
         <!-- ROW 1 -->
         <tr style="height:14mm">
           <td colspan="2" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Líder:</td>
-          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $cream }}"></td>
+          <td colspan="3" class="{{ $cell }} {{ $pad }} {{ $cream }} text-center font-extrabold">
+            {{ $s['leader'] ?? '' }}
+          </td>
 
           <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $gray }} text-center font-bold">Turno:</td>
           <td colspan="1" class="{{ $cell }} {{ $pad }} {{ $cream }} text-center font-extrabold">
