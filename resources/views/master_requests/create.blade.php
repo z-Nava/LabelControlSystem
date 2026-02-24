@@ -79,7 +79,7 @@
                         <option value="">Selecciona linea...</option>
                         @foreach($lines as $line)
                             <option value="{{ $line->id }}" @selected(old('line_id') == $line->id)>
-                                {{ $line->code }} - {{ $line->name }}
+                                {{ $line->code }} - {{ $line->line_type }}
                             </option>
                         @endforeach
                     </select>
