@@ -50,7 +50,7 @@
     .np-desc{ font-size: 14px; line-height: 1.15; padding: 0 3mm; }
     .np-bar{ font-size: 46px; font-weight: 800; }
 
-    .lote-top{ font-size: 54px; font-weight: 800; line-height: 1; }
+    .lote-top{ font-size: 26px; font-weight: 800; line-height: 1; }
     .lote-bar{ font-size: 30px; font-weight: 800; }
 
     .sub-bar{ font-size: 34px; font-weight: 800; }
@@ -72,7 +72,8 @@
     }
   </style>
 </head>
-<body data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
+<body data-render-barcodes="1"
+      data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
 
 @foreach($sheets as $s)
   <div class="sheet">
@@ -107,7 +108,13 @@
           <td colspan="2" class="bg-gray bold center">Línea:</td>
           <td colspan="5" class="center bold">{{ $s['line'] ?? '' }}</td>
 
-          <td colspan="4" class="center"><div class="job-bar">*{{ $s['job'] ?? '' }}*</div></td>
+          <td colspan="4" class="center" style="padding: 0 1.5mm;">
+            <svg class="js-barcode" style="width:100%; max-height:14mm;"
+                 data-format="CODE39"
+                 data-height="44"
+                 data-width="1.4"
+                 data-value="{{ $s['job'] ?? '' }}"></svg>
+          </td>
 
           <td colspan="2" rowspan="2" class="bg-cream center bold">{{ $s['date'] ?? '' }}</td>
         </tr>
@@ -134,7 +141,13 @@
                 <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-desc">{{ $s['desc'] ?? '' }}</div></td>
               </tr>
               <tr style="height: 32mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="np-bar">*{{ $s['np'] ?? '' }}*</div></td>
+                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0; padding: 0 1.5mm;">
+                  <svg class="js-barcode" style="width:100%; max-height:18mm;"
+                       data-format="CODE39"
+                       data-height="64"
+                       data-width="1.6"
+                       data-value="{{ $s['np'] ?? '' }}"></svg>
+                </td>
               </tr>
             </table>
           </td>
@@ -147,7 +160,13 @@
                 <td class="center" style="border:0;"><div class="lote-top">{{ $s['lote'] ?? '' }}</div></td>
               </tr>
               <tr style="height: 36mm;">
-                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0;"><div class="lote-bar">*{{ $s['lote'] ?? '' }}*</div></td>
+                <td class="center" style="border-top: var(--b) solid #000; border-left:0; border-right:0; border-bottom:0; padding: 0 1.5mm;">
+                  <svg class="js-barcode" style="width:100%; max-height:18mm;"
+                       data-format="CODE39"
+                       data-height="56"
+                       data-width="1.6"
+                       data-value="{{ $s['lote'] ?? '' }}"></svg>
+                </td>
               </tr>
             </table>
           </td>
@@ -168,9 +187,21 @@
         </tr>
 
         <tr class="h-sub2">
-          <td colspan="4" class="center"><div class="sub-bar">*{{ $s['subinventory'] ?? '' }}*</div></td>
+          <td colspan="4" class="center" style="padding: 0 1.5mm;">
+            <svg class="js-barcode" style="width:100%; max-height:14mm;"
+                 data-format="CODE39"
+                 data-height="44"
+                 data-width="1.4"
+                 data-value="{{ $s['subinventory'] ?? '' }}"></svg>
+          </td>
           <td colspan="4" class="center"><div class="sub-bar">*{{ $s['local'] ?? '' }}*</div></td>
-          <td colspan="3" class="center"><div class="sub-bar">*{{ $s['qty_pallet'] ?? '' }}*</div></td>
+          <td colspan="3" class="center" style="padding: 0 1.5mm;">
+            <svg class="js-barcode" style="width:100%; max-height:14mm;"
+                 data-format="CODE39"
+                 data-height="44"
+                 data-width="1.4"
+                 data-value="{{ $s['qty_pallet'] ?? '' }}"></svg>
+          </td>
           <td colspan="4"></td>
         </tr>
 
@@ -189,6 +220,7 @@
     </div>
   </div>
 @endforeach
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.1/JsBarcode.all.min.js"></script>
 @vite('resources/js/app.js')
 </body>
 </html>
