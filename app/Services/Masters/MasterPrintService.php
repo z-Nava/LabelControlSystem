@@ -219,7 +219,7 @@ class MasterPrintService
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
                 'subinventory' => 'WIP',
                 'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($mr->line?->code ?? '') : 'SMARKET-1'),
-                'qty_pallet'   => (string) ($mr->std_pack_qty ?? ($isMotors ? 0 : '')),
+                'qty_pallet'   => (string) ($folio->qty_for_folio ?? $mr->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();
 
