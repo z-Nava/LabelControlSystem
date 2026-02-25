@@ -37,11 +37,8 @@ class AuthService
             ]);
         }
 
-        // Caso OPERADOR (label_room) → sin contraseña
-        if ($user->hasRole('label_room')) {
-            Auth::login($user, $remember);
-        } else {
-            // Caso ADMIN → con contraseña
+        // Caso ADMIN → con contraseña
+        if ($user->hasRole('admin')) {
             if (!$password) {
                 RateLimiter::hit($throttleKey, 60);
 
@@ -66,6 +63,9 @@ class AuthService
                     'password' => 'Credenciales inválidas.',
                 ]);
             }
+        } else {
+            // Caso OPERADOR (label_room) → sin contraseña
+            Auth::login($user, $remember);
         }
 
         RateLimiter::clear($throttleKey);

@@ -8,7 +8,7 @@
         </p>
 
         <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="#" class="rounded-2xl border p-5 hover:shadow transition">
+            <a href="{{ route('users.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                 <div class="font-semibold">Usuarios</div>
                 <div class="text-sm text-slate-600 mt-1">Altas, bajas, roles, estado activo.</div>
             </a>

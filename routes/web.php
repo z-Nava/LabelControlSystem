@@ -7,6 +7,7 @@ use App\Http\Controllers\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -31,6 +32,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/production-lines/{production_line}/edit', [ProductionLineController::class, 'edit'])->name('production_lines.edit');
         Route::put('/production-lines/{production_line}', [ProductionLineController::class, 'update'])->name('production_lines.update');
         Route::post('/production-lines/{production_line}/toggle', [ProductionLineController::class, 'toggle'])->name('production_lines.toggle');
+
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     });
 
