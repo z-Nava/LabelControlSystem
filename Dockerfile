@@ -1,6 +1,5 @@
 FROM php:8.2-fpm
 
-# System deps needed for GD + Zip + common tooling
 RUN apt-get update && apt-get install -y \
     libpng-dev libjpeg-dev libfreetype6-dev \
     libzip-dev unzip git \
@@ -10,18 +9,14 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /var/www/html
 
-# Install composer deps first (better cache)
 COPY composer.json composer.lock ./
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# IMPORTANT: avoid Laravel composer scripts before the app code exists
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
-# Copy app
 COPY . .
 
-# Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 9000
-CMD ["php-fpm"]
+# Railway expects an HTTP server on $PORT
+EXPOSE 8000
+CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
