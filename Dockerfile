@@ -1,3 +1,12 @@
+# 1) Build assets (Vite)
+FROM node:20-alpine AS assets
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# 2) PHP runtime
 FROM php:8.2-fpm
 
 RUN apt-get update && apt-get install -y \
@@ -15,8 +24,10 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 
 COPY . .
 
+# Copy built assets into public/build (this is what @vite expects)
+COPY --from=assets /app/public/build /var/www/html/public/build
+
 RUN chown -R www-data:www-data storage bootstrap/cache
 
-# Railway expects an HTTP server on $PORT
 EXPOSE 8000
 CMD php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
