@@ -13,7 +13,9 @@ WORKDIR /var/www/html
 # Install composer deps first (better cache)
 COPY composer.json composer.lock ./
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+# IMPORTANT: avoid Laravel composer scripts before the app code exists
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 # Copy app
 COPY . .
@@ -23,4 +25,3 @@ RUN chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 9000
 CMD ["php-fpm"]
-
