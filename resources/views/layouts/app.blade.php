@@ -22,12 +22,20 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">
-                    Salir
+            <div class="flex items-center gap-2">
+                <button type="button"
+                    onclick="window.history.back()"
+                    class="rounded-xl border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50 transition">
+                    Regresar
                 </button>
-            </form>
+
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">
+                        Salir
+                    </button>
+                </form>
+            </div>
         </div>
     </header>
 
