@@ -28,12 +28,22 @@
 
     let timerAssembly = null;
     let timerPackaging = null;
+    let isSubmitting = false;
 
     function getFormValue(name) {
         return (root.elements.namedItem(name)?.value || '').trim();
     }
 
-    function buildConfirmationMessage() {
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function getConfirmationHtml() {
         const leader = getFormValue('leader_name') || '—';
         const date = getFormValue('request_date') || '—';
         const line = getSelectedText(lineSelect) || '—';
@@ -55,18 +65,36 @@
             ? `${partialFolio || '—'} (${partialQty || '—'} pzas)`
             : 'No';
 
+        return `
+            <div class="text-left text-sm space-y-1">
+                <p><strong>Líder:</strong> ${escapeHtml(leader)}</p>
+                <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
+                <p><strong>Línea:</strong> ${escapeHtml(line)}</p>
+                <p><strong>Jobs:</strong> ${escapeHtml(assemblyJob)} / ${escapeHtml(packagingJob)}</p>
+                <p><strong>Tipo de Master:</strong> ${escapeHtml(type)}</p>
+                <p><strong>Folios:</strong> ${escapeHtml(folios)}</p>
+                <p><strong>Folio parcial:</strong> ${escapeHtml(partialInfo)}</p>
+            </div>
+        `;
+    }
 
-        return [
-            '¿Confirmas el envío de la requisición con estos datos?',
-            '',
-            `Líder: ${leader}`,
-            `Fecha: ${date}`,
-            `Línea: ${line}`,
-            `Jobs: ${assemblyJob} / ${packagingJob}`,
-            `Tipo de Master: ${type}`,
-            `Folios: ${folios}`,
-            `Folio parcial: ${partialInfo}`,
-        ].join('\n');
+    async function confirmSubmit() {
+        if (!window.Swal) {
+            return window.confirm('¿Confirmas el envío de la requisición?');
+        }
+
+        const result = await window.Swal.fire({
+            title: '¿Confirmas el envío de la requisición?',
+            html: getConfirmationHtml(),
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, enviar',
+            cancelButtonText: 'Cancelar',
+            focusCancel: true,
+            reverseButtons: true,
+        });
+
+        return result.isConfirmed;
     }
 
     function getSelectedText(selectElement) {
@@ -196,12 +224,20 @@
         element?.addEventListener('input', refreshPreview);
     });
 
-       root.addEventListener('submit', (event) => {
-        const confirmed = window.confirm(buildConfirmationMessage());
+    root.addEventListener('submit', async (event) => {
+        if (isSubmitting) {
+            return;
+        }
+
+        event.preventDefault();
+        const confirmed = await confirmSubmit();
 
         if (!confirmed) {
-            event.preventDefault();
+            return;
         }
+
+        isSubmitting = true;
+        root.submit();
     });
 
     refreshPreview();
