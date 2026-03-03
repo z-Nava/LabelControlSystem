@@ -16,11 +16,20 @@ class MasterRequestService
 
             $foliosFrom = (int) ($data['folios_from'] ?? 0);
             $foliosTo   = (int) ($data['folios_to'] ?? 0);
+            $hasPartialData = !empty($data['partial_folio']) && !empty($data['partial_qty']);
 
             if ($foliosFrom < 1 || $foliosTo < $foliosFrom) {
                 throw ValidationException::withMessages([
                     'folios_from' => 'Rango de folios inválido.',
                 ]);
+            }
+
+            if ($hasPartialData) {
+                // El folio parcial siempre debe ser el consecutivo del último folio normal.
+                $data['partial_folio'] = $foliosTo + 1;
+            } else {
+                $data['partial_folio'] = null;
+                $data['partial_qty'] = null;
             }
 
             $mr = MasterRequest::create($data);
@@ -37,7 +46,7 @@ class MasterRequestService
             }
 
             // Folio parcial (opcional)
-            if (!empty($data['partial_folio']) && !empty($data['partial_qty'])) {
+           if ($hasPartialData) {
                 MasterRequestFolio::create([
                     'master_request_id' => $mr->id,
                     'folio_number' => (int) $data['partial_folio'],
