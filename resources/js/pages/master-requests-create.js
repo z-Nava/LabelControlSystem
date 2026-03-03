@@ -29,6 +29,46 @@
     let timerAssembly = null;
     let timerPackaging = null;
 
+    function getFormValue(name) {
+        return (root.elements.namedItem(name)?.value || '').trim();
+    }
+
+    function buildConfirmationMessage() {
+        const leader = getFormValue('leader_name') || '—';
+        const date = getFormValue('request_date') || '—';
+        const line = getSelectedText(lineSelect) || '—';
+        const assemblyJob = getFormValue('job_assembly') || '—';
+        const packagingJob = getFormValue('job_packaging') || '—';
+        const type = getFormValue('request_type')
+            ? getFormValue('request_type').replaceAll('_', ' ')
+            : '—';
+
+        const foliosFrom = getFormValue('folios_from');
+        const foliosTo = getFormValue('folios_to');
+        const folios = (foliosFrom || foliosTo)
+            ? `${foliosFrom || '—'} al ${foliosTo || '—'}`
+            : '—';
+
+        const partialFolio = getFormValue('partial_folio');
+        const partialQty = getFormValue('partial_qty');
+        const partialInfo = (partialFolio || partialQty)
+            ? `${partialFolio || '—'} (${partialQty || '—'} pzas)`
+            : 'No';
+
+
+        return [
+            '¿Confirmas el envío de la requisición con estos datos?',
+            '',
+            `Líder: ${leader}`,
+            `Fecha: ${date}`,
+            `Línea: ${line}`,
+            `Jobs: ${assemblyJob} / ${packagingJob}`,
+            `Tipo de Master: ${type}`,
+            `Folios: ${folios}`,
+            `Folio parcial: ${partialInfo}`,
+        ].join('\n');
+    }
+
     function getSelectedText(selectElement) {
         if (!selectElement || !selectElement.selectedOptions || !selectElement.selectedOptions[0]) {
             return '';
@@ -154,6 +194,14 @@
     [requestDate, lineSelect, shiftSelect, requestType, jobAssembly, jobPackaging].forEach((element) => {
         element?.addEventListener('change', refreshPreview);
         element?.addEventListener('input', refreshPreview);
+    });
+
+       root.addEventListener('submit', (event) => {
+        const confirmed = window.confirm(buildConfirmationMessage());
+
+        if (!confirmed) {
+            event.preventDefault();
+        }
     });
 
     refreshPreview();
