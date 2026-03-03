@@ -40,7 +40,8 @@
     .bg-green{ background: var(--green); }
 
     .title{ font-size: 22px; font-weight: 800; letter-spacing:.4px; }
-    .logo{ font-size: 34px; font-weight: 900; color:#c00000; font-style: italic; line-height:1; padding-left:6mm; }
+    .logo-wrap{ height: 100%; padding-left: 3mm; display:flex; align-items:center; }
+    .logo{ height: 15mm; width:auto; object-fit:contain; display:block; }
 
     .job-label{ font-size: 25px; font-weight: 800; }
     .job-top{ font-size: 26px; font-weight: 800; }
@@ -86,7 +87,7 @@
         </colgroup>
 
         <tr class="h-header">
-          <td colspan="4" class="left"><div class="logo">Milwaukee</div></td>
+          <td colspan="4" class="left"><div class="logo-wrap"><img src="{{ Vite::asset('resources/img/LOGO-MILWAUKEE.png') }}" alt="Milwaukee" class="logo"></div></td>
           <td colspan="11" class="center"><div class="title">PRODUCTO TERMINADO - ENSAMBLE BATERIAS</div></td>
         </tr>
 

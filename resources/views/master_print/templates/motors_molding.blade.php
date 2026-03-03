@@ -41,7 +41,9 @@
 
         <tr style="height:12mm">
           <td colspan="4" class="{{ $cell }} {{ $pad }} text-left">
-            <div class="text-[34px] font-black italic leading-none text-[#c00000] pl-[6mm]">Milwaukee</div>
+            <div class="h-full pl-[3mm] flex items-center">
+              <img src="{{ Vite::asset('resources/img/LOGO-MILWAUKEE.png') }}" alt="Milwaukee" class="h-[10mm] w-auto object-contain">
+            </div>
           </td>
           <td colspan="11" class="{{ $cell }} {{ $pad }} text-center">
             <div class="text-[22px] font-extrabold tracking-[.8px] leading-none">PRODUCTO TERMINADO - MOTORES Y MOLDEO</div>
