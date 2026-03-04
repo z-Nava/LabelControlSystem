@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Admin;
 
-use App\Http\Requests\StoreProductionLineRequest;
-use App\Http\Requests\UpdateProductionLineRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreProductionLineRequest;
+use App\Http\Requests\Admin\UpdateProductionLineRequest;
 use App\Models\ProductionLine;
 use App\Services\Catalogs\ProductionLineService;
 use Illuminate\Http\RedirectResponse;

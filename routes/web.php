@@ -1,13 +1,13 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProductionLineController;
-use App\Http\Controllers\OracleJobController;
+use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Admin\ProductionLineController;
+use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {

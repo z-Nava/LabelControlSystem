@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Oracle;
 
-use App\Http\Requests\ImportOracleJobsRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Oracle\ImportOracleJobsRequest;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
