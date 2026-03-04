@@ -14,10 +14,16 @@
         </div>
     </div>
 
+    @if($errors->any())
+        <div class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     <form method="GET" action="{{ route('master_requests.index') }}" class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
             <label class="text-sm text-slate-600">Estado</label>
-            <select name="status" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+            <select name="status" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
                 <option value="pending" @selected(($filters['status'] ?? 'pending') === 'pending')>Pendientes (requested/in_progress)</option>
                 <option value="completed" @selected(($filters['status'] ?? '') === 'completed')>Completadas</option>
                 <option value="cancelled" @selected(($filters['status'] ?? '') === 'cancelled')>Canceladas</option>
@@ -27,7 +33,9 @@
 
         <div class="md:col-span-2">
             <label class="text-sm text-slate-600">Buscar</label>
-            <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="# requisición, líder, job, PO"
+           <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="# requisición, líder, job, PO" maxlength="80"
+                   pattern="[A-Za-zÀ-ÖØ-öø-ÿ0-9#\-_.\/\x27\s]*"
+                   title="Solo letras, números, espacios y # - _ . / '"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
         </div>
 

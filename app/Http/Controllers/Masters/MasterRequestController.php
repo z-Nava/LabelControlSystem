@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Masters;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Masters\IndexMasterRequestRequest;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
 use App\Services\Masters\MasterRequestService;
@@ -18,9 +19,9 @@ class MasterRequestController extends Controller
         private readonly MasterRequestReadService $readService,
     ) {}
 
-    public function index(): View
+    public function index(IndexMasterRequestRequest $request): View
     {
-        $result = $this->readService->paginateForIndex(request()->query());
+        $result = $this->readService->paginateForIndex($request->validated());
 
         return view('master_requests.index', [
             'masterRequests' => $result['masterRequests'],
