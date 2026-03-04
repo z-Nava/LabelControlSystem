@@ -61,7 +61,7 @@
                 <div>
                     <label class="text-sm text-slate-600">Fecha</label>
                     <input id="requestDate" name="request_date" type="date"
-                           value="{{ old('request_date', now()->toDateString()) }}"
+                           value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}"
                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                 </div>
 
@@ -100,7 +100,7 @@
 
                 <div class="md:col-span-2">
                     <label class="text-sm text-slate-600">Líder</label>
-                    <input name="leader_name" value="{{ old('leader_name') }}"
+                     <input name="leader_name" value="{{ old('leader_name') }}" maxlength="120" minlength="3" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s\-\.']+"
                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                 </div>
             </div>
@@ -145,15 +145,15 @@
             <div class="border-t p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-xl border bg-slate-50 p-3">
                     <label class="text-sm text-slate-700 font-medium">Job Ensamble</label>
-                    <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"
+                    <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"  maxlength="40" pattern="[0-9A-Za-z-]+"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                           placeholder="Ej: 393383">
+                           placeholder="Ej: 393383" required>
                     <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-2"></p>
                 </div>
 
                 <div class="rounded-xl border bg-slate-50 p-3">
                     <label class="text-sm text-slate-700 font-medium">Job Empaque (si aplica)</label>
-                    <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"
+                    <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"  maxlength="40" pattern="[0-9A-Za-z-]+"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                            placeholder="Opcional">
                     <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>
@@ -162,14 +162,14 @@
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="text-sm text-slate-600">Custom PO</label>
-                        <input id="poNumber" name="po_number" value="{{ old('po_number') }}"
+                        <input id="poNumber" name="po_number" value="{{ old('po_number') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                                placeholder="Se autollenará si Oracle lo trae">
                     </div>
 
                     <div>
                         <label class="text-sm text-slate-600">Destino (Ship Code)</label>
-                        <input id="destination" name="destination" value="{{ old('destination') }}"
+                        <input id="destination" name="destination" value="{{ old('destination') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                                placeholder="Se autollenará si Oracle lo trae">
                     </div>
@@ -197,7 +197,7 @@
 
                     <div>
                         <label class="text-sm text-slate-600">al</label>
-                        <input name="folios_to" type="number" min="1" value="{{ old('folios_to') }}"
+                        <input name="folios_to" type="number" min="{{ old('folios_from', 1) }}" value="{{ old('folios_to') }}"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                     </div>
 

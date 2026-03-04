@@ -97,6 +97,57 @@
         return result.isConfirmed;
     }
 
+    
+    function validateBeforeSubmit() {
+        const foliosFrom = Number.parseInt(getFormValue('folios_from') || '0', 10);
+        const foliosTo = Number.parseInt(getFormValue('folios_to') || '0', 10);
+        const partialFolio = getFormValue('partial_folio');
+        const partialQty = getFormValue('partial_qty');
+        const type = getFormValue('request_type');
+        const assemblyValue = getFormValue('job_assembly');
+        const packagingValue = getFormValue('job_packaging');
+
+        const packagingInput = root.elements.namedItem('job_packaging');
+        const foliosToInput = root.elements.namedItem('folios_to');
+        const partialFolioInput = root.elements.namedItem('partial_folio');
+        const partialQtyInput = root.elements.namedItem('partial_qty');
+        const assemblyInput = root.elements.namedItem('job_assembly');
+
+        assemblyInput?.setCustomValidity('');
+        packagingInput?.setCustomValidity('');
+        foliosToInput?.setCustomValidity('');
+        partialFolioInput?.setCustomValidity('');
+        partialQtyInput?.setCustomValidity('');
+
+        if (!assemblyValue) {
+            root.elements.namedItem('job_assembly')?.setCustomValidity('El Job Ensamble es obligatorio.');
+            return false;
+        }
+
+        if (type === 'assembly_packaging' && !packagingValue) {
+            packagingInput?.setCustomValidity('El Job Empaque es obligatorio para este tipo de requisición.');
+            return false;
+        }
+
+        if (packagingValue && packagingValue === assemblyValue) {
+            packagingInput?.setCustomValidity('El Job Empaque debe ser distinto al Job Ensamble.');
+            return false;
+        }
+
+        if (foliosTo && foliosFrom && foliosTo < foliosFrom) {
+            foliosToInput?.setCustomValidity('El folio final debe ser mayor o igual al inicial.');
+            return false;
+        }
+
+        if ((partialFolio && !partialQty) || (!partialFolio && partialQty)) {
+            partialFolioInput?.setCustomValidity('Debes capturar ambos campos parciales.');
+            partialQtyInput?.setCustomValidity('Debes capturar ambos campos parciales.');
+            return false;
+        }
+
+        return root.checkValidity();
+    }
+
     function getSelectedText(selectElement) {
         if (!selectElement || !selectElement.selectedOptions || !selectElement.selectedOptions[0]) {
             return '';
@@ -224,12 +275,25 @@
         element?.addEventListener('input', refreshPreview);
     });
 
+    ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty'].forEach((field) => {
+        const element = root.elements.namedItem(field);
+        element?.addEventListener('input', () => element.setCustomValidity(''));
+    });
+
+
+
     root.addEventListener('submit', async (event) => {
         if (isSubmitting) {
             return;
         }
 
         event.preventDefault();
+
+         if (!validateBeforeSubmit()) {
+            root.reportValidity();
+            return;
+        }
+        
         const confirmed = await confirmSubmit();
 
         if (!confirmed) {
