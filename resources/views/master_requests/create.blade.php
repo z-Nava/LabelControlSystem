@@ -145,7 +145,7 @@
             <div class="border-t p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="rounded-xl border bg-slate-50 p-3">
                     <label class="text-sm text-slate-700 font-medium">Job Ensamble</label>
-                    <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"  maxlength="40" pattern="[0-9A-Za-z-]+"
+                    <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"  maxlength="40" pattern="^[0-9A-Za-z\-]+$"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                            placeholder="Ej: 393383" required>
                     <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-2"></p>
@@ -153,7 +153,7 @@
 
                 <div class="rounded-xl border bg-slate-50 p-3">
                     <label class="text-sm text-slate-700 font-medium">Job Empaque (si aplica)</label>
-                    <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"  maxlength="40" pattern="[0-9A-Za-z-]+"
+                    <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"  maxlength="40" pattern="^[0-9A-Za-z\-]+$"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                            placeholder="Opcional">
                     <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>

@@ -87,6 +87,29 @@ class MasterRequestService
             'ttl_cust_po' => $job->ttl_cust_po,         // PO
             'ship_code' => $job->ship_code,             // DESTINO
             'bom_revision' => $job->bom_revision,       // REVISION (motores)
+            'valid_for_assembly' => $this->isAssemblyJob($job),
+            'valid_for_packaging' => $this->isPackagingJob($job),
         ];
     }
+    
+    private function isAssemblyJob(OracleJob $job): bool
+    {
+        $assembly = strtoupper(trim((string) $job->assembly));
+        $line = strtoupper(trim((string) $job->line));
+
+        return str_starts_with($assembly, '103')
+            || str_starts_with($assembly, '130')
+            || str_starts_with($line, 'MEXMI')
+            || str_starts_with($line, 'MXM');
+    }
+
+    private function isPackagingJob(OracleJob $job): bool
+    {
+        $assembly = strtoupper(trim((string) $job->assembly));
+
+        return str_starts_with($assembly, '018')
+            || str_starts_with($assembly, '055')
+            || str_starts_with($assembly, '001');
+    }
 }
+

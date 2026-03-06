@@ -24,6 +24,7 @@ import { attachValidationClearListeners, validateBeforeSubmit } from './master-r
             lookupUrl,
             fields,
             refreshPreview: updatePreview,
+            role: 'assembly',
         }),
         350,
     );
@@ -35,6 +36,7 @@ import { attachValidationClearListeners, validateBeforeSubmit } from './master-r
             lookupUrl,
             fields,
             refreshPreview: updatePreview,
+            role: 'packaging',
         }),
         350,
     );
