@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Admin\ProductionLineController;
+use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -40,6 +41,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        Route::get('/label-skus', [LabelSkuController::class, 'index'])->name('label_skus.index');
+        Route::get('/label-skus/create', [LabelSkuController::class, 'create'])->name('label_skus.create');
+        Route::post('/label-skus', [LabelSkuController::class, 'store'])->name('label_skus.store');
+        Route::get('/label-skus/{label_sku}/edit', [LabelSkuController::class, 'edit'])->name('label_skus.edit');
+        Route::put('/label-skus/{label_sku}', [LabelSkuController::class, 'update'])->name('label_skus.update');
+        Route::post('/label-skus/{label_sku}/toggle', [LabelSkuController::class, 'toggle'])->name('label_skus.toggle');
 
     });
 
