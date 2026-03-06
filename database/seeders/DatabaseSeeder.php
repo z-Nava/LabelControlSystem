@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             LabelRoomUserSeeder::class,
             ProductionLineSeeder::class,
+            LabelSkusSeeder::class,
         ]);
     }
 }
