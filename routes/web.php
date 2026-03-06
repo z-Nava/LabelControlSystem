@@ -4,6 +4,8 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Admin\ProductionLineController;
 use App\Http\Controllers\Admin\LabelSkuController;
+use App\Http\Controllers\Labels\LabelPrintController;
+use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -68,6 +70,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
+
+        Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
+        Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');
+        Route::post('/label-requests', [LabelRequestController::class, 'store'])->name('label_requests.store');
+        Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->name('label_requests.show');
+        Route::post('/label-requests/{label_request}/cancel', [LabelRequestController::class, 'cancel'])->name('label_requests.cancel');
+        Route::post('/label-requests/{label_request}/complete', [LabelRequestController::class, 'complete'])->name('label_requests.complete');
+
+        Route::get('/label-requests/{label_request}/print', [LabelPrintController::class, 'create'])->name('label_requests.print.create');
+        Route::post('/label-requests/{label_request}/print', [LabelPrintController::class, 'store'])->name('label_requests.print.store');
 
 
     });

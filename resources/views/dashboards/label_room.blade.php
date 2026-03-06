@@ -46,7 +46,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <a href="#" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
+                    <a href="{{ route('label_requests.index') }}" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
                         <div class="text-lg font-semibold">Nueva requisición de Etiquetas</div>
                         <div class="text-sm opacity-90 mt-1">Rating / Serial / Shipping</div>
                     </a>
