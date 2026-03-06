@@ -1,308 +1,82 @@
-(function () {
-    const root = document.getElementById('masterRequestCreate');
+import { debounce } from './utils/debounce';
+import { confirmSubmit } from './master-requests-create/confirmation';
+import { getMasterRequestElements } from './master-requests-create/dom';
+import { createJobLookupHandler } from './master-requests-create/lookup';
+import { refreshPreview } from './master-requests-create/preview';
+import { attachValidationClearListeners, validateBeforeSubmit } from './master-requests-create/validation';
 
-    if (!root) {
+(function () {
+    const page = getMasterRequestElements();
+
+    if (!page) {
         return;
     }
 
-    const lookupUrl = root.dataset.lookupUrl;
+    const { form, fields, preview, lookupUrl } = page;
+    const updatePreview = () => refreshPreview(fields, preview);
 
-    const requestDate = document.getElementById('requestDate');
-    const lineSelect = document.getElementById('lineSelect');
-    const shiftSelect = document.getElementById('shiftSelect');
-    const requestType = document.getElementById('requestType');
-
-    const jobAssembly = document.getElementById('jobAssembly');
-    const jobPackaging = document.getElementById('jobPackaging');
-
-    const poNumber = document.getElementById('poNumber');
-    const destination = document.getElementById('destination');
-
-    const hintAssembly = document.getElementById('jobAssemblyHint');
-    const hintPackaging = document.getElementById('jobPackagingHint');
-
-    const previewDate = document.getElementById('previewDate');
-    const previewLineShift = document.getElementById('previewLineShift');
-    const previewJobs = document.getElementById('previewJobs');
-    const previewType = document.getElementById('previewType');
-
-    let timerAssembly = null;
-    let timerPackaging = null;
     let isSubmitting = false;
 
-    function getFormValue(name) {
-        return (root.elements.namedItem(name)?.value || '').trim();
-    }
+    const debouncedAssemblyLookup = debounce(
+        createJobLookupHandler({
+            inputElement: fields.jobAssembly,
+            hintElement: fields.hintAssembly,
+            lookupUrl,
+            fields,
+            refreshPreview: updatePreview,
+        }),
+        350,
+    );
 
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
-    }
+    const debouncedPackagingLookup = debounce(
+        createJobLookupHandler({
+            inputElement: fields.jobPackaging,
+            hintElement: fields.hintPackaging,
+            lookupUrl,
+            fields,
+            refreshPreview: updatePreview,
+        }),
+        350,
+    );
 
-    function getConfirmationHtml() {
-        const leader = getFormValue('leader_name') || '—';
-        const date = getFormValue('request_date') || '—';
-        const line = getSelectedText(lineSelect) || '—';
-        const assemblyJob = getFormValue('job_assembly') || '—';
-        const packagingJob = getFormValue('job_packaging') || '—';
-        const type = getFormValue('request_type')
-            ? getFormValue('request_type').replaceAll('_', ' ')
-            : '—';
+    fields.jobAssembly?.addEventListener('input', debouncedAssemblyLookup);
+    fields.jobPackaging?.addEventListener('input', debouncedPackagingLookup);
 
-        const foliosFrom = getFormValue('folios_from');
-        const foliosTo = getFormValue('folios_to');
-        const folios = (foliosFrom || foliosTo)
-            ? `${foliosFrom || '—'} al ${foliosTo || '—'}`
-            : '—';
-
-        const partialFolio = getFormValue('partial_folio');
-        const partialQty = getFormValue('partial_qty');
-        const partialInfo = (partialFolio || partialQty)
-            ? `${partialFolio || '—'} (${partialQty || '—'} pzas)`
-            : 'No';
-
-        return `
-            <div class="text-left text-sm space-y-1">
-                <p><strong>Líder:</strong> ${escapeHtml(leader)}</p>
-                <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
-                <p><strong>Línea:</strong> ${escapeHtml(line)}</p>
-                <p><strong>Jobs:</strong> ${escapeHtml(assemblyJob)} / ${escapeHtml(packagingJob)}</p>
-                <p><strong>Tipo de Master:</strong> ${escapeHtml(type)}</p>
-                <p><strong>Folios:</strong> ${escapeHtml(folios)}</p>
-                <p><strong>Folio parcial:</strong> ${escapeHtml(partialInfo)}</p>
-            </div>
-        `;
-    }
-
-    async function confirmSubmit() {
-        if (!window.Swal) {
-            return window.confirm('¿Confirmas el envío de la requisición?');
-        }
-
-        const result = await window.Swal.fire({
-            title: '¿Confirmas el envío de la requisición?',
-            html: getConfirmationHtml(),
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, enviar',
-            cancelButtonText: 'Cancelar',
-            focusCancel: true,
-            reverseButtons: true,
-        });
-
-        return result.isConfirmed;
-    }
-
-    
-    function validateBeforeSubmit() {
-        const foliosFrom = Number.parseInt(getFormValue('folios_from') || '0', 10);
-        const foliosTo = Number.parseInt(getFormValue('folios_to') || '0', 10);
-        const partialFolio = getFormValue('partial_folio');
-        const partialQty = getFormValue('partial_qty');
-        const type = getFormValue('request_type');
-        const assemblyValue = getFormValue('job_assembly');
-        const packagingValue = getFormValue('job_packaging');
-
-        const packagingInput = root.elements.namedItem('job_packaging');
-        const foliosToInput = root.elements.namedItem('folios_to');
-        const partialFolioInput = root.elements.namedItem('partial_folio');
-        const partialQtyInput = root.elements.namedItem('partial_qty');
-        const assemblyInput = root.elements.namedItem('job_assembly');
-
-        assemblyInput?.setCustomValidity('');
-        packagingInput?.setCustomValidity('');
-        foliosToInput?.setCustomValidity('');
-        partialFolioInput?.setCustomValidity('');
-        partialQtyInput?.setCustomValidity('');
-
-        if (!assemblyValue) {
-            root.elements.namedItem('job_assembly')?.setCustomValidity('El Job Ensamble es obligatorio.');
-            return false;
-        }
-
-        if (type === 'assembly_packaging' && !packagingValue) {
-            packagingInput?.setCustomValidity('El Job Empaque es obligatorio para este tipo de requisición.');
-            return false;
-        }
-
-        if (packagingValue && packagingValue === assemblyValue) {
-            packagingInput?.setCustomValidity('El Job Empaque debe ser distinto al Job Ensamble.');
-            return false;
-        }
-
-        if (foliosTo && foliosFrom && foliosTo < foliosFrom) {
-            foliosToInput?.setCustomValidity('El folio final debe ser mayor o igual al inicial.');
-            return false;
-        }
-
-        if ((partialFolio && !partialQty) || (!partialFolio && partialQty)) {
-            partialFolioInput?.setCustomValidity('Debes capturar ambos campos parciales.');
-            partialQtyInput?.setCustomValidity('Debes capturar ambos campos parciales.');
-            return false;
-        }
-
-        return root.checkValidity();
-    }
-
-    function getSelectedText(selectElement) {
-        if (!selectElement || !selectElement.selectedOptions || !selectElement.selectedOptions[0]) {
-            return '';
-        }
-
-        return selectElement.selectedOptions[0].textContent.trim();
-    }
-
-    function refreshPreview() {
-        previewDate.textContent = requestDate?.value || '—';
-
-        const lineText = getSelectedText(lineSelect);
-        const shiftText = getSelectedText(shiftSelect);
-        previewLineShift.textContent = (lineText || shiftText)
-            ? `${lineText || '—'} · ${shiftText || '—'}`
-            : '—';
-
-        const assemblyJob = (jobAssembly?.value || '').trim();
-        const packagingJob = (jobPackaging?.value || '').trim();
-        previewJobs.textContent = (assemblyJob || packagingJob)
-            ? [assemblyJob, packagingJob].filter(Boolean).join(' / ')
-            : '—';
-
-        const requestTypeValue = (requestType?.value || '').trim();
-        previewType.textContent = requestTypeValue ? requestTypeValue.replaceAll('_', ' ') : '—';
-    }
-
-    async function lookup(jobNumber) {
-        const url = new URL(lookupUrl, window.location.origin);
-        url.searchParams.set('job_number', jobNumber);
-
-        const response = await fetch(url, {
-            headers: {
-                Accept: 'application/json',
-            },
-        });
-
-        return await response.json();
-    }
-
-    function setHint(element, type, message) {
-        const baseClass = 'text-xs mt-2 ';
-        const colorClass = type === 'ok'
-            ? 'text-emerald-700'
-            : type === 'warn'
-                ? 'text-amber-700'
-                : 'text-slate-500';
-
-        element.className = baseClass + colorClass;
-        element.textContent = message || '';
-    }
-
-    async function handleAssemblyLookup() {
-        const value = (jobAssembly.value || '').trim();
-        refreshPreview();
-
-        if (!value) {
-            setHint(hintAssembly, 'muted', '');
-            return;
-        }
-
-        setHint(hintAssembly, 'muted', 'Buscando en Oracle…');
-        const data = await lookup(value);
-
-        if (!data.found) {
-            setHint(hintAssembly, 'warn', 'No encontrado en Oracle Jobs.');
-            return;
-        }
-
-        setHint(hintAssembly, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
-
-        if (!destination.value) {
-            destination.value = data.ship_code || '';
-        }
-
-        if (!poNumber.value) {
-            poNumber.value = data.ttl_cust_po || '';
-        }
-
-        refreshPreview();
-    }
-
-    async function handlePackagingLookup() {
-        const value = (jobPackaging.value || '').trim();
-        refreshPreview();
-
-        if (!value) {
-            setHint(hintPackaging, 'muted', '');
-            return;
-        }
-
-        setHint(hintPackaging, 'muted', 'Buscando en Oracle…');
-        const data = await lookup(value);
-
-        if (!data.found) {
-            setHint(hintPackaging, 'warn', 'No encontrado en Oracle Jobs.');
-            return;
-        }
-
-        setHint(hintPackaging, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
-
-        if (!destination.value) {
-            destination.value = data.ship_code || '';
-        }
-
-        if (!poNumber.value) {
-            poNumber.value = data.ttl_cust_po || '';
-        }
-
-        refreshPreview();
-    }
-
-    jobAssembly?.addEventListener('input', () => {
-        clearTimeout(timerAssembly);
-        timerAssembly = setTimeout(handleAssemblyLookup, 350);
+    [
+        fields.requestDate,
+        fields.lineSelect,
+        fields.shiftSelect,
+        fields.requestType,
+        fields.jobAssembly,
+        fields.jobPackaging,
+    ].forEach((element) => {
+        element?.addEventListener('change', updatePreview);
+        element?.addEventListener('input', updatePreview);
     });
 
-    jobPackaging?.addEventListener('input', () => {
-        clearTimeout(timerPackaging);
-        timerPackaging = setTimeout(handlePackagingLookup, 350);
-    });
+    attachValidationClearListeners(form);
 
-    [requestDate, lineSelect, shiftSelect, requestType, jobAssembly, jobPackaging].forEach((element) => {
-        element?.addEventListener('change', refreshPreview);
-        element?.addEventListener('input', refreshPreview);
-    });
-
-    ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty'].forEach((field) => {
-        const element = root.elements.namedItem(field);
-        element?.addEventListener('input', () => element.setCustomValidity(''));
-    });
-
-
-
-    root.addEventListener('submit', async (event) => {
+    form.addEventListener('submit', async (event) => {
         if (isSubmitting) {
             return;
         }
 
         event.preventDefault();
 
-         if (!validateBeforeSubmit()) {
-            root.reportValidity();
+        if (!validateBeforeSubmit(form)) {
+            form.reportValidity();
             return;
         }
-        
-        const confirmed = await confirmSubmit();
+
+        const confirmed = await confirmSubmit(form, fields);
 
         if (!confirmed) {
             return;
         }
 
         isSubmitting = true;
-        root.submit();
+        form.submit();
     });
 
-    refreshPreview();
+    updatePreview();
 })();

@@ -8,7 +8,7 @@
         return;
     }
 
-    function setFile(file) {
+    function setSelectedFile(file) {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInput.files = dataTransfer.files;
@@ -17,33 +17,45 @@
         submitButton.disabled = false;
     }
 
+    function preventDefaults(event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    function setDragState(isDragging) {
+        dropZone.classList.toggle('border-red-600', isDragging);
+    }
+
+
     dropZone.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (event) => {
-        if (event.target.files && event.target.files[0]) {
-            setFile(event.target.files[0]);
+        const selectedFile = event.target.files?.[0];
+
+        if (selectedFile) {
+            setSelectedFile(selectedFile);
         }
     });
 
     ['dragenter', 'dragover'].forEach((eventName) => {
         dropZone.addEventListener(eventName, (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            dropZone.classList.add('border-red-600');
+            preventDefaults(event);
+            setDragState(true);
         });
     });
 
     ['dragleave', 'drop'].forEach((eventName) => {
         dropZone.addEventListener(eventName, (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            dropZone.classList.remove('border-red-600');
+            preventDefaults(event);
+            setDragState(false);
         });
     });
 
     dropZone.addEventListener('drop', (event) => {
-        if (event.dataTransfer.files && event.dataTransfer.files[0]) {
-            setFile(event.dataTransfer.files[0]);
+        const droppedFile = event.dataTransfer?.files?.[0];
+
+        if (droppedFile) {
+            setSelectedFile(droppedFile);
         }
     });
 })();

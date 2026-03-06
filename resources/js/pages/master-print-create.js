@@ -1,17 +1,19 @@
 (function () {
     const selectAllButton = document.getElementById('selectAll');
     const clearAllButton = document.getElementById('clearAll');
+    const folioCheckboxes = document.querySelectorAll('input[name="folio_ids[]"]');
 
-    if (!selectAllButton || !clearAllButton) {
+    if (!selectAllButton || !clearAllButton || folioCheckboxes.length === 0) {
         return;
     }
 
-    function setAllFoliosChecked(checked) {
-        document.querySelectorAll('input[name="folio_ids[]"]').forEach((checkbox) => {
+     function toggleAllFolios(checked) {
+        folioCheckboxes.forEach((checkbox) => {
             checkbox.checked = checked;
         });
     }
 
-    selectAllButton.addEventListener('click', () => setAllFoliosChecked(true));
-    clearAllButton.addEventListener('click', () => setAllFoliosChecked(false));
+    selectAllButton.addEventListener('click', () => toggleAllFolios(true));
+    clearAllButton.addEventListener('click', () => toggleAllFolios(false));
 })();
+
