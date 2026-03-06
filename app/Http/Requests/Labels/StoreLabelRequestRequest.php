@@ -3,12 +3,14 @@
 namespace App\Http\Requests\Labels;
 
 use App\Models\LabelSku;
-use App\Models\OracleJob;
+use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class StoreLabelRequestRequest extends FormRequest
 {
+    private ?OracleJobLookupService $oracleJobLookup = null;
+
     public function authorize(): bool
     {
         return true;
@@ -68,14 +70,26 @@ class StoreLabelRequestRequest extends FormRequest
 
             $jobNumber = (string) $this->input('job_number');
             if ($jobNumber !== '') {
-                $jobExists = OracleJob::query()
-                    ->whereRaw('UPPER(job_number) = ?', [$jobNumber])
-                    ->exists();
+                $job = $this->oracleJobLookup()->findByJobNumber($jobNumber);
 
-                if (!$jobExists) {
+                if (!$job) {
                     $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
+                    return;
+                }
+
+                if (!$this->oracleJobLookup()->isPackagingJob($job)) {
+                    $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001).');
                 }
             }
         });
+    }
+
+    private function oracleJobLookup(): OracleJobLookupService
+    {
+        if (!$this->oracleJobLookup) {
+            $this->oracleJobLookup = app(OracleJobLookupService::class);
+        }
+
+        return $this->oracleJobLookup;
     }
 }

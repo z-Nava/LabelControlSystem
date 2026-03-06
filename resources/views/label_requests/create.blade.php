@@ -16,7 +16,7 @@
         </div>
     @endif
 
-    <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" action="{{ route('label_requests.store') }}">
+    <form id="labelRequestCreate" data-lookup-url="{{ route('oracle.lookup_job') }}" class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" action="{{ route('label_requests.store') }}">
         @csrf
 
         <div>
@@ -31,7 +31,7 @@
 
         <div>
             <label class="text-sm text-slate-600">Líder</label>
-            <input type="text" name="leader_name" value="{{ old('leader_name', auth()->user()->name) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <input type="text" name="leader_name" value="{{ old('leader_name') }}" minlength="3" maxlength="120" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s\-\.']+" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
         </div>
 
         <div>
@@ -56,7 +56,7 @@
 
         <div>
             <label class="text-sm text-slate-600">SKU / Label PN</label>
-            <input type="text" list="label-sku-list" name="label_part_number" value="{{ old('label_part_number') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <input id="labelPartNumber" type="text" list="label-sku-list" name="label_part_number" value="{{ old('label_part_number') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
             <datalist id="label-sku-list">
                 @foreach($labelSkus as $sku)
                     <option value="{{ $sku->label_part_number }}">{{ $sku->sku }} - {{ $sku->description }}</option>
@@ -81,15 +81,16 @@
 
         <div>
             <label class="text-sm text-slate-600">Job</label>
-            <input type="text" name="job_number" value="{{ old('job_number') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <input id="jobNumber" type="text" name="job_number" value="{{ old('job_number') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <p id="jobHint" class="text-xs text-slate-500 mt-2"></p>
         </div>
         <div>
             <label class="text-sm text-slate-600">PO</label>
-            <input type="text" name="po_number" value="{{ old('po_number') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <input id="poNumber" type="text" name="po_number" value="{{ old('po_number') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
         </div>
         <div>
             <label class="text-sm text-slate-600">Destino</label>
-            <input type="text" name="destination" value="{{ old('destination') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <input id="destination" type="text" name="destination" value="{{ old('destination') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
         </div>
         <div>
             <label class="text-sm text-slate-600">Modelo</label>

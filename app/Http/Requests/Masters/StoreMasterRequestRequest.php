@@ -3,18 +3,13 @@
 namespace App\Http\Requests\Masters;
 
 use App\Models\OracleJob;
+use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class StoreMasterRequestRequest extends FormRequest
 {
-
-    /**
-     * @var array<string,OracleJob|null>
-     */
-    private array $oracleJobCache = [];
-
+    private ?OracleJobLookupService $oracleJobLookup = null;
 
     public function authorize(): bool
     {
@@ -85,7 +80,7 @@ class StoreMasterRequestRequest extends FormRequest
             'partial_folio' => ['nullable', 'integer', 'min:1', 'required_with:partial_qty'],
             'partial_qty' => ['nullable', 'integer', 'min:1', 'required_with:partial_folio'],
 
-            'request_type' =>  ['required', Rule::in(['assembly', 'batteries_assembly', 'assembly_packaging', 'motors_molding'])],
+            'request_type' => ['required', Rule::in(['assembly', 'batteries_assembly', 'assembly_packaging', 'motors_molding'])],
             'kind' => ['required', 'in:new,reposition'],
 
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -94,34 +89,25 @@ class StoreMasterRequestRequest extends FormRequest
 
     private function findOracleJob(string $jobNumber): ?OracleJob
     {
-        $normalizedJobNumber = strtoupper(trim($jobNumber));
-
-        if (array_key_exists($normalizedJobNumber, $this->oracleJobCache)) {
-            return $this->oracleJobCache[$normalizedJobNumber];
-        }
-
-        return $this->oracleJobCache[$normalizedJobNumber] = OracleJob::query()
-            ->whereRaw('UPPER(job_number) = ?', [$normalizedJobNumber])
-            ->first();
+        return $this->oracleJobLookup()->findByJobNumber($jobNumber);
     }
 
     private function isAssemblyJob(OracleJob $job): bool
     {
-        $assembly = strtoupper(trim((string) $job->assembly));
-        $line = strtoupper(trim((string) $job->line));
-
-        return str_starts_with($assembly, '103')
-            || str_starts_with($assembly, '130')
-            || str_starts_with($line, 'MEXMI')
-            || str_starts_with($line, 'MXM');
+        return $this->oracleJobLookup()->isAssemblyJob($job);
     }
 
     private function isPackagingJob(OracleJob $job): bool
     {
-        $assembly = strtoupper(trim((string) $job->assembly));
+        return $this->oracleJobLookup()->isPackagingJob($job);
+    }
 
-        return str_starts_with($assembly, '018')
-            || str_starts_with($assembly, '055')
-            || str_starts_with($assembly, '001');
+    private function oracleJobLookup(): OracleJobLookupService
+    {
+        if (!$this->oracleJobLookup) {
+            $this->oracleJobLookup = app(OracleJobLookupService::class);
+        }
+
+        return $this->oracleJobLookup;
     }
 }

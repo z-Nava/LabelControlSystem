@@ -3,16 +3,36 @@
 namespace App\Services\Labels;
 
 use App\Models\LabelRequest;
+use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class LabelRequestService
 {
+    public function __construct(
+        private readonly OracleJobLookupService $oracleJobLookup,
+    ) {}
+
     public function create(array $data): LabelRequest
     {
         return DB::transaction(function () use ($data) {
             $payload = $data;
             $payload['status'] = 'requested';
+
+            $jobNumber = (string) ($payload['job_number'] ?? '');
+            if ($jobNumber !== '') {
+                $job = $this->oracleJobLookup->findByJobNumber($jobNumber);
+
+                if ($job) {
+                    if (empty($payload['po_number'])) {
+                        $payload['po_number'] = strtoupper(trim((string) $job->ttl_cust_po));
+                    }
+
+                    if (empty($payload['destination'])) {
+                        $payload['destination'] = strtoupper(trim((string) $job->ship_code));
+                    }
+                }
+            }
 
             return LabelRequest::query()->create($payload)->load(['line', 'shift']);
         });
