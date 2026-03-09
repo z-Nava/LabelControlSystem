@@ -11,6 +11,7 @@ use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\SkuSerialFormatController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -50,6 +51,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/label-skus/{label_sku}/edit', [LabelSkuController::class, 'edit'])->name('label_skus.edit');
         Route::put('/label-skus/{label_sku}', [LabelSkuController::class, 'update'])->name('label_skus.update');
         Route::post('/label-skus/{label_sku}/toggle', [LabelSkuController::class, 'toggle'])->name('label_skus.toggle');
+
+        Route::get('/sku-serial-formats', [SkuSerialFormatController::class, 'index'])->name('sku_serial_formats.index');
+        Route::get('/sku-serial-formats/create', [SkuSerialFormatController::class, 'create'])->name('sku_serial_formats.create');
+        Route::post('/sku-serial-formats', [SkuSerialFormatController::class, 'store'])->name('sku_serial_formats.store');
+        Route::get('/sku-serial-formats/{sku_serial_format}/edit', [SkuSerialFormatController::class, 'edit'])->name('sku_serial_formats.edit');
+        Route::put('/sku-serial-formats/{sku_serial_format}', [SkuSerialFormatController::class, 'update'])->name('sku_serial_formats.update');
+        Route::post('/sku-serial-formats/{sku_serial_format}/toggle', [SkuSerialFormatController::class, 'toggle'])->name('sku_serial_formats.toggle');
 
     });
 

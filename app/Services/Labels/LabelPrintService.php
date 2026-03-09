@@ -5,6 +5,8 @@ namespace App\Services\Labels;
 use App\Models\LabelPrintBatch;
 use App\Models\LabelPrintBatchItem;
 use App\Models\LabelRequest;
+use App\Models\LabelSku;
+use App\Models\SkuSerialFormat;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -16,6 +18,30 @@ class LabelPrintService
             throw ValidationException::withMessages([
                 'status' => 'No se puede imprimir una requisición cerrada.',
             ]);
+        }
+
+         if ($labelRequest->include_serial) {
+            $labelSku = LabelSku::query()
+                ->where('label_part_number', $labelRequest->label_part_number)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$labelSku) {
+                throw ValidationException::withMessages([
+                    'label_part_number' => 'El Label PN no está activo en el catálogo SKU/NP.',
+                ]);
+            }
+
+            $hasActiveFormat = SkuSerialFormat::query()
+                ->where('sku', $labelSku->sku)
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$hasActiveFormat) {
+                throw ValidationException::withMessages([
+                    'sku_serial_format' => 'Para imprimir seriales, el SKU debe tener un formato serial activo.',
+                ]);
+            }
         }
 
         return DB::transaction(function () use ($labelRequest, $data, $printedByUserId, $printedByName) {
