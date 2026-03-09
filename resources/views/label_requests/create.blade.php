@@ -39,7 +39,7 @@
             <select name="line_id" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                 <option value="">Selecciona</option>
                 @foreach($lines as $line)
-                    <option value="{{ $line->id }}" @selected((string) old('line_id') === (string) $line->id)>{{ $line->code }} · {{ $line->name }}</option>
+                    <option value="{{ $line->id }}" @selected((string) old('line_id') === (string) $line->id)>{{ $line->code }} · {{ $line->line_type }}</option>
                 @endforeach
             </select>
         </div>

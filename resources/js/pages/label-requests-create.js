@@ -46,37 +46,50 @@ function setHint(element, type, message = '') {
         const url = new URL(lookupUrl, window.location.origin);
         url.searchParams.set('job_number', jobNumber);
 
-        const response = await fetch(url, {
-            headers: {
-                Accept: 'application/json',
-            },
-        });
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
 
-        const data = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-        if (!data.found) {
-            jobInput.setCustomValidity('No encontrado en Oracle Jobs.');
-            setHint(hint, 'warn', 'No encontrado en Oracle Jobs.');
-            return;
+            const data = await response.json();
+
+            if (!data.found) {
+                jobInput.setCustomValidity('No encontrado en Oracle Jobs.');
+                setHint(hint, 'warn', 'No encontrado en Oracle Jobs.');
+                return;
+            }
+
+            if (!data.valid_for_packaging) {
+                jobInput.setCustomValidity('El Job debe pertenecer a Empaque (assembly 018/055/001).');
+                setHint(hint, 'warn', 'Tipo inválido para Empaque.');
+                return;
+            }
+
+            if (!destinationInput?.value) {
+                destinationInput.value = data.ship_code || '';
+            }
+
+            if (!poInput?.value) {
+                poInput.value = data.ttl_cust_po || '';
+            }
+
+            setHint(hint, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
+        } catch (error) {
+            jobInput.setCustomValidity('No fue posible validar el Job en este momento.');
+            setHint(hint, 'warn', 'No fue posible consultar Oracle. Intenta de nuevo.');
         }
-
-        if (!data.valid_for_packaging) {
-            jobInput.setCustomValidity('El Job debe pertenecer a Empaque (assembly 018/055/001).');
-            setHint(hint, 'warn', 'Tipo inválido para Empaque.');
-            return;
-        }
-
-        if (!destinationInput?.value) {
-            destinationInput.value = data.ship_code || '';
-        }
-
-        if (!poInput?.value) {
-            poInput.value = data.ttl_cust_po || '';
-        }
-
-        setHint(hint, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
     }, 350);
 
     jobInput.addEventListener('input', performLookup);
     jobInput.addEventListener('change', performLookup);
+
+    if (jobInput.value.trim() !== '') {
+        performLookup();
+    }
 })();

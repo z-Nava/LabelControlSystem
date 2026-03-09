@@ -24,7 +24,7 @@ class OracleJobLookupService
         }
 
         return $this->jobCache[$normalizedJobNumber] = OracleJob::query()
-            ->whereRaw('UPPER(job_number) = ?', [$normalizedJobNumber])
+            ->whereRaw('UPPER(TRIM(job_number)) = ?', [$normalizedJobNumber])
             ->first();
     }
 
