@@ -56,12 +56,15 @@
 
         <div>
             <label class="text-sm text-slate-600">SKU / Label PN</label>
-            <input id="labelPartNumber" type="text" list="label-sku-list" name="label_part_number" value="{{ old('label_part_number') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            <datalist id="label-sku-list">
+            <select id="labelPartNumber" name="label_part_number" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                <option value="">Selecciona SKU / Label PN disponible</option>
                 @foreach($labelSkus as $sku)
-                    <option value="{{ $sku->label_part_number }}">{{ $sku->sku }} - {{ $sku->description }}</option>
+                    <option value="{{ $sku->label_part_number }}" @selected(old('label_part_number') === $sku->label_part_number)>
+                        {{ $sku->sku }} · {{ $sku->label_part_number }} · {{ $sku->description }}
+                    </option>
                 @endforeach
-            </datalist>
+           </select>
+            <p class="text-xs text-slate-500 mt-1">Mostrando solo SKUs con formato activo en seriales.</p>
         </div>
 
         <div>

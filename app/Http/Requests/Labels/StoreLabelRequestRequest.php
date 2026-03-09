@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Labels;
 
 use App\Models\LabelSku;
+use App\Models\SkuSerialFormat;
 use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -58,13 +59,22 @@ class StoreLabelRequestRequest extends FormRequest
 
             $labelPn = (string) $this->input('label_part_number');
             if ($labelPn !== '') {
-                $exists = LabelSku::query()
+                $labelSku = LabelSku::query()
                     ->where('label_part_number', $labelPn)
                     ->where('is_active', true)
-                    ->exists();
+                    ->first(['sku']);
 
-                if (!$exists) {
+                if (!$labelSku) {
                     $validator->errors()->add('label_part_number', 'El Label PN debe existir y estar activo en el catálogo SKU/NP.');
+                } else {
+                    $hasActiveFormat = SkuSerialFormat::query()
+                        ->where('sku', $labelSku->sku)
+                        ->where('is_active', true)
+                        ->exists();
+
+                    if (!$hasActiveFormat) {
+                        $validator->errors()->add('label_part_number', 'El Label PN seleccionado no tiene un formato activo en sku_serial_formats.');
+                    }
                 }
             }
 

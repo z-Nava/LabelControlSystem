@@ -5,6 +5,7 @@ namespace App\Services\Labels;
 use App\Models\LabelRequest;
 use App\Models\LabelSku;
 use App\Models\ProductionLine;
+use App\Models\SkuSerialFormat;
 use App\Models\Shift;
 
 class LabelRequestReadService
@@ -60,7 +61,16 @@ class LabelRequestReadService
             'defaultWeek' => (int) now()->isoWeek(),
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
             'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
-            'labelSkus' => LabelSku::query()->active()->orderBy('sku')->get(['sku', 'label_part_number', 'description']),
+            'labelSkus' => LabelSku::query()
+                ->active()
+                ->whereExists(function ($query) {
+                    $query->selectRaw('1')
+                        ->from((new SkuSerialFormat())->getTable())
+                        ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
+                        ->where('sku_serial_formats.is_active', true);
+                })
+                ->orderBy('sku')
+                ->get(['sku', 'label_part_number', 'description']),
         ];
     }
 

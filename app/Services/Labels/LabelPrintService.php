@@ -221,7 +221,7 @@ class LabelPrintService
             return $labelRequest->label_part_number . "-{$yy}{$ww}{$serial}";
         }
 
-        $pattern = $serialFormat->pattern ?: '{PPP}{C}{PL}{YY}{WW}{SSSSS}';
+        $pattern = $this->normalizeSerialPattern((string) ($serialFormat->pattern ?: '{PPP}{C}{PL}{YY}{WW}{SSSSS}'));
 
         return strtr($pattern, [
             '{PPP}' => (string) ($serialFormat->prefix ?? ''),
@@ -231,5 +231,16 @@ class LabelPrintService
             '{WW}' => $ww,
             '{SSSSS}' => $serial,
         ]);
+    }
+
+    private function normalizeSerialPattern(string $pattern): string
+    {
+        $normalized = preg_replace('/\{\{\s*(PPP|C|PL|YY|WW|SSSSS)\s*\}\}/', '{$1}', $pattern) ?? $pattern;
+
+        if (!str_contains($normalized, '{SSSSS}')) {
+            $normalized .= '{SSSSS}';
+        }
+
+        return $normalized;
     }
 }
