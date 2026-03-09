@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SerialRange extends Model
 {
@@ -25,5 +26,11 @@ class SerialRange extends Model
         'label_request_id' => 'integer',
         'created_by_user_id' => 'integer',
     ];
+
+     public function week(): BelongsTo
+    {
+        return $this->belongsTo(SerialWeek::class, 'serial_week_id');
+    }
 }
+
 

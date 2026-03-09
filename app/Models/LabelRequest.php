@@ -62,6 +62,11 @@ class LabelRequest extends Model
         return $this->hasMany(LabelPrintBatch::class, 'label_request_id');
     }
 
+     public function serialRanges(): HasMany
+    {
+        return $this->hasMany(SerialRange::class, 'label_request_id');
+    }
+
     // Scopes útiles
     public function scopeOpen($query)
     {

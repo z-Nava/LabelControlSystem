@@ -72,6 +72,7 @@ class LabelRequestReadService
                 'shift:id,name,code',
                 'requestedByUser:id,name',
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
+                'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),
             ])
             ->findOrFail($id);
     }

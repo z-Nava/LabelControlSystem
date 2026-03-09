@@ -26,26 +26,31 @@ class LabelPrintService
         return DB::transaction(function () use ($labelRequest, $data, $printedByUserId, $printedByName) {
             $copies = (int) $data['copies'];
             $isPrintBatch = $data['batch_type'] === 'print';
-            $printSerial = (bool) $labelRequest->include_serial;
-            $printRating = (bool) $labelRequest->include_rating;
-            $needsSerialAllocation = $isPrintBatch && ($printSerial || $printRating);
+            $printSerial = (bool) $data['print_serial'];
+            $printRating = (bool) $data['print_rating'];
 
-            if ($isPrintBatch) {
-                $printedQty = $this->printedQuantity($labelRequest->id);
-                $remaining = (int) $labelRequest->quantity_requested - $printedQty;
-
-                if ($remaining <= 0) {
-                    throw ValidationException::withMessages([
-                        'copies' => 'La requisición ya tiene toda la cantidad solicitada impresa.',
-                    ]);
-                }
-
-                if ($copies > $remaining) {
-                    throw ValidationException::withMessages([
-                        'copies' => "Solo puedes imprimir {$remaining} copias para completar la requisición.",
-                    ]);
-                }
+            if (!$printSerial && !$printRating) {
+                throw ValidationException::withMessages([
+                    'print_serial' => 'Debes seleccionar al menos una opción: serial o rating.',
+                ]);
             }
+
+            if ($printSerial && !$labelRequest->include_serial) {
+                throw ValidationException::withMessages([
+                    'print_serial' => 'La requisición no permite impresión de serial.',
+                ]);
+            }
+
+            if ($printRating && !$labelRequest->include_rating) {
+                throw ValidationException::withMessages([
+                    'print_rating' => 'La requisición no permite impresión de rating.',
+                ]);
+            }
+
+            $ranges = SerialRange::query()
+                ->where('label_request_id', $labelRequest->id)
+                ->orderBy('range_start')
+                ->get();
 
             $batch = LabelPrintBatch::query()->create([
                 'label_request_id' => $labelRequest->id,
@@ -58,10 +63,34 @@ class LabelPrintService
                 'printed_at' => now(),
             ]);
 
-            if ($needsSerialAllocation) {
+            if ($isPrintBatch) {
+                if ((int) $labelRequest->quantity_requested <= 0) {
+                    throw ValidationException::withMessages([
+                        'status' => 'La requisición debe tener cantidad solicitada mayor a 0.',
+                    ]);
+                }
+
+                if ($ranges->isNotEmpty()) {
+                    throw ValidationException::withMessages([
+                        'batch_type' => 'Esta requisición ya tiene seriales asignados. Usa reprint o rework.',
+                    ]);
+                }
+
                 $serialFormat = $this->resolveSerialFormat($labelRequest);
+                if (!$serialFormat) {
+                    throw ValidationException::withMessages([
+                        'batch_type' => 'No existe un formato activo en sku_serial_formats para este SKU.',
+                    ]);
+                }
+
                 $week = $this->resolveSerialWeek($labelRequest, $serialFormat);
-                $reservedUnits = $this->reserveSerialUnits($week, $copies, $labelRequest, $serialFormat, $printedByUserId);
+                $reservedUnits = $this->reserveSerialUnits(
+                    $week,
+                    (int) $labelRequest->quantity_requested,
+                    $labelRequest,
+                    $serialFormat,
+                    $printedByUserId,
+                );
 
                 $batch->update(['serial_week_id' => $week->id]);
 
@@ -75,38 +104,42 @@ class LabelPrintService
                     ]);
                 }
             } else {
-                LabelPrintBatchItem::query()->create([
-                    'label_print_batch_id' => $batch->id,
-                    'serial_unit_id' => null,
-                    'print_serial' => $printSerial,
-                    'print_rating' => $printRating,
-                    'copies' => $copies,
-                ]);
+                if ($ranges->isEmpty()) {
+                    throw ValidationException::withMessages([
+                        'batch_type' => 'No hay rango asignado para reimprimir. Primero crea un batch de tipo print.',
+                    ]);
+                }
+
+                $weekId = (int) $ranges->first()->serial_week_id;
+                $batch->update(['serial_week_id' => $weekId]);
+
+                $units = SerialUnit::query()
+                    ->where('serial_week_id', $weekId)
+                    ->where(function ($query) use ($ranges) {
+                        foreach ($ranges as $range) {
+                            $query->orWhereBetween('serial_number', [$range->range_start, $range->range_end]);
+                        }
+                    })
+                    ->orderBy('serial_number')
+                    ->get(['id']);
+
+                foreach ($units as $unit) {
+                    LabelPrintBatchItem::query()->create([
+                        'label_print_batch_id' => $batch->id,
+                        'serial_unit_id' => $unit->id,
+                        'print_serial' => $printSerial,
+                        'print_rating' => $printRating,
+                        'copies' => $copies,
+                    ]);
+                }
             }
 
-            if ($isPrintBatch) {
-                $newPrintedQty = $this->printedQuantity($labelRequest->id);
-                $newStatus = $newPrintedQty >= (int) $labelRequest->quantity_requested
-                    ? 'completed'
-                    : 'in_progress';
-
-                if ($labelRequest->status !== $newStatus) {
-                    $labelRequest->update(['status' => $newStatus]);
-                }
+            if ($isPrintBatch && $labelRequest->status === 'requested') {
+                $labelRequest->update(['status' => 'in_progress']);
             }
 
             return $batch->load(['items', 'labelRequest']);
         });
-    }
-
-    private function printedQuantity(int $labelRequestId): int
-    {
-        return (int) LabelPrintBatchItem::query()
-            ->selectRaw('COALESCE(SUM(label_print_batch_items.copies), 0) as total')
-            ->join('label_print_batches', 'label_print_batches.id', '=', 'label_print_batch_items.label_print_batch_id')
-            ->where('label_print_batches.label_request_id', $labelRequestId)
-            ->where('label_print_batches.batch_type', 'print')
-            ->value('total');
     }
 
     private function resolveSerialWeek(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): SerialWeek

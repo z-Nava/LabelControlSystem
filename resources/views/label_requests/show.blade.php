@@ -23,7 +23,9 @@
             <div class="text-xs uppercase tracking-wide text-slate-500">Resumen</div>
             <div class="font-semibold mt-1">NP: {{ $labelRequest->label_part_number }}</div>
             <div class="text-slate-700">Qty: {{ number_format($labelRequest->quantity_requested) }}</div>
-            <div class="text-slate-700">Semana: {{ $labelRequest->week }}</div>
+            <div class="text-slate-700">Semana/Año: {{ $labelRequest->week }} / {{ $labelRequest->request_date?->format('Y') }}</div>
+            <div class="text-slate-700">Incluye serial: {{ $labelRequest->include_serial ? 'Sí' : 'No' }}</div>
+            <div class="text-slate-700">Incluye rating: {{ $labelRequest->include_rating ? 'Sí' : 'No' }}</div>
             <div class="text-slate-700">Status: {{ $labelRequest->status }}</div>
         </div>
 
@@ -50,6 +52,38 @@
                     </form>
                 @endif
             </div>
+        </div>
+    </div>
+
+    <div class="mt-6 rounded-xl border border-slate-200">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h2 class="font-semibold text-slate-900">Rangos de serial asignados</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                <tr class="text-left text-slate-500 border-b border-slate-200">
+                    <th class="py-3 px-4">Semana/Año</th>
+                    <th class="py-3 px-4">Prefijo</th>
+                    <th class="py-3 px-4">Rango</th>
+                    <th class="py-3 px-4">Cantidad</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y">
+                @forelse($labelRequest->serialRanges as $range)
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4">{{ $range->week?->week ?? '-' }} / {{ $range->week?->year ?? '-' }}</td>
+                        <td class="py-3 px-4">{{ $range->week?->prefix ?? '-' }}</td>
+                        <td class="py-3 px-4 font-mono">{{ $range->range_start }} - {{ $range->range_end }}</td>
+                        <td class="py-3 px-4">{{ number_format($range->quantity) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="px-4 py-6 text-center text-slate-500">Aún no hay rangos asignados. Se generan al primer batch de tipo print.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
