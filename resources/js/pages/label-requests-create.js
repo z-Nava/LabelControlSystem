@@ -68,14 +68,14 @@ function setHint(element, type, message = '') {
             if (!data.valid_for_packaging) {
                 jobInput.setCustomValidity('El Job debe pertenecer a Empaque (assembly 018/055/001).');
                 setHint(hint, 'warn', 'Tipo inválido para Empaque.');
-                return;
+                return; 
             }
 
-            if (!destinationInput?.value) {
+            if (destinationInput) {
                 destinationInput.value = data.ship_code || '';
             }
 
-            if (!poInput?.value) {
+            if (poInput) {
                 poInput.value = data.ttl_cust_po || '';
             }
 
