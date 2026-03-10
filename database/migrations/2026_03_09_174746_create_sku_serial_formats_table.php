@@ -12,13 +12,23 @@ return new class extends Migration {
 
             $table->string('sku', 80)->index();
 
-            $table->string('prefix', 10)->nullable();        // PPP
-            $table->string('serial_break', 10)->nullable();  // C
-            $table->string('plant_code', 10)->nullable();    // PL
+            // Componentes base del serial (separados)
+            $table->string('prefix', 10)->nullable();        // PPP (ej: 628)
+            $table->string('serial_break', 10)->nullable();  // C   (ej: C o D)
+            $table->string('plant_code', 10)->nullable();    // PL  (ej: 8)
 
-            $table->string('pattern', 80)
-                ->default('{PPP}{C}{PL}{YY}{WW}{SSSSS}');
+            // Configuración para construir el serial_full sin llaves
+            $table->string('separator', 5)->default('');     // '' o '-' o ' '
+            $table->unsignedTinyInteger('year_digits')->default(2); // 2=YY, 4=YYYY
+            $table->unsignedTinyInteger('week_digits')->default(2); // 2=WW
+            $table->boolean('include_year')->default(true);
+            $table->boolean('include_week')->default(true);
 
+            // (Opcional/legacy) si quieres seguir guardando una "plantilla"
+            // ya NO la uses para construir el serial_full si te estaba causando llaves
+            $table->string('pattern', 80)->nullable();
+
+            // Control del consecutivo (SSSSS)
             $table->unsignedTinyInteger('unit_length')->default(5);
             $table->unsignedInteger('next_unit')->default(1);
 
