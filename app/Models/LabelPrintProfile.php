@@ -13,6 +13,7 @@ class LabelPrintProfile extends Model
     protected $fillable = [
         'label_sku_id',
         'label_type',
+        'label_template_id',
         'name',
         'default_printer_name',
         'default_printer_ip',
@@ -20,6 +21,7 @@ class LabelPrintProfile extends Model
         'darkness',
         'speed',
         'media_type',
+        'media_tracking',
         'print_mode',
         'offset_x',
         'offset_y',
@@ -32,6 +34,7 @@ class LabelPrintProfile extends Model
     protected $casts = [
         'label_sku_id' => 'integer',
         'dpi' => 'integer',
+        'label_template_id' => 'integer',
         'darkness' => 'integer',
         'speed' => 'integer',
         'offset_x' => 'integer',
@@ -50,6 +53,11 @@ class LabelPrintProfile extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(LabelPrintProfileVersion::class, 'label_print_profile_id');
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(LabelTemplate::class, 'label_template_id');
     }
 
     public function createdByUser(): BelongsTo

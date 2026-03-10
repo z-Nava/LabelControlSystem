@@ -12,6 +12,8 @@ use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
+use App\Http\Controllers\Admin\LabelTemplateController;
+use App\Http\Controllers\Admin\LabelPrintProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -58,6 +60,20 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/sku-serial-formats/{sku_serial_format}/edit', [SkuSerialFormatController::class, 'edit'])->name('sku_serial_formats.edit');
         Route::put('/sku-serial-formats/{sku_serial_format}', [SkuSerialFormatController::class, 'update'])->name('sku_serial_formats.update');
         Route::post('/sku-serial-formats/{sku_serial_format}/toggle', [SkuSerialFormatController::class, 'toggle'])->name('sku_serial_formats.toggle');
+
+        Route::get('/label-templates', [LabelTemplateController::class, 'index'])->name('label_templates.index');
+        Route::get('/label-templates/create', [LabelTemplateController::class, 'create'])->name('label_templates.create');
+        Route::post('/label-templates', [LabelTemplateController::class, 'store'])->name('label_templates.store');
+        Route::get('/label-templates/{label_template}/edit', [LabelTemplateController::class, 'edit'])->name('label_templates.edit');
+        Route::put('/label-templates/{label_template}', [LabelTemplateController::class, 'update'])->name('label_templates.update');
+        Route::post('/label-templates/{label_template}/toggle', [LabelTemplateController::class, 'toggle'])->name('label_templates.toggle');
+
+        Route::get('/label-print-profiles', [LabelPrintProfileController::class, 'index'])->name('label_print_profiles.index');
+        Route::get('/label-print-profiles/create', [LabelPrintProfileController::class, 'create'])->name('label_print_profiles.create');
+        Route::post('/label-print-profiles', [LabelPrintProfileController::class, 'store'])->name('label_print_profiles.store');
+        Route::get('/label-print-profiles/{label_print_profile}/edit', [LabelPrintProfileController::class, 'edit'])->name('label_print_profiles.edit');
+        Route::put('/label-print-profiles/{label_print_profile}', [LabelPrintProfileController::class, 'update'])->name('label_print_profiles.update');
+        Route::post('/label-print-profiles/{label_print_profile}/toggle', [LabelPrintProfileController::class, 'toggle'])->name('label_print_profiles.toggle');
 
     });
 

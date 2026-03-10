@@ -17,7 +17,7 @@
     <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 space-y-1">
         <p><span class="font-semibold">Requisición:</span> {{ number_format($labelRequest->quantity_requested) }} etiqueta(s) · Semana {{ $labelRequest->week }} · Año {{ $labelRequest->request_date?->format('Y') }}</p>
         <p><span class="font-semibold">Serial permitido:</span> {{ $labelRequest->include_serial ? 'Sí' : 'No' }} · <span class="font-semibold">Rating permitido:</span> {{ $labelRequest->include_rating ? 'Sí' : 'No' }}</p>
-        <p class="text-xs text-slate-500">Batch <span class="font-semibold">print</span>: asigna rango nuevo una sola vez. Batch <span class="font-semibold">reprint/rework</span>: reutiliza el rango existente (no consume nuevos seriales).</p>
+        <p class="text-xs text-slate-500">Batch <span class="font-semibold">print</span>: si no hay rango asignado, consume seriales; si ya existe, reutiliza rango (modo reprint). Rating también consume seriales porque comparte secuencia con serial.</p>
     </div>
 
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" action="{{ route('label_requests.print.store', $labelRequest) }}">

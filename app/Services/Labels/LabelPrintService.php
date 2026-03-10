@@ -70,38 +70,36 @@ class LabelPrintService
                     ]);
                 }
 
-                if ($ranges->isNotEmpty()) {
-                    throw ValidationException::withMessages([
-                        'batch_type' => 'Esta requisición ya tiene seriales asignados. Usa reprint o rework.',
-                    ]);
-                }
+                if ($ranges->isEmpty()) {
+                    $serialFormat = $this->resolveSerialFormat($labelRequest);
+                    if (!$serialFormat) {
+                        throw ValidationException::withMessages([
+                            'batch_type' => 'No existe un formato activo en sku_serial_formats para este SKU.',
+                        ]);
+                    }
 
-                $serialFormat = $this->resolveSerialFormat($labelRequest);
-                if (!$serialFormat) {
-                    throw ValidationException::withMessages([
-                        'batch_type' => 'No existe un formato activo en sku_serial_formats para este SKU.',
-                    ]);
-                }
+                    $week = $this->resolveSerialWeek($labelRequest, $serialFormat);
+                    $reservedUnits = $this->reserveSerialUnits(
+                        $week,
+                        (int) $labelRequest->quantity_requested,
+                        $labelRequest,
+                        $serialFormat,
+                        $printedByUserId,
+                    );
 
-                $week = $this->resolveSerialWeek($labelRequest, $serialFormat);
-                $reservedUnits = $this->reserveSerialUnits(
-                    $week,
-                    (int) $labelRequest->quantity_requested,
-                    $labelRequest,
-                    $serialFormat,
-                    $printedByUserId,
-                );
+                    $batch->update(['serial_week_id' => $week->id]);
 
-                $batch->update(['serial_week_id' => $week->id]);
-
-                foreach ($reservedUnits as $unit) {
-                    LabelPrintBatchItem::query()->create([
-                        'label_print_batch_id' => $batch->id,
-                        'serial_unit_id' => $unit->id,
-                        'print_serial' => $printSerial,
-                        'print_rating' => $printRating,
-                        'copies' => 1,
-                    ]);
+                    foreach ($reservedUnits as $unit) {
+                        LabelPrintBatchItem::query()->create([
+                            'label_print_batch_id' => $batch->id,
+                            'serial_unit_id' => $unit->id,
+                            'print_serial' => $printSerial,
+                            'print_rating' => $printRating,
+                            'copies' => 1,
+                        ]);
+                    }
+                } else {
+                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
                 }
             } else {
                 if ($ranges->isEmpty()) {
@@ -110,28 +108,7 @@ class LabelPrintService
                     ]);
                 }
 
-                $weekId = (int) $ranges->first()->serial_week_id;
-                $batch->update(['serial_week_id' => $weekId]);
-
-                $units = SerialUnit::query()
-                    ->where('serial_week_id', $weekId)
-                    ->where(function ($query) use ($ranges) {
-                        foreach ($ranges as $range) {
-                            $query->orWhereBetween('serial_number', [$range->range_start, $range->range_end]);
-                        }
-                    })
-                    ->orderBy('serial_number')
-                    ->get(['id']);
-
-                foreach ($units as $unit) {
-                    LabelPrintBatchItem::query()->create([
-                        'label_print_batch_id' => $batch->id,
-                        'serial_unit_id' => $unit->id,
-                        'print_serial' => $printSerial,
-                        'print_rating' => $printRating,
-                        'copies' => $copies,
-                    ]);
-                }
+                $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
             }
 
             if ($isPrintBatch && $labelRequest->status === 'requested') {
@@ -140,6 +117,32 @@ class LabelPrintService
 
             return $batch->load(['items', 'labelRequest']);
         });
+    }
+
+    private function appendBatchItemsFromRanges(LabelPrintBatch $batch, $ranges, bool $printSerial, bool $printRating, int $copies): void
+    {
+        $weekId = (int) $ranges->first()->serial_week_id;
+        $batch->update(['serial_week_id' => $weekId]);
+
+        $units = SerialUnit::query()
+            ->where('serial_week_id', $weekId)
+            ->where(function ($query) use ($ranges) {
+                foreach ($ranges as $range) {
+                    $query->orWhereBetween('serial_number', [$range->range_start, $range->range_end]);
+                }
+            })
+            ->orderBy('serial_number')
+            ->get(['id']);
+
+        foreach ($units as $unit) {
+            LabelPrintBatchItem::query()->create([
+                'label_print_batch_id' => $batch->id,
+                'serial_unit_id' => $unit->id,
+                'print_serial' => $printSerial,
+                'print_rating' => $printRating,
+                'copies' => $copies,
+            ]);
+        }
     }
 
     private function resolveSerialWeek(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): SerialWeek
