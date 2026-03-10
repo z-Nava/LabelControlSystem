@@ -22,7 +22,7 @@
 
     <form class="mt-5 flex gap-2" method="GET" action="{{ route('sku_serial_formats.index') }}">
         <input name="q" value="{{ $search }}" class="w-full rounded-xl border border-slate-300 px-3 py-2"
-               placeholder="Buscar por SKU, prefix, plant code o pattern..." />
+               placeholder="Buscar por SKU, prefijos, separador o pattern..." />
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">Buscar</button>
     </form>
 
@@ -32,10 +32,12 @@
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">SKU</th>
                     <th class="py-3 pr-3">Prefix</th>
-                    <th class="py-3 pr-3">Serial break</th>
+                    <th class="py-3 pr-3">Break</th>
                     <th class="py-3 pr-3">Plant</th>
+                    <th class="py-3 pr-3">Sep</th>
+                    <th class="py-3 pr-3">Año/Sem</th>
+                    <th class="py-3 pr-3">Unit</th>
                     <th class="py-3 pr-3">Pattern</th>
-                    <th class="py-3 pr-3">Unit length</th>
                     <th class="py-3 pr-3">Activo</th>
                     <th class="py-3 text-right">Acciones</th>
                 </tr>
@@ -47,8 +49,12 @@
                         <td class="py-3 pr-3">{{ $format->prefix ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->serial_break ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->plant_code ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->pattern }}</td>
+                        <td class="py-3 pr-3">{{ $format->separator === '' ? '∅' : $format->separator }}</td>
+                        <td class="py-3 pr-3">
+                            {{ $format->include_year ? $format->year_digits : '-' }}/{{ $format->include_week ? $format->week_digits : '-' }}
+                        </td>
                         <td class="py-3 pr-3">{{ $format->unit_length }}</td>
+                        <td class="py-3 pr-3">{{ $format->pattern ?: 'segmentado' }}</td>
                         <td class="py-3 pr-3">
                             @if($format->is_active)
                                 <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Sí</span>
@@ -69,7 +75,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="py-6 text-center text-slate-500">No hay formatos registrados.</td></tr>
+                    <tr><td colspan="10" class="py-6 text-center text-slate-500">No hay formatos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>

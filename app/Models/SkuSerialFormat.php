@@ -13,6 +13,11 @@ class SkuSerialFormat extends Model
         'prefix',
         'serial_break',
         'plant_code',
+        'separator',
+        'year_digits',
+        'week_digits',
+        'include_year',
+        'include_week',
         'pattern',
         'unit_length',
         'next_unit',
@@ -22,7 +27,11 @@ class SkuSerialFormat extends Model
 
     protected $casts = [
         'unit_length' => 'integer',
+        'year_digits' => 'integer',
+        'week_digits' => 'integer',
         'next_unit' => 'integer',
+        'include_year' => 'boolean',
+        'include_week' => 'boolean',
         'is_active' => 'boolean',
         'updated_by_user_id' => 'integer',
     ];

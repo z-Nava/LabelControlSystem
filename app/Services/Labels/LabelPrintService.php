@@ -213,24 +213,78 @@ class LabelPrintService
 
     private function formatSerialFull(LabelRequest $labelRequest, SerialWeek $week, ?SkuSerialFormat $serialFormat, int $serialNumber): string
     {
-        $yy = substr((string) $week->year, -2);
-        $ww = str_pad((string) $week->week, 2, '0', STR_PAD_LEFT);
-        $serial = str_pad((string) $serialNumber, $serialFormat?->unit_length ?? 5, '0', STR_PAD_LEFT);
-
         if (!$serialFormat) {
+            $yy = substr((string) $week->year, -2);
+            $ww = str_pad((string) $week->week, 2, '0', STR_PAD_LEFT);
+            $serial = str_pad((string) $serialNumber, 5, '0', STR_PAD_LEFT);
+
             return $labelRequest->label_part_number . "-{$yy}{$ww}{$serial}";
         }
 
-        $pattern = $this->normalizeSerialPattern((string) ($serialFormat->pattern ?: '{PPP}{C}{PL}{YY}{WW}{SSSSS}'));
+        if (!empty($serialFormat->pattern)) {
+            return $this->formatFromLegacyPattern($week, $serialFormat, $serialNumber);
+        }
+
+        return $this->formatFromComponents($week, $serialFormat, $serialNumber);
+    }
+
+    private function formatFromLegacyPattern(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    {
+        $year = $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 2));
+        $weekValue = $this->resolveWeekValue($week, (int) ($serialFormat->week_digits ?? 2));
+        $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 5, '0', STR_PAD_LEFT);
+
+        $pattern = $this->normalizeSerialPattern((string) $serialFormat->pattern);
 
         return strtr($pattern, [
             '{PPP}' => (string) ($serialFormat->prefix ?? ''),
             '{C}' => (string) ($serialFormat->serial_break ?? ''),
             '{PL}' => (string) ($serialFormat->plant_code ?? ''),
-            '{YY}' => $yy,
-            '{WW}' => $ww,
+            '{YY}' => $year,
+            '{WW}' => $weekValue,
             '{SSSSS}' => $serial,
         ]);
+    }
+
+    private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    {
+        $components = [
+            (string) ($serialFormat->prefix ?? ''),
+            (string) ($serialFormat->serial_break ?? ''),
+            (string) ($serialFormat->plant_code ?? ''),
+        ];
+
+        if ((bool) ($serialFormat->include_year ?? true)) {
+            $components[] = $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 2));
+        }
+
+        if ((bool) ($serialFormat->include_week ?? true)) {
+            $components[] = $this->resolveWeekValue($week, (int) ($serialFormat->week_digits ?? 2));
+        }
+
+        $components[] = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 5, '0', STR_PAD_LEFT);
+
+        $separator = (string) ($serialFormat->separator ?? '');
+
+        return collect($components)
+            ->filter(fn (string $component) => $component !== '')
+            ->implode($separator);
+    }
+
+    private function resolveYearValue(SerialWeek $week, int $digits): string
+    {
+        $year = (string) $week->year;
+
+        if ($digits >= 4) {
+            return str_pad(substr($year, -4), 4, '0', STR_PAD_LEFT);
+        }
+
+        return str_pad(substr($year, -2), 2, '0', STR_PAD_LEFT);
+    }
+
+    private function resolveWeekValue(SerialWeek $week, int $digits): string
+    {
+        return str_pad((string) $week->week, max(1, $digits), '0', STR_PAD_LEFT);
     }
 
     private function normalizeSerialPattern(string $pattern): string
