@@ -4,6 +4,7 @@
 <div class="bg-white rounded-2xl shadow p-6" id="label-print-center"
      data-preview-url="{{ route('label_requests.print_batches.preview', ['label_request' => $labelRequest, 'batch' => $batch]) }}"
      data-confirm-url="{{ route('label_requests.print_batches.confirm', ['label_request' => $labelRequest, 'batch' => $batch]) }}"
+     data-csrf-token="{{ csrf_token() }}"
      data-back-url="{{ route('label_requests.show', $labelRequest) }}">
     <div class="flex items-center justify-between gap-3">
         <div>
@@ -63,7 +64,7 @@
     let selectedDevice = null;
     let previewPayload = null;
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
@@ -90,37 +91,62 @@
 
         setStatus('Buscando impresoras Zebra...');
 
-        BrowserPrint.getLocalDevices((devices) => {
-            const printers = (devices || []).filter((device) => device.deviceType === 'printer');
+        BrowserPrint.getDefaultDevice('printer', (device) => {
+            if (device) {
+                selectedDevice = device;
+                localStorage.setItem(storageKey, JSON.stringify({
+                    name: selectedDevice.name,
+                    uid: selectedDevice.uid,
+                    connection: selectedDevice.connection,
+                }));
 
-            if (!printers.length) {
-                setStatus('No se detectaron impresoras locales.', true);
+                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
+                setStatus('Impresora conectada (default). Ya puedes hacer preview o imprimir.');
                 return;
             }
 
-            selectedDevice = printers[0];
-            localStorage.setItem(storageKey, JSON.stringify({
-                name: selectedDevice.name,
-                uid: selectedDevice.uid,
-                connection: selectedDevice.connection,
-            }));
+            BrowserPrint.getLocalDevices((devices) => {
+                const printers = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
 
-            printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
-            setStatus('Impresora conectada. Ya puedes hacer preview o imprimir.');
+                if (!printers.length) {
+                    setStatus('No se detectaron impresoras locales.', true);
+                    return;
+                }
+
+                selectedDevice = printers[0];
+                localStorage.setItem(storageKey, JSON.stringify({
+                    name: selectedDevice.name,
+                    uid: selectedDevice.uid,
+                    connection: selectedDevice.connection,
+                }));
+
+                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
+                setStatus('Impresora conectada (local). Ya puedes hacer preview o imprimir.');
+            }, (error) => {
+                setStatus(`Error al conectar impresora: ${error}`, true);
+            }, 'printer');
         }, (error) => {
-            setStatus(`Error al conectar impresora: ${error}`, true);
-        }, 'printer');
+            setStatus(`Error al obtener impresora default: ${error}`, true);
+        });
     };
+
+    const sendToPrinter = (zplChunk) => new Promise((resolve, reject) => {
+        selectedDevice.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
+    });
 
     const loadPreview = async () => {
         setStatus('Generando preview...');
 
         const response = await fetch(root.dataset.previewUrl, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
             },
+            body: JSON.stringify({}),
         });
 
         if (!response.ok) {
@@ -142,10 +168,12 @@
     const confirmPrinted = async () => {
         const response = await fetch(root.dataset.confirmUrl, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
             },
             body: JSON.stringify({ printed_ok: true }),
         });
@@ -174,17 +202,21 @@
                 return;
             }
 
-            setStatus('Enviando ZPL a BrowserPrint...');
-            selectedDevice.send(previewPayload.zpl, async () => {
-                try {
-                    const result = await confirmPrinted();
-                    setStatus(`Impresión confirmada. Seriales actualizados: ${result.updated_serial_units}.`);
-                } catch (error) {
-                    setStatus(`Impreso localmente, pero falló confirmación backend: ${error.message}`, true);
-                }
-            }, (error) => {
-                setStatus(`Error al imprimir: ${error}`, true);
-            });
+            const documents = (previewPayload.documents || []).map((doc) => doc.zpl).filter(Boolean);
+            const queue = documents.length ? documents : [previewPayload.zpl];
+
+            setStatus(`Enviando ${queue.length} bloque(s) ZPL a BrowserPrint...`);
+
+            for (const chunk of queue) {
+                await sendToPrinter(chunk);
+            }
+
+            try {
+                const result = await confirmPrinted();
+                setStatus(`Impresión confirmada. Seriales actualizados: ${result.updated_serial_units}.`);
+            } catch (error) {
+                setStatus(`Impreso localmente, pero falló confirmación backend: ${error.message}`, true);
+            }
         } catch (error) {
             setStatus(`Error en impresión: ${error.message}`, true);
         }
