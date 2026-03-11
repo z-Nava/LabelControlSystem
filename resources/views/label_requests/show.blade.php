@@ -100,6 +100,7 @@
                         <th class="py-3 px-4">Tipo</th>
                         <th class="py-3 px-4">Impreso por</th>
                         <th class="py-3 px-4">Razón</th>
+                        <th class="py-3 px-4 text-right">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -109,10 +110,13 @@
                             <td class="py-3 px-4">{{ $batch->batch_type }}</td>
                             <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                             <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
+                            <td class="py-3 px-4 text-right">
+                                <a href="{{ route('label_requests.print_batches.print', ['label_request' => $labelRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados.</td>
+                            <td colspan="5" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>

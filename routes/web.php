@@ -105,6 +105,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/label-requests/{label_request}/print', [LabelPrintController::class, 'create'])->name('label_requests.print.create');
         Route::post('/label-requests/{label_request}/print', [LabelPrintController::class, 'store'])->name('label_requests.print.store');
+        Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
+        Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
+        Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
 
 
     });

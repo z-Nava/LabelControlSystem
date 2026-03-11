@@ -60,7 +60,7 @@ class LabelPrintService
                 'reason' => $data['reason'] ?? null,
                 'printed_by_user_id' => $printedByUserId,
                 'printed_by_name' => $printedByName,
-                'printed_at' => now(),
+                'printed_at' => null,
             ]);
 
             if ($isPrintBatch) {

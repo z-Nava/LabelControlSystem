@@ -31,6 +31,11 @@ class LabelPrintBatchItem extends Model
         return $this->belongsTo(LabelPrintBatch::class, 'label_print_batch_id');
     }
 
+    public function serialUnit(): BelongsTo
+    {
+        return $this->belongsTo(SerialUnit::class, 'serial_unit_id');
+    }
+
     // Helpers
     public function printsAnything(): bool
     {

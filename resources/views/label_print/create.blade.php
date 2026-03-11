@@ -58,7 +58,7 @@
         </div>
 
         <div class="md:col-span-3">
-            <button class="rounded-xl bg-red-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-red-500">Registrar batch</button>
+            <button class="rounded-xl bg-red-600 text-white px-5 py-2.5 text-sm font-semibold hover:bg-red-500">Ir a imprimir</button>
         </div>
     </form>
 </div>
