@@ -5,7 +5,7 @@ namespace App\Services\Printing;
 class RawPrinterService
 {
     /**
-     * @return array{ok:bool,message:string}
+     * @return array{ok:bool,detected:bool,message:string}
      */
     public function sendTestLabel(string $ip, ?string $printerName = null, int $dpi = 203): array
     {
@@ -15,6 +15,7 @@ class RawPrinterService
         if ($socket === false) {
             return [
                 'ok' => false,
+                'detected' => false,
                 'message' => "No se pudo conectar a la impresora {$ip}:9100. {$errorMessage}",
             ];
         }
@@ -28,6 +29,7 @@ class RawPrinterService
         if ($writtenBytes === false || $writtenBytes <= 0) {
             return [
                 'ok' => false,
+                'detected' => true,
                 'message' => 'Se pudo abrir conexión, pero no se pudo enviar la etiqueta de prueba.',
             ];
         }
@@ -36,6 +38,7 @@ class RawPrinterService
 
         return [
             'ok' => true,
+            'detected' => true,
             'message' => "Impresión de prueba enviada a {$ip}{$printerLabel}.",
         ];
     }

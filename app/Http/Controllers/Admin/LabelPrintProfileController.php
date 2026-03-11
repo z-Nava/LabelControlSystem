@@ -54,10 +54,16 @@ class LabelPrintProfileController extends Controller
         );
 
         if (!$response['ok']) {
-            return back()->withInput()->with('error', $response['message']);
+            return back()
+                ->withInput()
+                ->with('error', $response['message'])
+                ->with('printer_detected', $response['detected']);
         }
 
-        return back()->withInput()->with('success', $response['message']);
+        return back()
+            ->withInput()
+            ->with('success', $response['message'])
+            ->with('printer_detected', $response['detected']);
     }
 
     public function edit(LabelPrintProfile $label_print_profile): View
