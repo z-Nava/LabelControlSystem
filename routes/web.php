@@ -70,6 +70,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/label-print-profiles', [LabelPrintProfileController::class, 'index'])->name('label_print_profiles.index');
         Route::get('/label-print-profiles/create', [LabelPrintProfileController::class, 'create'])->name('label_print_profiles.create');
+        Route::post('/label-print-profiles/test-print', [LabelPrintProfileController::class, 'testPrint'])->name('label_print_profiles.test_print');
         Route::post('/label-print-profiles', [LabelPrintProfileController::class, 'store'])->name('label_print_profiles.store');
         Route::get('/label-print-profiles/{label_print_profile}/edit', [LabelPrintProfileController::class, 'edit'])->name('label_print_profiles.edit');
         Route::put('/label-print-profiles/{label_print_profile}', [LabelPrintProfileController::class, 'update'])->name('label_print_profiles.update');

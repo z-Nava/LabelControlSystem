@@ -3,20 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\TestLabelPrinterRequest;
 use App\Http\Requests\Admin\StoreLabelPrintProfileRequest;
 use App\Http\Requests\Admin\UpdateLabelPrintProfileRequest;
 use App\Models\LabelPrintProfile;
 use App\Models\LabelSku;
 use App\Models\LabelTemplate;
 use App\Services\Catalogs\LabelPrintProfileService;
+use App\Services\Printing\RawPrinterService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class LabelPrintProfileController extends Controller
 {
-    public function __construct(private readonly LabelPrintProfileService $service)
-    {
-    }
+    public function __construct(
+        private readonly LabelPrintProfileService $service,
+        private readonly RawPrinterService $rawPrinterService,
+    ) {}
 
     public function index(): View
     {
@@ -39,6 +42,22 @@ class LabelPrintProfileController extends Controller
         $this->service->create($request->validated(), auth()->id());
 
         return redirect()->route('label_print_profiles.index')->with('success', 'Perfil de impresión creado correctamente.');
+    }
+
+    public function testPrint(TestLabelPrinterRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $response = $this->rawPrinterService->sendTestLabel(
+            ip: (string) $data['default_printer_ip'],
+            printerName: $data['default_printer_name'] ?? null,
+            dpi: (int) ($data['dpi'] ?? 203),
+        );
+
+        if (!$response['ok']) {
+            return back()->withInput()->with('error', $response['message']);
+        }
+
+        return back()->withInput()->with('success', $response['message']);
     }
 
     public function edit(LabelPrintProfile $label_print_profile): View
