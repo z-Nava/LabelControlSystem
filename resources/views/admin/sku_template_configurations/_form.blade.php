@@ -209,6 +209,23 @@
         });
     };
 
+    const buildTestSerialZpl = () => {
+        const x = Number.parseInt(document.querySelector('[name="serial_position_x"]')?.value || '40', 10) || 40;
+        const y = Number.parseInt(document.querySelector('[name="serial_position_y"]')?.value || '40', 10) || 40;
+        const fontSize = Number.parseInt(document.querySelector('[name="serial_font_size"]')?.value || '40', 10) || 40;
+        const orientation = (document.querySelector('[name="serial_orientation"]')?.value || 'N').trim().toUpperCase();
+        const serial = 'SN2501000001';
+
+        return [
+            '^XA',
+            '^CI28',
+            `^FO${x},${y}`,
+            `^A${orientation}N,${fontSize},${fontSize}`,
+            `^FD${serial}^FS`,
+            '^XZ',
+        ].join('\n');
+    };
+
     const runTestPrint = () => {
         const type = connectionSelect.value;
 
@@ -222,9 +239,9 @@
             return;
         }
 
-        const zpl = '^XA^CF0,40^FO30,40^FDTEST PRINT USB^FS^XZ';
+        const zpl = buildTestSerialZpl();
         selectedDevice.send(zpl, () => {
-            setStatus('Impresión de prueba enviada por USB.');
+            setStatus('Impresión de prueba enviada por USB con serial de referencia.');
         }, (error) => {
             setStatus(`Falló impresión de prueba: ${error}`, true);
         });
