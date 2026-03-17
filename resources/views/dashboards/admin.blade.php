@@ -13,14 +13,9 @@
                 <div class="text-sm text-slate-600 mt-1">Altas, bajas, roles, estado activo.</div>
             </a>
 
-            <a href="{{ route('label_templates.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                <div class="font-semibold">Templates (ZPL)</div>
-                <div class="text-sm text-slate-600 mt-1">Versiones, layouts, activación.</div>
-            </a>
-
-            <a href="{{ route('label_print_profiles.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                <div class="font-semibold">Print Profiles</div>
-                <div class="text-sm text-slate-600 mt-1">Orientación, darkness, speed, X/Y, etc.</div>
+            <a href="{{ route('admin.sku_template_configurations.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Templates por SKU</div>
+                <div class="text-sm text-slate-600 mt-1">Templates ZPL + Print Profiles en una sola vista por SKU y Part Number.</div>
             </a>
 
             <a href="#" class="rounded-2xl border p-5 hover:shadow transition">
