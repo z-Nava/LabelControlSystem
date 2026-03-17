@@ -7,9 +7,12 @@ use App\Http\Requests\Admin\StoreSkuTemplateConfigurationRequest;
 use App\Http\Requests\Admin\UpdateSkuTemplateConfigurationRequest;
 use App\Models\LabelPrintProfile;
 use App\Models\LabelSku;
+use App\Models\SkuSerialFormat;
 use App\Services\Catalogs\LabelPrintProfileService;
 use App\Services\Catalogs\LabelTemplateService;
+use App\Services\Labels\SerialTemplateZplBuilder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -18,6 +21,7 @@ class SkuTemplateConfigurationController extends Controller
     public function __construct(
         private readonly LabelTemplateService $templateService,
         private readonly LabelPrintProfileService $profileService,
+        private readonly SerialTemplateZplBuilder $zplBuilder,
     ) {
     }
 
@@ -44,7 +48,7 @@ class SkuTemplateConfigurationController extends Controller
 
     public function create(): View
     {
-        $labelSkus = LabelSku::query()->active()->orderBy('sku')->get();
+        $labelSkus = $this->skuOptionsWithSerialFormat();
 
         return view('admin.sku_template_configurations.create', compact('labelSkus'));
     }
@@ -65,7 +69,7 @@ class SkuTemplateConfigurationController extends Controller
     public function edit(LabelPrintProfile $configuration): View
     {
         $configuration->load('template');
-        $labelSkus = LabelSku::query()->active()->orderBy('sku')->get();
+        $labelSkus = $this->skuOptionsWithSerialFormat();
 
         return view('admin.sku_template_configurations.edit', compact('configuration', 'labelSkus'));
     }
@@ -102,8 +106,24 @@ class SkuTemplateConfigurationController extends Controller
             ->with('success', 'Estado de la configuración actualizado.');
     }
 
+    private function skuOptionsWithSerialFormat(): Collection
+    {
+        return LabelSku::query()
+            ->active()
+            ->whereIn('sku', SkuSerialFormat::query()->active()->select('sku'))
+            ->orderBy('sku')
+            ->get();
+    }
+
     private function templatePayload(array $data): array
     {
+        $layout = [
+            'x' => $data['serial_position_x'],
+            'y' => $data['serial_position_y'],
+            'font_size' => $data['serial_font_size'],
+            'orientation' => $data['serial_orientation'],
+        ];
+
         return [
             'name' => $data['template_name'],
             'label_type' => $data['label_type'],
@@ -111,8 +131,10 @@ class SkuTemplateConfigurationController extends Controller
             'dpi' => $data['template_dpi'],
             'width_mm' => $data['template_width_mm'] ?? null,
             'height_mm' => $data['template_height_mm'] ?? null,
-            'zpl' => $data['template_zpl'],
-            'meta' => $data['template_meta'] ?? null,
+            'zpl' => $this->zplBuilder->build($layout),
+            'meta' => [
+                'serial_layout' => $layout,
+            ],
             'is_active' => $data['template_is_active'],
         ];
     }
@@ -125,7 +147,7 @@ class SkuTemplateConfigurationController extends Controller
             'label_template_id' => $templateId,
             'name' => $data['profile_name'],
             'default_printer_name' => $data['default_printer_name'] ?? null,
-            'default_printer_ip' => $data['default_printer_ip'] ?? null,
+            'default_printer_ip' => $data['connection_type'] === 'network' ? ($data['default_printer_ip'] ?? null) : null,
             'dpi' => $data['profile_dpi'],
             'darkness' => $data['darkness'] ?? null,
             'speed' => $data['speed'] ?? null,
@@ -134,7 +156,10 @@ class SkuTemplateConfigurationController extends Controller
             'print_mode' => $data['print_mode'] ?? null,
             'offset_x' => $data['offset_x'] ?? 0,
             'offset_y' => $data['offset_y'] ?? 0,
-            'settings' => $data['profile_settings'] ?? null,
+            'settings' => [
+                'connection_type' => $data['connection_type'],
+                'usb_required' => $data['connection_type'] === 'usb',
+            ],
             'is_active' => $data['profile_is_active'],
         ];
     }
