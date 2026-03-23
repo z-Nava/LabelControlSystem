@@ -17,6 +17,7 @@ class LabelTemplate extends Model
         'width_mm',
         'height_mm',
         'zpl',
+        'serial_layout',
         'meta',
         'version',
         'is_active',
@@ -29,6 +30,7 @@ class LabelTemplate extends Model
         'dpi' => 'integer',
         'width_mm' => 'decimal:2',
         'height_mm' => 'decimal:2',
+        'serial_layout' => 'array',
         'meta' => 'array',
         'version' => 'integer',
         'is_active' => 'boolean',
@@ -49,6 +51,13 @@ class LabelTemplate extends Model
     public function updatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by_user_id');
+    }
+
+    public function getResolvedSerialLayoutAttribute(): array
+    {
+        return $this->serial_layout
+            ?? data_get($this->meta, 'serial_layout', [])
+            ?? [];
     }
 
     public function scopeActive($query)

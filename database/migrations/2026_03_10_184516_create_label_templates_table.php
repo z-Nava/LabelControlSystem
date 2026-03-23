@@ -30,6 +30,9 @@ return new class extends Migration {
             // ZPL base (con placeholders del tipo {{serial_full}}, {{label_part_number}}, etc.)
             $table->longText('zpl');
 
+            // Layout estructurado para la etiqueta serial (QR, SKU, serial, etc.)
+            $table->json('serial_layout')->nullable();
+
             // Variables/metadata extra (opcional)
             $table->json('meta')->nullable();
 

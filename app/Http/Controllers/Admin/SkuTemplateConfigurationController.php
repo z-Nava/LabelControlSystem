@@ -118,30 +118,10 @@ class SkuTemplateConfigurationController extends Controller
     private function templatePayload(array $data): array
     {
         $layout = [
-            'text' => [
-                'x' => $data['serial_position_x'],
-                'y' => $data['serial_position_y'],
-                'font_size' => $data['serial_font_size'],
-                'orientation' => $data['serial_orientation'],
-            ],
-            'qr' => [
-                'x' => $data['qr_position_x'] ?? 30,
-                'y' => $data['qr_position_y'] ?? 30,
-                'magnification' => $data['qr_magnification'] ?? 4,
-            ],
-            'sku' => [
-                'x' => $data['sku_position_x'] ?? 170,
-                'y' => $data['sku_position_y'] ?? 35,
-                'font_size' => $data['sku_font_size'] ?? 44,
-                'orientation' => $data['sku_orientation'] ?? 'N',
-            ],
-            'sn' => [
-                'x' => $data['sn_position_x'] ?? 170,
-                'y' => $data['sn_position_y'] ?? 95,
-                'font_size' => $data['sn_font_size'] ?? 22,
-                'orientation' => $data['sn_orientation'] ?? 'N',
-                'prefix' => $data['sn_prefix'] ?? 'SN:',
-            ],
+            'x' => $data['serial_position_x'],
+            'y' => $data['serial_position_y'],
+            'font_size' => $data['serial_font_size'],
+            'orientation' => $data['serial_orientation'],
         ];
 
         return [
@@ -151,7 +131,7 @@ class SkuTemplateConfigurationController extends Controller
             'dpi' => $data['template_dpi'],
             'width_mm' => $data['template_width_mm'] ?? null,
             'height_mm' => $data['template_height_mm'] ?? null,
-            'zpl' => $this->zplBuilder->build($data['label_type'], $layout),
+            'zpl' => $this->zplBuilder->build($layout),
             'meta' => [
                 'serial_layout' => $layout,
             ],

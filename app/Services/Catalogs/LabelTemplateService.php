@@ -64,6 +64,9 @@ class LabelTemplateService
 
     private function normalizeData(array $data, bool $defaultActive, ?int $userId): array
     {
+        $serialLayout = $this->normalizeSerialLayout($data['serial_layout'] ?? null);
+        $meta = $this->normalizeMeta($data['meta'] ?? null, $serialLayout);
+
         $payload = [
             'name' => trim($data['name']),
             'label_type' => trim($data['label_type']),
@@ -72,7 +75,8 @@ class LabelTemplateService
             'width_mm' => $data['width_mm'] ?: null,
             'height_mm' => $data['height_mm'] ?: null,
             'zpl' => trim($data['zpl']),
-            'meta' => $data['meta'] ?: null,
+            'serial_layout' => $serialLayout,
+            'meta' => $meta,
             'is_active' => (bool) ($data['is_active'] ?? $defaultActive),
             'updated_by_user_id' => $userId,
         ];
@@ -82,6 +86,24 @@ class LabelTemplateService
         }
 
         return $payload;
+    }
+
+    private function normalizeSerialLayout(mixed $serialLayout): ?array
+    {
+        return is_array($serialLayout) && $serialLayout !== []
+            ? $serialLayout
+            : null;
+    }
+
+    private function normalizeMeta(mixed $meta, ?array $serialLayout): ?array
+    {
+        $normalizedMeta = is_array($meta) ? $meta : [];
+
+        if ($serialLayout !== null) {
+            $normalizedMeta['serial_layout'] = $serialLayout;
+        }
+
+        return $normalizedMeta !== [] ? $normalizedMeta : null;
     }
 
     private function nextVersion(int $skuId, string $labelType): int

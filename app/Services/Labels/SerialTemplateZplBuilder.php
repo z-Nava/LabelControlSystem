@@ -6,20 +6,16 @@ class SerialTemplateZplBuilder
 {
     public function build(string $labelType, array $layout): string
     {
-        return $labelType === 'serial'
-            ? $this->buildSerialTemplate($layout)
-            : $this->buildTextOnlyTemplate($layout);
-    }
-
-    private function buildTextOnlyTemplate(array $layout): string
-    {
-        $text = $this->normalizeTextLayout($layout['text'] ?? $layout);
+        $x = (int) ($layout['x'] ?? 40);
+        $y = (int) ($layout['y'] ?? 40);
+        $fontSize = (int) ($layout['font_size'] ?? 40);
+        $orientation = $this->normalizeOrientation((string) ($layout['orientation'] ?? 'N'));
 
         return implode("\n", [
             '^XA',
             '^CI28',
-            sprintf('^FO%d,%d', $text['x'], $text['y']),
-            sprintf('^A%sN,%d,%d', $text['orientation'], $text['font_size'], $text['font_size']),
+            sprintf('^FO%d,%d', $x, $y),
+            sprintf('^A%sN,%d,%d', $orientation, $fontSize, $fontSize),
             '^FD{{serial_full}}^FS',
             '^XZ',
         ]);
@@ -77,3 +73,4 @@ class SerialTemplateZplBuilder
             : 'N';
     }
 }
+
