@@ -24,9 +24,11 @@ class LabelBatchPrintExecutionService
             ]);
         }
 
-        $skuId = LabelSku::query()
+        $sku = LabelSku::query()
             ->where('label_part_number', $batch->labelRequest?->label_part_number)
-            ->value('id');
+            ->first(['id', 'sku', 'label_part_number']);
+
+        $skuId = $sku?->id;
 
         $documents = [];
 
@@ -52,7 +54,7 @@ class LabelBatchPrintExecutionService
                     continue;
                 }
 
-                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType);
+                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku);
                 $rendered = $this->renderTemplate((string) $template->zpl, $payload);
 
                 for ($copy = 1; $copy <= (int) $item->copies; $copy++) {
@@ -112,7 +114,7 @@ class LabelBatchPrintExecutionService
         });
     }
 
-    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType): array
+    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType, ?LabelSku $sku): array
     {
         return [
             'serial_full' => $serialUnit->serial_full,
@@ -121,7 +123,7 @@ class LabelBatchPrintExecutionService
             'label_type' => $labelType,
             'label_request_id' => (string) $batch->label_request_id,
             'batch_id' => (string) $batch->id,
-            'label_part_number' => (string) ($batch->labelRequest?->label_part_number ?? ''),
+            'label_part_number' => (string) ($sku?->label_part_number ?? $batch->labelRequest?->label_part_number ?? ''),
             'week' => (string) ($batch->labelRequest?->week ?? ''),
             'year' => (string) ($batch->labelRequest?->request_date?->format('Y') ?? ''),
         ];
