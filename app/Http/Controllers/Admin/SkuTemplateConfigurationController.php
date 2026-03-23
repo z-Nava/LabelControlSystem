@@ -118,35 +118,10 @@ class SkuTemplateConfigurationController extends Controller
     private function templatePayload(array $data): array
     {
         $layout = [
-            'elements' => [
-                [
-                    'type' => 'qr',
-                    'content' => 'serial_full',
-                    'x' => $data['qr_position_x'],
-                    'y' => $data['qr_position_y'],
-                    'orientation' => $data['qr_orientation'],
-                    'magnification' => $data['qr_magnification'],
-                    'model' => '2',
-                ],
-                [
-                    'type' => 'text',
-                    'content' => 'sku',
-                    'x' => $data['sku_position_x'],
-                    'y' => $data['sku_position_y'],
-                    'font_size' => $data['sku_font_size'],
-                    'width' => $data['sku_font_width'] ?? $data['sku_font_size'],
-                    'orientation' => $data['sku_orientation'],
-                ],
-                [
-                    'type' => 'text',
-                    'content' => 'serial_full',
-                    'x' => $data['serial_position_x'],
-                    'y' => $data['serial_position_y'],
-                    'font_size' => $data['serial_font_size'],
-                    'width' => $data['serial_font_width'] ?? $data['serial_font_size'],
-                    'orientation' => $data['serial_orientation'],
-                ],
-            ],
+            'x' => $data['serial_position_x'],
+            'y' => $data['serial_position_y'],
+            'font_size' => $data['serial_font_size'],
+            'orientation' => $data['serial_orientation'],
         ];
 
         return [
@@ -157,8 +132,9 @@ class SkuTemplateConfigurationController extends Controller
             'width_mm' => $data['template_width_mm'] ?? null,
             'height_mm' => $data['template_height_mm'] ?? null,
             'zpl' => $this->zplBuilder->build($layout),
-            'serial_layout' => $layout,
-            'meta' => null,
+            'meta' => [
+                'serial_layout' => $layout,
+            ],
             'is_active' => $data['template_is_active'],
         ];
     }

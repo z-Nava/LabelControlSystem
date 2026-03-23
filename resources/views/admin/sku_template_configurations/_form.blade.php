@@ -1,13 +1,6 @@
 @csrf
 @php
-    $layout = old('serial_layout', $configuration->template->resolved_serial_layout ?? []);
-    $elements = collect($layout['elements'] ?? [])->keyBy('content');
-    $qrElement = $elements->get('serial_full', []);
-    $textSerialElement = collect($layout['elements'] ?? [])->first(fn ($element) => ($element['type'] ?? null) === 'text' && ($element['content'] ?? null) === 'serial_full') ?? [];
-    if (($qrElement['type'] ?? null) !== 'qr') {
-        $qrElement = [];
-    }
-    $skuElement = $elements->get('sku', []);
+    $layout = old('serial_layout', $configuration->template->meta['serial_layout'] ?? []);
     $settings = old('profile_settings', $configuration->settings ?? []);
     $connectionType = old('connection_type', $settings['connection_type'] ?? ($configuration->default_printer_ip ? 'network' : 'usb'));
     $selectedLabelType = old('label_type', $configuration->label_type ?? $configuration->template?->label_type ?? 'serial');
@@ -34,8 +27,7 @@
     </div>
 
     <div class="md:col-span-2 border-t pt-3 mt-1">
-        <h2 class="font-semibold text-slate-900">Template serial pequeño (ZPL generado automáticamente)</h2>
-        <p class="mt-1 text-xs text-slate-500">La etiqueta serial se genera con 3 elementos: QR con el SN, SKU y serial completo.</p>
+        <h2 class="font-semibold text-slate-900">Template (ZPL generado automáticamente)</h2>
     </div>
 
     <div>
@@ -50,91 +42,25 @@
             @endforeach
         </select>
     </div>
-
-    <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <h3 class="font-semibold text-slate-900">QR con SN</h3>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición QR X</label>
-                <input type="number" name="qr_position_x" value="{{ old('qr_position_x', $qrElement['x'] ?? 30) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición QR Y</label>
-                <input type="number" name="qr_position_y" value="{{ old('qr_position_y', $qrElement['y'] ?? 25) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Magnificación QR</label>
-                <input type="number" name="qr_magnification" value="{{ old('qr_magnification', $qrElement['magnification'] ?? 4) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" min="1" max="10" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Orientación QR</label>
-                <select name="qr_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-                    @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('qr_orientation', $qrElement['orientation'] ?? 'N') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Posición serial X</label>
+        <input type="number" name="serial_position_x" value="{{ old('serial_position_x', $layout['x'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
     </div>
-
-    <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <h3 class="font-semibold text-slate-900">Texto SKU</h3>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición SKU X</label>
-                <input type="number" name="sku_position_x" value="{{ old('sku_position_x', $skuElement['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición SKU Y</label>
-                <input type="number" name="sku_position_y" value="{{ old('sku_position_y', $skuElement['y'] ?? 35) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Alto de letra SKU</label>
-                <input type="number" name="sku_font_size" value="{{ old('sku_font_size', $skuElement['font_size'] ?? 28) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Ancho de letra SKU</label>
-                <input type="number" name="sku_font_width" value="{{ old('sku_font_width', $skuElement['width'] ?? $skuElement['font_size'] ?? 28) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-slate-700">Orientación SKU</label>
-                <select name="sku_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-                    @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('sku_orientation', $skuElement['orientation'] ?? 'N') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Posición serial Y</label>
+        <input type="number" name="serial_position_y" value="{{ old('serial_position_y', $layout['y'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
     </div>
-
-    <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <h3 class="font-semibold text-slate-900">Texto serial completo</h3>
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición serial X</label>
-                <input type="number" name="serial_position_x" value="{{ old('serial_position_x', $textSerialElement['x'] ?? $layout['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Posición serial Y</label>
-                <input type="number" name="serial_position_y" value="{{ old('serial_position_y', $textSerialElement['y'] ?? $layout['y'] ?? 80) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Alto de letra serial</label>
-                <input type="number" name="serial_font_size" value="{{ old('serial_font_size', $textSerialElement['font_size'] ?? $layout['font_size'] ?? 24) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700">Ancho de letra serial</label>
-                <input type="number" name="serial_font_width" value="{{ old('serial_font_width', $textSerialElement['width'] ?? $textSerialElement['font_size'] ?? $layout['font_size'] ?? 24) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-slate-700">Orientación serial</label>
-                <select name="serial_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-                    @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('serial_orientation', $textSerialElement['orientation'] ?? $layout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Tamaño de letra</label>
+        <input type="number" name="serial_font_size" value="{{ old('serial_font_size', $layout['font_size'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Orientación serial</label>
+        <select name="serial_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
+            @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
+                <option value="{{ $value }}" @selected(old('serial_orientation', $layout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+            @endforeach
+        </select>
     </div>
 
     <div>
@@ -311,34 +237,17 @@
     };
 
     const buildTestSerialZpl = () => {
-        const qrX = Number.parseInt(document.querySelector('[name="qr_position_x"]')?.value || '30', 10) || 30;
-        const qrY = Number.parseInt(document.querySelector('[name="qr_position_y"]')?.value || '25', 10) || 25;
-        const qrOrientation = (document.querySelector('[name="qr_orientation"]')?.value || 'N').trim().toUpperCase();
-        const qrMagnification = Number.parseInt(document.querySelector('[name="qr_magnification"]')?.value || '4', 10) || 4;
-        const skuX = Number.parseInt(document.querySelector('[name="sku_position_x"]')?.value || '170', 10) || 170;
-        const skuY = Number.parseInt(document.querySelector('[name="sku_position_y"]')?.value || '35', 10) || 35;
-        const skuFontSize = Number.parseInt(document.querySelector('[name="sku_font_size"]')?.value || '28', 10) || 28;
-        const skuFontWidth = Number.parseInt(document.querySelector('[name="sku_font_width"]')?.value || String(skuFontSize), 10) || skuFontSize;
-        const skuOrientation = (document.querySelector('[name="sku_orientation"]')?.value || 'N').trim().toUpperCase();
-        const serialX = Number.parseInt(document.querySelector('[name="serial_position_x"]')?.value || '170', 10) || 170;
-        const serialY = Number.parseInt(document.querySelector('[name="serial_position_y"]')?.value || '80', 10) || 80;
-        const serialFontSize = Number.parseInt(document.querySelector('[name="serial_font_size"]')?.value || '24', 10) || 24;
-        const serialFontWidth = Number.parseInt(document.querySelector('[name="serial_font_width"]')?.value || String(serialFontSize), 10) || serialFontSize;
-        const serialOrientation = (document.querySelector('[name="serial_orientation"]')?.value || 'N').trim().toUpperCase();
+        const x = Number.parseInt(document.querySelector('[name="serial_position_x"]')?.value || '40', 10) || 40;
+        const y = Number.parseInt(document.querySelector('[name="serial_position_y"]')?.value || '40', 10) || 40;
+        const fontSize = Number.parseInt(document.querySelector('[name="serial_font_size"]')?.value || '40', 10) || 40;
+        const orientation = (document.querySelector('[name="serial_orientation"]')?.value || 'N').trim().toUpperCase();
         const serial = 'SN2501000001';
-        const sku = 'SKU-TEST-001';
 
         return [
             '^XA',
             '^CI28',
-            `^FO${qrX},${qrY}`,
-            `^BQN,${qrOrientation},2,${Math.max(1, Math.min(10, qrMagnification))}`,
-            `^FDLA,${serial}^FS`,
-            `^FO${skuX},${skuY}`,
-            `^A${skuOrientation}N,${skuFontSize},${skuFontWidth}`,
-            `^FD${sku}^FS`,
-            `^FO${serialX},${serialY}`,
-            `^A${serialOrientation}N,${serialFontSize},${serialFontWidth}`,
+            `^FO${x},${y}`,
+            `^A${orientation}N,${fontSize},${fontSize}`,
             `^FD${serial}^FS`,
             '^XZ',
         ].join('\n');
@@ -359,7 +268,7 @@
 
         const zpl = buildTestSerialZpl();
         selectedDevice.send(zpl, () => {
-            setStatus('Impresión de prueba enviada por USB con QR, SKU y serial de referencia.');
+            setStatus('Impresión de prueba enviada por USB con serial de referencia.');
         }, (error) => {
             setStatus(`Falló impresión de prueba: ${error}`, true);
         });
