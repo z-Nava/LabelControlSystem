@@ -158,33 +158,59 @@
         });
     });
 
+    const showMessage = (title, text, icon = 'info') => {
+        if (window.Swal?.fire) {
+            window.Swal.fire(title, text, icon);
+            return;
+        }
+
+        window.alert(`${title}\n\n${text}`);
+    };
+
+    const confirmSubmit = async ({ serialCount, ratingCount, printerName, reason }) => {
+        if (window.Swal?.fire) {
+            return window.Swal.fire({
+                title: '¿Confirmar reimpresión / retrabajo?',
+                html: `Seriales: <b>${serialCount}</b><br>Ratings: <b>${ratingCount}</b><br>Impresora: <b>${printerName}</b><br><br>Motivo:<br><span class="text-sm">${reason}</span>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, crear batch',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true,
+            });
+        }
+
+        const isConfirmed = window.confirm(
+            `¿Confirmar reimpresión / retrabajo?\n\nSeriales: ${serialCount}\nRatings: ${ratingCount}\nImpresora: ${printerName}\n\nMotivo:\n${reason}`
+        );
+
+        return { isConfirmed };
+    };
+
     submitButton?.addEventListener('click', async () => {
         const serialCount = document.querySelectorAll('.serial-item:checked').length;
         const ratingCount = document.querySelectorAll('.rating-item:checked').length;
 
         if (!serialCount && !ratingCount) {
-            window.Swal?.fire('Selecciona elementos', 'Debes elegir al menos un serial o rating para continuar.', 'warning');
+            showMessage('Selecciona elementos', 'Debes elegir al menos un serial o rating para continuar.', 'warning');
             return;
         }
 
         if (!printerNameInput.value.trim()) {
-            window.Swal?.fire('Impresora requerida', 'Primero selecciona una impresora con Browser Print.', 'warning');
+            showMessage('Impresora requerida', 'Primero selecciona una impresora con Browser Print.', 'warning');
             return;
         }
 
         if (!reasonInput.value.trim()) {
-            window.Swal?.fire('Motivo requerido', 'Captura el motivo de reimpresión/retrabajo.', 'warning');
+            showMessage('Motivo requerido', 'Captura el motivo de reimpresión/retrabajo.', 'warning');
             return;
         }
 
-        const result = await window.Swal?.fire({
-            title: '¿Confirmar reimpresión / retrabajo?',
-            html: `Seriales: <b>${serialCount}</b><br>Ratings: <b>${ratingCount}</b><br>Impresora: <b>${printerNameInput.value}</b><br><br>Motivo:<br><span class="text-sm">${reasonInput.value}</span>`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, crear batch',
-            cancelButtonText: 'Cancelar',
-            reverseButtons: true,
+        const result = await confirmSubmit({
+            serialCount,
+            ratingCount,
+            printerName: printerNameInput.value,
+            reason: reasonInput.value,
         });
 
         if (result?.isConfirmed) {

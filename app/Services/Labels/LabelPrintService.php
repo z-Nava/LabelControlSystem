@@ -18,7 +18,9 @@ class LabelPrintService
 {
     public function createBatch(LabelRequest $labelRequest, array $data, ?int $printedByUserId, string $printedByName): LabelPrintBatch
     {
-        if (in_array($labelRequest->status, ['completed', 'cancelled'], true)) {
+        $isPrintBatch = ($data['batch_type'] ?? null) === 'print';
+
+        if ($labelRequest->status === 'cancelled' || ($labelRequest->status === 'completed' && $isPrintBatch)) {
             throw ValidationException::withMessages([
                 'status' => 'No se puede imprimir una requisición cerrada.',
             ]);
