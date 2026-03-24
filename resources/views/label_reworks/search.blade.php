@@ -5,7 +5,7 @@
     <div class="flex items-start justify-between gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Retrabajo / Reimpresión de Etiquetas</h1>
-            <p class="text-slate-600 mt-1">Busca por job y gestiona retrabajos con historial de impresión.</p>
+            <p class="text-slate-600 mt-1">Busca requisiciones completadas por job y gestiona retrabajos con historial de impresión.</p>
         </div>
 
         <a href="{{ route('dashboard') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Volver al dashboard</a>
@@ -47,8 +47,8 @@
                         <td class="py-3 pr-3">{{ $request->line?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $request->shift?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $request->job_number ?: '-' }}</td>
-                        <td class="py-3 pr-3 font-mono">{{ $request->serial_ranges_min_range_start ?? '-' }}</td>
-                        <td class="py-3 pr-3 font-mono">{{ $request->serial_ranges_max_range_end ?? '-' }}</td>
+                        <td class="py-3 pr-3 font-mono">{{ $request->serial_start_full ?? '-' }}</td>
+                        <td class="py-3 pr-3 font-mono">{{ $request->serial_end_full ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $request->print_batches_count }}</td>
                         <td class="py-3 pl-3 text-right whitespace-nowrap">
                             <a href="{{ route('label_requests.show', $request->id) }}#historial-impresiones" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">Ver historial</a>
@@ -57,7 +57,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="py-6 text-center text-slate-500">No se encontraron requisiciones de etiquetas para ese job.</td>
+                        <td colspan="9" class="py-6 text-center text-slate-500">No se encontraron requisiciones completadas para ese job.</td>
                     </tr>
                 @endforelse
             </tbody>

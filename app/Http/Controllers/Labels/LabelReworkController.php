@@ -92,10 +92,34 @@ class LabelReworkController extends Controller
     private function buildSearchQuery(string $job)
     {
         return LabelRequest::query()
+            ->select('label_requests.*')
             ->with(['line:id,code,name', 'shift:id,code,name'])
             ->withCount('printBatches')
             ->withMin('serialRanges', 'range_start')
             ->withMax('serialRanges', 'range_end')
+            ->selectSub(function ($query) {
+                $query->from('serial_ranges as sr')
+                    ->join('serial_units as su', function ($join) {
+                        $join->on('su.serial_week_id', '=', 'sr.serial_week_id')
+                            ->on('su.serial_number', '=', 'sr.range_start');
+                    })
+                    ->whereColumn('sr.label_request_id', 'label_requests.id')
+                    ->orderBy('sr.range_start')
+                    ->limit(1)
+                    ->select('su.serial_full');
+            }, 'serial_start_full')
+            ->selectSub(function ($query) {
+                $query->from('serial_ranges as sr')
+                    ->join('serial_units as su', function ($join) {
+                        $join->on('su.serial_week_id', '=', 'sr.serial_week_id')
+                            ->on('su.serial_number', '=', 'sr.range_end');
+                    })
+                    ->whereColumn('sr.label_request_id', 'label_requests.id')
+                    ->orderByDesc('sr.range_end')
+                    ->limit(1)
+                    ->select('su.serial_full');
+            }, 'serial_end_full')
+            ->where('status', 'completed')
             ->when($job !== '', fn ($query) => $query->where('job_number', 'like', "%{$job}%"))
             ->orderByDesc('request_date')
             ->orderByDesc('id');
