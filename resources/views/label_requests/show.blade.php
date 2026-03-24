@@ -18,6 +18,37 @@
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
     @endif
 
+    @php
+        $status = $labelRequest->status;
+        $statusText = match ($status) {
+            'requested' => 'Solicitada',
+            'in_progress' => 'En proceso',
+            'completed' => 'Completada',
+            'cancelled' => 'Cancelada',
+            default => ucfirst(str_replace('_', ' ', (string) $status)),
+        };
+        $statusClasses = match ($status) {
+            'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            'cancelled' => 'bg-red-100 text-red-700 border-red-200',
+            'in_progress' => 'bg-amber-100 text-amber-700 border-amber-200',
+            default => 'bg-sky-100 text-sky-700 border-sky-200',
+        };
+    @endphp
+
+    <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <h2 class="text-base font-semibold text-blue-900">¿Qué debes hacer en esta pantalla?</h2>
+        <ol class="mt-3 space-y-2 text-sm text-blue-900 list-decimal list-inside">
+            <li>Revisa que los datos de la requisición sean correctos (NP, cantidad, semana y datos de producción).</li>
+            <li>Confirma el estatus actual:
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold {{ $statusClasses }}">
+                    {{ $statusText }}
+                </span>
+            </li>
+            <li>Si todo está listo, haz clic en <span class="font-semibold">“Ir a imprimir”</span> para generar o reimprimir etiquetas.</li>
+            <li>Cuando la requisición quede terminada, usa <span class="font-semibold">“Marcar como completada”</span>.</li>
+        </ol>
+    </div>
+
     <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Resumen</div>
@@ -26,7 +57,11 @@
             <div class="text-slate-700">Semana/Año: {{ $labelRequest->week }} / {{ $labelRequest->request_date?->format('Y') }}</div>
             <div class="text-slate-700">Incluye serial: {{ $labelRequest->include_serial ? 'Sí' : 'No' }}</div>
             <div class="text-slate-700">Incluye rating: {{ $labelRequest->include_rating ? 'Sí' : 'No' }}</div>
-            <div class="text-slate-700">Status: {{ $labelRequest->status }}</div>
+            <div class="mt-1 text-slate-700">Estatus:
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold {{ $statusClasses }}">
+                    {{ $statusText }}
+                </span>
+            </div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -39,17 +74,22 @@
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Acciones de estado</div>
-            <div class="mt-2 flex flex-wrap gap-2">
+            <p class="mt-1 text-xs text-slate-600">Usa estas acciones solo cuando corresponda para mantener trazabilidad correcta.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
                 @if(in_array($labelRequest->status, ['requested', 'in_progress'], true))
                     <form method="POST" action="{{ route('label_requests.complete', $labelRequest) }}">
                         @csrf
-                        <button class="rounded-lg border border-emerald-200 text-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-50">Marcar completed</button>
+                        <button class="rounded-lg border border-emerald-200 text-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-50">Marcar como completada</button>
                     </form>
 
                     <form method="POST" action="{{ route('label_requests.cancel', $labelRequest) }}">
                         @csrf
                         <button class="rounded-lg border border-red-200 text-red-700 px-3 py-1.5 text-sm hover:bg-red-50" onclick="return confirm('¿Cancelar requisición?')">Cancelar</button>
                     </form>
+                @else
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                        Esta requisición ya no permite cambios de estado.
+                    </div>
                 @endif
             </div>
         </div>
