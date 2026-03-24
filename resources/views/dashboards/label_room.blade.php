@@ -52,16 +52,9 @@
                         <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial / Shipping</div>
                     </a>
 
-                    <a href="{{ route('label_requests.index', ['status' => 'requested']) }}" class="rounded-2xl border p-6 hover:shadow transition">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 2</div>
-                        <div class="text-lg font-semibold text-slate-800 mt-1">Seguimiento e impresión</div>
-                        <div class="text-sm text-slate-600 mt-1">Retomar requisiciones solicitadas o en proceso</div>
-                    </a>
-
-                    <a href="{{ route('label_requests.index', ['status' => 'in_progress']) }}" class="rounded-2xl border p-6 bg-slate-50 hover:shadow-sm transition">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 3</div>
-                        <div class="text-lg font-semibold text-slate-800 mt-1">Entregas / Recepción</div>
-                        <div class="text-sm text-slate-600 mt-1">Cerrar requisiciones y evitar reclamos</div>
+                    <a href="{{ route('label_reworks.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
+                        <div class="text-lg font-semibold text-slate-800">Retrabajo etiquetas</div>
+                        <div class="text-sm text-slate-600 mt-1">Reimprime seriales y ratings por job</div>
                     </a>
                 </div>
             </section>
