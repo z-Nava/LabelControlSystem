@@ -37,7 +37,7 @@ class SerialTemplateZplBuilder
             '^XA',
             '^CI28',
             sprintf('^FO%d,%d', $qr['x'], $qr['y']),
-            sprintf('^BQN,2,%d', $qr['magnification']),
+            sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
             '^FDLA,{{serial_full}}^FS',
             sprintf('^FO%d,%d', $sku['x'], $sku['y']),
             sprintf('^A%sN,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']),
@@ -64,6 +64,7 @@ class SerialTemplateZplBuilder
         return [
             'x' => (int) ($layout['x'] ?? 30),
             'y' => (int) ($layout['y'] ?? 30),
+            'orientation' => $this->normalizeOrientation((string) ($layout['orientation'] ?? 'N')),
             'magnification' => max(1, min(10, (int) ($layout['magnification'] ?? 4))),
         ];
     }

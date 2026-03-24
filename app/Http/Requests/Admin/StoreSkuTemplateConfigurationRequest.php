@@ -14,11 +14,15 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $labelType = $this->input('label_type', 'serial');
+
         $this->merge([
             'template_is_active' => $this->boolean('template_is_active', true),
             'profile_is_active' => $this->boolean('profile_is_active', true),
             'connection_type' => $this->input('connection_type', 'usb'),
             'sn_prefix' => trim((string) $this->input('sn_prefix', 'SN:')),
+            'label_type' => $labelType,
+            'qr_orientation' => $this->input('qr_orientation', 'N'),
         ]);
     }
 
@@ -32,27 +36,20 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'template_dpi' => ['required', 'integer', 'in:203,300'],
             'template_width_mm' => ['nullable', 'numeric', 'min:1'],
             'template_height_mm' => ['nullable', 'numeric', 'min:1'],
-            'qr_position_x' => ['required', 'integer', 'min:0', 'max:5000'],
-            'qr_position_y' => ['required', 'integer', 'min:0', 'max:5000'],
-            'qr_orientation' => ['required', 'in:N,R,I,B'],
-            'qr_magnification' => ['required', 'integer', 'min:1', 'max:10'],
-            'sku_position_x' => ['required', 'integer', 'min:0', 'max:5000'],
-            'sku_position_y' => ['required', 'integer', 'min:0', 'max:5000'],
-            'sku_font_size' => ['required', 'integer', 'min:10', 'max:300'],
+            'qr_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'qr_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'qr_orientation' => ['nullable', 'in:N,R,I,B'],
+            'qr_magnification' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'sku_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'sku_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
+            'sku_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
             'sku_font_width' => ['nullable', 'integer', 'min:10', 'max:300'],
-            'sku_orientation' => ['required', 'in:N,R,I,B'],
+            'sku_orientation' => ['nullable', 'in:N,R,I,B'],
             'serial_position_x' => ['required', 'integer', 'min:0', 'max:5000'],
             'serial_position_y' => ['required', 'integer', 'min:0', 'max:5000'],
             'serial_font_size' => ['required', 'integer', 'min:10', 'max:300'],
             'serial_font_width' => ['nullable', 'integer', 'min:10', 'max:300'],
             'serial_orientation' => ['required', 'in:N,R,I,B'],
-            'qr_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
-            'qr_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
-            'qr_magnification' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'sku_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
-            'sku_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
-            'sku_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
-            'sku_orientation' => ['nullable', 'in:N,R,I,B'],
             'sn_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sn_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sn_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
@@ -91,7 +88,20 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 return;
             }
 
-            foreach (['qr_position_x', 'qr_position_y', 'qr_magnification', 'sku_position_x', 'sku_position_y', 'sku_font_size', 'sn_position_x', 'sn_position_y', 'sn_font_size'] as $field) {
+            foreach ([
+                'qr_position_x',
+                'qr_position_y',
+                'qr_orientation',
+                'qr_magnification',
+                'sku_position_x',
+                'sku_position_y',
+                'sku_font_size',
+                'sku_orientation',
+                'sn_position_x',
+                'sn_position_y',
+                'sn_font_size',
+                'sn_orientation',
+            ] as $field) {
                 if ($this->filled($field)) {
                     continue;
                 }

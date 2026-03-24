@@ -117,7 +117,27 @@ class SkuTemplateConfigurationController extends Controller
 
     private function templatePayload(array $data): array
     {
-        $layout = [
+        $layout = $this->buildTemplateLayout($data);
+
+        return [
+            'name' => $data['template_name'],
+            'label_type' => $data['label_type'],
+            'label_sku_id' => $data['label_sku_id'],
+            'dpi' => $data['template_dpi'],
+            'width_mm' => $data['template_width_mm'] ?? null,
+            'height_mm' => $data['template_height_mm'] ?? null,
+            'zpl' => $this->zplBuilder->build($data['label_type'], $layout),
+            'serial_layout' => $layout,
+            'meta' => [
+                'serial_layout' => $layout,
+            ],
+            'is_active' => $data['template_is_active'],
+        ];
+    }
+
+    private function buildTemplateLayout(array $data): array
+    {
+        return [
             'text' => [
                 'x' => $data['serial_position_x'],
                 'y' => $data['serial_position_y'],
@@ -127,6 +147,7 @@ class SkuTemplateConfigurationController extends Controller
             'qr' => [
                 'x' => $data['qr_position_x'] ?? 30,
                 'y' => $data['qr_position_y'] ?? 30,
+                'orientation' => $data['qr_orientation'] ?? 'N',
                 'magnification' => $data['qr_magnification'] ?? 4,
             ],
             'sku' => [
@@ -142,20 +163,6 @@ class SkuTemplateConfigurationController extends Controller
                 'orientation' => $data['sn_orientation'] ?? 'N',
                 'prefix' => $data['sn_prefix'] ?? 'SN:',
             ],
-        ];
-
-        return [
-            'name' => $data['template_name'],
-            'label_type' => $data['label_type'],
-            'label_sku_id' => $data['label_sku_id'],
-            'dpi' => $data['template_dpi'],
-            'width_mm' => $data['template_width_mm'] ?? null,
-            'height_mm' => $data['template_height_mm'] ?? null,
-            'zpl' => $this->zplBuilder->build($data['label_type'], $layout),
-            'meta' => [
-                'serial_layout' => $layout,
-            ],
-            'is_active' => $data['template_is_active'],
         ];
     }
 

@@ -1,6 +1,8 @@
 @csrf
 @php
-    $layout = old('serial_layout', $configuration->template->meta['serial_layout'] ?? []);
+    $resolvedLayout = $configuration->template?->resolved_serial_layout
+        ?? data_get($configuration->template?->meta, 'serial_layout', []);
+    $layout = old('serial_layout', $resolvedLayout);
     $textLayout = $layout['text'] ?? $layout;
     $qrLayout = $layout['qr'] ?? [];
     $skuLayout = $layout['sku'] ?? [];
@@ -9,6 +11,16 @@
     $connectionType = old('connection_type', $settings['connection_type'] ?? ($configuration->default_printer_ip ? 'network' : 'usb'));
     $selectedLabelType = old('label_type', $configuration->label_type ?? $configuration->template?->label_type ?? 'serial');
 @endphp
+@if ($errors->any())
+    <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 md:col-span-2">
+        <p class="font-semibold">No se pudo guardar la configuración.</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2" id="sku-template-configuration-form">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>
@@ -102,6 +114,15 @@
                 <label class="block text-sm font-medium text-slate-700">Magnificación QR</label>
                 <input type="number" name="qr_magnification" min="1" max="10" value="{{ old('qr_magnification', $qrLayout['magnification'] ?? 4) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('qr_magnification') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Orientación QR</label>
+                <select name="qr_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                    @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
+                        <option value="{{ $value }}" @selected(old('qr_orientation', $qrLayout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('qr_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
 
             <div>
@@ -271,6 +292,11 @@
         serialSections.forEach((section) => {
             section.style.display = isSerial ? 'block' : 'none';
         });
+        serialSections.forEach((section) => {
+            section.querySelectorAll('input, select').forEach((field) => {
+                field.required = isSerial;
+            });
+        });
         ratingSections.forEach((section) => {
             section.querySelectorAll('input, select').forEach((field) => {
                 if (field.name.startsWith('serial_')) {
@@ -357,6 +383,7 @@
 
         const qrX = readInt('[name="qr_position_x"]', 30);
         const qrY = readInt('[name="qr_position_y"]', 30);
+        const qrOrientation = normalizeOrientation(document.querySelector('[name="qr_orientation"]')?.value, 'N');
         const qrMagnification = readInt('[name="qr_magnification"]', 4);
         const skuX = readInt('[name="sku_position_x"]', 170);
         const skuY = readInt('[name="sku_position_y"]', 35);
@@ -373,7 +400,7 @@
             '^XA',
             '^CI28',
             `^FO${qrX},${qrY}`,
-            `^BQN,2,${Math.min(Math.max(qrMagnification, 1), 10)}`,
+            `^BQ${qrOrientation},2,${Math.min(Math.max(qrMagnification, 1), 10)}`,
             `^FDLA,${serial}^FS`,
             `^FO${skuX},${skuY}`,
             `^A${skuOrientation}N,${skuFontSize},${skuFontSize}`,
