@@ -17,6 +17,9 @@
     @if(session('success'))
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
 
     @php
         $status = $labelRequest->status;
@@ -151,7 +154,17 @@
                             <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                             <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
                             <td class="py-3 px-4 text-right">
-                                <a href="{{ route('label_requests.print_batches.print', ['label_request' => $labelRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                                @if($labelRequest->status === 'completed')
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border px-3 py-1.5 text-xs bg-slate-100 text-slate-500 cursor-not-allowed"
+                                        onclick="alert('Esta requisición ya está completada y sus etiquetas relacionadas ya fueron impresas. No puedes entrar nuevamente al Centro de impresión.')"
+                                    >
+                                        Centro de impresión
+                                    </button>
+                                @else
+                                    <a href="{{ route('label_requests.print_batches.print', ['label_request' => $labelRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                                @endif
                             </td>
                         </tr>
                     @empty

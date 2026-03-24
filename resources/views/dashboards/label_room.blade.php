@@ -46,13 +46,21 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <a href="{{ route('label_requests.index') }}" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
-                        <div class="text-lg font-semibold">Nueva requisición de Etiquetas</div>
-                        <div class="text-sm opacity-90 mt-1">Rating / Serial / Shipping</div>
+                    <a href="{{ route('label_requests.create') }}" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
+                        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Paso 1</div>
+                        <div class="text-lg font-semibold mt-1">Nueva requisición de Etiquetas</div>
+                        <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial / Shipping</div>
                     </a>
 
-                    <a href="#" class="rounded-2xl border border-dashed p-6 bg-slate-50 hover:shadow-sm transition">
-                        <div class="text-lg font-semibold text-slate-800">Entregas / Recepción</div>
+                    <a href="{{ route('label_requests.index', ['status' => 'requested']) }}" class="rounded-2xl border p-6 hover:shadow transition">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 2</div>
+                        <div class="text-lg font-semibold text-slate-800 mt-1">Seguimiento e impresión</div>
+                        <div class="text-sm text-slate-600 mt-1">Retomar requisiciones solicitadas o en proceso</div>
+                    </a>
+
+                    <a href="{{ route('label_requests.index', ['status' => 'in_progress']) }}" class="rounded-2xl border p-6 bg-slate-50 hover:shadow-sm transition">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 3</div>
+                        <div class="text-lg font-semibold text-slate-800 mt-1">Entregas / Recepción</div>
                         <div class="text-sm text-slate-600 mt-1">Cerrar requisiciones y evitar reclamos</div>
                     </a>
                 </div>

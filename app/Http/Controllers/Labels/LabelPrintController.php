@@ -40,9 +40,14 @@ class LabelPrintController extends Controller
             ->with('success', 'Batch de impresión registrado.');
     }
 
-    public function printCenter(LabelRequest $label_request, LabelPrintBatch $batch): View
+    public function printCenter(LabelRequest $label_request, LabelPrintBatch $batch): View|RedirectResponse
     {
         abort_unless((int) $batch->label_request_id === (int) $label_request->id, 404);
+        if ($label_request->status === 'completed') {
+            return redirect()
+                ->route('label_requests.show', $label_request)
+                ->with('error', 'Esta requisición ya está completada y tiene etiquetas impresas. No puedes entrar nuevamente al Centro de impresión.');
+        }
 
         $batch->load(['items']);
 
@@ -55,6 +60,7 @@ class LabelPrintController extends Controller
     public function preview(LabelRequest $label_request, LabelPrintBatch $batch): JsonResponse
     {
         abort_unless((int) $batch->label_request_id === (int) $label_request->id, 404);
+        abort_if($label_request->status === 'completed', 403, 'Esta requisición está completada y no permite nuevas acciones de impresión.');
 
         return response()->json($this->batchExecutionService->buildPreview($batch));
     }
@@ -62,6 +68,7 @@ class LabelPrintController extends Controller
     public function confirm(Request $request, LabelRequest $label_request, LabelPrintBatch $batch): JsonResponse
     {
         abort_unless((int) $batch->label_request_id === (int) $label_request->id, 404);
+        abort_if($label_request->status === 'completed', 403, 'Esta requisición está completada y no permite confirmar impresión.');
 
         $data = $request->validate([
             'printed_ok' => ['required', 'boolean'],
