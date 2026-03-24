@@ -98,7 +98,7 @@
         </div>
     </div>
 
-    <div class="mt-6 rounded-xl border border-slate-200">
+    <div id="historial-impresiones" class="mt-6 rounded-xl border border-slate-200">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h2 class="font-semibold text-slate-900">Rangos de serial asignados</h2>
         </div>
@@ -130,7 +130,7 @@
         </div>
     </div>
 
-    <div class="mt-6 rounded-xl border border-slate-200">
+    <div id="historial-impresiones" class="mt-6 rounded-xl border border-slate-200">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h2 class="font-semibold text-slate-900">Historial de impresiones (batches)</h2>
         </div>

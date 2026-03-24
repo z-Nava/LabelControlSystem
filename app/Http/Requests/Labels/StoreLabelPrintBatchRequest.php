@@ -27,6 +27,10 @@ class StoreLabelPrintBatchRequest extends FormRequest
             'print_serial' => ['required', 'boolean'],
             'print_rating' => ['required', 'boolean'],
             'reason' => ['nullable', 'string', 'max:255', 'required_if:batch_type,reprint,rework'],
+            'selected_serial_unit_ids' => ['nullable', 'array'],
+            'selected_serial_unit_ids.*' => ['integer'],
+            'selected_rating_unit_ids' => ['nullable', 'array'],
+            'selected_rating_unit_ids.*' => ['integer'],
         ];
     }
 }

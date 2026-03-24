@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ProductionLineController;
 use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
+use App\Http\Controllers\Labels\LabelReworkController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -101,6 +102,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
         Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
         Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
+
+        Route::get('/label-reworks', [LabelReworkController::class, 'search'])->name('label_reworks.search');
+        Route::get('/label-reworks/{label_request}', [LabelReworkController::class, 'show'])->name('label_reworks.show');
+        Route::post('/label-reworks/{label_request}/reprint', [LabelReworkController::class, 'store'])->name('label_reworks.store');
 
 
     });

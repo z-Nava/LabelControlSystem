@@ -23,12 +23,12 @@
 
         <div class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 1</div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Inicio</div>
                 <div class="mt-1 font-semibold text-slate-900">Datos generales</div>
                 <p class="mt-1 text-sm text-slate-600">Fecha, semana, línea, turno y líder.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 2</div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Captura</div>
                 <div class="mt-1 font-semibold text-slate-900">Etiqueta solicitada</div>
                 <p class="mt-1 text-sm text-slate-600">SKU / Label PN, cantidad y tipo de etiqueta.</p>
             </div>

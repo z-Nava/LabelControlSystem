@@ -10,6 +10,7 @@ use App\Models\SerialRange;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
 use App\Models\SkuSerialFormat;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -28,6 +29,8 @@ class LabelPrintService
             $isPrintBatch = $data['batch_type'] === 'print';
             $printSerial = (bool) $data['print_serial'];
             $printRating = (bool) $data['print_rating'];
+            $selectedSerialUnitIds = collect($data['selected_serial_unit_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            $selectedRatingUnitIds = collect($data['selected_rating_unit_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
 
             if (!$printSerial && !$printRating) {
                 throw ValidationException::withMessages([
@@ -108,7 +111,18 @@ class LabelPrintService
                     ]);
                 }
 
-                $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
+                if ($selectedSerialUnitIds->isNotEmpty() || $selectedRatingUnitIds->isNotEmpty()) {
+                    $this->appendBatchItemsFromSelectedUnits(
+                        batch: $batch,
+                        labelRequest: $labelRequest,
+                        ranges: $ranges,
+                        selectedSerialUnitIds: $selectedSerialUnitIds,
+                        selectedRatingUnitIds: $selectedRatingUnitIds,
+                        copies: $copies,
+                    );
+                } else {
+                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
+                }
             }
 
             if ($isPrintBatch && $labelRequest->status === 'requested') {
@@ -140,6 +154,64 @@ class LabelPrintService
                 'serial_unit_id' => $unit->id,
                 'print_serial' => $printSerial,
                 'print_rating' => $printRating,
+                'copies' => $copies,
+            ]);
+        }
+    }
+
+    private function appendBatchItemsFromSelectedUnits(
+        LabelPrintBatch $batch,
+        LabelRequest $labelRequest,
+        $ranges,
+        Collection $selectedSerialUnitIds,
+        Collection $selectedRatingUnitIds,
+        int $copies
+    ): void {
+        $weekId = (int) $ranges->first()->serial_week_id;
+        $batch->update(['serial_week_id' => $weekId]);
+
+        $selectedUnionIds = $selectedSerialUnitIds->merge($selectedRatingUnitIds)->unique()->values();
+
+        if ($selectedUnionIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'selection' => 'Debes seleccionar al menos un serial o rating para reimpresión/retrabajo.',
+            ]);
+        }
+
+        if ($selectedSerialUnitIds->isNotEmpty() && !$labelRequest->include_serial) {
+            throw ValidationException::withMessages([
+                'selection' => 'La requisición no permite serial; no puedes seleccionarlos en retrabajo.',
+            ]);
+        }
+
+        if ($selectedRatingUnitIds->isNotEmpty() && !$labelRequest->include_rating) {
+            throw ValidationException::withMessages([
+                'selection' => 'La requisición no permite rating; no puedes seleccionarlos en retrabajo.',
+            ]);
+        }
+
+        $allowedIds = SerialUnit::query()
+            ->where('serial_week_id', $weekId)
+            ->where(function ($query) use ($ranges) {
+                foreach ($ranges as $range) {
+                    $query->orWhereBetween('serial_number', [$range->range_start, $range->range_end]);
+                }
+            })
+            ->whereIn('id', $selectedUnionIds)
+            ->pluck('id');
+
+        if ($allowedIds->count() !== $selectedUnionIds->count()) {
+            throw ValidationException::withMessages([
+                'selection' => 'Uno o más seriales seleccionados no pertenecen al rango de la requisición.',
+            ]);
+        }
+
+        foreach ($allowedIds as $unitId) {
+            LabelPrintBatchItem::query()->create([
+                'label_print_batch_id' => $batch->id,
+                'serial_unit_id' => $unitId,
+                'print_serial' => $selectedSerialUnitIds->contains($unitId),
+                'print_rating' => $selectedRatingUnitIds->contains($unitId),
                 'copies' => $copies,
             ]);
         }
