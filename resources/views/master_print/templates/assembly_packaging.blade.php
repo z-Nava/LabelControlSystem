@@ -52,9 +52,9 @@
             <td class="border border-black p-[1.2mm]"><div class="mx-auto h-[11mm] w-[11mm] js-qr overflow-hidden" data-size="52" data-value="{{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}"></div></td>
             <td class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1.2mm] text-center font-bold">Custom PO</td>
             <td colspan="2" class="border border-black p-[1.2mm] text-center">
-              <div class="flex items-center justify-center gap-2">
-                <span class="text-[16px] font-semibold">{{ $s['po_number'] ?? '' }}</span>
-                <div class="h-[10.5mm] w-[10.5mm] js-qr overflow-hidden" data-size="48" data-value="{{ $s['po_number'] ?? '' }}"></div>
+              <div class="flex flex-col items-center justify-center gap-1">
+                <span class="text-[15px] font-semibold">{{ $s['po_number'] ?? '' }}</span>
+                <div class="h-[10mm] w-[10mm] js-qr overflow-hidden" data-size="44" data-value="{{ $s['po_number'] ?? '' }}"></div>
               </div>
             </td>
           </tr>
@@ -78,7 +78,7 @@
             </td>
             <td colspan="3" class="border border-black p-0">
               <div class="flex h-full flex-col">
-                <div class="flex h-[8mm] items-center justify-center bg-gradient-to-b from-slate-100 to-slate-300 text-[14px] font-bold">Lote Ensamble:</div>
+                <div class="flex h-[9mm] items-center justify-center bg-gradient-to-b from-slate-100 to-slate-300 text-[13px] font-bold tracking-wide">Lote Ensamble:</div>
                 <div class="flex flex-1 items-center justify-center gap-2"><span class="text-[16px] font-semibold">{{ $s['lote'] ?? '' }}</span><div class="js-qr h-[14mm] w-[14mm] overflow-hidden" data-size="62" data-value="{{ $s['lote'] ?? '' }}"></div></div>
               </div>
             </td>
@@ -95,7 +95,7 @@
             </td>
             <td colspan="3" class="border border-black p-0">
               <div class="flex h-full flex-col">
-                <div class="flex h-[8mm] items-center justify-center bg-gradient-to-b from-slate-100 to-slate-300 text-[14px] font-bold">Lote Empaque:</div>
+                <div class="flex h-[9mm] items-center justify-center bg-gradient-to-b from-slate-100 to-slate-300 text-[13px] font-bold tracking-wide">Lote Empaque:</div>
                 <div class="flex flex-1 items-center justify-center gap-2"><span class="text-[16px] font-semibold">{{ $s['lote_packaging'] ?? '' }}</span><div class="js-qr h-[14mm] w-[14mm] overflow-hidden" data-size="62" data-value="{{ $s['lote_packaging'] ?? '' }}"></div></div>
               </div>
             </td>
@@ -107,16 +107,10 @@
             <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1.2mm] text-center font-bold">Cantidad en pallet:</td>
             <td colspan="6" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1.2mm] text-center font-bold">Observaciones:</td>
           </tr>
-          <tr class="h-[16mm]">
-            <td colspan="3" class="border border-black p-[1.2mm] text-center text-[18px]">{{ $s['subinventory'] ?? '' }}</td>
-            <td colspan="3" class="border border-black p-[1.2mm] text-center text-[18px]">{{ $s['local'] ?? '' }}</td>
-            <td colspan="3" class="border border-black p-[1.2mm] text-center text-[18px]">{{ $s['qty_pallet'] ?? '' }}</td>
-            <td colspan="6" class="border border-black p-[1.2mm]"></td>
-          </tr>
           <tr class="h-[18mm]">
-            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex h-full items-center justify-center"><div class="js-qr h-[16mm] w-[16mm] overflow-hidden" data-size="70" data-value="{{ $s['subinventory'] ?? '' }}"></div></div></td>
-            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex h-full items-center justify-center"><div class="js-qr h-[16mm] w-[16mm] overflow-hidden" data-size="70" data-value="{{ $s['local'] ?? '' }}"></div></div></td>
-            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex h-full items-center justify-center"><div class="js-qr h-[16mm] w-[16mm] overflow-hidden" data-size="70" data-value="{{ $s['qty_pallet'] ?? '' }}"></div></div></td>
+            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex items-center justify-center gap-2"><span class="text-[16px]">{{ $s['subinventory'] ?? '' }}</span><div class="js-qr h-[11mm] w-[11mm] overflow-hidden" data-size="50" data-value="{{ $s['subinventory'] ?? '' }}"></div></div></td>
+            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex items-center justify-center gap-2"><span class="text-[16px]">{{ $s['local'] ?? '' }}</span><div class="js-qr h-[11mm] w-[11mm] overflow-hidden" data-size="50" data-value="{{ $s['local'] ?? '' }}"></div></div></td>
+            <td colspan="3" class="border border-black p-[1.2mm]"><div class="flex items-center justify-center gap-2"><span class="text-[16px]">{{ $s['qty_pallet'] ?? '' }}</span><div class="js-qr h-[11mm] w-[11mm] overflow-hidden" data-size="50" data-value="{{ $s['qty_pallet'] ?? '' }}"></div></div></td>
             <td colspan="6" class="border border-black p-[1.2mm]"></td>
           </tr>
 

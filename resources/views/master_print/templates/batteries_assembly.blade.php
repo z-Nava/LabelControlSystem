@@ -44,7 +44,7 @@
             <td colspan="2" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1.2mm] text-center font-bold">Línea:</td>
             <td colspan="5" class="border border-black p-[1.2mm] text-center font-bold">{{ $s['line'] ?? '' }}</td>
             <td colspan="4" class="border border-black p-[1.2mm]"><div class="flex h-full items-center justify-center"><div class="js-qr h-[17mm] w-[17mm] overflow-hidden" data-size="76" data-value="{{ $s['job'] ?? '' }}"></div></div></td>
-            <td colspan="2" class="border border-black p-[1.2mm]"></td>
+            <td colspan="2" class="border border-black bg-[#fff8d9] p-[1.2mm] text-center font-bold">{{ $s['date'] ?? '' }}</td>
           </tr>
 
           <tr class="h-[10mm]">
