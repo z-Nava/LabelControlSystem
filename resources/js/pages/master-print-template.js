@@ -1,42 +1,58 @@
 (function () {
     const { dataset } = document.body;
-    const shouldRenderBarcodes = dataset.renderBarcodes === '1';
+    const shouldRenderQrs = dataset.renderQrs === '1';
     const shouldAutoPrint = dataset.autoPrint === '1';
 
-    function getBarcodeConfig(element) {
-        return {
-            format: element.dataset.format || 'CODE39',
-            height: Number(element.dataset.height || 44),
-            width: Number(element.dataset.width || 1.4),
-            margin: Number(element.dataset.margin || 0),
-            displayValue: false,
-            background: '#ffffff',
-        };
-    }
-
     function renderEmptyState(element) {
-        element.outerHTML = '<div class="text-[10px] text-slate-500 flex items-center justify-center min-h-[6mm]">Sin código</div>';
+        element.innerHTML = '<div class="text-[9px] text-slate-500 flex items-center justify-center h-full w-full">Sin código</div>';
     }
 
-    function renderBarcodes() {
-        if (!shouldRenderBarcodes || typeof window.JsBarcode !== 'function') {
+    function renderQrs() {
+        if (!shouldRenderQrs || typeof window.QRCode !== 'function') {
             return;
         }
 
-        document.querySelectorAll('svg.js-barcode[data-value]').forEach((element) => {
-            const barcodeValue = (element.dataset.value || '').trim().toUpperCase();
+        document.querySelectorAll('.js-qr[data-value]').forEach((element) => {
+            const qrValue = (element.dataset.value || '').trim();
 
-            if (!barcodeValue) {
+            if (!qrValue) {
                 renderEmptyState(element);
                 return;
             }
 
-            window.JsBarcode(element, barcodeValue, getBarcodeConfig(element)); 
+            const size = Number(element.dataset.size || 68);
+
+            element.innerHTML = '';
+
+            new window.QRCode(element, {
+                text: qrValue,
+                width: size,
+                height: size,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: window.QRCode.CorrectLevel.M,
+            });
+
+            const img = element.querySelector('img');
+            const canvas = element.querySelector('canvas');
+
+            if (img) {
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                img.style.display = 'block';
+            }
+
+            if (canvas) {
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.display = 'block';
+            }
         });
     }
 
     window.addEventListener('load', () => {
-        renderBarcodes();
+        renderQrs();
 
         if (shouldAutoPrint) {
             window.print();
