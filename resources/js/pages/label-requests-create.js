@@ -37,7 +37,9 @@ function setText(element, message) {
     const hint = document.getElementById('jobHint');
     const dateInput = document.getElementById('requestDate');
     const weekInput = document.getElementById('requestWeek');
+    const lineTypeSelect = document.getElementById('lineTypeSelect');
     const lineSelect = document.getElementById('lineSelect');
+    const lineTypeHint = document.getElementById('lineTypeHint');
     const shiftSelect = document.getElementById('shiftSelect');
     const leaderInput = document.getElementById('leaderName');
     const labelSelect = document.getElementById('labelPartNumber');
@@ -56,6 +58,61 @@ function setText(element, message) {
     const previewTypes = document.getElementById('previewTypes');
     const previewJob = document.getElementById('previewJob');
     const previewExtras = document.getElementById('previewExtras');
+    const lineOptions = lineSelect
+        ? Array.from(lineSelect.querySelectorAll('option')).filter((option) => option.value !== '')
+        : [];
+
+    const syncLineTypeFromSelectedLine = () => {
+        if (!lineTypeSelect || !lineSelect?.value) {
+            return;
+        }
+
+        const selectedLineOption = lineSelect.selectedOptions?.[0];
+        const selectedLineType = selectedLineOption?.dataset.lineType || '';
+
+        if (selectedLineType) {
+            lineTypeSelect.value = selectedLineType;
+        }
+    };
+
+    const updateLineOptionsByType = ({ preserveSelection = true } = {}) => {
+        if (!lineSelect) {
+            return;
+        }
+
+        const selectedLineType = lineTypeSelect?.value || '';
+        const currentLineValue = lineSelect.value;
+        let visibleCount = 0;
+
+        lineOptions.forEach((option) => {
+            const optionLineType = option.dataset.lineType || '';
+            const shouldShow = selectedLineType === '' || optionLineType === selectedLineType;
+
+            option.hidden = !shouldShow;
+            option.disabled = !shouldShow;
+
+            if (shouldShow) {
+                visibleCount += 1;
+            }
+        });
+
+        if (preserveSelection && currentLineValue) {
+            const selectedOption = lineOptions.find((option) => option.value === currentLineValue);
+            if (selectedOption?.hidden || selectedOption?.disabled) {
+                lineSelect.value = '';
+            }
+        }
+
+        if (lineTypeHint) {
+            if (!selectedLineType) {
+                setHint(lineTypeHint, 'muted', `Mostrando todas las líneas (${visibleCount} disponibles).`);
+            } else if (visibleCount > 0) {
+                setHint(lineTypeHint, 'ok', `Mostrando ${visibleCount} línea(s) para "${selectedLineType}".`);
+            } else {
+                setHint(lineTypeHint, 'warn', `No hay líneas activas para "${selectedLineType}".`);
+            }
+        }
+    };
 
     const formatDate = (value) => {
         if (!value) {
@@ -206,6 +263,7 @@ function setText(element, message) {
     [
         dateInput,
         weekInput,
+        lineTypeSelect,
         lineSelect,
         shiftSelect,
         leaderInput,
@@ -237,5 +295,14 @@ function setText(element, message) {
         }
     }
 
+    if (lineTypeSelect) {
+        lineTypeSelect.addEventListener('change', () => {
+            updateLineOptionsByType({ preserveSelection: true });
+            updatePreview();
+        });
+    }
+
+    syncLineTypeFromSelectedLine();
+    updateLineOptionsByType({ preserveSelection: true });
     updatePreview();
 })();

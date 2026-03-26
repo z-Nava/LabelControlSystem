@@ -5,6 +5,48 @@ import { createJobLookupHandler } from './master-requests-create/lookup';
 import { refreshPreview } from './master-requests-create/preview';
 import { attachValidationClearListeners, validateBeforeSubmit } from './master-requests-create/validation';
 
+function initializeLineTypeFilter(fields) {
+    const lineTypeSelect = fields.lineTypeSelect;
+    const lineSelect = fields.lineSelect;
+
+    if (!lineTypeSelect || !lineSelect) {
+        return;
+    }
+
+    const lineOptions = Array.from(lineSelect.options).filter((option) => option.value !== '');
+
+    if (!lineOptions.length) {
+        return;
+    }
+
+    const selectedLineOption = lineOptions.find((option) => option.value === lineSelect.value);
+
+    if (!lineTypeSelect.value && selectedLineOption?.dataset.lineType) {
+        lineTypeSelect.value = selectedLineOption.dataset.lineType;
+    }
+
+    const applyFilter = () => {
+        const selectedLineType = (lineTypeSelect.value || '').trim().toLowerCase();
+
+        lineOptions.forEach((option) => {
+            const optionLineType = (option.dataset.lineType || '').trim().toLowerCase();
+            const shouldShow = !selectedLineType || optionLineType === selectedLineType;
+
+            option.hidden = !shouldShow;
+            option.disabled = !shouldShow;
+        });
+
+        const selectedOption = lineOptions.find((option) => option.value === lineSelect.value);
+
+        if (selectedOption && (selectedOption.hidden || selectedOption.disabled)) {
+            lineSelect.value = '';
+        }
+    };
+
+    lineTypeSelect.addEventListener('change', applyFilter);
+    applyFilter();
+}
+
 (function () {
     const page = getMasterRequestElements();
 
@@ -16,6 +58,8 @@ import { attachValidationClearListeners, validateBeforeSubmit } from './master-r
     const updatePreview = () => refreshPreview(fields, preview);
 
     let isSubmitting = false;
+
+    initializeLineTypeFilter(fields);
 
     const debouncedAssemblyLookup = debounce(
         createJobLookupHandler({
@@ -46,6 +90,7 @@ import { attachValidationClearListeners, validateBeforeSubmit } from './master-r
 
     [
         fields.requestDate,
+        fields.lineTypeSelect,
         fields.lineSelect,
         fields.shiftSelect,
         fields.requestType,

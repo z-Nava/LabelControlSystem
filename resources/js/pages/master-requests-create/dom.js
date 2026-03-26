@@ -10,6 +10,7 @@ export function getMasterRequestElements() {
         lookupUrl: form.dataset.lookupUrl,
         fields: {
             requestDate: document.getElementById('requestDate'),
+            lineTypeSelect: document.getElementById('lineTypeSelect'),
             lineSelect: document.getElementById('lineSelect'),
             shiftSelect: document.getElementById('shiftSelect'),
             requestType: document.getElementById('requestType'),

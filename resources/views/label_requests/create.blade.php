@@ -112,11 +112,29 @@
                         </div>
 
                         <div>
+                            <label class="text-sm font-medium text-slate-700">Tipo de línea</label>
+                            <select id="lineTypeSelect"
+                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
+                                <option value="">Mostrar todos los tipos</option>
+                                @foreach($lines->pluck('line_type')->filter()->unique()->sort() as $lineType)
+                                    <option value="{{ $lineType }}" @selected(old('line_type') === $lineType)>
+                                        {{ $lineType }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p id="lineTypeHint" class="mt-2 text-xs text-slate-500">
+                                Selecciona un tipo para acotar las líneas disponibles.
+                            </p>
+                        </div>
+
+                        <div>
                             <label class="text-sm font-medium text-slate-700">Línea</label>
                             <select id="lineSelect" name="line_id" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
                                 <option value="">Selecciona una línea</option>
                                 @foreach($lines as $line)
-                                    <option value="{{ $line->id }}" @selected((string) old('line_id') === (string) $line->id)>
+                                    <option value="{{ $line->id }}"
+                                            data-line-type="{{ $line->line_type }}"
+                                            @selected((string) old('line_id') === (string) $line->id)>
                                         {{ $line->code }} · {{ $line->line_type }}
                                     </option>
                                 @endforeach
