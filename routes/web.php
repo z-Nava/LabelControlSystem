@@ -89,6 +89,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
+        Route::get('/label-requests/lookup-job', [LabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
 
         Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
         Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');

@@ -53,7 +53,7 @@
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <form id="labelRequestCreate"
-              data-lookup-url="{{ route('oracle.lookup_job') }}"
+              data-lookup-url="{{ route('label_requests.lookup_job') }}"
               class="space-y-4"
               method="POST"
               action="{{ route('label_requests.store') }}">

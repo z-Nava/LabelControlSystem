@@ -17,6 +17,9 @@ class StoreLabelRequestRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, array<int, string>>
+     */
     public function rules(): array
     {
         return [
@@ -53,52 +56,77 @@ class StoreLabelRequestRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if (!$this->boolean('include_serial') && !$this->boolean('include_rating')) {
-                $validator->errors()->add('include_serial', 'Debes seleccionar al menos un tipo de etiqueta (Serial o Rating).');
-            }
-
-            $labelPn = (string) $this->input('label_part_number');
-            if ($labelPn !== '') {
-                $labelSku = LabelSku::query()
-                    ->where('label_part_number', $labelPn)
-                    ->where('is_active', true)
-                    ->first(['sku']);
-
-                if (!$labelSku) {
-                    $validator->errors()->add('label_part_number', 'El Label PN debe existir y estar activo en el catálogo SKU/NP.');
-                } else {
-                    $hasActiveFormat = SkuSerialFormat::query()
-                        ->where('sku', $labelSku->sku)
-                        ->where('is_active', true)
-                        ->exists();
-
-                    if (!$hasActiveFormat) {
-                        $validator->errors()->add('label_part_number', 'El Label PN seleccionado no tiene un formato activo en sku_serial_formats.');
-                    }
-                }
-            }
-
-            $jobNumber = (string) $this->input('job_number');
-            if ($jobNumber !== '') {
-                $job = $this->oracleJobLookup()->findByJobNumber($jobNumber);
-
-                if (!$job) {
-                    $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
-                    return;
-                }
-
-                if (!$this->oracleJobLookup()->isPackagingJob($job)) {
-                    $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001).');
-                }
-            }
+            $this->validateAtLeastOneLabelType($validator);
+            $this->validateActiveLabelPartNumber($validator);
+            $this->validatePackagingJobNumber($validator);
         });
+    }
+
+    private function validateAtLeastOneLabelType(Validator $validator): void
+    {
+        if ($this->boolean('include_serial') || $this->boolean('include_rating')) {
+            return;
+        }
+
+        $validator->errors()->add('include_serial', 'Debes seleccionar al menos un tipo de etiqueta (Serial o Rating).');
+    }
+
+    private function validateActiveLabelPartNumber(Validator $validator): void
+    {
+        $labelPartNumber = (string) $this->input('label_part_number');
+
+        if ($labelPartNumber === '') {
+            return;
+        }
+
+        $labelSku = LabelSku::query()
+            ->where('label_part_number', $labelPartNumber)
+            ->where('is_active', true)
+            ->first(['sku']);
+
+        if (!$labelSku) {
+            $validator->errors()->add('label_part_number', 'El Label PN debe existir y estar activo en el catálogo SKU/NP.');
+            return;
+        }
+
+        $hasActiveFormat = SkuSerialFormat::query()
+            ->where('sku', $labelSku->sku)
+            ->where('is_active', true)
+            ->exists();
+
+        if (!$hasActiveFormat) {
+            $validator->errors()->add('label_part_number', 'El Label PN seleccionado no tiene un formato activo en sku_serial_formats.');
+        }
+    }
+
+    private function validatePackagingJobNumber(Validator $validator): void
+    {
+        $jobNumber = (string) $this->input('job_number');
+
+        if ($jobNumber === '') {
+            return;
+        }
+
+        $jobLookup = $this->oracleJobLookup();
+        $job = $jobLookup->findByJobNumber($jobNumber);
+
+        if (!$job) {
+            $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
+            return;
+        }
+
+        if (!$jobLookup->isPackagingJob($job)) {
+            $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001).');
+        }
     }
 
     private function oracleJobLookup(): OracleJobLookupService
     {
-        if (!$this->oracleJobLookup) {
-            $this->oracleJobLookup = app(OracleJobLookupService::class);
+        if ($this->oracleJobLookup instanceof OracleJobLookupService) {
+            return $this->oracleJobLookup;
         }
+
+        $this->oracleJobLookup = app(OracleJobLookupService::class);
 
         return $this->oracleJobLookup;
     }
