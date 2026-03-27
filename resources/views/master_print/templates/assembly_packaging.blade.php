@@ -131,14 +131,14 @@
             <div class="col-span-2 border-r border-black p-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
                 <div class="mt-1 text-[15px] font-semibold text-black">
-                    {{ $s['model'] ?? '' }}
+                    {{-- $s['model'] ?? '' --}}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Destino</div>
                 <div class="mt-1 text-[13px] font-bold text-black break-words">
-                    {{ $s['destination'] ?? ($s['destino'] ?? 'OB EXCELLENCE') }}
+                    {{ $s['destination'] ?? ($s['destino'] ?? '') }}
                 </div>
             </div>
 

@@ -7,273 +7,335 @@
     @vite('resources/css/app.css')
 
     <style>
+        @page {
+            size: letter landscape;
+            margin: 6mm;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+        }
+
+        body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .sheet {
+            width: 100%;
+            max-width: 267mm;
+            min-height: auto;
+            margin: 0 auto;
+        }
+
+        .qr-box > div,
+        .qr-box canvas,
+        .qr-box img {
+            margin: 0 auto !important;
+        }
+
+        @media screen {
+            body {
+                background: #e5e7eb;
+                padding: 10px;
+            }
+
+            .sheet {
+                background: #fff;
+                box-shadow: 0 8px 24px rgba(0,0,0,.08);
+            }
+        }
+
         @media print {
-            @page { size: letter landscape; margin: 5mm; }
-            html, body { margin: 0; padding: 0; background: #fff; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body {
+                background: #fff !important;
+                padding: 0;
+            }
+
+            .sheet {
+                max-width: none;
+                min-height: auto;
+                box-shadow: none !important;
+                break-before: page;
+            }
+
+            .sheet:first-child {
+                break-before: auto;
+            }
         }
     </style>
 </head>
-<body class="m-0 bg-slate-100 print:bg-white"
-      data-render-qrs="1"
-      data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}">
-
+<body
+    class="m-0"
+    data-render-qrs="1"
+    data-auto-print="{{ ($mode ?? null) === 'print' ? '1' : '0' }}"
+>
 @foreach($sheets as $s)
-    <section class="mx-auto w-full max-w-[258mm] px-2 py-2 print:px-0 print:py-0 print:break-before-page first:print:break-before-auto">
-        <div class="w-full overflow-hidden">
-            <div class="w-full overflow-hidden rounded-[2.5mm] border border-black bg-white shadow-sm print:rounded-none print:shadow-none">
-                <table class="w-full table-fixed border-collapse text-black">
-                    <colgroup>
-                        <col class="w-[17.5mm]"><col class="w-[17.5mm]"><col class="w-[17.5mm]"><col class="w-[17.5mm]"><col class="w-[17.5mm]">
-                        <col class="w-[14.32mm]"><col class="w-[14.32mm]"><col class="w-[19.09mm]"><col class="w-[19.09mm]"><col class="w-[17.5mm]"><col class="w-[17.5mm]">
-                        <col class="w-[16.7mm]"><col class="w-[16.7mm]"><col class="w-[17.5mm]"><col class="w-[17.82mm]">
-                    </colgroup>
+    <section class="sheet overflow-hidden rounded-[3mm] border border-black">
 
-                    <tr class="h-[10mm]">
-                        <td colspan="4" class="border border-black p-[1mm]">
-                            <div class="flex h-full items-center pl-[2.5mm]">
-                                <img src="{{ Vite::asset('resources/img/LOGO-MILWAUKEE.png') }}"
-                                     alt="Milwaukee"
-                                     class="h-[8.5mm] w-auto object-contain">
-                            </div>
-                        </td>
-                        <td colspan="11" class="border border-black p-[1mm] text-center text-[20px] font-extrabold">
-                            PRODUCTO TERMINADO - MOTORES Y MOLDEO
-                        </td>
-                    </tr>
+        {{-- HEADER --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-3 flex items-center justify-center border-r border-black px-4 py-2.5">
+                <img
+                    src="{{ Vite::asset('resources/img/LOGO-MILWAUKEE.png') }}"
+                    alt="Milwaukee"
+                    class="max-h-[14mm] w-auto object-contain"
+                >
+            </div>
 
-                    <tr class="h-[8mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] font-bold">
-                            Líder:
-                        </td>
-                        <td colspan="3" class="border border-black bg-[#fff8d9] p-[1mm]">
-                            {{ $s['leader'] ?? '' }}
-                        </td>
+            <div class="col-span-6 flex items-center justify-center border-r border-black px-4 py-2.5 text-center">
+                <div>
+                    <div class="text-[7px] font-semibold uppercase tracking-[1.6px] text-slate-500">
+                        Master Sheet
+                    </div>
+                    <div class="text-[18px] font-extrabold leading-none tracking-[0.6px] text-black">
+                        PRODUCTO TERMINADO - MOTORES Y MOLDEO
+                    </div>
+                </div>
+            </div>
 
-                        <td rowspan="2" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Turno:
-                        </td>
-                        <td rowspan="2" class="border border-black bg-[#fff8d9] p-[1mm] text-center font-bold">
-                            {{ $s['shift'] ?? '' }}
-                        </td>
+            <div class="col-span-3 grid grid-cols-2 text-[10px]">
+                <div class="border-r border-b border-black px-2 py-2 font-bold">Fecha</div>
+                <div class="border-b border-black px-2 py-2 text-right font-semibold">{{ $s['date'] ?? '' }}</div>
 
-                        <td colspan="2" rowspan="2" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center text-[20px] font-extrabold">
-                            Job
-                        </td>
+                <div class="border-r border-black px-2 py-2 font-bold">Folio</div>
+                <div class="px-2 py-2 text-right text-[14px] font-extrabold">{{ $s['folio_no'] ?? '' }}</div>
+            </div>
+        </div>
 
-                        <td colspan="3" class="border border-black bg-[#fde8dc] p-[1mm] text-center text-[18px] font-extrabold">
-                            {{ $s['job'] ?? '' }}
-                        </td>
+        {{-- TOP INFO --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-3 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Líder</div>
+                <div class="mt-1 text-[13px] font-semibold text-black">
+                    {{ $s['leader'] ?? '' }}
+                </div>
+            </div>
 
-                        <td colspan="2" rowspan="2" class="border border-black p-0">
-    <table class="w-full h-full table-fixed border-collapse">
-        <tr class="h-[15mm]">
-            <td class="border-b border-black bg-gradient-to-b from-slate-100 to-slate-300 px-[1mm] text-center align-middle font-bold">
-                Fecha:
-            </td>
-        </tr>
-        <tr class="h-[8mm]">
-            <td class="bg-[#fff8d9] px-[1mm] text-center align-middle text-[11px] font-bold whitespace-nowrap">
-                {{ $s['date'] ?? '' }}
-            </td>
-        </tr>
-    </table>
-</td>
-                    </tr>
+            <div class="col-span-2 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Turno</div>
+                <div class="mt-1 text-[13px] font-semibold text-black">
+                    {{ $s['shift'] ?? '' }}
+                </div>
+            </div>
 
-                    <tr class="h-[8mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] font-bold">
-                            # empleado estación final
-                        </td>
-                        <td colspan="3" class="border border-black bg-[#fff8d9] p-[1mm]"></td>
+            <div class="col-span-3 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Línea</div>
+                <div class="mt-1 text-[14px] font-semibold text-black">
+                    {{ $s['line'] ?? '' }}
+                </div>
+            </div>
 
-                        <td colspan="3" class="border border-black p-[1mm]">
-                            <div class="flex h-full items-center justify-center">
-                                <div class="js-qr h-[12mm] w-[12mm] overflow-hidden"
-                                     data-size="56"
-                                     data-value="{{ $s['job'] ?? '' }}"></div>
-                            </div>
-                        </td>
+            <div class="col-span-4 p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500"># empleado estación final</div>
+                <div class="mt-1 text-[14px] font-semibold text-black">
+                    {{ $s['final_station_employee_no'] ?? '' }}
+                </div>
+            </div>
+        </div>
 
-                        <td colspan="3" class="border border-black bg-[#fde8dc] p-[1mm]"></td>
-                    </tr>
+        {{-- JOB / MODELO / REVISION --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-3 border-r border-black p-3">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
+                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                    {{ $s['job'] ?? '' }}
+                </div>
+            </div>
 
-                    <tr class="h-[12mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Línea:
-                        </td>
-                        <td colspan="5" class="border border-black p-[1mm] text-center font-bold">
-                            {{ $s['line'] ?? '' }}
-                        </td>
-                        <td colspan="2" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Folio:
-                        </td>
-                        <td colspan="5" class="border border-black p-[1mm] text-center font-bold">
-                            {{ $s['folio_no'] ?? '' }}
-                        </td>
-                    </tr>
+            <div class="col-span-6 border-r border-black p-3">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
+                <div class="mt-1.5 text-[22px] font-extrabold leading-none text-black">
+                    {{-- $s['model'] ?? '' --}}
+                </div>
+            </div>
 
-                    <tr class="h-[8mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Modelo:
-                        </td>
-                        <td colspan="12" class="border border-black p-[1mm] text-center font-bold">
-                            {{ $s['model'] ?? '' }}
-                        </td>
-                    </tr>
+            <div class="col-span-3 p-3">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Revisión</div>
+                <div class="mt-1.5 text-[18px] font-extrabold text-black break-all">
+                    {{ $s['revision'] ?? '' }}
+                </div>
+            </div>
+        </div>
 
-                    <tr class="h-[48mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Np Ensamble:
-                        </td>
+        {{-- NP / LOTE --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-9 border-r border-black p-3">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                    NP Ensamble
+                </div>
+                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                    {{ $s['np'] ?? '' }}
+                </div>
+                <div class="mt-2 min-h-[10mm] border-t border-dashed border-slate-400 pt-1.5 text-[10px] leading-snug text-slate-700">
+                    {{ $s['desc'] ?? '' }}
+                </div>
+            </div>
 
-                        <td colspan="7" class="border border-black p-0">
-                            <div class="flex h-full flex-col">
-                                <div class="flex h-[12mm] items-center justify-center text-[26px] font-extrabold">
-                                    {{ $s['np'] ?? '' }}
-                                </div>
-                                <div class="flex h-[10mm] items-center justify-center border-t border-black px-[2mm] text-center text-[10px]">
-                                    {{ $s['desc'] ?? '' }}
-                                </div>
-                                <div class="flex flex-1 items-center justify-center border-t border-black">
-                                    <div class="js-qr h-[18mm] w-[18mm] overflow-hidden"
-                                         data-size="74"
-                                         data-value="{{ $s['np'] ?? '' }}"></div>
-                                </div>
-                            </div>
-                        </td>
+            <div class="col-span-3 p-3">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
+                <div class="mt-1.5 text-[16px] font-extrabold text-black break-all">
+                    {{ $s['lote'] ?? '' }}
+                </div>
+            </div>
+        </div>
 
-                        {{-- Bloque completo de Lote / Revisión --}}
-                        <td colspan="5" class="border border-black p-0">
-                            <table class="w-full h-full table-fixed border-collapse">
-                                <colgroup>
-                                    <col class="w-[32%]">
-                                    <col class="w-[68%]">
-                                </colgroup>
+        {{-- DATOS / OBSERVACIONES --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-3 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                <div class="mt-1.5 text-[14px] font-bold text-black">
+                    {{ $s['subinventory'] ?? '' }}
+                </div>
+            </div>
 
-                                <tr class="h-[24mm]">
-                                    <td class="border-r border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center align-middle text-[12px] font-bold">
-                                        Lote:
-                                    </td>
-                                    <td class="p-0">
-                                        <div class="flex h-full flex-col">
-                                            <div class="flex h-[12mm] items-center justify-center px-[1mm] text-center text-[18px] font-extrabold">
-                                                {{ $s['lote'] ?? '' }}
-                                            </div>
-                                            <div class="flex flex-1 items-center justify-center border-t border-black">
-                                                <div class="js-qr h-[10mm] w-[10mm] overflow-hidden"
-                                                     data-size="44"
-                                                     data-value="{{ $s['lote'] ?? '' }}"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
+            <div class="col-span-3 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                <div class="mt-1.5 text-[14px] font-bold text-black">
+                    {{ $s['local'] ?? '' }}
+                </div>
+            </div>
 
-                                <tr class="h-[24mm]">
-                                    <td class="border-t border-r border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center align-middle text-[12px] font-bold">
-                                        Revisión:
-                                    </td>
-                                    <td class="border-t border-black p-0">
-                                        <div class="flex h-full flex-col">
-                                            <div class="flex h-[10mm] items-center justify-center px-[1mm] text-center text-[16px] font-extrabold">
-                                                {{ $s['revision'] ?? '' }}
-                                            </div>
-                                            <div class="flex flex-1 items-center justify-center border-t border-black">
-                                                <div class="js-qr h-[12mm] w-[12mm] overflow-hidden"
-                                                     data-size="52"
-                                                     data-value="{{ $s['revision'] ?? '' }}"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
+            <div class="col-span-2 border-r border-black p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                <div class="mt-1.5 text-[14px] font-bold text-black">
+                    {{ $s['qty_pallet'] ?? '' }}
+                </div>
+            </div>
 
-                    <tr class="h-[8mm]">
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Subinventory:
-                        </td>
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Local:
-                        </td>
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Cantidad en pallet:
-                        </td>
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center font-bold">
-                            Observaciones:
-                        </td>
-                    </tr>
+            <div class="col-span-4 p-2.5">
+                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
+                <div class="mt-1.5 h-[8mm] rounded-[2mm] border border-black px-2 py-1 text-[10px] text-black"></div>
+            </div>
+        </div>
 
-                    <tr class="h-[26mm]">
-                        <td colspan="3" class="border border-black p-0 align-top">
-                            <div class="flex h-full flex-col">
-                                <div class="flex h-[10mm] items-center justify-center px-[1mm] text-center">
-                                    {{ $s['subinventory'] ?? '' }}
-                                </div>
-                                <div class="flex flex-1 items-center justify-center border-t border-black">
-                                    <div class="js-qr h-[11mm] w-[11mm] overflow-hidden"
-                                         data-size="46"
-                                         data-value="{{ $s['subinventory'] ?? '' }}"></div>
-                                </div>
-                            </div>
-                        </td>
+        {{-- QR SIMÉTRICOS --}}
+        <div class="border-b border-black">
+            <div class="border-b border-black px-3 py-1.5 text-center">
+                <div class="text-[10px] font-extrabold uppercase tracking-[1px] text-black">
+                    Panel de Códigos
+                </div>
+            </div>
 
-                        <td colspan="4" class="border border-black p-0 align-top">
-                            <div class="flex h-full flex-col">
-                                <div class="flex h-[10mm] items-center justify-center px-[1mm] text-center">
-                                    {{ $s['local'] ?? '' }}
-                                </div>
-                                <div class="flex flex-1 items-center justify-center border-t border-black">
-                                    @if(!empty($s['local']))
-                                        <div class="js-qr h-[11mm] w-[11mm] overflow-hidden"
-                                             data-size="46"
-                                             data-value="{{ $s['local'] }}"></div>
-                                    @else
-                                        <span class="text-[10px] text-slate-400">Sin código</span>
-                                    @endif
-                                </div>
-                            </div>
-                        </td>
+            <div class="grid grid-cols-3">
+                <div class="border-r border-b border-black p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        <div
+                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                            data-size="72"
+                            data-value="{{ $s['job'] ?? '' }}"
+                        ></div>
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['job'] ?? '' }}
+                    </div>
+                </div>
 
-                        <td colspan="4" class="border border-black p-0 align-top">
-                            <div class="flex h-full flex-col">
-                                <div class="flex h-[10mm] items-center justify-center px-[1mm] text-center">
-                                    {{ $s['qty_pallet'] ?? '' }}
-                                </div>
-                                <div class="flex flex-1 items-center justify-center border-t border-black">
-                                    <div class="js-qr h-[11mm] w-[11mm] overflow-hidden"
-                                         data-size="46"
-                                         data-value="{{ $s['qty_pallet'] ?? '' }}"></div>
-                                </div>
-                            </div>
-                        </td>
+                <div class="border-r border-b border-black p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        <div
+                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                            data-size="72"
+                            data-value="{{ $s['np'] ?? '' }}"
+                        ></div>
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['np'] ?? '' }}
+                    </div>
+                </div>
 
-                        <td colspan="4" class="border border-black p-[1mm]"></td>
-                    </tr>
+                <div class="border-b border-black p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        <div
+                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                            data-size="72"
+                            data-value="{{ $s['lote'] ?? '' }}"
+                        ></div>
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['lote'] ?? '' }}
+                    </div>
+                </div>
 
-                    <tr class="h-[8mm]">
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center text-[12px] font-bold">
-                            LIBERACION IPQC
-                        </td>
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center text-[12px] font-bold">
-                            LIBERACION OQC
-                        </td>
-                        <td colspan="4" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center text-[12px] font-bold">
-                            PRODUCTION SUPPORT
-                        </td>
-                        <td colspan="3" class="border border-black bg-gradient-to-b from-slate-100 to-slate-300 p-[1mm] text-center text-[12px] font-bold">
-                            ALMACÉN:
-                        </td>
-                    </tr>
+                <div class="border-r border-black p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Revisión</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        <div
+                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                            data-size="72"
+                            data-value="{{ $s['revision'] ?? '' }}"
+                        ></div>
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['revision'] ?? '' }}
+                    </div>
+                </div>
 
-                    <tr class="h-[28mm]">
-                        <td colspan="4" class="border border-black p-[1mm]"></td>
-                        <td colspan="4" class="border border-black p-[1mm]"></td>
-                        <td colspan="4" class="border border-black p-[1mm]"></td>
-                        <td colspan="3" class="border border-black p-[1mm]"></td>
-                    </tr>
-                </table>
+                <div class="border-r border-black p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        <div
+                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                            data-size="72"
+                            data-value="{{ $s['subinventory'] ?? '' }}"
+                        ></div>
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['subinventory'] ?? '' }}
+                    </div>
+                </div>
+
+                <div class="p-2 text-center">
+                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                        @if(!empty($s['local']))
+                            <div
+                                class="js-qr h-[17mm] w-[17mm] overflow-hidden"
+                                data-size="72"
+                                data-value="{{ $s['local'] }}"
+                            ></div>
+                        @endif
+                    </div>
+                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                        {{ $s['local'] ?? '' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- FOOTER --}}
+        <div class="grid grid-cols-12 border-t border-black">
+            <div class="col-span-3 border-r border-black">
+                <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
+                    Liberación IPQC
+                </div>
+                <div class="h-[9mm]"></div>
+            </div>
+
+            <div class="col-span-3 border-r border-black">
+                <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
+                    Liberación OQC
+                </div>
+                <div class="h-[20mm]"></div>
+            </div>
+
+            <div class="col-span-3 border-r border-black">
+                <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
+                    Production Support
+                </div>
+                <div class="h-[20mm]"></div>
+            </div>
+
+            <div class="col-span-3">
+                <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
+                    Almacén
+                </div>
+                <div class="h-[20mm]"></div>
             </div>
         </div>
     </section>
