@@ -14,6 +14,7 @@ use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
 use App\Http\Controllers\Admin\SkuTemplateConfigurationController;
+use App\Http\Controllers\Admin\StockLocatorController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -38,6 +39,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/production-lines/{production_line}/edit', [ProductionLineController::class, 'edit'])->name('production_lines.edit');
         Route::put('/production-lines/{production_line}', [ProductionLineController::class, 'update'])->name('production_lines.update');
         Route::post('/production-lines/{production_line}/toggle', [ProductionLineController::class, 'toggle'])->name('production_lines.toggle');
+
+        Route::get('/stock-locators', [StockLocatorController::class, 'index'])->name('stock_locators.index');
+        Route::get('/stock-locators/create', [StockLocatorController::class, 'create'])->name('stock_locators.create');
+        Route::post('/stock-locators', [StockLocatorController::class, 'store'])->name('stock_locators.store');
+        Route::get('/stock-locators/{stock_locator}/edit', [StockLocatorController::class, 'edit'])->name('stock_locators.edit');
+        Route::put('/stock-locators/{stock_locator}', [StockLocatorController::class, 'update'])->name('stock_locators.update');
+        Route::post('/stock-locators/{stock_locator}/toggle', [StockLocatorController::class, 'toggle'])->name('stock_locators.toggle');
 
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');

@@ -28,6 +28,11 @@
                 <div class="text-sm text-slate-600 mt-1">Catálogo de líneas (MXC007, MXMR003...).</div>
             </a>
 
+            <a href="{{ route('stock_locators.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                <div class="font-semibold">Locals by Oracle Line</div>
+                <div class="text-sm text-slate-600 mt-1">Mapeo de STOCK_LOCATOR → SUBINVENTORY para llenar Local en masters.</div>
+            </a>
+
             <a href="{{ route('label_skus.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                 <div class="font-semibold">Label SKU Tools</div>
                 <div class="text-sm text-slate-600 mt-1">Catálogo SKU ↔ Label PN y estado activo/inactivo.</div>

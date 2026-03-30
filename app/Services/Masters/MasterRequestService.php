@@ -4,6 +4,7 @@ namespace App\Services\Masters;
 
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
+use App\Services\Catalogs\StockLocatorService;
 use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -12,6 +13,7 @@ class MasterRequestService
 {
     public function __construct(
         private readonly OracleJobLookupService $oracleJobLookup,
+        private readonly StockLocatorService $stockLocatorService,
     ) {}
 
     public function create(array $data): MasterRequest
@@ -35,6 +37,13 @@ class MasterRequestService
                 $data['partial_folio'] = null;
                 $data['partial_qty'] = null;
             }
+
+            $oracleJob = !empty($data['job_assembly'])
+                ? $this->oracleJobLookup->findByJobNumber($data['job_assembly'])
+                : null;
+
+            $resolvedStockLocator = strtoupper(trim((string) ($oracleJob?->line ?? '')));
+            $data['local'] = $resolvedStockLocator !== '' ? $resolvedStockLocator : null;
 
             $mr = MasterRequest::create($data);
 

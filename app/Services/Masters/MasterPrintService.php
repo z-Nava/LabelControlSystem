@@ -10,11 +10,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use App\Models\OracleJob;
+use App\Services\Catalogs\StockLocatorService;
 
 class MasterPrintService
 {
     public function __construct(
-        private readonly MasterRequestStatusService $statusService
+        private readonly MasterRequestStatusService $statusService,
+        private readonly StockLocatorService $stockLocatorService,
     ) {}
 
     public function createBatch(
@@ -190,6 +192,9 @@ class MasterPrintService
 
             $isMotors = ($mr->request_type ?? '') === 'motors_molding';
             $isAssemblyPackaging = ($mr->request_type ?? '') === 'assembly_packaging';
+            $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $mr->line?->code ?? '')));
+            $resolvedLocal = $mr->local ? strtoupper(trim((string) $mr->local)) : $oracleLine;
+            $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
 
             $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : ('-' . $folioNo);
@@ -217,7 +222,8 @@ class MasterPrintService
                 'destination' => (string) ($mr->destination ?? ''),
 
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
-                'subinventory' => 'WIP',
+                'subinventory' => (string) ($mapping?->subinventory ?? ''),
+                'local' => (string) ($resolvedLocal ?? ''),
                 'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($mr->line?->code ?? '') : 'SMARKET-1'),
                 'qty_pallet'   => (string) ($folio->qty_for_folio ?? $mr->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];

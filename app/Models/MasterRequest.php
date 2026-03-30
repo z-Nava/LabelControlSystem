@@ -20,6 +20,7 @@ class MasterRequest extends Model
         'job_assembly',
         'job_packaging',
         'destination',
+        'local',
         'folios_from',
         'folios_to',
         'std_pack_qty',
