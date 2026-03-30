@@ -140,7 +140,7 @@
                     <option value="motors_molding" @selected(old('request_type')=='motors_molding')>HOJA MASTER - MOTORES Y MOLDEO</option>
                 </select>
                 <p class="text-xs text-slate-500 mt-2">
-                    Tip: si seleccionas “Ensamble y Empaque”, captura ambos jobs.
+                    Tip: para “Ensamble y Empaque”, el Job de Empaque es obligatorio y el de Ensamble es opcional.
                 </p>
             </div>
         </details>
@@ -160,7 +160,7 @@
                     <label class="text-sm text-slate-700 font-medium">Job Ensamble</label>
                     <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"  maxlength="40" pattern="^[0-9A-Za-z\-]+$"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                           placeholder="Ej: 393383" required>
+                           placeholder="Ej: 393383">
                     <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-2"></p>
                 </div>
 

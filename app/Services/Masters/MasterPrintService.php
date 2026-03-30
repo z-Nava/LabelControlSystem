@@ -196,8 +196,8 @@ class MasterPrintService
             $resolvedLocal = $mr->local ? strtoupper(trim((string) $mr->local)) : $oracleLine;
             $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
 
-            $lote = $job !== '' ? ($job . '-' . $folioNo) : ('-' . $folioNo);
-            $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : ('-' . $folioNo);
+            $lote = $job !== '' ? ($job . '-' . $folioNo) : '';
+            $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : '';
 
             return [
                 'leader' => (string) $mr->leader_name,

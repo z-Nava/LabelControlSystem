@@ -27,12 +27,15 @@ class StoreMasterRequestRequest extends FormRequest
 
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
             'job_assembly' => [
-                'required',
+                Rule::requiredIf(function (): bool {
+                    return $this->string('request_type')->toString() !== 'assembly_packaging';
+                }),
+                'nullable',
                 'string',
                 'max:40',
                 'regex:/^[0-9A-Za-z\-]+$/',
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (!is_string($value)) {
+                    if (!is_string($value) || trim($value) === '') {
                         return;
                     }
 
@@ -49,6 +52,9 @@ class StoreMasterRequestRequest extends FormRequest
                 },
             ],
             'job_packaging' => [
+                Rule::requiredIf(function (): bool {
+                    return $this->string('request_type')->toString() === 'assembly_packaging';
+                }),
                 'nullable',
                 'string',
                 'max:40',

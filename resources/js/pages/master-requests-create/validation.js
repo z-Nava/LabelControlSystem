@@ -29,7 +29,7 @@ export function validateBeforeSubmit(form) {
 
     clearValidationErrors(form);
 
-    if (!assemblyValue) {
+    if (requestType !== 'assembly_packaging' && !assemblyValue) {
         assemblyInput?.setCustomValidity('El Job Ensamble es obligatorio.');
         return false;
     }
