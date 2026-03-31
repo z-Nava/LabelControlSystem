@@ -22,11 +22,17 @@
         </a>
     </div>
 
+    @php
+        $totalFolios = $mr->folios->count();
+        $printedFolios = $mr->folios->where('status', 'printed')->count();
+        $pendingFolios = $totalFolios - $printedFolios;
+    @endphp
+
     <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Acción principal</div>
             <h2 class="mt-1 text-base font-semibold text-slate-900">Impresión inicial</h2>
-            <p class="mt-1 text-sm text-slate-600">Genera un nuevo lote de impresión para los folios de esta requisición.</p>
+            <p class="mt-1 text-sm text-slate-600">Genera un lote y continúa en la pantalla de impresión con los botones de PDF listos.</p>
 
             <a href="{{ route('master_requests.print.create', $mr->id) }}"
                 class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
@@ -47,8 +53,8 @@
 
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Documentos</div>
-            <h2 class="mt-1 text-base font-semibold text-slate-900">Lote generado</h2>
-            <p class="mt-1 text-sm text-slate-600">Abre el archivo listo para impresión o descarga el PDF generado.</p>
+            <h2 class="mt-1 text-base font-semibold text-slate-900">Último lote generado</h2>
+            <p class="mt-1 text-sm text-slate-600">Consulta rápido el lote más reciente desde esta requisición.</p>
 
             @if(session('batch_id'))
                 <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -86,6 +92,24 @@
             <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Destino / PO</div>
             <div class="font-semibold">{{ $mr->destination ?? '-' }}</div>
             <div class="text-slate-700">{{ $mr->po_number ?? '-' }}</div>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Resumen de folios</div>
+            <div class="mt-1 text-2xl font-semibold text-slate-900">{{ $totalFolios }}</div>
+            <p class="text-sm text-slate-600">Folios totales en la requisición.</p>
+        </div>
+        <div class="rounded-xl border border-green-200 bg-green-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Impresos</div>
+            <div class="mt-1 text-2xl font-semibold text-green-800">{{ $printedFolios }}</div>
+            <p class="text-sm text-green-700">Folios con estatus printed.</p>
+        </div>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Pendientes</div>
+            <div class="mt-1 text-2xl font-semibold text-amber-800">{{ $pendingFolios }}</div>
+            <p class="text-sm text-amber-700">Folios por imprimir o reimprimir.</p>
         </div>
     </div>
 

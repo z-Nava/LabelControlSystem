@@ -52,7 +52,7 @@ class MasterPrintController extends Controller
         );
 
         return redirect()
-            ->route('master_requests.show', $master_request)
+            ->route('master_requests.print.create', $master_request)
             ->with('success', "Batch creado (#{$batch->id}). Listo para imprimir.")
             ->with('batch_id', $batch->id)
             ->with('pdf_url', route('master_print_batches.pdf', $batch));
