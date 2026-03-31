@@ -161,6 +161,7 @@
                     <input id="jobAssembly" name="job_assembly" value="{{ old('job_assembly') }}"  maxlength="40" pattern="^[0-9A-Za-z\-]+$"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                            placeholder="Ej: 393383">
+                    <p id="jobAssemblyQty" class="text-md text-slate-600 mt-2">Cantidad del job: —</p>
                     <p id="jobAssemblyHint" class="text-xs text-slate-500 mt-2"></p>
                 </div>
 
@@ -169,6 +170,7 @@
                     <input id="jobPackaging" name="job_packaging" value="{{ old('job_packaging') }}"  maxlength="40" pattern="^[0-9A-Za-z\-]+$"
                            class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                            placeholder="Opcional">
+                    <p id="jobPackagingQty" class="text-md text-slate-600 mt-2">Cantidad del job: —</p>
                     <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>
                 </div>
 

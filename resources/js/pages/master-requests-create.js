@@ -55,7 +55,11 @@ function initializeLineTypeFilter(fields) {
     }
 
     const { form, fields, preview, lookupUrl } = page;
-    const updatePreview = () => refreshPreview(fields, preview);
+    const jobLookupState = {
+        assembly: null,
+        packaging: null,
+    };
+    const updatePreview = () => refreshPreview(fields, preview, jobLookupState);
 
     let isSubmitting = false;
 
@@ -65,10 +69,14 @@ function initializeLineTypeFilter(fields) {
         createJobLookupHandler({
             inputElement: fields.jobAssembly,
             hintElement: fields.hintAssembly,
+            qtyElement: fields.qtyAssembly,
             lookupUrl,
             fields,
             refreshPreview: updatePreview,
             role: 'assembly',
+            onResolved: (jobData) => {
+                jobLookupState.assembly = jobData;
+            },
         }),
         350,
     );
@@ -77,10 +85,14 @@ function initializeLineTypeFilter(fields) {
         createJobLookupHandler({
             inputElement: fields.jobPackaging,
             hintElement: fields.hintPackaging,
+            qtyElement: fields.qtyPackaging,
             lookupUrl,
             fields,
             refreshPreview: updatePreview,
             role: 'packaging',
+            onResolved: (jobData) => {
+                jobLookupState.packaging = jobData;
+            },
         }),
         350,
     );

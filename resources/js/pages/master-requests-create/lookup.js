@@ -36,6 +36,28 @@ function updateAutoCompletedFields(fields, data) {
     }
 }
 
+function formatJobQty(jobQty) {
+    if (jobQty === null || jobQty === undefined || jobQty === '') {
+        return '—';
+    }
+
+    const parsedJobQty = Number(jobQty);
+
+    if (!Number.isFinite(parsedJobQty)) {
+        return String(jobQty);
+    }
+
+    return new Intl.NumberFormat('es-MX').format(parsedJobQty);
+}
+
+function setJobQtyText(element, jobQty) {
+    if (!element) {
+        return;
+    }
+
+    element.textContent = `Cantidad del job: ${formatJobQty(jobQty)}`;
+}
+
 function validateLookupByRole(inputElement, data, role) {
     inputElement?.setCustomValidity('');
 
@@ -61,7 +83,16 @@ function validateLookupByRole(inputElement, data, role) {
     };
 }
 
-export function createJobLookupHandler({ inputElement, hintElement, lookupUrl, fields, refreshPreview, role }) {
+export function createJobLookupHandler({
+    inputElement,
+    hintElement,
+    qtyElement,
+    lookupUrl,
+    fields,
+    refreshPreview,
+    role,
+    onResolved,
+}) {
     return async () => {
         const jobNumber = (inputElement?.value || '').trim();
         refreshPreview();
@@ -69,6 +100,8 @@ export function createJobLookupHandler({ inputElement, hintElement, lookupUrl, f
         if (!jobNumber) {
             inputElement?.setCustomValidity('');
             setHint(hintElement, 'muted');
+            setJobQtyText(qtyElement);
+            onResolved?.(null);
             return;
         }
 
@@ -78,11 +111,15 @@ export function createJobLookupHandler({ inputElement, hintElement, lookupUrl, f
         if (!data.found) {
             inputElement?.setCustomValidity('No encontrado en Oracle Jobs.');
             setHint(hintElement, 'warn', 'No encontrado en Oracle Jobs.');
+            setJobQtyText(qtyElement);
+            onResolved?.(null);
             return;
         }
 
         const validation = validateLookupByRole(inputElement, data, role);
         setHint(hintElement, validation.type, validation.message);
+        setJobQtyText(qtyElement, data.job_qty);
+        onResolved?.(data);
 
         updateAutoCompletedFields(fields, data);
         refreshPreview();

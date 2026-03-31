@@ -63,6 +63,7 @@ class OracleJobLookupService
         return [
             'found' => true,
             'job_number' => $job->job_number,
+            'job_qty' => $job->job_qty,
             'line' => $job->line,
             'assembly' => $job->assembly,
             'part_description' => $job->part_description,

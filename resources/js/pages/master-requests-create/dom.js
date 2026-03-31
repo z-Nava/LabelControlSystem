@@ -18,6 +18,8 @@ export function getMasterRequestElements() {
             jobPackaging: document.getElementById('jobPackaging'),
             poNumber: document.getElementById('poNumber'),
             destination: document.getElementById('destination'),
+            qtyAssembly: document.getElementById('jobAssemblyQty'),
+            qtyPackaging: document.getElementById('jobPackagingQty'),
             hintAssembly: document.getElementById('jobAssemblyHint'),
             hintPackaging: document.getElementById('jobPackagingHint'),
         },

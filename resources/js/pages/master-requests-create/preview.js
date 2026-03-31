@@ -2,7 +2,21 @@ export function getSelectedText(selectElement) {
     return selectElement?.selectedOptions?.[0]?.textContent?.trim() || '';
 }
 
-export function refreshPreview(fields, preview) {
+function formatJobWithQty(jobNumber, jobLookup) {
+    if (!jobNumber) {
+        return '';
+    }
+
+    if (!jobLookup || jobLookup.job_number !== jobNumber) {
+        return jobNumber;
+    }
+
+    const qty = jobLookup.job_qty ?? '—';
+
+    return `${jobNumber} (${qty})`;
+}
+
+export function refreshPreview(fields, preview, jobLookupState = {}) {
     if (preview.date) {
         preview.date.textContent = fields.requestDate?.value || '—';
     }
@@ -19,9 +33,11 @@ export function refreshPreview(fields, preview) {
     if (preview.jobs) {
         const assemblyJob = (fields.jobAssembly?.value || '').trim();
         const packagingJob = (fields.jobPackaging?.value || '').trim();
+        const assemblyDisplay = formatJobWithQty(assemblyJob, jobLookupState.assembly);
+        const packagingDisplay = formatJobWithQty(packagingJob, jobLookupState.packaging);
 
         preview.jobs.textContent = (assemblyJob || packagingJob)
-            ? [assemblyJob, packagingJob].filter(Boolean).join(' / ')
+            ? [assemblyDisplay, packagingDisplay].filter(Boolean).join(' / ')
             : '—';
     }
 
