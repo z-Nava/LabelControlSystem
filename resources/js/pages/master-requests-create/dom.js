@@ -12,6 +12,7 @@ export function getMasterRequestElements() {
             requestDate: document.getElementById('requestDate'),
             lineTypeSelect: document.getElementById('lineTypeSelect'),
             lineSelect: document.getElementById('lineSelect'),
+            localInput: document.getElementById('localInput'),
             shiftSelect: document.getElementById('shiftSelect'),
             requestType: document.getElementById('requestType'),
             jobAssembly: document.getElementById('jobAssembly'),

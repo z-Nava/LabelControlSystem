@@ -78,6 +78,7 @@ class StoreMasterRequestRequest extends FormRequest
                 },
             ],
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
+            'local' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9\-._]+$/'],
 
             'folios_from' => ['required', 'integer', 'min:1'],
             'folios_to' => ['required', 'integer', 'min:1', 'gte:folios_from'],
@@ -91,6 +92,15 @@ class StoreMasterRequestRequest extends FormRequest
 
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $local = trim((string) $this->input('local', ''));
+
+        $this->merge([
+            'local' => $local !== '' ? strtoupper($local) : null,
+        ]);
     }
 
     private function findOracleJob(string $jobNumber): ?OracleJob

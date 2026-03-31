@@ -47,6 +47,37 @@ function initializeLineTypeFilter(fields) {
     applyFilter();
 }
 
+function initializeLocalFromLine(fields) {
+    const lineSelect = fields.lineSelect;
+    const localInput = fields.localInput;
+
+    if (!lineSelect || !localInput) {
+        return;
+    }
+
+    const getDefaultLocal = () => {
+        const selectedLineOption = lineSelect.selectedOptions?.[0];
+        return (selectedLineOption?.dataset.lineCode || selectedLineOption?.textContent || '').trim();
+    };
+
+    const applyDefaultLocal = () => {
+        const localValue = (localInput.value || '').trim();
+        const lastAutoValue = localInput.dataset.lastAutoValue || '';
+        const canOverride = localValue === '' || localValue === lastAutoValue;
+
+        if (!canOverride) {
+            return;
+        }
+
+        const defaultLocal = getDefaultLocal();
+        localInput.value = defaultLocal;
+        localInput.dataset.lastAutoValue = defaultLocal;
+    };
+
+    lineSelect.addEventListener('change', applyDefaultLocal);
+    applyDefaultLocal();
+}
+
 (function () {
     const page = getMasterRequestElements();
 
@@ -64,6 +95,7 @@ function initializeLineTypeFilter(fields) {
     let isSubmitting = false;
 
     initializeLineTypeFilter(fields);
+    initializeLocalFromLine(fields);
 
     const debouncedAssemblyLookup = debounce(
         createJobLookupHandler({
@@ -104,6 +136,7 @@ function initializeLineTypeFilter(fields) {
         fields.requestDate,
         fields.lineTypeSelect,
         fields.lineSelect,
+        fields.localInput,
         fields.shiftSelect,
         fields.requestType,
         fields.jobAssembly,

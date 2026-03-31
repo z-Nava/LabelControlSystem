@@ -4,6 +4,7 @@ namespace App\Services\Masters;
 
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
+use App\Models\ProductionLine;
 use App\Services\Catalogs\StockLocatorService;
 use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Support\Facades\DB;
@@ -42,8 +43,13 @@ class MasterRequestService
                 ? $this->oracleJobLookup->findByJobNumber($data['job_assembly'])
                 : null;
 
-            $resolvedStockLocator = strtoupper(trim((string) ($oracleJob?->line ?? '')));
-            $data['local'] = $resolvedStockLocator !== '' ? $resolvedStockLocator : null;
+            $manualLocal = strtoupper(trim((string) ($data['local'] ?? '')));
+            $lineDefaultLocal = strtoupper(trim((string) ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')));
+            $oracleStockLocator = strtoupper(trim((string) ($oracleJob?->line ?? '')));
+
+            $data['local'] = $manualLocal !== ''
+                ? $manualLocal
+                : ($lineDefaultLocal !== '' ? $lineDefaultLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null));
 
             $mr = MasterRequest::create($data);
 

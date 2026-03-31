@@ -91,11 +91,18 @@
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                         <option value="">Selecciona linea...</option>
                         @foreach($lines as $line)
-                            <option value="{{ $line->id }}" data-line-type="{{ $line->line_type }}" @selected(old('line_id') == $line->id)>
+                            <option value="{{ $line->id }}" data-line-type="{{ $line->line_type }}" data-line-code="{{ $line->code }}" @selected(old('line_id') == $line->id)>
                                 {{ $line->code }}
                             </option>
                         @endforeach
                     </select>
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-600">Local</label>
+                    <input id="localInput" name="local" value="{{ old('local') }}" maxlength="20"
+                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-600"
+                           placeholder="Se sugiere según la línea, editable">
                 </div>
 
                 <div>
