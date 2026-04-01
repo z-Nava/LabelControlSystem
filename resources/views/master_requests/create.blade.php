@@ -274,7 +274,7 @@
 
             <div class="border-t p-4">
                 <label class="text-sm text-slate-600">Notas</label>
-                <textarea name="notes" rows="3"
+                <textarea name="notes" rows="3" maxlength="1000"
                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('notes') }}</textarea>
             </div>
         </details>

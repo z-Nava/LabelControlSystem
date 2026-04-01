@@ -32,6 +32,10 @@
                     class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                     placeholder="Ej. 0001"
                     autocomplete="username"
+                    inputmode="numeric"
+                    maxlength="10"
+                    minlength="1"
+                    pattern="[0-9]+"
                     required
                 />
             </div>
@@ -47,6 +51,8 @@
                     class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                     placeholder="********"
                     autocomplete="current-password"
+                    minlength="8"
+                    maxlength="72"
                 />
             </div>
 
