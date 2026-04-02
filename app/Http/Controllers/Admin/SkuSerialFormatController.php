@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSkuSerialFormatRequest;
 use App\Http\Requests\Admin\UpdateSkuSerialFormatRequest;
+use App\Models\LabelSku;
 use App\Models\SkuSerialFormat;
 use App\Services\Catalogs\SkuSerialFormatService;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,12 @@ class SkuSerialFormatController extends Controller
 
     public function create(): View
     {
-        return view('sku_serial_formats.create');
+        $activeSkus = LabelSku::query()
+            ->active()
+            ->orderBy('sku')
+            ->get(['sku', 'label_part_number']);
+
+        return view('sku_serial_formats.create', compact('activeSkus'));
     }
 
     public function store(StoreSkuSerialFormatRequest $request): RedirectResponse
@@ -39,7 +45,18 @@ class SkuSerialFormatController extends Controller
 
     public function edit(SkuSerialFormat $sku_serial_format): View
     {
-        return view('sku_serial_formats.edit', ['format' => $sku_serial_format]);
+        $activeSkus = LabelSku::query()
+            ->where(function ($query) use ($sku_serial_format) {
+                $query->active()
+                    ->orWhere('sku', $sku_serial_format->sku);
+            })
+            ->orderBy('sku')
+            ->get(['sku', 'label_part_number']);
+
+        return view('sku_serial_formats.edit', [
+            'format' => $sku_serial_format,
+            'activeSkus' => $activeSkus,
+        ]);
     }
 
     public function update(UpdateSkuSerialFormatRequest $request, SkuSerialFormat $sku_serial_format): RedirectResponse

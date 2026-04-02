@@ -3,9 +3,19 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>
-        <input name="sku" value="{{ old('sku', $format->sku ?? '') }}"
-               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="2552-20" required />
+        <select id="sku" name="sku" required
+                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+            <option value="">Selecciona un SKU activo</option>
+            @foreach(($activeSkus ?? collect()) as $skuOption)
+                @php($selectedSku = old('sku', $format->sku ?? ''))
+                <option value="{{ $skuOption->sku }}"
+                        data-label-part-number="{{ $skuOption->label_part_number }}"
+                        @selected($selectedSku === $skuOption->sku)>
+                    {{ $skuOption->sku }}
+                </option>
+            @endforeach
+        </select>
+        <p id="skuLabelPartNumber" class="mt-1 text-xs text-emerald-600"></p>
         @error('sku') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
@@ -99,3 +109,26 @@
         Ejemplo esperado: <strong>G67</strong> + <strong>D</strong> + <strong>H</strong> + <strong>25</strong> + <strong>34</strong> + <strong>00001</strong> = <strong>G67DH253400001</strong>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const skuSelect = document.getElementById('sku');
+        const skuLabelPartNumber = document.getElementById('skuLabelPartNumber');
+
+        if (!skuSelect || !skuLabelPartNumber) {
+            return;
+        }
+
+        const updateLabelPartNumber = () => {
+            const selectedOption = skuSelect.options[skuSelect.selectedIndex];
+            const labelPartNumber = selectedOption?.dataset?.labelPartNumber;
+
+            skuLabelPartNumber.textContent = labelPartNumber
+                ? `Label Part Number: ${labelPartNumber}`
+                : '';
+        };
+
+        skuSelect.addEventListener('change', updateLabelPartNumber);
+        updateLabelPartNumber();
+    });
+</script>

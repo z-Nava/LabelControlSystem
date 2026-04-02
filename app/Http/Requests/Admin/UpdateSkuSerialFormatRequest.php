@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateSkuSerialFormatRequest extends FormRequest
 {
@@ -16,7 +17,13 @@ class UpdateSkuSerialFormatRequest extends FormRequest
         $id = $this->route('sku_serial_format')?->id ?? null;
 
         return [
-            'sku' => ['required', 'string', 'max:80', 'exists:label_skus,sku', "unique:sku_serial_formats,sku,{$id}"],
+            'sku' => [
+                'required',
+                'string',
+                'max:80',
+                Rule::exists('label_skus', 'sku')->where('is_active', true),
+                "unique:sku_serial_formats,sku,{$id}",
+            ],
             'prefix' => ['nullable', 'string', 'max:10'],
             'serial_break' => ['nullable', 'string', 'max:10'],
             'plant_code' => ['nullable', 'string', 'max:10'],
