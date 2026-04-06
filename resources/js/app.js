@@ -8,6 +8,7 @@ import './pages/master-print-create';
 import './pages/oracle-jobs-import';
 import './pages/master-print-template';
 import './pages/label-requests-create';
+import './pages/sku-template-configurations-form';
 
 // opcional: hacerlo global
 window.Swal = Swal

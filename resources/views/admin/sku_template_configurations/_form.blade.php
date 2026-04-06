@@ -1,16 +1,4 @@
 @csrf
-@php
-    $resolvedLayout = $configuration->template?->resolved_serial_layout
-        ?? data_get($configuration->template?->meta, 'serial_layout', []);
-    $layout = old('serial_layout', $resolvedLayout);
-    $textLayout = $layout['text'] ?? $layout;
-    $qrLayout = $layout['qr'] ?? [];
-    $skuLayout = $layout['sku'] ?? [];
-    $snLayout = $layout['sn'] ?? [];
-    $settings = old('profile_settings', $configuration->settings ?? []);
-    $connectionType = old('connection_type', $settings['connection_type'] ?? ($configuration->default_printer_ip ? 'network' : 'usb'));
-    $selectedLabelType = old('label_type', $configuration->label_type ?? $configuration->template?->label_type ?? 'serial');
-@endphp
 @if ($errors->any())
     <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 md:col-span-2">
         <p class="font-semibold">No se pudo guardar la configuración.</p>
@@ -21,7 +9,10 @@
         </ul>
     </div>
 @endif
-<div class="grid grid-cols-1 gap-4 md:grid-cols-2" id="sku-template-configuration-form">
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2"
+    id="sku-template-configuration-form"
+    data-default-serial="L36BH2606007A7"
+    data-default-sku="2978-OCUT">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>
         <select name="label_sku_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
@@ -37,7 +28,7 @@
         <label class="block text-sm font-medium text-slate-700">Tipo de etiqueta</label>
         <select name="label_type" id="label_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
             @foreach(['serial', 'rating', 'shipping'] as $type)
-                <option value="{{ $type }}" @selected($selectedLabelType === $type)>{{ ucfirst($type) }}</option>
+                <option value="{{ $type }}" @selected($formState['selected_label_type'] === $type)>{{ ucfirst($type) }}</option>
             @endforeach
         </select>
     </div>
@@ -68,24 +59,24 @@
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="block text-sm font-medium text-slate-700">Posición serial X</label>
-                <input type="number" name="serial_position_x" value="{{ old('serial_position_x', $textLayout['x'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+                <input type="number" name="serial_position_x" value="{{ old('serial_position_x', $formState['text_layout']['x'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
                 @error('serial_position_x') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Posición serial Y</label>
-                <input type="number" name="serial_position_y" value="{{ old('serial_position_y', $textLayout['y'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+                <input type="number" name="serial_position_y" value="{{ old('serial_position_y', $formState['text_layout']['y'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
                 @error('serial_position_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Tamaño de letra</label>
-                <input type="number" name="serial_font_size" value="{{ old('serial_font_size', $textLayout['font_size'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+                <input type="number" name="serial_font_size" value="{{ old('serial_font_size', $formState['text_layout']['font_size'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
                 @error('serial_font_size') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Orientación serial</label>
                 <select name="serial_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
                     @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('serial_orientation', $textLayout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('serial_orientation', $formState['text_layout']['orientation'] ?? 'N') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
                 @error('serial_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
@@ -102,24 +93,24 @@
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <div>
                 <label class="block text-sm font-medium text-slate-700">QR X</label>
-                <input type="number" name="qr_position_x" value="{{ old('qr_position_x', $qrLayout['x'] ?? 30) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="qr_position_x" value="{{ old('qr_position_x', $formState['qr_layout']['x'] ?? 30) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('qr_position_x') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">QR Y</label>
-                <input type="number" name="qr_position_y" value="{{ old('qr_position_y', $qrLayout['y'] ?? 30) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="qr_position_y" value="{{ old('qr_position_y', $formState['qr_layout']['y'] ?? 30) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('qr_position_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Magnificación QR</label>
-                <input type="number" name="qr_magnification" min="1" max="10" value="{{ old('qr_magnification', $qrLayout['magnification'] ?? 4) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="qr_magnification" min="1" max="10" value="{{ old('qr_magnification', $formState['qr_layout']['magnification'] ?? 4) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('qr_magnification') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Orientación QR</label>
                 <select name="qr_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                     @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('qr_orientation', $qrLayout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('qr_orientation', $formState['qr_layout']['orientation'] ?? 'N') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
                 @error('qr_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
@@ -127,17 +118,17 @@
 
             <div>
                 <label class="block text-sm font-medium text-slate-700">SKU X</label>
-                <input type="number" name="sku_position_x" value="{{ old('sku_position_x', $skuLayout['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sku_position_x" value="{{ old('sku_position_x', $formState['sku_layout']['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_position_x') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">SKU Y</label>
-                <input type="number" name="sku_position_y" value="{{ old('sku_position_y', $skuLayout['y'] ?? 35) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sku_position_y" value="{{ old('sku_position_y', $formState['sku_layout']['y'] ?? 35) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_position_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Tamaño letra SKU</label>
-                <input type="number" name="sku_font_size" value="{{ old('sku_font_size', $skuLayout['font_size'] ?? 44) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sku_font_size" value="{{ old('sku_font_size', $formState['sku_layout']['font_size'] ?? 44) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_font_size') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
 
@@ -145,38 +136,38 @@
                 <label class="block text-sm font-medium text-slate-700">Orientación SKU</label>
                 <select name="sku_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                     @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('sku_orientation', $skuLayout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('sku_orientation', $formState['sku_layout']['orientation'] ?? 'N') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
                 @error('sku_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">SN pequeño X</label>
-                <input type="number" name="sn_position_x" value="{{ old('sn_position_x', $snLayout['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sn_position_x" value="{{ old('sn_position_x', $formState['sn_layout']['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sn_position_x') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">SN pequeño Y</label>
-                <input type="number" name="sn_position_y" value="{{ old('sn_position_y', $snLayout['y'] ?? 95) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sn_position_y" value="{{ old('sn_position_y', $formState['sn_layout']['y'] ?? 95) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sn_position_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Tamaño letra SN pequeño</label>
-                <input type="number" name="sn_font_size" value="{{ old('sn_font_size', $snLayout['font_size'] ?? 22) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input type="number" name="sn_font_size" value="{{ old('sn_font_size', $formState['sn_layout']['font_size'] ?? 22) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sn_font_size') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Orientación SN pequeño</label>
                 <select name="sn_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                     @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)
-                        <option value="{{ $value }}" @selected(old('sn_orientation', $snLayout['orientation'] ?? 'N') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('sn_orientation', $formState['sn_layout']['orientation'] ?? 'N') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
                 @error('sn_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Prefijo texto SN</label>
-                <input name="sn_prefix" value="{{ old('sn_prefix', $snLayout['prefix'] ?? 'SN:') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                <input name="sn_prefix" value="{{ old('sn_prefix', $formState['sn_layout']['prefix'] ?? 'SN:') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sn_prefix') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
         </div>
@@ -215,8 +206,8 @@
     <div>
         <label class="block text-sm font-medium text-slate-700">Tipo de conexión</label>
         <select name="connection_type" id="connection_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-            <option value="usb" @selected($connectionType === 'usb')>USB</option>
-            <option value="network" @selected($connectionType === 'network')>Red (IP)</option>
+            <option value="usb" @selected($formState['connection_type'] === 'usb')>USB</option>
+            <option value="network" @selected($formState['connection_type'] === 'network')>Red (IP)</option>
         </select>
     </div>
 
@@ -247,201 +238,3 @@
 </div>
 
 <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
-<script>
-(() => {
-    const connectionSelect = document.getElementById('connection_type');
-    const labelTypeSelect = document.getElementById('label_type');
-    const ipWrapper = document.getElementById('printer-ip-wrapper');
-    const ipInput = document.getElementById('default_printer_ip');
-    const usbConnectedInput = document.getElementById('usb_connected');
-    const statusBox = document.getElementById('printer-test-status');
-    const testUsbButton = document.getElementById('test-usb-connection');
-    const testPrintButton = document.getElementById('test-print');
-    const printerNameInput = document.getElementById('default_printer_name');
-    const skuSelect = document.querySelector('[name="label_sku_id"]');
-    const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
-    const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
-
-    let selectedDevice = null;
-
-    const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || '2978-OCUT';
-    const getSerialValue = () => 'L36BH2606007A7';
-
-    const normalizeOrientation = (value, fallback = 'N') => {
-        const normalized = String(value || fallback).trim().toUpperCase();
-        return ['N', 'R', 'I', 'B'].includes(normalized) ? normalized : fallback;
-    };
-
-    const readInt = (selector, fallback) => Number.parseInt(document.querySelector(selector)?.value || String(fallback), 10) || fallback;
-
-    const setStatus = (message, isError = false) => {
-        statusBox.textContent = message;
-        statusBox.classList.toggle('text-red-700', isError);
-        statusBox.classList.toggle('text-slate-700', !isError);
-    };
-
-    const toggleConnectionFields = () => {
-        const isNetwork = connectionSelect.value === 'network';
-        ipWrapper.style.display = isNetwork ? 'block' : 'none';
-        ipInput.toggleAttribute('required', isNetwork);
-        usbConnectedInput.value = isNetwork ? '1' : '0';
-    };
-
-    const toggleLayoutSections = () => {
-        const isSerial = labelTypeSelect.value === 'serial';
-        serialSections.forEach((section) => {
-            section.style.display = isSerial ? 'block' : 'none';
-        });
-        serialSections.forEach((section) => {
-            section.querySelectorAll('input, select').forEach((field) => {
-                field.required = isSerial;
-            });
-        });
-        ratingSections.forEach((section) => {
-            section.querySelectorAll('input, select').forEach((field) => {
-                if (field.name.startsWith('serial_')) {
-                    field.required = true;
-                }
-            });
-        });
-        setStatus(isSerial
-            ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
-            : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.');
-    };
-
-    const ensureBrowserPrint = () => {
-        if (!window.BrowserPrint) {
-            setStatus('No se encontró BrowserPrint para pruebas de impresora.', true);
-            return false;
-        }
-
-        return true;
-    };
-
-    const connectUsb = () => {
-        if (!ensureBrowserPrint()) {
-            return;
-        }
-
-        setStatus('Buscando impresora USB...');
-        BrowserPrint.getDefaultDevice('printer', (device) => {
-            if (device && String(device.connection || '').toLowerCase().includes('usb')) {
-                selectedDevice = device;
-                usbConnectedInput.value = '1';
-                printerNameInput.value = device.name || printerNameInput.value;
-                setStatus(`Conexión USB OK: ${device.name}`);
-                return;
-            }
-
-            BrowserPrint.getLocalDevices((devices) => {
-                const usbPrinter = (devices || []).find((candidate) => {
-                    return candidate.deviceType === 'printer' && String(candidate.connection || '').toLowerCase().includes('usb');
-                });
-
-                if (!usbPrinter) {
-                    usbConnectedInput.value = '0';
-                    setStatus('No se detectó impresora USB conectada.', true);
-                    return;
-                }
-
-                selectedDevice = usbPrinter;
-                usbConnectedInput.value = '1';
-                printerNameInput.value = usbPrinter.name || printerNameInput.value;
-                setStatus(`Conexión USB OK: ${usbPrinter.name}`);
-            }, (error) => {
-                usbConnectedInput.value = '0';
-                setStatus(`Error al detectar impresora USB: ${error}`, true);
-            }, 'printer');
-        }, () => {
-            BrowserPrint.getLocalDevices(() => {}, () => {
-                usbConnectedInput.value = '0';
-                setStatus('No fue posible obtener la impresora default.', true);
-            }, 'printer');
-        });
-    };
-
-    const buildTestSerialZpl = () => {
-        const labelType = labelTypeSelect.value;
-        const serial = getSerialValue();
-        const sku = getSelectedSkuCode();
-
-        if (labelType !== 'serial') {
-            const x = readInt('[name="serial_position_x"]', 40);
-            const y = readInt('[name="serial_position_y"]', 40);
-            const fontSize = readInt('[name="serial_font_size"]', 40);
-            const orientation = normalizeOrientation(document.querySelector('[name="serial_orientation"]')?.value, 'N');
-
-            return [
-                '^XA',
-                '^CI28',
-                `^FO${x},${y}`,
-                `^A0${orientation},${fontSize},${fontSize}`,
-                `^FD${serial}^FS`,
-                '^XZ',
-            ].join('\n');
-        }
-
-        const qrX = readInt('[name="qr_position_x"]', 30);
-        const qrY = readInt('[name="qr_position_y"]', 30);
-        const qrOrientation = normalizeOrientation(document.querySelector('[name="qr_orientation"]')?.value, 'N');
-        const qrMagnification = readInt('[name="qr_magnification"]', 4);
-        const skuX = readInt('[name="sku_position_x"]', 170);
-        const skuY = readInt('[name="sku_position_y"]', 35);
-        const skuFontSize = readInt('[name="sku_font_size"]', 44);
-        const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
-        const snX = readInt('[name="sn_position_x"]', 170);
-        const snY = readInt('[name="sn_position_y"]', 95);
-        const snFontSize = readInt('[name="sn_font_size"]', 22);
-        const snOrientation = normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
-        const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value || 'SN:').trim();
-        const snLine = snPrefix ? `${snPrefix} ${serial}` : serial;
-
-        return [
-            '^XA',
-            '^CI28',
-            `^FO${qrX},${qrY}`,
-            `^BQ${qrOrientation},2,${Math.min(Math.max(qrMagnification, 1), 10)}`,
-            `^FDLA,${serial}^FS`,
-            `^FO${skuX},${skuY}`,
-            `^A0${skuOrientation},${skuFontSize},${skuFontSize}`,
-            `^FD${sku}^FS`,
-            `^FO${snX},${snY}`,
-            `^A0${snOrientation},${snFontSize},${snFontSize}`,
-            `^FD${snLine}^FS`,
-            '^XZ',
-        ].join('\n');
-    };
-
-    const runTestPrint = () => {
-        const type = connectionSelect.value;
-
-        if (type === 'network') {
-            setStatus('Prueba de impresión para conexión de red lista (requiere flujo BrowserPrint de red en estación cliente).');
-            return;
-        }
-
-        if (!selectedDevice) {
-            setStatus('Primero ejecuta "Probar conexión USB".', true);
-            return;
-        }
-
-        const zpl = buildTestSerialZpl();
-        selectedDevice.send(zpl, () => {
-            const labelType = labelTypeSelect.value;
-            setStatus(labelType === 'serial'
-                ? 'Impresión de prueba enviada por USB con QR, SKU y SN de referencia.'
-                : 'Impresión de prueba enviada por USB con SN de referencia.');
-        }, (error) => {
-            setStatus(`Falló impresión de prueba: ${error}`, true);
-        });
-    };
-
-    connectionSelect?.addEventListener('change', toggleConnectionFields);
-    labelTypeSelect?.addEventListener('change', toggleLayoutSections);
-    testUsbButton?.addEventListener('click', connectUsb);
-    testPrintButton?.addEventListener('click', runTestPrint);
-
-    toggleConnectionFields();
-    toggleLayoutSections();
-})();
-</script>

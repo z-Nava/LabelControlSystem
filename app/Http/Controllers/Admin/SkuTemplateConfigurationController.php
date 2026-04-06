@@ -48,9 +48,11 @@ class SkuTemplateConfigurationController extends Controller
 
     public function create(): View
     {
+        $configuration = new LabelPrintProfile();
         $labelSkus = $this->skuOptionsWithSerialFormat();
+        $formState = $this->buildFormState($configuration);
 
-        return view('admin.sku_template_configurations.create', compact('labelSkus'));
+        return view('admin.sku_template_configurations.create', compact('configuration', 'labelSkus', 'formState'));
     }
 
     public function store(StoreSkuTemplateConfigurationRequest $request): RedirectResponse
@@ -70,8 +72,9 @@ class SkuTemplateConfigurationController extends Controller
     {
         $configuration->load('template');
         $labelSkus = $this->skuOptionsWithSerialFormat();
+        $formState = $this->buildFormState($configuration);
 
-        return view('admin.sku_template_configurations.edit', compact('configuration', 'labelSkus'));
+        return view('admin.sku_template_configurations.edit', compact('configuration', 'labelSkus', 'formState'));
     }
 
     public function update(UpdateSkuTemplateConfigurationRequest $request, LabelPrintProfile $configuration): RedirectResponse
@@ -188,6 +191,32 @@ class SkuTemplateConfigurationController extends Controller
                 'usb_required' => $data['connection_type'] === 'usb',
             ],
             'is_active' => $data['profile_is_active'],
+        ];
+    }
+
+    private function buildFormState(LabelPrintProfile $configuration): array
+    {
+        $resolvedLayout = $configuration->template?->resolved_serial_layout
+            ?? data_get($configuration->template?->meta, 'serial_layout', []);
+        $layout = old('serial_layout', $resolvedLayout);
+
+        return [
+            'text_layout' => $layout['text'] ?? $layout,
+            'qr_layout' => $layout['qr'] ?? [],
+            'sku_layout' => $layout['sku'] ?? [],
+            'sn_layout' => $layout['sn'] ?? [],
+            'connection_type' => old(
+                'connection_type',
+                data_get(
+                    old('profile_settings', $configuration->settings ?? []),
+                    'connection_type',
+                    $configuration->default_printer_ip ? 'network' : 'usb'
+                )
+            ),
+            'selected_label_type' => old(
+                'label_type',
+                $configuration->label_type ?? $configuration->template?->label_type ?? 'serial'
+            ),
         ];
     }
 }
