@@ -19,7 +19,7 @@ class SerialTemplateZplBuilder
             '^XA',
             '^CI28',
             sprintf('^FO%d,%d', $text['x'], $text['y']),
-            sprintf('^A%sN,%d,%d', $text['orientation'], $text['font_size'], $text['font_size']),
+            sprintf('^A0%s,%d,%d', $text['orientation'], $text['font_size'], $text['font_size']),
             '^FD{{serial_full}}^FS',
             '^XZ',
         ]);
@@ -40,10 +40,10 @@ class SerialTemplateZplBuilder
             sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
             '^FDLA,{{serial_full}}^FS',
             sprintf('^FO%d,%d', $sku['x'], $sku['y']),
-            sprintf('^A%sN,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']),
+            sprintf('^A0%s,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']),
             '^FD{{sku}}^FS',
             sprintf('^FO%d,%d', $sn['x'], $sn['y']),
-            sprintf('^A%sN,%d,%d', $sn['orientation'], $sn['font_size'], $sn['font_size']),
+            sprintf('^A0%s,%d,%d', $sn['orientation'], $sn['font_size'], $sn['font_size']),
             sprintf('^FD%s^FS', $snText),
             '^XZ',
         ]);
