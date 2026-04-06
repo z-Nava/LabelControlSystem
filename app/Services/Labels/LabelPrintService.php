@@ -57,6 +57,19 @@ class LabelPrintService
                 ->orderBy('range_start')
                 ->get();
 
+            if ($isPrintBatch) {
+                $existingPrintBatch = LabelPrintBatch::query()
+                    ->where('label_request_id', $labelRequest->id)
+                    ->where('batch_type', 'print')
+                    ->exists();
+
+                if ($existingPrintBatch) {
+                    throw ValidationException::withMessages([
+                        'batch_type' => 'Ya existe un batch de tipo print para esta requisición. Usa retrabajo/reimpresión para evitar duplicidad de seriales.',
+                    ]);
+                }
+            }
+
             $batch = LabelPrintBatch::query()->create([
                 'label_request_id' => $labelRequest->id,
                 'serial_week_id' => null,

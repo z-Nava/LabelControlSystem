@@ -20,9 +20,21 @@
     @if(session('error'))
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
     @endif
+    @if($errors->any())
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc list-inside space-y-1">
+                @foreach($errors->all() as $message)
+                    <li>{{ $message }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     @php
         $status = $labelRequest->status;
+        $printBatches = $labelRequest->printBatches;
+        $hasPrintedPrintBatch = $printBatches->contains(fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at !== null);
+        $hasUnprintedPrintBatch = $printBatches->contains(fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at === null);
         $statusText = match ($status) {
             'requested' => 'Solicitada',
             'in_progress' => 'En proceso',
@@ -82,6 +94,7 @@
                 @if(in_array($labelRequest->status, ['requested', 'in_progress'], true))
                     <form method="POST" action="{{ route('label_requests.complete', $labelRequest) }}">
                         @csrf
+                        <input type="hidden" name="force_without_printed_batch" value="{{ $hasPrintedPrintBatch ? 0 : 1 }}">
                         <button class="rounded-lg border border-emerald-200 text-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-50">Marcar como completada</button>
                     </form>
 
@@ -97,6 +110,12 @@
             </div>
         </div>
     </div>
+
+    @if($hasUnprintedPrintBatch)
+        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Existe al menos un <span class="font-semibold">batch print creado pero no confirmado como impreso</span>. Si cancelas la requisición, el rango serial asignado se liberará para reutilizarse.
+        </div>
+    @endif
 
     <div id="historial-impresiones" class="mt-6 rounded-xl border border-slate-200">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
@@ -143,6 +162,7 @@
                         <th class="py-3 px-4">Tipo</th>
                         <th class="py-3 px-4">Impreso por</th>
                         <th class="py-3 px-4">Razón</th>
+                        <th class="py-3 px-4">Estado de impresión</th>
                         <th class="py-3 px-4 text-right">Acción</th>
                     </tr>
                 </thead>
@@ -153,6 +173,13 @@
                             <td class="py-3 px-4">{{ $batch->batch_type }}</td>
                             <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                             <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
+                            <td class="py-3 px-4">
+                                @if($batch->printed_at)
+                                    <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Impresión confirmada</span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Batch creado · pendiente de imprimir</span>
+                                @endif
+                            </td>
                             <td class="py-3 px-4 text-right">
                                 @if($labelRequest->status === 'completed')
                                     <button
@@ -169,7 +196,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados.</td>
+                            <td colspan="6" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -177,4 +204,20 @@
         </div>
     </div>
 </div>
+
+@if(in_array($labelRequest->status, ['requested', 'in_progress'], true) && !$hasPrintedPrintBatch)
+<script>
+(() => {
+    const completeForm = document.querySelector('form[action="{{ route('label_requests.complete', $labelRequest) }}"]');
+    if (!completeForm) return;
+
+    completeForm.addEventListener('submit', (event) => {
+        const message = 'Esta requisición no tiene un batch print confirmado como impreso. Si continúas, el serial quedará asignado e impedirá reutilizarlo automáticamente. ¿Deseas continuar y marcar como completada?';
+        if (!window.confirm(message)) {
+            event.preventDefault();
+        }
+    });
+})();
+</script>
+@endif
 @endsection

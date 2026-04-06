@@ -20,14 +20,20 @@
         <p class="text-xs text-slate-500">Batch <span class="font-semibold">print</span>: si no hay rango asignado, consume seriales; si ya existe, reutiliza rango (modo reprint). Rating también consume seriales porque comparte secuencia con serial.</p>
     </div>
 
+    @if($hasPrintBatch)
+        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Esta requisición ya tiene un batch de tipo <span class="font-semibold">print</span>. Para evitar duplicidad de seriales, solo se permite crear batches de reimpresión/retrabajo.
+        </div>
+    @endif
+
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" action="{{ route('label_requests.print.store', $labelRequest) }}">
         @csrf
 
         <div>
             <label class="text-sm text-slate-600">Tipo de batch</label>
             <select name="batch_type" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
-                <option value="print" @selected(old('batch_type', 'print') === 'print')>Impresión</option>
-                <option value="reprint" @selected(old('batch_type') === 'reprint')>Reimpresión</option>
+                <option value="print" @selected(old('batch_type', $hasPrintBatch ? 'reprint' : 'print') === 'print') @disabled($hasPrintBatch)>Impresión</option>
+                <option value="reprint" @selected(old('batch_type', $hasPrintBatch ? 'reprint' : null) === 'reprint')>Reimpresión</option>
                 <option value="rework" @selected(old('batch_type') === 'rework')>Retrabajo</option>
             </select>
         </div>

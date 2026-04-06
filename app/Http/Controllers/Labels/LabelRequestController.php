@@ -11,6 +11,7 @@ use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LabelRequestController extends Controller
@@ -64,9 +65,12 @@ class LabelRequestController extends Controller
         return redirect()->route('label_requests.show', $label_request)->with('success', 'Requisición cancelada.');
     }
 
-    public function complete(LabelRequest $label_request): RedirectResponse
+    public function complete(Request $request, LabelRequest $label_request): RedirectResponse
     {
-        $this->service->complete($label_request);
+        $this->service->complete(
+            $label_request,
+            $request->boolean('force_without_printed_batch'),
+        );
 
         return redirect()->route('label_requests.show', $label_request)->with('success', 'Requisición completada.');
     }

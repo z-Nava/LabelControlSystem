@@ -23,7 +23,14 @@ class LabelPrintController extends Controller
 
     public function create(LabelRequest $label_request): View
     {
-        return view('label_print.create', ['labelRequest' => $label_request]);
+        $hasPrintBatch = $label_request->printBatches()
+            ->where('batch_type', 'print')
+            ->exists();
+
+        return view('label_print.create', [
+            'labelRequest' => $label_request,
+            'hasPrintBatch' => $hasPrintBatch,
+        ]);
     }
 
     public function store(StoreLabelPrintBatchRequest $request, LabelRequest $label_request): RedirectResponse
