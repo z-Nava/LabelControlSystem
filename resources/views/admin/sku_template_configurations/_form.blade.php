@@ -375,7 +375,7 @@
                 '^XA',
                 '^CI28',
                 `^FO${x},${y}`,
-                `^A${orientation}N,${fontSize},${fontSize}`,
+                `^A0${orientation},${fontSize},${fontSize}`,
                 `^FD${serial}^FS`,
                 '^XZ',
             ].join('\n');
@@ -403,10 +403,10 @@
             `^BQ${qrOrientation},2,${Math.min(Math.max(qrMagnification, 1), 10)}`,
             `^FDLA,${serial}^FS`,
             `^FO${skuX},${skuY}`,
-            `^A${skuOrientation}N,${skuFontSize},${skuFontSize}`,
+            `^A0${skuOrientation},${skuFontSize},${skuFontSize}`,
             `^FD${sku}^FS`,
             `^FO${snX},${snY}`,
-            `^A${snOrientation}N,${snFontSize},${snFontSize}`,
+            `^A0${snOrientation},${snFontSize},${snFontSize}`,
             `^FD${snLine}^FS`,
             '^XZ',
         ].join('\n');

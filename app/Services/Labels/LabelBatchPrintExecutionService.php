@@ -12,6 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 class LabelBatchPrintExecutionService
 {
+    public function __construct(
+        private readonly SerialTemplateZplBuilder $zplBuilder,
+    ) {
+    }
+
     public function buildPreview(LabelPrintBatch $batch): array
     {
         $batch->loadMissing(['labelRequest', 'items', 'items.serialUnit']);
@@ -56,7 +61,8 @@ class LabelBatchPrintExecutionService
                 }
 
                 $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku?->sku);
-                $rendered = $this->renderTemplate((string) $template->zpl, $payload);
+                $templateZpl = $this->resolveTemplateZpl($template, $labelType);
+                $rendered = $this->renderTemplate($templateZpl, $payload);
 
                 for ($copy = 1; $copy <= (int) $item->copies; $copy++) {
                     $zplLabels[] = $rendered;
@@ -166,5 +172,16 @@ class LabelBatchPrintExecutionService
             ->orderByRaw('CASE WHEN label_sku_id IS NULL THEN 1 ELSE 0 END')
             ->latest('id')
             ->first();
+    }
+
+    private function resolveTemplateZpl(LabelTemplate $template, string $labelType): string
+    {
+        $layout = $template->resolved_serial_layout;
+
+        if (in_array($labelType, ['serial', 'rating'], true) && is_array($layout) && $layout !== []) {
+            return $this->zplBuilder->build($labelType, $layout);
+        }
+
+        return (string) $template->zpl;
     }
 }
