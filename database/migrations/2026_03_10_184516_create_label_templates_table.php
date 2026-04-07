@@ -56,7 +56,7 @@ return new class extends Migration {
             $table->timestamps();
 
             // Índices útiles
-            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active']);
+            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active'], 'idx_tpl_sku_type_std_active');
             $table->unique(['label_sku_id', 'label_type', 'serial_standard', 'version'], 'uq_tpl_sku_type_std_version');
         });
     }

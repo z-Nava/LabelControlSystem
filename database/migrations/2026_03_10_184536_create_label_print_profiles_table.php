@@ -58,7 +58,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active']);
+            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active'], 'idx_prof_sku_type_std_active');
             $table->unique(['label_sku_id', 'label_type', 'serial_standard', 'name'], 'uq_prof_sku_type_std_name');
         });
     }
