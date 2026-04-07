@@ -10,6 +10,8 @@ class SkuSerialFormat extends Model
 
     protected $fillable = [
         'sku',
+        'serial_standard',
+        'serial_scheme',
         'prefix',
         'serial_break',
         'plant_code',

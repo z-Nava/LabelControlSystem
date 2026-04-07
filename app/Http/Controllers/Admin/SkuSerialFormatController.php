@@ -30,7 +30,8 @@ class SkuSerialFormatController extends Controller
         $activeSkus = LabelSku::query()
             ->active()
             ->orderBy('sku')
-            ->get(['sku', 'label_part_number']);
+            ->orderBy('serial_standard')
+            ->get(['sku', 'serial_standard', 'label_part_number']);
 
         return view('sku_serial_formats.create', compact('activeSkus'));
     }
@@ -51,7 +52,8 @@ class SkuSerialFormatController extends Controller
                     ->orWhere('sku', $sku_serial_format->sku);
             })
             ->orderBy('sku')
-            ->get(['sku', 'label_part_number']);
+            ->orderBy('serial_standard')
+            ->get(['sku', 'serial_standard', 'label_part_number']);
 
         return view('sku_serial_formats.edit', [
             'format' => $sku_serial_format,

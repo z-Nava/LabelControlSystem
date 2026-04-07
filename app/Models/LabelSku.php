@@ -11,6 +11,7 @@ class LabelSku extends Model
 
     protected $fillable = [
         'sku',
+        'serial_standard',
         'label_part_number',
         'description',
         'is_active',

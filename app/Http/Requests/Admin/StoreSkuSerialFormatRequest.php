@@ -15,12 +15,17 @@ class StoreSkuSerialFormatRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
+            'serial_scheme' => ['required', Rule::in(['ul_standard', 'emea_rating'])],
             'sku' => [
                 'required',
                 'string',
                 'max:80',
-                Rule::exists('label_skus', 'sku')->where('is_active', true),
-                'unique:sku_serial_formats,sku',
+                Rule::exists('label_skus', 'sku')->where(function ($query) {
+                    $query->where('is_active', true)
+                        ->where('serial_standard', strtoupper(trim((string) $this->input('serial_standard', 'UL'))));
+                }),
+                Rule::unique('sku_serial_formats', 'sku')->where('serial_standard', strtoupper(trim((string) $this->input('serial_standard', 'UL')))),
             ],
             'prefix' => ['nullable', 'string', 'max:10'],
             'serial_break' => ['nullable', 'string', 'max:10'],
@@ -40,6 +45,8 @@ class StoreSkuSerialFormatRequest extends FormRequest
     {
         $this->merge([
             'sku' => strtoupper(trim((string) $this->input('sku'))),
+            'serial_standard' => strtoupper(trim((string) $this->input('serial_standard', 'UL'))),
+            'serial_scheme' => trim((string) $this->input('serial_scheme', 'ul_standard')),
             'pattern' => $this->input('pattern') !== null ? trim((string) $this->input('pattern')) : null,
             'prefix' => $this->input('prefix'),
             'serial_break' => $this->input('serial_break'),

@@ -13,9 +13,10 @@ class LabelPrintProfileService
         return LabelPrintProfile::query()
             ->with(['sku', 'template'])
             ->when($search, function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('label_type', 'like', "%{$search}%")
-                    ->orWhereHas('sku', fn ($q) => $q->where('sku', 'like', "%{$search}%"));
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('label_type', 'like', "%{$search}%")
+                        ->orWhere('serial_standard', 'like', "%{$search}%")
+                        ->orWhereHas('sku', fn ($q) => $q->where('sku', 'like', "%{$search}%"));
             })
             ->orderBy('is_active', 'desc')
             ->orderByDesc('updated_at')
@@ -69,6 +70,7 @@ class LabelPrintProfileService
         $payload = [
             'label_sku_id' => (int) $data['label_sku_id'],
             'label_type' => $data['label_type'] ?: null,
+            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
             'label_template_id' => $data['label_template_id'] ?: null,
             'name' => trim($data['name']),
             'default_printer_name' => $data['default_printer_name'] ?: null,
@@ -99,6 +101,7 @@ class LabelPrintProfileService
             ->where('id', '!=', $profile->id)
             ->where('label_sku_id', $profile->label_sku_id)
             ->where('label_type', $profile->label_type)
+            ->where('serial_standard', $profile->serial_standard)
             ->where('is_active', true)
             ->update([
                 'is_active' => false,
@@ -117,6 +120,7 @@ class LabelPrintProfileService
             'version' => $nextVersion,
             'snapshot' => $profile->fresh()->only([
                 'label_sku_id', 'label_type', 'label_template_id', 'name', 'default_printer_name', 'default_printer_ip',
+                'serial_standard',
                 'dpi', 'darkness', 'speed', 'media_type', 'media_tracking', 'print_mode', 'offset_x', 'offset_y', 'settings', 'is_active',
             ]),
             'created_by_user_id' => $userId,

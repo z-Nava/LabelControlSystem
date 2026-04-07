@@ -12,6 +12,7 @@ return new class extends Migration {
 
             // En tu diagrama: controlador por label_part_number + semana/año
             $table->string('label_part_number', 80);
+            $table->string('serial_standard', 10)->default('UL');
 
             $table->unsignedTinyInteger('week'); // 1-53
             $table->unsignedSmallInteger('year'); // 2024, 2025...
@@ -25,9 +26,9 @@ return new class extends Migration {
             $table->timestamps();
 
             // Para impedir duplicidad por PN + semana + año
-            $table->unique(['label_part_number', 'year', 'week'], 'uq_serial_weeks_pn_year_week');
+            $table->unique(['label_part_number', 'serial_standard', 'year', 'week'], 'uq_serial_weeks_pn_std_year_week');
 
-            $table->index(['year', 'week']);
+            $table->index(['serial_standard', 'year', 'week']);
         });
     }
 

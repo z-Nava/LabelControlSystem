@@ -34,6 +34,7 @@
             <thead>
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">SKU</th>
+                    <th class="py-3 pr-3">Estándar</th>
                     <th class="py-3 pr-3">Label PN</th>
                     <th class="py-3 pr-3">Descripción</th>
                     <th class="py-3 pr-3">Activo</th>
@@ -44,6 +45,7 @@
                 @forelse($labelSkus as $labelSku)
                     <tr>
                         <td class="py-3 pr-3 font-semibold text-slate-900">{{ $labelSku->sku }}</td>
+                        <td class="py-3 pr-3">{{ $labelSku->serial_standard ?? 'UL' }}</td>
                         <td class="py-3 pr-3">{{ $labelSku->label_part_number }}</td>
                         <td class="py-3 pr-3">{{ $labelSku->description ?: '-' }}</td>
                         <td class="py-3 pr-3">
@@ -71,7 +73,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="py-6 text-center text-slate-500">
+                        <td colspan="6" class="py-6 text-center text-slate-500">
                             No hay SKUs registrados.
                         </td>
                     </tr>

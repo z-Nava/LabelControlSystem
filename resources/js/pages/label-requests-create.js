@@ -2,6 +2,7 @@ import { collectElements } from './label-requests-create/dom';
 import { createJobLookupHandler } from './label-requests-create/lookup';
 import {
     syncLineTypeFromSelectedLine,
+    updateLabelOptionsByStandard,
     updateLineOptionsByType,
     updatePreview,
 } from './label-requests-create/preview';
@@ -25,6 +26,7 @@ import {
         inputs.line,
         inputs.shift,
         inputs.leader,
+        inputs.serialStandard,
         inputs.labelPartNumber,
         inputs.quantity,
         inputs.includeSerial,
@@ -48,6 +50,13 @@ import {
         });
     }
 
+    if (inputs.serialStandard) {
+        inputs.serialStandard.addEventListener('change', () => {
+            updateLabelOptionsByStandard(elements, { preserveSelection: true });
+            updateUI();
+        });
+    }
+
     if (inputs.jobNumber && lookupJob) {
         inputs.jobNumber.addEventListener('input', () => {
             updateUI();
@@ -61,6 +70,7 @@ import {
     }
 
     syncLineTypeFromSelectedLine(elements);
+    updateLabelOptionsByStandard(elements, { preserveSelection: true });
     updateLineOptionsByType(elements, { preserveSelection: true });
     updateUI();
 })();

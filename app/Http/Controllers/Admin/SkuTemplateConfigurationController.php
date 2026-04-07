@@ -113,7 +113,13 @@ class SkuTemplateConfigurationController extends Controller
     {
         return LabelSku::query()
             ->active()
-            ->whereIn('sku', SkuSerialFormat::query()->active()->select('sku'))
+            ->whereExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from((new SkuSerialFormat())->getTable())
+                    ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
+                    ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
+                    ->where('sku_serial_formats.is_active', true);
+            })
             ->orderBy('sku')
             ->get();
     }
@@ -125,6 +131,7 @@ class SkuTemplateConfigurationController extends Controller
         return [
             'name' => $data['template_name'],
             'label_type' => $data['label_type'],
+            'serial_standard' => $data['serial_standard'],
             'label_sku_id' => $data['label_sku_id'],
             'dpi' => $data['template_dpi'],
             'width_mm' => $data['template_width_mm'] ?? null,
@@ -153,6 +160,7 @@ class SkuTemplateConfigurationController extends Controller
                 'orientation' => $data['qr_orientation'] ?? 'N',
                 'magnification' => $data['qr_magnification'] ?? 4,
             ],
+            'rating_qr' => (bool) ($data['rating_with_qr'] ?? false),
             'sku' => [
                 'x' => $data['sku_position_x'] ?? 170,
                 'y' => $data['sku_position_y'] ?? 35,
@@ -174,6 +182,7 @@ class SkuTemplateConfigurationController extends Controller
         return [
             'label_sku_id' => $data['label_sku_id'],
             'label_type' => $data['label_type'],
+            'serial_standard' => $data['serial_standard'],
             'label_template_id' => $templateId,
             'name' => $data['profile_name'],
             'default_printer_name' => $data['default_printer_name'] ?? null,
@@ -217,6 +226,11 @@ class SkuTemplateConfigurationController extends Controller
                 'label_type',
                 $configuration->label_type ?? $configuration->template?->label_type ?? 'serial'
             ),
+            'selected_serial_standard' => old(
+                'serial_standard',
+                $configuration->serial_standard ?? $configuration->template?->serial_standard ?? 'UL'
+            ),
+            'rating_qr' => (bool) old('rating_with_qr', data_get($layout, 'rating_qr', false)),
         ];
     }
 }

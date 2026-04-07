@@ -19,6 +19,7 @@ class LabelRequest extends Model
         'requested_by_name',
         'requested_by_user_id',
         'label_part_number',
+        'serial_standard',
         'po_number',
         'destination',
         'model',

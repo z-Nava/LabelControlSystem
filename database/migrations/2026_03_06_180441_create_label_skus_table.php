@@ -10,7 +10,8 @@ return new class extends Migration {
         Schema::create('label_skus', function (Blueprint $table) {
             $table->id();
 
-            $table->string('sku', 80)->unique();
+            $table->string('sku', 80);
+            $table->string('serial_standard', 10)->default('UL'); // UL | EMEA
             $table->string('label_part_number', 80);
 
             $table->string('description', 160)->nullable();
@@ -24,7 +25,9 @@ return new class extends Migration {
 
             $table->timestamps();
 
+            $table->unique(['sku', 'serial_standard'], 'uq_label_skus_sku_standard');
             $table->index('label_part_number');
+            $table->index(['serial_standard', 'is_active']);
             $table->index('is_active');
         });
     }

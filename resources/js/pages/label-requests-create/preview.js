@@ -32,11 +32,12 @@ function updateLabelPreview(elements) {
     }
 
     const sku = selectedOption?.dataset.sku || 'SKU';
+    const standard = selectedOption?.dataset.standard || inputs.serialStandard?.value || 'UL';
     const description = selectedOption?.dataset.description || 'Sin descripción';
 
-    setText(preview.label, `${sku} · ${labelPartNumber}`);
+    setText(preview.label, `${standard} · ${sku} · ${labelPartNumber}`);
     setText(preview.labelDescription, description);
-    setHint(hints.label, 'ok', `${sku}: ${description}`);
+    setHint(hints.label, 'ok', `${standard} · ${sku}: ${description}`);
 }
 
 function updateLineShiftPreview(elements) {
@@ -102,6 +103,41 @@ function updatePreview(elements) {
     updateLabelPreview(elements);
 }
 
+function updateLabelOptionsByStandard(elements, { preserveSelection = true } = {}) {
+    const { inputs, labelOptions } = elements;
+    const selectedStandard = inputs.serialStandard?.value || 'UL';
+    const selectedValue = inputs.labelPartNumber?.value || '';
+
+    let available = 0;
+    labelOptions.forEach((option) => {
+        const optionStandard = option.dataset.standard || 'UL';
+        const shouldShow = optionStandard === selectedStandard;
+        option.hidden = !shouldShow;
+        option.disabled = !shouldShow;
+        if (shouldShow) {
+            available += 1;
+        }
+    });
+
+    if (preserveSelection && selectedValue) {
+        const selectedOption = labelOptions.find((option) => option.value === selectedValue);
+        if (selectedOption?.hidden || selectedOption?.disabled) {
+            inputs.labelPartNumber.value = '';
+        }
+    }
+
+    if (!inputs.labelPartNumber) {
+        return;
+    }
+
+    const placeholder = inputs.labelPartNumber.querySelector('option[value=""]');
+    if (placeholder) {
+        placeholder.textContent = available > 0
+            ? `Selecciona SKU / Label PN (${selectedStandard})`
+            : `No hay SKU / Label PN para ${selectedStandard}`;
+    }
+}
+
 function syncLineTypeFromSelectedLine(elements) {
     const { inputs } = elements;
 
@@ -162,6 +198,7 @@ function updateLineOptionsByType(elements, { preserveSelection = true } = {}) {
 
 export {
     syncLineTypeFromSelectedLine,
+    updateLabelOptionsByStandard,
     updateLineOptionsByType,
     updatePreview,
 };

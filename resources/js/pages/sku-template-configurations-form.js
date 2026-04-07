@@ -25,6 +25,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const testPrintButton = document.getElementById('test-print');
     const printerNameInput = document.getElementById('default_printer_name');
     const skuSelect = document.querySelector('[name="label_sku_id"]');
+    const serialStandardSelect = document.querySelector('[name="serial_standard"]');
+    const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
     const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
     const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
 
@@ -61,12 +63,14 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const toggleLayoutSections = () => {
         const isSerial = labelTypeSelect?.value === 'serial';
+        const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
+        const requiresQr = isSerial || isRatingWithQr;
 
         serialSections.forEach((section) => {
-            section.style.display = isSerial ? 'block' : 'none';
+            section.style.display = requiresQr ? 'block' : 'none';
 
             section.querySelectorAll('input, select').forEach((field) => {
-                field.required = isSerial;
+                field.required = requiresQr;
             });
         });
 
@@ -80,7 +84,9 @@ const initSkuTemplateConfigurationsForm = () => {
 
         setStatus(isSerial
             ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
-            : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.');
+            : (isRatingWithQr
+                ? 'Configurando etiqueta Rating con QR (EMEA).'
+                : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.'));
     };
 
     const ensureBrowserPrint = () => {
@@ -216,6 +222,13 @@ const initSkuTemplateConfigurationsForm = () => {
 
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
+    ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
+    skuSelect?.addEventListener('change', () => {
+        const skuStandard = skuSelect.selectedOptions?.[0]?.dataset?.serialStandard;
+        if (serialStandardSelect && skuStandard) {
+            serialStandardSelect.value = skuStandard;
+        }
+    });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
 

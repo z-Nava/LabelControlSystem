@@ -30,8 +30,9 @@ class LabelBatchPrintExecutionService
         }
 
         $sku = LabelSku::query()
-            ->select(['id', 'sku', 'label_part_number'])
+            ->select(['id', 'sku', 'label_part_number', 'serial_standard'])
             ->where('label_part_number', $batch->labelRequest?->label_part_number)
+            ->where('serial_standard', (string) ($batch->labelRequest?->serial_standard ?? 'UL'))
             ->first();
 
         $skuId = $sku?->id;
@@ -45,8 +46,9 @@ class LabelBatchPrintExecutionService
                 continue;
             }
 
-            $profile = $this->resolveProfile($skuId, $labelType);
-            $template = $this->resolveTemplate($profile?->label_template_id, $skuId, $labelType);
+            $standard = (string) ($batch->labelRequest?->serial_standard ?? 'UL');
+            $profile = $this->resolveProfile($skuId, $labelType, $standard);
+            $template = $this->resolveTemplate($profile?->label_template_id, $skuId, $labelType, $standard);
 
             if (!$template) {
                 throw ValidationException::withMessages([
@@ -134,6 +136,7 @@ class LabelBatchPrintExecutionService
             'sku' => (string) ($sku ?? ''),
             'week' => (string) ($batch->labelRequest?->week ?? ''),
             'year' => (string) ($batch->labelRequest?->request_date?->format('Y') ?? ''),
+            'serial_standard' => (string) ($batch->labelRequest?->serial_standard ?? 'UL'),
         ];
     }
 
@@ -144,11 +147,12 @@ class LabelBatchPrintExecutionService
         }, $template) ?? $template;
     }
 
-    private function resolveProfile(?int $skuId, string $labelType): ?LabelPrintProfile
+    private function resolveProfile(?int $skuId, string $labelType, string $standard): ?LabelPrintProfile
     {
         return LabelPrintProfile::query()
             ->active()
             ->where('label_type', $labelType)
+            ->where('serial_standard', $standard)
             ->where(function ($query) use ($skuId) {
                 $query->where('label_sku_id', $skuId)->orWhereNull('label_sku_id');
             })
@@ -157,7 +161,7 @@ class LabelBatchPrintExecutionService
             ->first();
     }
 
-    private function resolveTemplate(?int $profileTemplateId, ?int $skuId, string $labelType): ?LabelTemplate
+    private function resolveTemplate(?int $profileTemplateId, ?int $skuId, string $labelType, string $standard): ?LabelTemplate
     {
         if ($profileTemplateId) {
             return LabelTemplate::query()->whereKey($profileTemplateId)->first();
@@ -166,6 +170,7 @@ class LabelBatchPrintExecutionService
         return LabelTemplate::query()
             ->active()
             ->where('label_type', $labelType)
+            ->where('serial_standard', $standard)
             ->where(function ($query) use ($skuId) {
                 $query->where('label_sku_id', $skuId)->orWhereNull('label_sku_id');
             })

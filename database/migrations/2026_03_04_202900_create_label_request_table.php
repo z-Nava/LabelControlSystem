@@ -34,6 +34,7 @@ return new class extends Migration {
 
             // Ojo: en tu diagrama dice label_part_number (que es el NP de la etiqueta)
             $table->string('label_part_number', 80);
+            $table->string('serial_standard', 10)->default('UL'); // UL | EMEA
 
             $table->string('po_number', 80)->nullable();
             $table->string('destination', 80)->nullable();
@@ -57,6 +58,7 @@ return new class extends Migration {
             $table->index(['request_date', 'week']);
             $table->index(['line_id', 'shift_id']);
             $table->index('label_part_number');
+            $table->index('serial_standard');
             $table->index('status');
         });
     }

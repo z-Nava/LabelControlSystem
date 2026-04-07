@@ -25,7 +25,11 @@ class LabelTemplateService
     public function create(array $data, ?int $userId = null): LabelTemplate
     {
         $payload = $this->normalizeData($data, true, $userId);
-        $payload['version'] = $this->nextVersion((int) ($payload['label_sku_id'] ?? 0), $payload['label_type']);
+        $payload['version'] = $this->nextVersion(
+            (int) ($payload['label_sku_id'] ?? 0),
+            $payload['label_type'],
+            $payload['serial_standard'] ?? 'UL',
+        );
 
         $template = LabelTemplate::query()->create($payload);
 
@@ -70,6 +74,7 @@ class LabelTemplateService
         $payload = [
             'name' => trim($data['name']),
             'label_type' => trim($data['label_type']),
+            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
             'label_sku_id' => $data['label_sku_id'] ?: null,
             'dpi' => (int) $data['dpi'],
             'width_mm' => $data['width_mm'] ?: null,
@@ -106,11 +111,12 @@ class LabelTemplateService
         return $normalizedMeta !== [] ? $normalizedMeta : null;
     }
 
-    private function nextVersion(int $skuId, string $labelType): int
+    private function nextVersion(int $skuId, string $labelType, string $standard): int
     {
         return (int) LabelTemplate::query()
             ->where('label_sku_id', $skuId ?: null)
             ->where('label_type', $labelType)
+            ->where('serial_standard', strtoupper(trim($standard)))
             ->max('version') + 1;
     }
 
@@ -119,6 +125,7 @@ class LabelTemplateService
         LabelTemplate::query()
             ->where('id', '!=', $template->id)
             ->where('label_type', $template->label_type)
+            ->where('serial_standard', $template->serial_standard)
             ->where('label_sku_id', $template->label_sku_id)
             ->where('is_active', true)
             ->update(['is_active' => false, 'updated_by_user_id' => $template->updated_by_user_id]);

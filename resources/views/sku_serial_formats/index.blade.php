@@ -31,6 +31,8 @@
             <thead>
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">SKU</th>
+                    <th class="py-3 pr-3">Estándar</th>
+                    <th class="py-3 pr-3">Esquema</th>
                     <th class="py-3 pr-3">Prefix</th>
                     <th class="py-3 pr-3">Break</th>
                     <th class="py-3 pr-3">Plant</th>
@@ -46,6 +48,8 @@
                 @forelse($formats as $format)
                     <tr>
                         <td class="py-3 pr-3 font-semibold text-slate-900">{{ $format->sku }}</td>
+                        <td class="py-3 pr-3">{{ $format->serial_standard ?? 'UL' }}</td>
+                        <td class="py-3 pr-3">{{ $format->serial_scheme ?? 'ul_standard' }}</td>
                         <td class="py-3 pr-3">{{ $format->prefix ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->serial_break ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->plant_code ?: '-' }}</td>
@@ -75,7 +79,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="py-6 text-center text-slate-500">No hay formatos registrados.</td></tr>
+                    <tr><td colspan="12" class="py-6 text-center text-slate-500">No hay formatos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -6,7 +6,10 @@ class SerialTemplateZplBuilder
 {
     public function build(string $labelType, array $layout): string
     {
-        return $labelType === 'serial'
+        $buildWithQr = $labelType === 'serial'
+            || ($labelType === 'rating' && (bool) ($layout['rating_qr'] ?? false));
+
+        return $buildWithQr
             ? $this->buildSerialTemplate($layout)
             : $this->buildTextOnlyTemplate($layout);
     }

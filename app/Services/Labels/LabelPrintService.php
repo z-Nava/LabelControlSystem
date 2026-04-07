@@ -239,6 +239,7 @@ class LabelPrintService
         return SerialWeek::query()->firstOrCreate(
             [
                 'label_part_number' => $labelRequest->label_part_number,
+                'serial_standard' => (string) ($labelRequest->serial_standard ?? 'UL'),
                 'week' => (int) $labelRequest->week,
                 'year' => $year,
             ],
@@ -253,6 +254,7 @@ class LabelPrintService
     {
         $sku = LabelSku::query()
             ->where('label_part_number', $labelRequest->label_part_number)
+            ->where('serial_standard', (string) ($labelRequest->serial_standard ?? 'UL'))
             ->where('is_active', true)
             ->value('sku');
 
@@ -262,6 +264,7 @@ class LabelPrintService
 
         return SkuSerialFormat::query()
             ->where('sku', $sku)
+            ->where('serial_standard', (string) ($labelRequest->serial_standard ?? 'UL'))
             ->where('is_active', true)
             ->latest('id')
             ->first();

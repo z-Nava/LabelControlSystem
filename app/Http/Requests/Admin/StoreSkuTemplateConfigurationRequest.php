@@ -19,9 +19,11 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
         $this->merge([
             'template_is_active' => $this->boolean('template_is_active', true),
             'profile_is_active' => $this->boolean('profile_is_active', true),
+            'rating_with_qr' => $this->boolean('rating_with_qr', false),
             'connection_type' => $this->input('connection_type', 'usb'),
             'sn_prefix' => trim((string) $this->input('sn_prefix', 'SN:')),
             'label_type' => $labelType,
+            'serial_standard' => strtoupper(trim((string) $this->input('serial_standard', 'UL'))),
             'qr_orientation' => $this->input('qr_orientation', 'N'),
         ]);
     }
@@ -29,8 +31,14 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'label_sku_id' => ['required', 'integer', 'exists:label_skus,id'],
+            'label_sku_id' => [
+                'required',
+                'integer',
+                Rule::exists('label_skus', 'id')->where('serial_standard', strtoupper(trim((string) $this->input('serial_standard', 'UL')))),
+            ],
             'label_type' => ['required', 'in:serial,rating,shipping'],
+            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
+            'rating_with_qr' => ['nullable', 'boolean'],
 
             'template_name' => ['required', 'string', 'max:120'],
             'template_dpi' => ['required', 'integer', 'in:203,300'],
@@ -84,7 +92,10 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 }
             }
 
-            if ($this->input('label_type') !== 'serial') {
+            $requiresQrLayout = $this->input('label_type') === 'serial'
+                || ($this->input('label_type') === 'rating' && $this->boolean('rating_with_qr'));
+
+            if (!$requiresQrLayout) {
                 return;
             }
 

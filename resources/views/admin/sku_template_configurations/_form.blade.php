@@ -17,12 +17,23 @@
         <label class="block text-sm font-medium text-slate-700">SKU</label>
         <select name="label_sku_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
             @foreach($labelSkus as $sku)
-                <option value="{{ $sku->id }}" data-sku-code="{{ $sku->sku }}" @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
-                    {{ $sku->sku }} · {{ $sku->label_part_number }}
+                <option value="{{ $sku->id }}"
+                        data-sku-code="{{ $sku->sku }}"
+                        data-serial-standard="{{ $sku->serial_standard ?? 'UL' }}"
+                        @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
+                    {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }}
                 </option>
             @endforeach
         </select>
         <p class="mt-1 text-xs text-slate-500">Solo se listan SKU con serial format activo.</p>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Estándar serial</label>
+        <select name="serial_standard" id="serial_standard" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
+            @foreach(['UL', 'EMEA'] as $standard)
+                <option value="{{ $standard }}" @selected(($formState['selected_serial_standard'] ?? 'UL') === $standard)>{{ $standard }}</option>
+            @endforeach
+        </select>
     </div>
     <div>
         <label class="block text-sm font-medium text-slate-700">Tipo de etiqueta</label>
@@ -35,7 +46,15 @@
 
     <div class="mt-1 border-t pt-3 md:col-span-2">
         <h2 class="font-semibold text-slate-900">Template (ZPL generado automáticamente)</h2>
-        <p class="mt-1 text-xs text-slate-500">Rating mantiene el texto simple del SN. Serial agrega QR + SKU + SN pequeño como en la referencia.</p>
+        <p class="mt-1 text-xs text-slate-500">Rating por defecto mantiene texto simple del SN. Para EMEA puedes activar QR en rating.</p>
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="rating_with_qr" value="1" class="rounded border-slate-300"
+                   {{ old('rating_with_qr', ($formState['rating_qr'] ?? false)) ? 'checked' : '' }}>
+            Habilitar QR en etiquetas Rating (útil para EMEA)
+        </label>
     </div>
 
     <div>

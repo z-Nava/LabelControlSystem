@@ -27,6 +27,7 @@ function collectElements() {
             line: lineSelect,
             shift: byId('shiftSelect'),
             leader: byId('leaderName'),
+            serialStandard: byId('serialStandard'),
             labelPartNumber: byId('labelPartNumber'),
             quantity: byId('quantityRequested'),
             includeSerial: byId('includeSerial'),
@@ -54,6 +55,9 @@ function collectElements() {
         },
         lineOptions: lineSelect
             ? Array.from(lineSelect.querySelectorAll('option')).filter((option) => option.value !== '')
+            : [],
+        labelOptions: byId('labelPartNumber')
+            ? Array.from(byId('labelPartNumber').querySelectorAll('option')).filter((option) => option.value !== '')
             : [],
     };
 }

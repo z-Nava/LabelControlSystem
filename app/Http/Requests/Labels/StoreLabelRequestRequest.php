@@ -6,6 +6,7 @@ use App\Models\LabelSku;
 use App\Models\SkuSerialFormat;
 use App\Services\Oracle\OracleJobLookupService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreLabelRequestRequest extends FormRequest
@@ -28,6 +29,7 @@ class StoreLabelRequestRequest extends FormRequest
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
             'shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'leader_name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
+            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
             'label_part_number' => ['required', 'string', 'max:80'],
             'quantity_requested' => ['required', 'integer', 'min:1', 'max:100000'],
             'include_serial' => ['nullable', 'boolean'],
@@ -45,6 +47,7 @@ class StoreLabelRequestRequest extends FormRequest
         $this->merge([
             'include_serial' => $this->boolean('include_serial'),
             'include_rating' => $this->boolean('include_rating'),
+            'serial_standard' => strtoupper(trim((string) $this->input('serial_standard', 'UL'))),
             'label_part_number' => strtoupper(trim((string) $this->input('label_part_number'))),
             'job_number' => strtoupper(trim((string) $this->input('job_number'))),
             'po_number' => strtoupper(trim((string) $this->input('po_number'))),
@@ -81,6 +84,7 @@ class StoreLabelRequestRequest extends FormRequest
 
         $labelSku = LabelSku::query()
             ->where('label_part_number', $labelPartNumber)
+            ->where('serial_standard', (string) $this->input('serial_standard'))
             ->where('is_active', true)
             ->first(['sku']);
 
@@ -91,6 +95,7 @@ class StoreLabelRequestRequest extends FormRequest
 
         $hasActiveFormat = SkuSerialFormat::query()
             ->where('sku', $labelSku->sku)
+            ->where('serial_standard', (string) $this->input('serial_standard'))
             ->where('is_active', true)
             ->exists();
 

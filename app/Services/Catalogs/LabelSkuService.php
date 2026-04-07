@@ -13,6 +13,7 @@ class LabelSkuService
             ->when($search, function ($query) use ($search) {
                 $query->where('sku', 'like', "%{$search}%")
                     ->orWhere('label_part_number', 'like', "%{$search}%")
+                    ->orWhere('serial_standard', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             })
             ->orderBy('is_active', 'desc')
@@ -51,6 +52,7 @@ class LabelSkuService
     {
         return [
             'sku' => strtoupper(trim($data['sku'])),
+            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
             'label_part_number' => strtoupper(trim($data['label_part_number'])),
             'description' => isset($data['description']) ? trim($data['description']) : null,
             'is_active' => (bool) ($data['is_active'] ?? $defaultActive),

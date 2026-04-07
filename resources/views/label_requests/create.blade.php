@@ -172,15 +172,27 @@
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
+                            <label class="text-sm font-medium text-slate-700">Estándar serial</label>
+                            <select id="serialStandard" name="serial_standard" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
+                                @foreach(($serialStandards ?? ['UL', 'EMEA']) as $standard)
+                                    <option value="{{ $standard }}" @selected(old('serial_standard', $defaultStandard ?? 'UL') === $standard)>
+                                        {{ $standard }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
                             <label class="text-sm font-medium text-slate-700">SKU / Label PN</label>
                             <select id="labelPartNumber" name="label_part_number" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
                                 <option value="">Selecciona SKU / Label PN disponible</option>
                                 @foreach($labelSkus as $sku)
                                     <option value="{{ $sku->label_part_number }}"
                                             data-sku="{{ $sku->sku }}"
+                                            data-standard="{{ $sku->serial_standard ?? 'UL' }}"
                                             data-description="{{ $sku->description }}"
                                             @selected(old('label_part_number') === $sku->label_part_number)>
-                                        {{ $sku->sku }} · {{ $sku->label_part_number }} · {{ $sku->description }}
+                                        {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }} · {{ $sku->description }}
                                     </option>
                                 @endforeach
                            </select>

@@ -10,6 +10,7 @@ class SerialWeek extends Model
 
     protected $fillable = [
         'label_part_number',
+        'serial_standard',
         'week',
         'year',
         'prefix',
@@ -22,4 +23,3 @@ class SerialWeek extends Model
         'last_serial_number' => 'integer',
     ];
 }
-

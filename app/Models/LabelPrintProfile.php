@@ -13,6 +13,7 @@ class LabelPrintProfile extends Model
     protected $fillable = [
         'label_sku_id',
         'label_type',
+        'serial_standard',
         'label_template_id',
         'name',
         'default_printer_name',

@@ -11,6 +11,8 @@ return new class extends Migration {
             $table->id();
 
             $table->string('sku', 80)->index();
+            $table->string('serial_standard', 10)->default('UL'); // UL | EMEA
+            $table->string('serial_scheme', 20)->default('ul_standard'); // ul_standard | emea_rating
 
             // Componentes base del serial (separados)
             $table->string('prefix', 10)->nullable();        // PPP (ej: 628)
@@ -42,7 +44,8 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->index(['sku', 'is_active']);
+            $table->index(['sku', 'serial_standard', 'is_active']);
+            $table->unique(['sku', 'serial_standard'], 'uq_sku_serial_format_sku_standard');
         });
     }
 

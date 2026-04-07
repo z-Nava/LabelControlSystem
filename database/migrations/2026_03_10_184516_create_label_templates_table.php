@@ -14,6 +14,7 @@ return new class extends Migration {
 
             // serial | rating | shipping
             $table->string('label_type', 20)->index();
+            $table->string('serial_standard', 10)->default('UL')->index();
 
             // Template puede ser global (null) o por SKU (FK)
             $table->foreignId('label_sku_id')
@@ -55,8 +56,8 @@ return new class extends Migration {
             $table->timestamps();
 
             // Índices útiles
-            $table->index(['label_sku_id', 'label_type', 'is_active']);
-            $table->unique(['label_sku_id', 'label_type', 'version'], 'uq_tpl_sku_type_version');
+            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active']);
+            $table->unique(['label_sku_id', 'label_type', 'serial_standard', 'version'], 'uq_tpl_sku_type_std_version');
         });
     }
 

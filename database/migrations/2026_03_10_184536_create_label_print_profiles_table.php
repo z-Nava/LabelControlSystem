@@ -18,6 +18,7 @@ return new class extends Migration {
             // Si quieres perfiles distintos por tipo (serial/rating), úsalo.
             // Si no, déjalo NULL y aplica “perfil general” por SKU.
             $table->string('label_type', 20)->nullable()->index();
+            $table->string('serial_standard', 10)->default('UL')->index();
 
             $table->string('name', 120);
 
@@ -57,8 +58,8 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->index(['label_sku_id', 'label_type', 'is_active']);
-            $table->unique(['label_sku_id', 'label_type', 'name'], 'uq_prof_sku_type_name');
+            $table->index(['label_sku_id', 'label_type', 'serial_standard', 'is_active']);
+            $table->unique(['label_sku_id', 'label_type', 'serial_standard', 'name'], 'uq_prof_sku_type_std_name');
         });
     }
 

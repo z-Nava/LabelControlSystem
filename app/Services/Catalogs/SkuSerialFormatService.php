@@ -12,6 +12,7 @@ class SkuSerialFormatService
         return SkuSerialFormat::query()
             ->when($search, function ($query) use ($search) {
                 $query->where('sku', 'like', "%{$search}%")
+                    ->orWhere('serial_standard', 'like', "%{$search}%")
                     ->orWhere('prefix', 'like', "%{$search}%")
                     ->orWhere('serial_break', 'like', "%{$search}%")
                     ->orWhere('plant_code', 'like', "%{$search}%")
@@ -50,6 +51,8 @@ class SkuSerialFormatService
     {
         return [
             'sku' => strtoupper(trim($data['sku'])),
+            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
+            'serial_scheme' => trim((string) ($data['serial_scheme'] ?? 'ul_standard')),
             'prefix' => $this->nullableUpper($data['prefix'] ?? null),
             'serial_break' => $this->nullableUpper($data['serial_break'] ?? null),
             'plant_code' => $this->nullableUpper($data['plant_code'] ?? null),

@@ -59,6 +59,8 @@ class LabelRequestReadService
         return [
             'defaultDate' => now()->toDateString(),
             'defaultWeek' => (int) now()->isoWeek(),
+            'defaultStandard' => 'UL',
+            'serialStandards' => ['UL', 'EMEA'],
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
             'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
             'labelSkus' => LabelSku::query()
@@ -67,10 +69,12 @@ class LabelRequestReadService
                     $query->selectRaw('1')
                         ->from((new SkuSerialFormat())->getTable())
                         ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
+                        ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
                         ->where('sku_serial_formats.is_active', true);
                 })
                 ->orderBy('sku')
-                ->get(['sku', 'label_part_number', 'description']),
+                ->orderBy('serial_standard')
+                ->get(['sku', 'serial_standard', 'label_part_number', 'description']),
         ];
     }
 

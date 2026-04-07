@@ -12,6 +12,7 @@ class LabelTemplate extends Model
     protected $fillable = [
         'name',
         'label_type',
+        'serial_standard',
         'label_sku_id',
         'dpi',
         'width_mm',
