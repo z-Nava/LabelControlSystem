@@ -105,8 +105,8 @@
 
     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-2" data-layout-section="serial">
         <div class="mb-3">
-            <h3 class="font-semibold text-slate-900">Configuración etiqueta Serial con QR</h3>
-            <p class="mt-1 text-xs text-slate-500">El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.</p>
+            <h3 class="font-semibold text-slate-900" id="qr-layout-title">Configuración etiqueta Serial con QR</h3>
+            <p class="mt-1 text-xs text-slate-500" id="qr-layout-description">El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

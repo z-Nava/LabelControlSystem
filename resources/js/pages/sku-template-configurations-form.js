@@ -29,6 +29,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
     const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
     const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
+    const qrLayoutTitle = document.getElementById('qr-layout-title');
+    const qrLayoutDescription = document.getElementById('qr-layout-description');
 
     const defaultSerial = form.dataset.defaultSerial || 'L36BH2606007A7';
     const defaultSku = form.dataset.defaultSku || '2978-OCUT';
@@ -46,7 +48,8 @@ const initSkuTemplateConfigurationsForm = () => {
     };
 
     const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || defaultSku;
-
+    const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
+    
     const toggleConnectionFields = () => {
         const isNetwork = connectionSelect?.value === 'network';
 
@@ -81,6 +84,18 @@ const initSkuTemplateConfigurationsForm = () => {
                 }
             });
         });
+
+        if (qrLayoutTitle) {
+            qrLayoutTitle.textContent = isRatingWithQr
+                ? 'Configuración etiqueta Rating con QR'
+                : 'Configuración etiqueta Serial con QR';
+        }
+
+        if (qrLayoutDescription) {
+            qrLayoutDescription.textContent = isRatingWithQr
+                ? 'El QR codifica el serial completo para la etiqueta Rating; además se muestra el SKU grande y el SN en texto pequeño.'
+                : 'El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.';
+        }
 
         setStatus(isSerial
             ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
@@ -147,9 +162,10 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
+        const isRatingWithQr = isRatingWithQrEnabled();
         const serial = defaultSerial;
 
-        if (labelType !== 'serial') {
+        if (labelType !== 'serial' && !isRatingWithQr) {
             const x = readInt('[name="serial_position_x"]', 40);
             const y = readInt('[name="serial_position_y"]', 40);
             const fontSize = readInt('[name="serial_font_size"]', 40);
@@ -211,8 +227,9 @@ const initSkuTemplateConfigurationsForm = () => {
 
         selectedDevice.send(buildTestZpl(), () => {
             const isSerial = labelTypeSelect?.value === 'serial';
+            const isRatingWithQr = isRatingWithQrEnabled();
 
-            setStatus(isSerial
+            setStatus((isSerial || isRatingWithQr)
                 ? 'Impresión de prueba enviada por USB con QR, SKU y SN de referencia.'
                 : 'Impresión de prueba enviada por USB con SN de referencia.');
         }, (error) => {
