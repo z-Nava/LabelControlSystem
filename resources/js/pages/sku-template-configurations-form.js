@@ -25,12 +25,15 @@ const initSkuTemplateConfigurationsForm = () => {
     const testPrintButton = document.getElementById('test-print');
     const printerNameInput = document.getElementById('default_printer_name');
     const skuSelect = document.querySelector('[name="label_sku_id"]');
-    const serialStandardSelect = document.querySelector('[name="serial_standard"]');
+    const serialStandardInput = document.querySelector('[name="serial_standard"]');
+    const serialStandardDisplay = document.getElementById('serial_standard_display');
     const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
+    const ratingQrToggleWrapper = document.getElementById('rating-qr-toggle-wrapper');
     const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
     const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
     const qrLayoutTitle = document.getElementById('qr-layout-title');
     const qrLayoutDescription = document.getElementById('qr-layout-description');
+    const snPrefixWrapper = document.getElementById('sn-prefix-wrapper');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '5055540112345A1234';
@@ -50,10 +53,31 @@ const initSkuTemplateConfigurationsForm = () => {
     };
 
     const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || defaultSku;
+    const getSelectedSkuStandard = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.serialStandard || 'UL').toUpperCase();
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
-    const getSelectedSerialStandard = () => String(serialStandardSelect?.value || 'UL').toUpperCase();
+    const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
     const isEmeaRatingWithQr = () => isRatingWithQrEnabled() && getSelectedSerialStandard() === 'EMEA';
-    
+
+    const syncSerialStandardFromSku = () => {
+        const standard = getSelectedSkuStandard();
+
+        if (serialStandardInput) {
+            serialStandardInput.value = standard;
+        }
+
+        if (serialStandardDisplay) {
+            serialStandardDisplay.value = standard;
+        }
+    };
+
+    const toggleRatingQrControl = () => {
+        const isRating = labelTypeSelect?.value === 'rating';
+
+        if (ratingQrToggleWrapper) {
+            ratingQrToggleWrapper.style.display = isRating ? 'block' : 'none';
+        }
+    };
+
     const toggleConnectionFields = () => {
         const isNetwork = connectionSelect?.value === 'network';
 
@@ -69,6 +93,7 @@ const initSkuTemplateConfigurationsForm = () => {
     };
 
     const toggleLayoutSections = () => {
+        toggleRatingQrControl();
         const isSerial = labelTypeSelect?.value === 'serial';
         const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
         const hideSkuLayout = isEmeaRatingWithQr();
@@ -94,6 +119,10 @@ const initSkuTemplateConfigurationsForm = () => {
             group.style.display = hideSkuLayout ? 'none' : 'block';
         });
 
+        if (snPrefixWrapper) {
+            snPrefixWrapper.style.display = isSerial ? 'block' : 'none';
+        }
+
         if (qrLayoutTitle) {
             qrLayoutTitle.textContent = isRatingWithQr
                 ? 'Configuración etiqueta Rating con QR'
@@ -109,7 +138,7 @@ const initSkuTemplateConfigurationsForm = () => {
         setStatus(isSerial
             ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
             : (isRatingWithQr
-                ? 'Configurando etiqueta Rating con QR (EMEA).'
+                ? 'Configurando etiqueta Rating con QR del serial.'
                 : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.'));
     };
 
@@ -203,7 +232,9 @@ const initSkuTemplateConfigurationsForm = () => {
             ? normalizeOrientation(document.querySelector('[name="serial_orientation"]')?.value, 'N')
             : normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
         const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value ?? 'SN:').trim();
-        const snLine = snPrefix ? `${snPrefix} ${serial}` : serial;
+        const snLine = labelType === 'rating'
+            ? serial
+            : (snPrefix ? `${snPrefix} ${serial}` : serial);
         const zpl = [
             '^XA',
             '^CI28',
@@ -261,18 +292,14 @@ const initSkuTemplateConfigurationsForm = () => {
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
-    serialStandardSelect?.addEventListener('change', toggleLayoutSections);
     skuSelect?.addEventListener('change', () => {
-        const skuStandard = skuSelect.selectedOptions?.[0]?.dataset?.serialStandard;
-        if (serialStandardSelect && skuStandard) {
-            serialStandardSelect.value = skuStandard;
-        }
-
+        syncSerialStandardFromSku();
         toggleLayoutSections();
     });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
 
+    syncSerialStandardFromSku();
     toggleConnectionFields();
     toggleLayoutSections();
 };

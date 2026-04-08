@@ -16,7 +16,7 @@
     data-default-sku="2978-OCUT">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>
-        <select name="label_sku_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
+        <select name="label_sku_id" id="label_sku_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
             @foreach($labelSkus as $sku)
                 <option value="{{ $sku->id }}"
                         data-sku-code="{{ $sku->sku }}"
@@ -30,16 +30,14 @@
     </div>
     <div>
         <label class="block text-sm font-medium text-slate-700">Estándar serial</label>
-        <select name="serial_standard" id="serial_standard" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-            @foreach(['UL', 'EMEA'] as $standard)
-                <option value="{{ $standard }}" @selected(($formState['selected_serial_standard'] ?? 'UL') === $standard)>{{ $standard }}</option>
-            @endforeach
-        </select>
+        <input id="serial_standard_display" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" value="{{ $formState['selected_serial_standard'] ?? 'UL' }}" readonly />
+        <input type="hidden" name="serial_standard" id="serial_standard" value="{{ $formState['selected_serial_standard'] ?? 'UL' }}" />
+        <p class="mt-1 text-xs text-slate-500">Este valor se toma del SKU seleccionado y no se puede editar para evitar inconsistencias.</p>
     </div>
     <div>
         <label class="block text-sm font-medium text-slate-700">Tipo de etiqueta</label>
         <select name="label_type" id="label_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-            @foreach(['serial', 'rating', 'shipping'] as $type)
+            @foreach(['serial', 'rating'] as $type)
                 <option value="{{ $type }}" @selected($formState['selected_label_type'] === $type)>{{ ucfirst($type) }}</option>
             @endforeach
         </select>
@@ -47,15 +45,16 @@
 
     <div class="mt-1 border-t pt-3 md:col-span-2">
         <h2 class="font-semibold text-slate-900">Template (ZPL generado automáticamente)</h2>
-        <p class="mt-1 text-xs text-slate-500">Rating por defecto mantiene texto simple del SN. Para EMEA puedes activar QR en rating.</p>
+        <p class="mt-1 text-xs text-slate-500">Serial usa QR + SKU + SN. Rating usa SN y, para EMEA, también permite configurar QR del serial.</p>
     </div>
 
-    <div class="md:col-span-2">
+    <div class="md:col-span-2" id="rating-qr-toggle-wrapper" @if(($formState['selected_label_type'] ?? 'serial') !== 'rating') style="display:none;" @endif>
         <label class="inline-flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" name="rating_with_qr" value="1" class="rounded border-slate-300"
                    {{ old('rating_with_qr', ($formState['rating_qr'] ?? false)) ? 'checked' : '' }}>
-            Habilitar QR en etiquetas Rating (útil para EMEA)
+            Habilitar QR en etiquetas Rating
         </label>
+        <p class="mt-1 text-xs text-slate-500">Solo aplica para tipo Rating. Puedes activarlo o desactivarlo según la necesidad del layout.</p>
     </div>
 
     <div>
@@ -185,7 +184,7 @@
                 </select>
                 @error('sn_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
-            <div>
+            <div id="sn-prefix-wrapper" @if(($formState['selected_label_type'] ?? 'serial') !== 'serial') style="display:none;" @endif>
                 <label class="block text-sm font-medium text-slate-700">Prefijo texto SN</label>
                 <input name="sn_prefix" value="{{ old('sn_prefix', $formState['sn_layout']['prefix'] ?? 'SN:') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sn_prefix') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror

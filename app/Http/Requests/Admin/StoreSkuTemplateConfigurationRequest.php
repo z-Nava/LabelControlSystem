@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\LabelSku;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,15 +16,18 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $labelType = $this->input('label_type', 'serial');
+        $sku = LabelSku::query()->find($this->input('label_sku_id'));
+        $serialStandard = strtoupper(trim((string) ($sku?->serial_standard ?? $this->input('serial_standard', 'UL'))));
+        $forceRatingQr = $labelType === 'rating' && $serialStandard === 'EMEA';
 
         $this->merge([
             'template_is_active' => $this->boolean('template_is_active', true),
             'profile_is_active' => $this->boolean('profile_is_active', true),
-            'rating_with_qr' => $this->boolean('rating_with_qr', false),
+            'rating_with_qr' => $forceRatingQr ? true : $this->boolean('rating_with_qr', false),
             'connection_type' => $this->input('connection_type', 'usb'),
             'sn_prefix' => trim((string) $this->input('sn_prefix', 'SN:')),
             'label_type' => $labelType,
-            'serial_standard' => strtoupper(trim((string) $this->input('serial_standard', 'UL'))),
+            'serial_standard' => $serialStandard,
             'qr_orientation' => $this->input('qr_orientation', 'N'),
         ]);
     }
@@ -36,7 +40,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 'integer',
                 Rule::exists('label_skus', 'id')->where('serial_standard', strtoupper(trim((string) $this->input('serial_standard', 'UL')))),
             ],
-            'label_type' => ['required', 'in:serial,rating,shipping'],
+            'label_type' => ['required', 'in:serial,rating'],
             'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
             'rating_with_qr' => ['nullable', 'boolean'],
 
