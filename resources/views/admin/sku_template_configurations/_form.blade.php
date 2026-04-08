@@ -237,7 +237,7 @@
 
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
         <h3 class="font-semibold text-slate-900">Pruebas de impresora</h3>
-        <p class="mt-1 text-xs text-slate-600">Para USB, valida conexión antes de guardar y ejecuta impresión de prueba. La prueba cambia según el tipo: Serial imprime QR + SKU + SN; Rating imprime solo SN.</p>
+        <p class="mt-1 text-xs text-slate-600">Para USB, valida conexión antes de guardar y ejecuta impresión de prueba. La prueba cambia según el tipo: Serial imprime QR + SKU + SN; Rating con QR en EMEA imprime solo SN + QR (sin SKU).</p>
         <div class="mt-3 flex flex-wrap gap-2">
             <button id="test-usb-connection" type="button" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">Probar conexión USB</button>
             <button id="test-print" type="button" class="rounded-xl bg-slate-900 px-3 py-2 text-sm text-white">Impresión de prueba</button>

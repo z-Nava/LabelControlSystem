@@ -63,7 +63,7 @@ class LabelBatchPrintExecutionService
                 }
 
                 $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku?->sku);
-                $templateZpl = $this->resolveTemplateZpl($template, $labelType);
+                $templateZpl = $this->resolveTemplateZpl($template, $labelType, $standard);
                 $rendered = $this->renderTemplate($templateZpl, $payload);
 
                 for ($copy = 1; $copy <= (int) $item->copies; $copy++) {
@@ -179,12 +179,12 @@ class LabelBatchPrintExecutionService
             ->first();
     }
 
-    private function resolveTemplateZpl(LabelTemplate $template, string $labelType): string
+    private function resolveTemplateZpl(LabelTemplate $template, string $labelType, string $standard): string
     {
         $layout = $template->resolved_serial_layout;
 
         if (in_array($labelType, ['serial', 'rating'], true) && is_array($layout) && $layout !== []) {
-            return $this->zplBuilder->build($labelType, $layout);
+            return $this->zplBuilder->build($labelType, $layout, $standard);
         }
 
         return (string) $template->zpl;

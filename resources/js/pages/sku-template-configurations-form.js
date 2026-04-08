@@ -93,7 +93,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
         if (qrLayoutDescription) {
             qrLayoutDescription.textContent = isRatingWithQr
-                ? 'El QR codifica el serial completo para la etiqueta Rating; además se muestra el SKU grande y el SN en texto pequeño.'
+                ? 'El QR codifica el serial completo para la etiqueta Rating. En EMEA se imprime solo SN + QR del SN (sin SKU).'
                 : 'El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.';
         }
 

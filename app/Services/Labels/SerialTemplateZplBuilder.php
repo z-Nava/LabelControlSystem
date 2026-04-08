@@ -4,13 +4,13 @@ namespace App\Services\Labels;
 
 class SerialTemplateZplBuilder
 {
-    public function build(string $labelType, array $layout): string
+    public function build(string $labelType, array $layout, string $serialStandard = 'UL'): string
     {
         $buildWithQr = $labelType === 'serial'
             || ($labelType === 'rating' && (bool) ($layout['rating_qr'] ?? false));
 
         return $buildWithQr
-            ? $this->buildSerialTemplate($layout)
+            ? $this->buildSerialTemplate($layout, $labelType, $serialStandard)
             : $this->buildTextOnlyTemplate($layout);
     }
 
@@ -28,28 +28,37 @@ class SerialTemplateZplBuilder
         ]);
     }
 
-    private function buildSerialTemplate(array $layout): string
+    private function buildSerialTemplate(array $layout, string $labelType, string $serialStandard): string
     {
         $qr = $this->normalizeQrLayout($layout['qr'] ?? []);
-        $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
         $sn = $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
         $prefix = trim((string) ($layout['sn']['prefix'] ?? 'SN:'));
         $snText = trim($prefix) === '' ? '{{serial_full}}' : trim($prefix).' {{serial_full}}';
+        $hideSkuOnEmeaRating = $labelType === 'rating' && strtoupper($serialStandard) === 'EMEA';
 
-        return implode("\n", [
+        $zpl = [
             '^XA',
             '^CI28',
             sprintf('^FO%d,%d', $qr['x'], $qr['y']),
             sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
             '^FDLA,{{serial_full}}^FS',
-            sprintf('^FO%d,%d', $sku['x'], $sku['y']),
-            sprintf('^A0%s,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']),
-            '^FD{{sku}}^FS',
+        ];
+
+        if (!$hideSkuOnEmeaRating) {
+            $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
+            $zpl[] = sprintf('^FO%d,%d', $sku['x'], $sku['y']);
+            $zpl[] = sprintf('^A0%s,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']);
+            $zpl[] = '^FD{{sku}}^FS';
+        }
+
+        $zpl = array_merge($zpl, [
             sprintf('^FO%d,%d', $sn['x'], $sn['y']),
             sprintf('^A0%s,%d,%d', $sn['orientation'], $sn['font_size'], $sn['font_size']),
             sprintf('^FD%s^FS', $snText),
             '^XZ',
         ]);
+
+        return implode("\n", $zpl);
     }
 
     private function normalizeTextLayout(array $layout, int $defaultFontSize = 40): array
