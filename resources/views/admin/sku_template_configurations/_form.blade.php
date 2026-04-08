@@ -11,7 +11,8 @@
 @endif
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2"
     id="sku-template-configuration-form"
-    data-default-serial="L36BH2606007A7"
+    data-default-serial-ul="L36BH2606007A7"
+    data-default-serial-emea="5055540112345A1234"
     data-default-sku="2978-OCUT">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>
@@ -135,23 +136,23 @@
                 @error('qr_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
 
-            <div>
+            <div data-layout-group="sku">
                 <label class="block text-sm font-medium text-slate-700">SKU X</label>
                 <input type="number" name="sku_position_x" value="{{ old('sku_position_x', $formState['sku_layout']['x'] ?? 170) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_position_x') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
-            <div>
+            <div data-layout-group="sku">
                 <label class="block text-sm font-medium text-slate-700">SKU Y</label>
                 <input type="number" name="sku_position_y" value="{{ old('sku_position_y', $formState['sku_layout']['y'] ?? 35) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_position_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
-            <div>
+            <div data-layout-group="sku">
                 <label class="block text-sm font-medium text-slate-700">Tamaño letra SKU</label>
                 <input type="number" name="sku_font_size" value="{{ old('sku_font_size', $formState['sku_layout']['font_size'] ?? 44) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                 @error('sku_font_size') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
             </div>
 
-            <div>
+            <div data-layout-group="sku">
                 <label class="block text-sm font-medium text-slate-700">Orientación SKU</label>
                 <select name="sku_orientation" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                     @foreach(['N' => 'Normal', 'R' => 'Rotada 90°', 'I' => 'Invertida 180°', 'B' => 'Bottom-up 270°'] as $value => $label)

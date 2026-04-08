@@ -32,9 +32,11 @@ class SerialTemplateZplBuilder
     {
         $qr = $this->normalizeQrLayout($layout['qr'] ?? []);
         $sn = $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
-        $prefix = trim((string) ($layout['sn']['prefix'] ?? 'SN:'));
-        $snText = trim($prefix) === '' ? '{{serial_full}}' : trim($prefix).' {{serial_full}}';
         $hideSkuOnEmeaRating = $labelType === 'rating' && strtoupper($serialStandard) === 'EMEA';
+        $prefix = $hideSkuOnEmeaRating
+            ? ''
+            : trim((string) ($layout['sn']['prefix'] ?? 'SN:'));
+        $snText = $prefix === '' ? '{{serial_full}}' : $prefix.' {{serial_full}}';
 
         $zpl = [
             '^XA',

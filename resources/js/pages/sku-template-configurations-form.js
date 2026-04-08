@@ -32,8 +32,10 @@ const initSkuTemplateConfigurationsForm = () => {
     const qrLayoutTitle = document.getElementById('qr-layout-title');
     const qrLayoutDescription = document.getElementById('qr-layout-description');
 
-    const defaultSerial = form.dataset.defaultSerial || 'L36BH2606007A7';
+    const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
+    const defaultSerialEmea = form.dataset.defaultSerialEmea || '5055540112345A1234';
     const defaultSku = form.dataset.defaultSku || '2978-OCUT';
+    const skuLayoutGroups = document.querySelectorAll('[data-layout-group="sku"]');
 
     let selectedDevice = null;
 
@@ -49,6 +51,8 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || defaultSku;
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
+    const getSelectedSerialStandard = () => String(serialStandardSelect?.value || 'UL').toUpperCase();
+    const isEmeaRatingWithQr = () => isRatingWithQrEnabled() && getSelectedSerialStandard() === 'EMEA';
     
     const toggleConnectionFields = () => {
         const isNetwork = connectionSelect?.value === 'network';
@@ -67,6 +71,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const toggleLayoutSections = () => {
         const isSerial = labelTypeSelect?.value === 'serial';
         const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
+        const hideSkuLayout = isEmeaRatingWithQr();
         const requiresQr = isSerial || isRatingWithQr;
 
         serialSections.forEach((section) => {
@@ -83,6 +88,10 @@ const initSkuTemplateConfigurationsForm = () => {
                     field.required = true;
                 }
             });
+        });
+
+        skuLayoutGroups.forEach((group) => {
+            group.style.display = hideSkuLayout ? 'none' : 'block';
         });
 
         if (qrLayoutTitle) {
@@ -163,7 +172,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
         const isRatingWithQr = isRatingWithQrEnabled();
-        const serial = defaultSerial;
+        const serial = getSelectedSerialStandard() === 'EMEA' ? defaultSerialEmea : defaultSerialUl;
+        const hideSkuOnEmeaRating = isEmeaRatingWithQr();
 
         if (labelType !== 'serial' && !isRatingWithQr) {
             const x = readInt('[name="serial_position_x"]', 40);
@@ -185,31 +195,37 @@ const initSkuTemplateConfigurationsForm = () => {
         const qrY = readInt('[name="qr_position_y"]', 30);
         const qrOrientation = normalizeOrientation(document.querySelector('[name="qr_orientation"]')?.value, 'N');
         const qrMagnification = Math.min(Math.max(readInt('[name="qr_magnification"]', 4), 1), 10);
-        const skuX = readInt('[name="sku_position_x"]', 170);
-        const skuY = readInt('[name="sku_position_y"]', 35);
-        const skuFontSize = readInt('[name="sku_font_size"]', 44);
-        const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
         const snX = readInt('[name="sn_position_x"]', 170);
         const snY = readInt('[name="sn_position_y"]', 95);
         const snFontSize = readInt('[name="sn_font_size"]', 22);
         const snOrientation = normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
         const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value || 'SN:').trim();
         const snLine = snPrefix ? `${snPrefix} ${serial}` : serial;
-
-        return [
+        const zpl = [
             '^XA',
             '^CI28',
             `^FO${qrX},${qrY}`,
             `^BQ${qrOrientation},2,${qrMagnification}`,
             `^FDLA,${serial}^FS`,
-            `^FO${skuX},${skuY}`,
-            `^A0${skuOrientation},${skuFontSize},${skuFontSize}`,
-            `^FD${getSelectedSkuCode()}^FS`,
-            `^FO${snX},${snY}`,
-            `^A0${snOrientation},${snFontSize},${snFontSize}`,
-            `^FD${snLine}^FS`,
-            '^XZ',
-        ].join('\n');
+        ];
+
+        if (!hideSkuOnEmeaRating) {
+            const skuX = readInt('[name="sku_position_x"]', 170);
+            const skuY = readInt('[name="sku_position_y"]', 35);
+            const skuFontSize = readInt('[name="sku_font_size"]', 44);
+            const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
+
+            zpl.push(`^FO${skuX},${skuY}`);
+            zpl.push(`^A0${skuOrientation},${skuFontSize},${skuFontSize}`);
+            zpl.push(`^FD${getSelectedSkuCode()}^FS`);
+        }
+
+        zpl.push(`^FO${snX},${snY}`);
+        zpl.push(`^A0${snOrientation},${snFontSize},${snFontSize}`);
+        zpl.push(`^FD${snLine}^FS`);
+        zpl.push('^XZ');
+
+        return zpl.join('\n');
     };
 
     const runTestPrint = () => {
@@ -230,7 +246,9 @@ const initSkuTemplateConfigurationsForm = () => {
             const isRatingWithQr = isRatingWithQrEnabled();
 
             setStatus((isSerial || isRatingWithQr)
-                ? 'Impresión de prueba enviada por USB con QR, SKU y SN de referencia.'
+                ? (isEmeaRatingWithQr()
+                    ? 'Impresión de prueba enviada por USB con QR + SN EMEA (sin SKU).'
+                    : 'Impresión de prueba enviada por USB con QR, SKU y SN de referencia.')
                 : 'Impresión de prueba enviada por USB con SN de referencia.');
         }, (error) => {
             setStatus(`Falló impresión de prueba: ${error}`, true);
@@ -240,11 +258,14 @@ const initSkuTemplateConfigurationsForm = () => {
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
+    serialStandardSelect?.addEventListener('change', toggleLayoutSections);
     skuSelect?.addEventListener('change', () => {
         const skuStandard = skuSelect.selectedOptions?.[0]?.dataset?.serialStandard;
         if (serialStandardSelect && skuStandard) {
             serialStandardSelect.value = skuStandard;
         }
+
+        toggleLayoutSections();
     });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
