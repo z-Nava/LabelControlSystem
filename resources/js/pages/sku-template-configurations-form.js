@@ -199,7 +199,11 @@ const initSkuTemplateConfigurationsForm = () => {
         const snY = readInt('[name="sn_position_y"]', 95);
         const snFontSize = readInt('[name="sn_font_size"]', 22);
         const snOrientation = normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
-        const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value || 'SN:').trim();
+        const snPrefixInput = document.querySelector('[name="sn_prefix"]');
+        const snPrefixRaw = snPrefixInput ? snPrefixInput.value : undefined;
+        const snPrefix = hideSkuOnEmeaRating
+            ? ''
+            : String(snPrefixRaw ?? 'SN:').trim();
         const snLine = snPrefix ? `${snPrefix} ${serial}` : serial;
         const zpl = [
             '^XA',
