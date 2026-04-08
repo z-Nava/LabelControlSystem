@@ -244,7 +244,7 @@ class LabelPrintService
                 'year' => $year,
             ],
             [
-                'prefix' => $serialFormat?->prefix,
+                'prefix' => $serialFormat?->componentPrefix(),
                 'last_serial_number' => 0,
             ],
         );
@@ -330,9 +330,9 @@ class LabelPrintService
         $pattern = $this->normalizeSerialPattern((string) $serialFormat->pattern);
 
         return strtr($pattern, [
-            '{PPP}' => (string) ($serialFormat->prefix ?? ''),
-            '{C}' => (string) ($serialFormat->serial_break ?? ''),
-            '{PL}' => (string) ($serialFormat->plant_code ?? ''),
+            '{PPP}' => $serialFormat->componentPrefix(),
+            '{C}' => $serialFormat->componentBreak(),
+            '{PL}' => $serialFormat->componentPlantCode(),
             '{YY}' => $year,
             '{WW}' => $weekValue,
             '{SSSSS}' => $serial,
@@ -342,9 +342,9 @@ class LabelPrintService
     private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
     {
         $components = [
-            (string) ($serialFormat->prefix ?? ''),
-            (string) ($serialFormat->serial_break ?? ''),
-            (string) ($serialFormat->plant_code ?? ''),
+            $serialFormat->componentPrefix(),
+            $serialFormat->componentBreak(),
+            $serialFormat->componentPlantCode(),
         ];
 
         if ((bool) ($serialFormat->include_year ?? true)) {

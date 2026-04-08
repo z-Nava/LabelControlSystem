@@ -14,20 +14,23 @@ return new class extends Migration {
             $table->string('serial_standard', 10)->default('UL'); // UL | EMEA
             $table->string('serial_scheme', 20)->default('ul_standard'); // ul_standard | emea_rating
 
-            // Componentes base del serial (separados)
-            $table->string('prefix', 10)->nullable();        // PPP (ej: 628)
-            $table->string('serial_break', 10)->nullable();  // C   (ej: C o D)
-            $table->string('plant_code', 10)->nullable();    // PL  (ej: 8)
+            // Segmentos UL (PPP C PL)
+            $table->string('ul_prefix', 10)->nullable();
+            $table->string('ul_serial_break', 10)->nullable();
+            $table->string('ul_plant_code', 10)->nullable();
 
-            // Configuración para construir el serial_full sin llaves
-            $table->string('separator', 5)->default('');     // '' o '-' o ' '
+            // Segmentos EMEA (base / conformidad / planta)
+            $table->string('emea_prefix', 10)->nullable();
+            $table->string('emea_conformity_code', 10)->nullable();
+            $table->string('emea_plant_code', 10)->nullable();
+
+            // Configuración para construir el serial_full
+            $table->string('separator', 5)->default('');
             $table->unsignedTinyInteger('year_digits')->default(2); // 2=YY, 4=YYYY
             $table->unsignedTinyInteger('week_digits')->default(2); // 2=WW
             $table->boolean('include_year')->default(true);
             $table->boolean('include_week')->default(true);
 
-            // (Opcional/legacy) si quieres seguir guardando una "plantilla"
-            // ya NO la uses para construir el serial_full si te estaba causando llaves
             $table->string('pattern', 80)->nullable();
 
             // Control del consecutivo (SSSSS)

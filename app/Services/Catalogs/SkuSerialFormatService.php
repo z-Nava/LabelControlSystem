@@ -13,9 +13,12 @@ class SkuSerialFormatService
             ->when($search, function ($query) use ($search) {
                 $query->where('sku', 'like', "%{$search}%")
                     ->orWhere('serial_standard', 'like', "%{$search}%")
-                    ->orWhere('prefix', 'like', "%{$search}%")
-                    ->orWhere('serial_break', 'like', "%{$search}%")
-                    ->orWhere('plant_code', 'like', "%{$search}%")
+                    ->orWhere('ul_prefix', 'like', "%{$search}%")
+                    ->orWhere('ul_serial_break', 'like', "%{$search}%")
+                    ->orWhere('ul_plant_code', 'like', "%{$search}%")
+                    ->orWhere('emea_prefix', 'like', "%{$search}%")
+                    ->orWhere('emea_conformity_code', 'like', "%{$search}%")
+                    ->orWhere('emea_plant_code', 'like', "%{$search}%")
                     ->orWhere('separator', 'like', "%{$search}%")
                     ->orWhere('pattern', 'like', "%{$search}%");
             })
@@ -49,13 +52,12 @@ class SkuSerialFormatService
 
     private function normalizeData(array $data, bool $defaultActive, ?int $updatedByUserId): array
     {
-        return [
+        $serialStandard = strtoupper(trim((string) ($data['serial_standard'] ?? 'UL')));
+
+        $normalized = [
             'sku' => strtoupper(trim($data['sku'])),
-            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
+            'serial_standard' => $serialStandard,
             'serial_scheme' => trim((string) ($data['serial_scheme'] ?? 'ul_standard')),
-            'prefix' => $this->nullableUpper($data['prefix'] ?? null),
-            'serial_break' => $this->nullableUpper($data['serial_break'] ?? null),
-            'plant_code' => $this->nullableUpper($data['plant_code'] ?? null),
             'separator' => $this->normalizeSeparator($data['separator'] ?? ''),
             'year_digits' => (int) ($data['year_digits'] ?? 2),
             'week_digits' => (int) ($data['week_digits'] ?? 2),
@@ -66,6 +68,24 @@ class SkuSerialFormatService
             'is_active' => (bool) ($data['is_active'] ?? $defaultActive),
             'updated_by_user_id' => $updatedByUserId,
         ];
+
+        if ($serialStandard === 'EMEA') {
+            $normalized['emea_prefix'] = $this->nullableUpper($data['emea_prefix'] ?? null);
+            $normalized['emea_conformity_code'] = $this->nullableUpper($data['emea_conformity_code'] ?? null);
+            $normalized['emea_plant_code'] = $this->nullableUpper($data['emea_plant_code'] ?? null);
+            $normalized['ul_prefix'] = null;
+            $normalized['ul_serial_break'] = null;
+            $normalized['ul_plant_code'] = null;
+        } else {
+            $normalized['ul_prefix'] = $this->nullableUpper($data['ul_prefix'] ?? null);
+            $normalized['ul_serial_break'] = $this->nullableUpper($data['ul_serial_break'] ?? null);
+            $normalized['ul_plant_code'] = $this->nullableUpper($data['ul_plant_code'] ?? null);
+            $normalized['emea_prefix'] = null;
+            $normalized['emea_conformity_code'] = null;
+            $normalized['emea_plant_code'] = null;
+        }
+
+        return $normalized;
     }
 
     private function nullableUpper(?string $value): ?string

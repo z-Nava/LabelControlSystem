@@ -12,9 +12,12 @@ class SkuSerialFormat extends Model
         'sku',
         'serial_standard',
         'serial_scheme',
-        'prefix',
-        'serial_break',
-        'plant_code',
+        'ul_prefix',
+        'ul_serial_break',
+        'ul_plant_code',
+        'emea_prefix',
+        'emea_conformity_code',
+        'emea_plant_code',
         'separator',
         'year_digits',
         'week_digits',
@@ -41,5 +44,25 @@ class SkuSerialFormat extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function isEmea(): bool
+    {
+        return strtoupper((string) $this->serial_standard) === 'EMEA';
+    }
+
+    public function componentPrefix(): string
+    {
+        return (string) ($this->isEmea() ? $this->emea_prefix : $this->ul_prefix);
+    }
+
+    public function componentBreak(): string
+    {
+        return (string) ($this->isEmea() ? $this->emea_conformity_code : $this->ul_serial_break);
+    }
+
+    public function componentPlantCode(): string
+    {
+        return (string) ($this->isEmea() ? $this->emea_plant_code : $this->ul_plant_code);
     }
 }

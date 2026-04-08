@@ -50,9 +50,9 @@
                         <td class="py-3 pr-3 font-semibold text-slate-900">{{ $format->sku }}</td>
                         <td class="py-3 pr-3">{{ $format->serial_standard ?? 'UL' }}</td>
                         <td class="py-3 pr-3">{{ $format->serial_scheme ?? 'ul_standard' }}</td>
-                        <td class="py-3 pr-3">{{ $format->prefix ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->serial_break ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->plant_code ?: '-' }}</td>
+                        <td class="py-3 pr-3">{{ $format->componentPrefix() ?: '-' }}</td>
+                        <td class="py-3 pr-3">{{ $format->componentBreak() ?: '-' }}</td>
+                        <td class="py-3 pr-3">{{ $format->componentPlantCode() ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->separator === '' ? '∅' : $format->separator }}</td>
                         <td class="py-3 pr-3">
                             {{ $format->include_year ? $format->year_digits : '-' }}/{{ $format->include_week ? $format->week_digits : '-' }}
