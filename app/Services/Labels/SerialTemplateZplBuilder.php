@@ -31,7 +31,10 @@ class SerialTemplateZplBuilder
     private function buildSerialTemplate(array $layout, string $labelType, string $serialStandard): string
     {
         $qr = $this->normalizeQrLayout($layout['qr'] ?? []);
-        $sn = $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
+        $isRatingLabel = $labelType === 'rating';
+        $sn = $isRatingLabel
+            ? $this->normalizeTextLayout($layout['text'] ?? ($layout['sn'] ?? []))
+            : $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
         $hideSkuOnEmeaRating = $labelType === 'rating' && strtoupper($serialStandard) === 'EMEA';
         $prefix = $hideSkuOnEmeaRating
             ? ''

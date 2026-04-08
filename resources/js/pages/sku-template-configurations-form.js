@@ -195,15 +195,14 @@ const initSkuTemplateConfigurationsForm = () => {
         const qrY = readInt('[name="qr_position_y"]', 30);
         const qrOrientation = normalizeOrientation(document.querySelector('[name="qr_orientation"]')?.value, 'N');
         const qrMagnification = Math.min(Math.max(readInt('[name="qr_magnification"]', 4), 1), 10);
-        const snX = readInt('[name="sn_position_x"]', 170);
-        const snY = readInt('[name="sn_position_y"]', 95);
-        const snFontSize = readInt('[name="sn_font_size"]', 22);
-        const snOrientation = normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
-        const snPrefixInput = document.querySelector('[name="sn_prefix"]');
-        const snPrefixRaw = snPrefixInput ? snPrefixInput.value : undefined;
-        const snPrefix = hideSkuOnEmeaRating
-            ? ''
-            : String(snPrefixRaw ?? 'SN:').trim();
+        const useRatingTextLayout = labelType === 'rating';
+        const snX = useRatingTextLayout ? readInt('[name="serial_position_x"]', 40) : readInt('[name="sn_position_x"]', 170);
+        const snY = useRatingTextLayout ? readInt('[name="serial_position_y"]', 40) : readInt('[name="sn_position_y"]', 95);
+        const snFontSize = useRatingTextLayout ? readInt('[name="serial_font_size"]', 40) : readInt('[name="sn_font_size"]', 22);
+        const snOrientation = useRatingTextLayout
+            ? normalizeOrientation(document.querySelector('[name="serial_orientation"]')?.value, 'N')
+            : normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
+        const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value ?? 'SN:').trim();
         const snLine = snPrefix ? `${snPrefix} ${serial}` : serial;
         const zpl = [
             '^XA',
