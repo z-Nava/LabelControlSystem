@@ -1,13 +1,20 @@
 @csrf
 
+@php
+    $lockedStandard = $forcedStandard ?? null;
+@endphp
+
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm font-medium text-slate-700">Estándar serial</label>
+        @if($lockedStandard)
+            <input type="hidden" name="serial_standard" value="{{ $lockedStandard }}">
+        @endif
         <select name="serial_standard" id="serialStandard"
                 class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                required>
+                required @disabled($lockedStandard !== null)>
             @foreach(['UL', 'EMEA'] as $standard)
-                <option value="{{ $standard }}" @selected(old('serial_standard', $format->serial_standard ?? 'UL') === $standard)>
+                <option value="{{ $standard }}" @selected(old('serial_standard', $format->serial_standard ?? $lockedStandard ?? 'UL') === $standard)>
                     {{ $standard }}
                 </option>
             @endforeach

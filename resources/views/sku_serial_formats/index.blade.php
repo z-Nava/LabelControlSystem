@@ -8,10 +8,16 @@
             <p class="text-slate-600 mt-1">Formato de serial por SKU para construir serial_full.</p>
         </div>
 
-        <a href="{{ route('sku_serial_formats.create') }}"
-           class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition">
-            + Agregar formato
-        </a>
+        <div class="flex flex-col sm:flex-row gap-2">
+            <a href="{{ route('sku_serial_formats.create', ['standard' => 'UL']) }}"
+               class="rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold hover:bg-slate-800 transition text-center">
+                + Agregar formato UL
+            </a>
+            <a href="{{ route('sku_serial_formats.create', ['standard' => 'EMEA']) }}"
+               class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition text-center">
+                + Agregar formato EMEA
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -26,65 +32,22 @@
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">Buscar</button>
     </form>
 
-    <div class="mt-5 overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-slate-500 border-b">
-                    <th class="py-3 pr-3">SKU</th>
-                    <th class="py-3 pr-3">Estándar</th>
-                    <th class="py-3 pr-3">Esquema</th>
-                    <th class="py-3 pr-3">Prefix</th>
-                    <th class="py-3 pr-3">Break</th>
-                    <th class="py-3 pr-3">Plant</th>
-                    <th class="py-3 pr-3">Sep</th>
-                    <th class="py-3 pr-3">Año/Sem</th>
-                    <th class="py-3 pr-3">Unit</th>
-                    <th class="py-3 pr-3">Pattern</th>
-                    <th class="py-3 pr-3">Activo</th>
-                    <th class="py-3 text-right">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                @forelse($formats as $format)
-                    <tr>
-                        <td class="py-3 pr-3 font-semibold text-slate-900">{{ $format->sku }}</td>
-                        <td class="py-3 pr-3">{{ $format->serial_standard ?? 'UL' }}</td>
-                        <td class="py-3 pr-3">{{ $format->serial_scheme ?? 'ul_standard' }}</td>
-                        <td class="py-3 pr-3">{{ $format->componentPrefix() ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->componentBreak() ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->componentPlantCode() ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->separator === '' ? '∅' : $format->separator }}</td>
-                        <td class="py-3 pr-3">
-                            {{ $format->include_year ? $format->year_digits : '-' }}/{{ $format->include_week ? $format->week_digits : '-' }}
-                        </td>
-                        <td class="py-3 pr-3">{{ $format->unit_length }}</td>
-                        <td class="py-3 pr-3">{{ $format->pattern ?: 'segmentado' }}</td>
-                        <td class="py-3 pr-3">
-                            @if($format->is_active)
-                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Sí</span>
-                            @else
-                                <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-slate-700">No</span>
-                            @endif
-                        </td>
-                        <td class="py-3 text-right">
-                            <div class="inline-flex gap-2">
-                                <a href="{{ route('sku_serial_formats.edit', $format) }}" class="rounded-xl border px-3 py-2 hover:shadow transition">Editar</a>
-                                <form method="POST" action="{{ route('sku_serial_formats.toggle', $format) }}">
-                                    @csrf
-                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">
-                                        {{ $format->is_active ? 'Desactivar' : 'Activar' }}
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="12" class="py-6 text-center text-slate-500">No hay formatos registrados.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    @include('sku_serial_formats._table', [
+        'title' => 'Estándar UL',
+        'formats' => $ulFormats,
+        'emptyMessage' => 'No hay formatos UL registrados.',
+        'prefixLabel' => 'UL Prefix',
+        'breakLabel' => 'UL Break',
+        'plantLabel' => 'UL Plant',
+    ])
 
-    <div class="mt-4">{{ $formats->links() }}</div>
+    @include('sku_serial_formats._table', [
+        'title' => 'Estándar EMEA',
+        'formats' => $emeaFormats,
+        'emptyMessage' => 'No hay formatos EMEA registrados.',
+        'prefixLabel' => 'EMEA Base',
+        'breakLabel' => 'EMEA Conformity',
+        'plantLabel' => 'EMEA Plant/Line',
+    ])
 </div>
 @endsection

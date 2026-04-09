@@ -3,6 +3,7 @@
 namespace App\Services\Catalogs;
 
 use App\Models\SkuSerialFormat;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class SkuSerialFormatService
@@ -26,6 +27,29 @@ class SkuSerialFormatService
             ->orderBy('sku')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    public function listByStandard(string $serialStandard, ?string $search = null): Collection
+    {
+        return SkuSerialFormat::query()
+            ->where('serial_standard', strtoupper($serialStandard))
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($nestedQuery) use ($search) {
+                    $nestedQuery->where('sku', 'like', "%{$search}%")
+                        ->orWhere('serial_standard', 'like', "%{$search}%")
+                        ->orWhere('ul_prefix', 'like', "%{$search}%")
+                        ->orWhere('ul_serial_break', 'like', "%{$search}%")
+                        ->orWhere('ul_plant_code', 'like', "%{$search}%")
+                        ->orWhere('emea_prefix', 'like', "%{$search}%")
+                        ->orWhere('emea_conformity_code', 'like', "%{$search}%")
+                        ->orWhere('emea_plant_code', 'like', "%{$search}%")
+                        ->orWhere('separator', 'like', "%{$search}%")
+                        ->orWhere('pattern', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('is_active', 'desc')
+            ->orderBy('sku')
+            ->get();
     }
 
     public function create(array $data, ?int $updatedByUserId = null): SkuSerialFormat

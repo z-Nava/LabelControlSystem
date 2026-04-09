@@ -10,6 +10,7 @@ use App\Models\SerialRange;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
 use App\Models\SkuSerialFormat;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -324,8 +325,10 @@ class LabelPrintService
     private function formatFromLegacyPattern(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
     {
         $year = $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 2));
+        $fullYear = $this->resolveYearValue($week, 4);
         $weekValue = $this->resolveWeekValue($week, (int) ($serialFormat->week_digits ?? 2));
         $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 5, '0', STR_PAD_LEFT);
+        $monthCode = $this->resolveEmeaMonthCode($week);
 
         $pattern = $this->normalizeSerialPattern((string) $serialFormat->pattern);
 
@@ -334,13 +337,19 @@ class LabelPrintService
             '{C}' => $serialFormat->componentBreak(),
             '{PL}' => $serialFormat->componentPlantCode(),
             '{YY}' => $year,
+            '{YYYY}' => $fullYear,
             '{WW}' => $weekValue,
+            '{M}' => $monthCode,
             '{SSSSS}' => $serial,
         ]);
     }
 
     private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
     {
+        if ($serialFormat->isEmea() && $serialFormat->serial_scheme === 'emea_rating') {
+            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber);
+        }
+
         $components = [
             $serialFormat->componentPrefix(),
             $serialFormat->componentBreak(),
@@ -356,6 +365,26 @@ class LabelPrintService
         }
 
         $components[] = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 5, '0', STR_PAD_LEFT);
+
+        $separator = (string) ($serialFormat->separator ?? '');
+
+        return collect($components)
+            ->filter(fn (string $component) => $component !== '')
+            ->implode($separator);
+    }
+
+    private function formatEmeaRatingFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    {
+        $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 6, '0', STR_PAD_LEFT);
+        $monthYear = $this->resolveEmeaMonthCode($week) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
+
+        $components = [
+            $serialFormat->componentPrefix(),
+            $serialFormat->componentBreak(),
+            $serialFormat->componentPlantCode(),
+            $serial,
+            $monthYear,
+        ];
 
         $separator = (string) ($serialFormat->separator ?? '');
 
@@ -382,12 +411,43 @@ class LabelPrintService
 
     private function normalizeSerialPattern(string $pattern): string
     {
-        $normalized = preg_replace('/\{\{\s*(PPP|C|PL|YY|WW|SSSSS)\s*\}\}/', '{$1}', $pattern) ?? $pattern;
+        $normalized = preg_replace('/\{\{\s*(PPP|C|PL|YY|YYYY|WW|M|SSSSS)\s*\}\}/', '{$1}', $pattern) ?? $pattern;
 
         if (!str_contains($normalized, '{SSSSS}')) {
             $normalized .= '{SSSSS}';
         }
 
         return $normalized;
+    }
+
+    private function resolveEmeaMonthCode(SerialWeek $week): string
+    {
+        try {
+            $month = Carbon::now()->setISODate((int) $week->year, (int) $week->week, 1)->month;
+        } catch (\Throwable) {
+            $month = Carbon::now()->month;
+        }
+
+        return $this->monthCodeFromNumber($month);
+    }
+
+    private function monthCodeFromNumber(int $month): string
+    {
+        $codes = [
+            1 => 'A',
+            2 => 'B',
+            3 => 'C',
+            4 => 'D',
+            5 => 'E',
+            6 => 'F',
+            7 => 'G',
+            8 => 'H',
+            9 => 'J',
+            10 => 'K',
+            11 => 'L',
+            12 => 'M',
+        ];
+
+        return $codes[$month] ?? 'A';
     }
 }

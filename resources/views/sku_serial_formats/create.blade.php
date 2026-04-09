@@ -3,7 +3,7 @@
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">Agregar formato serial</h1>
+        <h1 class="text-2xl font-semibold">Agregar formato serial{{ isset($forcedStandard) && $forcedStandard ? ' · '.$forcedStandard : '' }}</h1>
         <a href="{{ route('sku_serial_formats.index') }}" class="text-slate-600 hover:text-slate-900">Volver</a>
     </div>
 

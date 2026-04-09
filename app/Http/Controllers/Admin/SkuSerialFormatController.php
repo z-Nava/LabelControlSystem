@@ -20,20 +20,27 @@ class SkuSerialFormatController extends Controller
     public function index(): View
     {
         $search = request('q');
-        $formats = $this->service->paginate(15, $search);
+        $ulFormats = $this->service->listByStandard('UL', $search);
+        $emeaFormats = $this->service->listByStandard('EMEA', $search);
 
-        return view('sku_serial_formats.index', compact('formats', 'search'));
+        return view('sku_serial_formats.index', compact('ulFormats', 'emeaFormats', 'search'));
     }
 
     public function create(): View
     {
+        $forcedStandard = strtoupper((string) request('standard', ''));
+        $forcedStandard = in_array($forcedStandard, ['UL', 'EMEA'], true) ? $forcedStandard : null;
+
         $activeSkus = LabelSku::query()
             ->active()
+            ->when($forcedStandard, function ($query) use ($forcedStandard) {
+                $query->where('serial_standard', $forcedStandard);
+            })
             ->orderBy('sku')
             ->orderBy('serial_standard')
             ->get(['sku', 'serial_standard', 'label_part_number']);
 
-        return view('sku_serial_formats.create', compact('activeSkus'));
+        return view('sku_serial_formats.create', compact('activeSkus', 'forcedStandard'));
     }
 
     public function store(StoreSkuSerialFormatRequest $request): RedirectResponse
