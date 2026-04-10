@@ -19,14 +19,19 @@ class LabelSkuController extends Controller
     public function index(): View
     {
         $search = request('q');
-        $labelSkus = $this->service->paginate(15, $search);
+        $labelSkusByStandard = $this->service->groupedByStandard($search);
 
-        return view('label_skus.index', compact('labelSkus', 'search'));
+        return view('label_skus.index', compact('labelSkusByStandard', 'search'));
     }
 
     public function create(): View
     {
-        return view('label_skus.create');
+        $serialStandard = strtoupper(trim((string) request('serial_standard', 'UL')));
+        if (!in_array($serialStandard, ['UL', 'EMEA', 'ANZ'], true)) {
+            $serialStandard = 'UL';
+        }
+
+        return view('label_skus.create', compact('serialStandard'));
     }
 
     public function store(StoreLabelSkuRequest $request): RedirectResponse

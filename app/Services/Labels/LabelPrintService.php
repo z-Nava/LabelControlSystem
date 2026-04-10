@@ -90,7 +90,8 @@ class LabelPrintService
                 }
 
                 if ($ranges->isEmpty()) {
-                    $serialFormat = $this->resolveSerialFormat($labelRequest);
+                    $labelSku = $this->resolveActiveLabelSku($labelRequest);
+                    $serialFormat = $this->resolveSerialFormat($labelRequest, $labelSku?->sku);
                     if (!$serialFormat) {
                         throw ValidationException::withMessages([
                             'batch_type' => 'No existe un formato activo en sku_serial_formats para este SKU.',
@@ -102,6 +103,7 @@ class LabelPrintService
                         $week,
                         (int) $labelRequest->quantity_requested,
                         $labelRequest,
+                        $labelSku,
                         $serialFormat,
                         $printedByUserId,
                     );
@@ -251,14 +253,17 @@ class LabelPrintService
         );
     }
 
-    private function resolveSerialFormat(LabelRequest $labelRequest): ?SkuSerialFormat
+    private function resolveActiveLabelSku(LabelRequest $labelRequest): ?LabelSku
     {
-        $sku = LabelSku::query()
+        return LabelSku::query()
             ->where('label_part_number', $labelRequest->label_part_number)
             ->where('serial_standard', (string) ($labelRequest->serial_standard ?? 'UL'))
             ->where('is_active', true)
-            ->value('sku');
+            ->first(['id', 'sku', 'label_part_number', 'serial_standard']);
+    }
 
+    private function resolveSerialFormat(LabelRequest $labelRequest, ?string $sku): ?SkuSerialFormat
+    {
         if (!$sku) {
             return null;
         }
@@ -274,8 +279,14 @@ class LabelPrintService
     /**
      * @return array<int, SerialUnit>
      */
-    private function reserveSerialUnits(SerialWeek $week, int $quantity, LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat, ?int $printedByUserId): array
-    {
+    private function reserveSerialUnits(
+        SerialWeek $week,
+        int $quantity,
+        LabelRequest $labelRequest,
+        ?LabelSku $labelSku,
+        ?SkuSerialFormat $serialFormat,
+        ?int $printedByUserId
+    ): array {
         $week = SerialWeek::query()->lockForUpdate()->findOrFail($week->id);
 
         $start = (int) $week->last_serial_number + 1;
@@ -292,17 +303,28 @@ class LabelPrintService
 
         $units = [];
         for ($number = $start; $number <= $end; $number++) {
+            $serialFull = $this->formatSerialFull($labelRequest, $week, $serialFormat, $number);
             $units[] = SerialUnit::query()->create([
                 'serial_week_id' => $week->id,
+                'label_sku_id' => $labelSku?->id,
+                'label_part_number' => (string) $labelRequest->label_part_number,
+                'serial_standard' => (string) ($labelRequest->serial_standard ?? 'UL'),
                 'serial_number' => $number,
-                'serial_full' => $this->formatSerialFull($labelRequest, $week, $serialFormat, $number),
+                'serial_full' => $serialFull,
+                'rating_qr_code' => $this->buildRatingQrCode($serialFull),
                 'status' => 'allocated',
+                'printed_at' => null,
             ]);
         }
 
         $week->update(['last_serial_number' => $end]);
 
         return $units;
+    }
+
+    private function buildRatingQrCode(string $serialFull): string
+    {
+        return $serialFull;
     }
 
     private function formatSerialFull(LabelRequest $labelRequest, SerialWeek $week, ?SkuSerialFormat $serialFormat, int $serialNumber): string

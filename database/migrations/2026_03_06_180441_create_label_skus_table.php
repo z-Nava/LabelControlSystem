@@ -11,10 +11,16 @@ return new class extends Migration {
             $table->id();
 
             $table->string('sku', 80);
-            $table->string('serial_standard', 10)->default('UL'); // UL | EMEA
+            $table->string('serial_standard', 10)->default('UL'); // UL | EMEA | ANZ
             $table->string('label_part_number', 80);
 
             $table->string('description', 160)->nullable();
+            $table->string('console_sku', 80)->nullable();
+            $table->string('assembly_part_number', 80)->nullable();
+            $table->string('packaging_part_number', 80)->nullable();
+            
+            $table->string('emea_sku', 80)->nullable();
+            $table->string('anz_sku', 80)->nullable();
             $table->boolean('is_active')->default(true);
 
             // Opcional: trazabilidad de quién lo creó/actualizó
@@ -29,6 +35,9 @@ return new class extends Migration {
             $table->index('label_part_number');
             $table->index(['serial_standard', 'is_active']);
             $table->index('is_active');
+            $table->index('console_sku');
+            $table->index('assembly_part_number');
+            $table->index('packaging_part_number');
         });
     }
 

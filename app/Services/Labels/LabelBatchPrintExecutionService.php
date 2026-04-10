@@ -110,7 +110,10 @@ class LabelBatchPrintExecutionService
             if ($unitIds->isNotEmpty()) {
                 SerialUnit::query()
                     ->whereIn('id', $unitIds)
-                    ->update(['status' => 'printed']);
+                    ->update([
+                        'status' => 'printed',
+                        'printed_at' => now(),
+                    ]);
             }
 
             $batch->update(['printed_at' => now()]);
@@ -127,6 +130,7 @@ class LabelBatchPrintExecutionService
     {
         return [
             'serial_full' => $serialUnit->serial_full,
+            'rating_qr_code' => (string) ($serialUnit->rating_qr_code ?? ''),
             'serial_number' => (string) $serialUnit->serial_number,
             'sku' => (string) ($sku?->sku ?? ''),
             'label_type' => $labelType,

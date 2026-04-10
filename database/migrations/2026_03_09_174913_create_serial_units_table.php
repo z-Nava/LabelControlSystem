@@ -14,14 +14,24 @@ return new class extends Migration {
                 ->constrained('serial_weeks')
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
+            $table->foreignId('label_sku_id')
+                ->nullable()
+                ->constrained('label_skus')
+                ->nullOnDelete()
+                ->cascadeOnUpdate();
+
+            $table->string('label_part_number', 80)->nullable();
+            $table->string('serial_standard', 10)->default('UL');
 
             // consecutivo numérico (ej 142)
             $table->unsignedInteger('serial_number');
 
             // serial completo formateado (PPP C PL YY WW SSSSS)
             $table->string('serial_full', 80);
+            $table->string('rating_qr_code', 120)->nullable();
 
             $table->enum('status', ['allocated', 'printed'])->default('allocated');
+            $table->timestamp('printed_at')->nullable();
 
             $table->timestamps();
 
@@ -32,6 +42,9 @@ return new class extends Migration {
             $table->unique(['serial_week_id', 'serial_number'], 'uq_serial_units_week_number');
 
             $table->index(['serial_week_id', 'status']);
+            $table->index(['label_sku_id', 'status']);
+            $table->index(['label_part_number', 'serial_standard']);
+            $table->index('printed_at');
         });
     }
 

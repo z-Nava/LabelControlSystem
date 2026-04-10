@@ -14,6 +14,11 @@ class LabelSku extends Model
         'serial_standard',
         'label_part_number',
         'description',
+        'console_sku',
+        'assembly_part_number',
+        'packaging_part_number',
+        'emea_sku',
+        'anz_sku',
         'is_active',
         'updated_by_user_id',
     ];
