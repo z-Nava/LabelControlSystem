@@ -125,7 +125,11 @@ class SkuSerialFormatService
 
     private function normalizeSeparator(?string $value): string
     {
-        return trim((string) $value);
+        if ($value === null) {
+            return '';
+        }
+
+        return in_array($value, ['', ' ', '-', '_', '|'], true) ? $value : '';
     }
 
     private function nullablePattern(?string $value): ?string

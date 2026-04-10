@@ -54,13 +54,22 @@
 
     <div>
         <label class="block text-sm font-medium text-slate-700">Separador entre segmentos</label>
-        <input name="separator" value="{{ old('separator', $format->separator ?? '') }}"
-               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               maxlength="5" placeholder="Vacío para serial continuo" />
+        <select name="separator"
+                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+            @php($selectedSeparator = old('separator', $format->separator ?? ''))
+            <option value="" @selected($selectedSeparator === '')>Sin separador</option>
+            <option value=" " @selected($selectedSeparator === ' ')>Espacio</option>
+            <option value="-" @selected($selectedSeparator === '-')>- (guion)</option>
+            <option value="_" @selected($selectedSeparator === '_')>_ (guion bajo)</option>
+            <option value="|" @selected($selectedSeparator === '|')>| (pipe)</option>
+        </select>
         @error('separator') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
     <div id="ulFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estructura UL</p>
+        </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">UL Prefix (PPP)</label>
             <input name="ul_prefix" value="{{ old('ul_prefix', $format->ul_prefix ?? '') }}"
@@ -85,25 +94,28 @@
     </div>
 
     <div id="emeaFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+        <div class="md:col-span-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estructura EMEA</p>
+        </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">EMEA Base code</label>
             <input name="emea_prefix" value="{{ old('emea_prefix', $format->emea_prefix ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                   maxlength="10" placeholder="5055" />
+                   maxlength="10" placeholder="5055 54" />
             @error('emea_prefix') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
         <div>
             <label class="block text-sm font-medium text-slate-700">EMEA Conformity code</label>
             <input name="emea_conformity_code" value="{{ old('emea_conformity_code', $format->emea_conformity_code ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                   maxlength="10" placeholder="54" />
+                   maxlength="10" placeholder="01" />
             @error('emea_conformity_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700">EMEA Plant / line code</label>
+            <label class="block text-sm font-medium text-slate-700">EMEA Plant / line code (opcional)</label>
             <input name="emea_plant_code" value="{{ old('emea_plant_code', $format->emea_plant_code ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                   maxlength="10" placeholder="01" />
+                   maxlength="10" placeholder="(vacío)" />
             @error('emea_plant_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
     </div>
@@ -197,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (isEmea) {
             if (expectedExampleText) {
-                expectedExampleText.textContent = '5055 + 54 + 01 + 000001 + A + 2026 = 50555401000001A2026';
+                expectedExampleText.textContent = '5055 54 + 01 + 000001 + A2026 = 5055 54 01 000001 A2026';
             }
             if (yearDigits) yearDigits.value = '4';
             if (includeYearCheckbox) includeYearCheckbox.checked = true;

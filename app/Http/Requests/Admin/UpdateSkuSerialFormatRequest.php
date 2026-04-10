@@ -37,7 +37,7 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'emea_prefix' => ['nullable', 'string', 'max:10'],
             'emea_conformity_code' => ['nullable', 'string', 'max:10'],
             'emea_plant_code' => ['nullable', 'string', 'max:10'],
-            'separator' => ['nullable', 'string', 'max:5'],
+            'separator' => ['nullable', 'string', Rule::in(['', ' ', '-', '_', '|'])],
             'year_digits' => ['required', 'integer', 'in:2,4'],
             'week_digits' => ['required', 'integer', 'between:1,2'],
             'include_year' => ['nullable', 'boolean'],
@@ -61,12 +61,27 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'emea_prefix' => $this->input('emea_prefix'),
             'emea_conformity_code' => $this->input('emea_conformity_code'),
             'emea_plant_code' => $this->input('emea_plant_code'),
-            'separator' => trim((string) $this->input('separator', '')),
+            'separator' => $this->normalizeSeparatorInput(),
             'year_digits' => (int) $this->input('year_digits', 2),
             'week_digits' => (int) $this->input('week_digits', 2),
             'include_year' => $this->boolean('include_year', true),
             'include_week' => $this->boolean('include_week', true),
             'is_active' => $this->boolean('is_active', false),
         ]);
+    }
+
+    private function normalizeSeparatorInput(): string
+    {
+        $separator = $this->input('separator', '');
+
+        if ($separator === null) {
+            return '';
+        }
+
+        if (!is_string($separator)) {
+            return '';
+        }
+
+        return in_array($separator, ['', ' ', '-', '_', '|'], true) ? $separator : '';
     }
 }
