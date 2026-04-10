@@ -12,7 +12,7 @@
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2"
     id="sku-template-configuration-form"
     data-default-serial-ul="L36BH2606007A7"
-    data-default-serial-emea="5055540112345A1234"
+    data-default-serial-emea="50555401123456A1234"
     data-default-sku="2978-OCUT">
     <div>
         <label class="block text-sm font-medium text-slate-700">SKU</label>

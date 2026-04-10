@@ -7,6 +7,17 @@ const normalizeOrientation = (value, fallback = 'N') => {
 };
 
 const readInt = (selector, fallback) => Number.parseInt(document.querySelector(selector)?.value || String(fallback), 10) || fallback;
+const formatEmeaSerialForPrint = (serial) => {
+    const compactSerial = String(serial || '').replace(/\s+/g, '').trim();
+    const emeaPattern = /^(.{4})(.{2})(.{2})(.{6})(.{5})$/;
+    const parts = compactSerial.match(emeaPattern);
+
+    if (!parts) {
+        return compactSerial;
+    }
+
+    return [parts[1], parts[2], parts[3], parts[4], parts[5]].join(' ');
+};
 
 const initSkuTemplateConfigurationsForm = () => {
     const form = document.getElementById('sku-template-configuration-form');
@@ -36,7 +47,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const snPrefixWrapper = document.getElementById('sn-prefix-wrapper');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
-    const defaultSerialEmea = form.dataset.defaultSerialEmea || '5055540112345A1234';
+    const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
     const defaultSku = form.dataset.defaultSku || '2978-OCUT';
     const skuLayoutGroups = document.querySelectorAll('[data-layout-group="sku"]');
 
@@ -202,6 +213,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const labelType = labelTypeSelect?.value;
         const isRatingWithQr = isRatingWithQrEnabled();
         const serial = getSelectedSerialStandard() === 'EMEA' ? defaultSerialEmea : defaultSerialUl;
+        const serialPrint = getSelectedSerialStandard() === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
         const hideSkuOnEmeaRating = isEmeaRatingWithQr();
 
         if (labelType !== 'serial' && !isRatingWithQr) {
@@ -215,7 +227,7 @@ const initSkuTemplateConfigurationsForm = () => {
                 '^CI28',
                 `^FO${x},${y}`,
                 `^A0${orientation},${fontSize},${fontSize}`,
-                `^FD${serial}^FS`,
+                `^FD${serialPrint}^FS`,
                 '^XZ',
             ].join('\n');
         }
@@ -233,8 +245,8 @@ const initSkuTemplateConfigurationsForm = () => {
             : normalizeOrientation(document.querySelector('[name="sn_orientation"]')?.value, 'N');
         const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value ?? 'SN:').trim();
         const snLine = labelType === 'rating'
-            ? serial
-            : (snPrefix ? `${snPrefix} ${serial}` : serial);
+            ? serialPrint
+            : (snPrefix ? `${snPrefix} ${serialPrint}` : serialPrint);
         const zpl = [
             '^XA',
             '^CI28',
