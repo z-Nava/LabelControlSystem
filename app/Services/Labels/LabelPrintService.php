@@ -238,12 +238,13 @@ class LabelPrintService
     private function resolveSerialWeek(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): SerialWeek
     {
         $year = (int) $labelRequest->request_date->format('Y');
+        $cycleValue = $this->resolveSerialCycleValue($labelRequest, $serialFormat);
 
         return SerialWeek::query()->firstOrCreate(
             [
                 'label_part_number' => $labelRequest->label_part_number,
                 'serial_standard' => (string) ($labelRequest->serial_standard ?? 'UL'),
-                'week' => (int) $labelRequest->week,
+                'week' => $cycleValue,
                 'year' => $year,
             ],
             [
@@ -329,6 +330,8 @@ class LabelPrintService
 
     private function formatSerialFull(LabelRequest $labelRequest, SerialWeek $week, ?SkuSerialFormat $serialFormat, int $serialNumber): string
     {
+        $requestMonth = (int) $labelRequest->request_date->month;
+
         if (!$serialFormat) {
             $yy = substr((string) $week->year, -2);
             $ww = str_pad((string) $week->week, 2, '0', STR_PAD_LEFT);
@@ -338,19 +341,19 @@ class LabelPrintService
         }
 
         if (!empty($serialFormat->pattern)) {
-            return $this->formatFromLegacyPattern($week, $serialFormat, $serialNumber);
+            return $this->formatFromLegacyPattern($week, $serialFormat, $serialNumber, $requestMonth);
         }
 
-        return $this->formatFromComponents($week, $serialFormat, $serialNumber);
+        return $this->formatFromComponents($week, $serialFormat, $serialNumber, $requestMonth);
     }
 
-    private function formatFromLegacyPattern(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    private function formatFromLegacyPattern(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber, ?int $requestMonth = null): string
     {
         $year = $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 2));
         $fullYear = $this->resolveYearValue($week, 4);
         $weekValue = $this->resolveWeekValue($week, (int) ($serialFormat->week_digits ?? 2));
         $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 5, '0', STR_PAD_LEFT);
-        $monthCode = $this->resolveEmeaMonthCode($week);
+        $monthCode = $this->resolveEmeaMonthCode($week, $requestMonth);
 
         $pattern = $this->normalizeSerialPattern((string) $serialFormat->pattern);
 
@@ -366,10 +369,10 @@ class LabelPrintService
         ]);
     }
 
-    private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber, ?int $requestMonth = null): string
     {
         if ($serialFormat->isEmea() && $serialFormat->serial_scheme === 'emea_rating') {
-            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber);
+            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber, $requestMonth);
         }
 
         $components = [
@@ -395,10 +398,10 @@ class LabelPrintService
             ->implode($separator);
     }
 
-    private function formatEmeaRatingFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber): string
+    private function formatEmeaRatingFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber, ?int $requestMonth = null): string
     {
         $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 6, '0', STR_PAD_LEFT);
-        $monthYear = $this->resolveEmeaMonthCode($week) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
+        $monthYear = $this->resolveEmeaMonthCode($week, $requestMonth) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
 
         $components = [
             $serialFormat->componentPrefix(),
@@ -431,6 +434,30 @@ class LabelPrintService
         return str_pad((string) $week->week, max(1, $digits), '0', STR_PAD_LEFT);
     }
 
+    private function resolveSerialCycleValue(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): int
+    {
+        if ($this->usesMonthlySerialCycle($labelRequest, $serialFormat)) {
+            return (int) $labelRequest->request_date->month;
+        }
+
+        return (int) $labelRequest->week;
+    }
+
+    private function usesMonthlySerialCycle(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): bool
+    {
+        $standard = strtoupper((string) ($labelRequest->serial_standard ?? 'UL'));
+
+        if (in_array($standard, ['EMEA', 'ANZ'], true)) {
+            return true;
+        }
+
+        return (bool) (
+            $serialFormat
+            && $serialFormat->isEmea()
+            && $serialFormat->serial_scheme === 'emea_rating'
+        );
+    }
+
     private function normalizeSerialPattern(string $pattern): string
     {
         $normalized = preg_replace('/\{\{\s*(PPP|C|PL|YY|YYYY|WW|M|SSSSS)\s*\}\}/', '{$1}', $pattern) ?? $pattern;
@@ -442,8 +469,12 @@ class LabelPrintService
         return $normalized;
     }
 
-    private function resolveEmeaMonthCode(SerialWeek $week): string
+    private function resolveEmeaMonthCode(SerialWeek $week, ?int $explicitMonth = null): string
     {
+        if ($explicitMonth !== null && $explicitMonth >= 1 && $explicitMonth <= 12) {
+            return $this->monthCodeFromNumber($explicitMonth);
+        }
+
         try {
             $month = Carbon::now()->setISODate((int) $week->year, (int) $week->week, 1)->month;
         } catch (\Throwable) {
