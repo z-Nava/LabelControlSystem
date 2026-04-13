@@ -58,7 +58,7 @@
                 class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
             @php($selectedSeparator = old('separator', $format->separator ?? ''))
             <option value="" @selected($selectedSeparator === '')>Sin separador</option>
-            <option value=" " @selected($selectedSeparator === ' ')>Espacio</option>
+            <option value="__SPACE__" @selected(in_array($selectedSeparator, [' ', '__SPACE__'], true))>Espacio</option>
             <option value="-" @selected($selectedSeparator === '-')>- (guion)</option>
             <option value="_" @selected($selectedSeparator === '_')>_ (guion bajo)</option>
             <option value="|" @selected($selectedSeparator === '|')>| (pipe)</option>

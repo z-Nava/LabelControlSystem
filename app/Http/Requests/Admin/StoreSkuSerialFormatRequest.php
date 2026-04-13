@@ -33,7 +33,7 @@ class StoreSkuSerialFormatRequest extends FormRequest
             'emea_prefix' => ['nullable', 'string', 'max:10'],
             'emea_conformity_code' => ['nullable', 'string', 'max:10'],
             'emea_plant_code' => ['nullable', 'string', 'max:10'],
-            'separator' => ['nullable', 'string', Rule::in(['', ' ', '-', '_', '|'])],
+            'separator' => ['nullable', 'string', Rule::in(['', ' ', '__SPACE__', '-', '_', '|'])],
             'year_digits' => ['required', 'integer', 'in:2,4'],
             'week_digits' => ['required', 'integer', 'between:1,2'],
             'include_year' => ['nullable', 'boolean'],
@@ -78,6 +78,10 @@ class StoreSkuSerialFormatRequest extends FormRequest
 
         if (!is_string($separator)) {
             return '';
+        }
+
+        if ($separator === '__SPACE__') {
+            return ' ';
         }
 
         return in_array($separator, ['', ' ', '-', '_', '|'], true) ? $separator : '';

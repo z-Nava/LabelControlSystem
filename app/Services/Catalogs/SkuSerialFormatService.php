@@ -129,6 +129,10 @@ class SkuSerialFormatService
             return '';
         }
 
+        if ($value === '__SPACE__') {
+            return ' ';
+        }
+
         return in_array($value, ['', ' ', '-', '_', '|'], true) ? $value : '';
     }
 
