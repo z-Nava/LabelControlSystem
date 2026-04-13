@@ -74,7 +74,14 @@ class LabelRequestReadService
                 })
                 ->orderBy('sku')
                 ->orderBy('serial_standard')
-                ->get(['sku', 'serial_standard', 'label_part_number', 'description']),
+                ->get([
+                    'sku',
+                    'serial_standard',
+                    'label_part_number',
+                    'description',
+                    'assembly_part_number',
+                    'packaging_part_number',
+                ]),
         ];
     }
 
