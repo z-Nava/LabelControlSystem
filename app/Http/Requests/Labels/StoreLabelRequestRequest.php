@@ -62,6 +62,7 @@ class StoreLabelRequestRequest extends FormRequest
             $this->validateAtLeastOneLabelType($validator);
             $this->validateActiveLabelPartNumber($validator);
             $this->validatePackagingJobNumber($validator);
+            $this->validateOracleAssemblyMatchesLabelSku($validator);
         });
     }
 
@@ -123,6 +124,47 @@ class StoreLabelRequestRequest extends FormRequest
         if (!$jobLookup->isPackagingJob($job)) {
             $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001).');
         }
+    }
+
+    private function validateOracleAssemblyMatchesLabelSku(Validator $validator): void
+    {
+        $jobNumber = (string) $this->input('job_number');
+        $labelPartNumber = (string) $this->input('label_part_number');
+        $serialStandard = (string) $this->input('serial_standard');
+
+        if ($jobNumber === '' || $labelPartNumber === '' || $serialStandard === '') {
+            return;
+        }
+
+        $labelSku = LabelSku::query()
+            ->where('label_part_number', $labelPartNumber)
+            ->where('serial_standard', $serialStandard)
+            ->where('is_active', true)
+            ->first(['assembly_part_number', 'packaging_part_number']);
+
+        if (!$labelSku) {
+            return;
+        }
+
+        $job = $this->oracleJobLookup()->findByJobNumber($jobNumber);
+
+        if (!$job) {
+            return;
+        }
+
+        $oracleAssembly = strtoupper(trim((string) $job->assembly));
+        $assemblyPartNumber = strtoupper(trim((string) $labelSku->assembly_part_number));
+        $packagingPartNumber = strtoupper(trim((string) $labelSku->packaging_part_number));
+
+        if ($oracleAssembly === '') {
+            return;
+        }
+
+        if ($oracleAssembly === $assemblyPartNumber || $oracleAssembly === $packagingPartNumber) {
+            return;
+        }
+
+        $validator->errors()->add('job_number', 'El assembly del Job en Oracle debe coincidir con Assembly PN o Packaging PN del Label SKU.');
     }
 
     private function oracleJobLookup(): OracleJobLookupService
