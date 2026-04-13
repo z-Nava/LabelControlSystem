@@ -1,6 +1,69 @@
 import { debounce } from '../utils/debounce';
 import { setHint } from './dom';
 
+function normalizeComparableValue(value) {
+    return (value || '').trim().toUpperCase();
+}
+
+function normalizePartNumber(value) {
+    return normalizeComparableValue(value).replace(/[^0-9A-Z]/g, '');
+}
+
+function trimLeadingZeros(value) {
+    return value.replace(/^0+/, '') || '0';
+}
+
+function partNumbersMatch(jobAssembly, skuPartNumber) {
+    const normalizedJobAssembly = normalizePartNumber(jobAssembly);
+    const normalizedSkuPartNumber = normalizePartNumber(skuPartNumber);
+
+    if (!normalizedJobAssembly || !normalizedSkuPartNumber) {
+        return false;
+    }
+
+    if (normalizedJobAssembly === normalizedSkuPartNumber) {
+        return true;
+    }
+
+    const jobAssemblyWithoutZeros = trimLeadingZeros(normalizedJobAssembly);
+    const skuPartNumberWithoutZeros = trimLeadingZeros(normalizedSkuPartNumber);
+
+    return jobAssemblyWithoutZeros === skuPartNumberWithoutZeros;
+}
+
+function autoSelectSkuByAssembly(elements, assembly) {
+    const { inputs, labelOptions } = elements;
+    const normalizedAssembly = normalizeComparableValue(assembly);
+
+    if (!normalizedAssembly || !inputs.labelPartNumber || !inputs.serialStandard) {
+        return false;
+    }
+
+    const matchingOption = labelOptions.find((option) => {
+        const assemblyPartNumber = option.dataset.assemblyPartNumber || '';
+        const packagingPartNumber = option.dataset.packagingPartNumber || '';
+
+        return partNumbersMatch(normalizedAssembly, assemblyPartNumber)
+            || partNumbersMatch(normalizedAssembly, packagingPartNumber);
+    });
+
+    if (!matchingOption) {
+        return false;
+    }
+
+    const matchedStandard = matchingOption.dataset.standard || 'UL';
+    const shouldNotifyStandardChange = inputs.serialStandard.value !== matchedStandard;
+    inputs.serialStandard.value = matchedStandard;
+    if (shouldNotifyStandardChange) {
+        inputs.serialStandard.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    matchingOption.hidden = false;
+    matchingOption.disabled = false;
+    inputs.labelPartNumber.value = matchingOption.value;
+
+    return true;
+}
+
 function createJobLookupHandler(elements, onStateChange) {
     const { lookupUrl, hints, inputs } = elements;
 
@@ -56,7 +119,13 @@ function createJobLookupHandler(elements, onStateChange) {
                 inputs.poNumber.value = data.ttl_cust_po || '';
             }
 
+            const wasSkuAutoSelected = autoSelectSkuByAssembly(elements, data.assembly);
             setHint(hints.job, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
+            if (wasSkuAutoSelected) {
+                setHint(hints.label, 'ok', 'SKU seleccionado automáticamente con el assembly del Job.');
+            } else {
+                setHint(hints.label, 'warn', 'Job encontrado en Oracle, pero no hubo coincidencia automática de SKU por part number.');
+            }
             onStateChange();
         } catch (error) {
             inputs.jobNumber.setCustomValidity('No fue posible validar el Job en este momento.');

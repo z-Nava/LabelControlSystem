@@ -11,8 +11,8 @@
                 </div>
                 <h1 class="mt-3 text-2xl font-semibold text-slate-900">Crear requisición de etiquetas</h1>
                 <p class="mt-2 max-w-3xl text-slate-600">
-                    Completa la solicitud paso a paso: primero define la operación, después selecciona el SKU y la cantidad,
-                    luego valida el Job en Oracle y finalmente agrega datos complementarios antes de guardar.
+                    Completa la solicitud paso a paso: primero define la operación, después valida el Job en Oracle,
+                    luego selecciona el SKU y la cantidad, y finalmente agrega datos complementarios antes de guardar.
                 </p>
             </div>
 
@@ -28,14 +28,14 @@
                 <p class="mt-1 text-sm text-slate-600">Fecha, semana, línea, turno y líder.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Captura</div>
-                <div class="mt-1 font-semibold text-slate-900">Etiqueta solicitada</div>
-                <p class="mt-1 text-sm text-slate-600">SKU / Label PN, cantidad y tipo de etiqueta.</p>
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 2</div>
+                <div class="mt-1 font-semibold text-slate-900">Validación Oracle</div>
+                <p class="mt-1 text-sm text-slate-600">Job, PO y destino con autollenado.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 3</div>
-                <div class="mt-1 font-semibold text-slate-900">Validación Oracle</div>
-                <p class="mt-1 text-sm text-slate-600">Job, PO y destino con autollenado.</p>
+                <div class="mt-1 font-semibold text-slate-900">Etiqueta solicitada</div>
+                <p class="mt-1 text-sm text-slate-600">SKU / Label PN, cantidad y tipo de etiqueta.</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 4</div>
@@ -159,88 +159,7 @@
             <details open class="group rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
                     <div>
-                        <div class="text-base font-semibold text-slate-900">2) Selección de etiqueta</div>
-                        <div class="mt-1 text-sm text-slate-500">Elige el Label PN activo, indica la cantidad y marca el tipo de impresión requerido.</div>
-                    </div>
-                    <span class="text-slate-400 transition group-open:rotate-180">⌄</span>
-                </summary>
-
-                <div class="border-t border-slate-200 p-5 space-y-4">
-                    <div class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                        Solo se muestran SKUs con formato de serial activo para evitar capturas inválidas.
-                    </div>
-
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="text-sm font-medium text-slate-700">Estándar serial</label>
-                            <select id="serialStandard" name="serial_standard" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
-                                @foreach(($serialStandards ?? ['UL', 'EMEA']) as $standard)
-                                    <option value="{{ $standard }}" @selected(old('serial_standard', $defaultStandard ?? 'UL') === $standard)>
-                                        {{ $standard }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="text-sm font-medium text-slate-700">SKU / Label PN</label>
-                            <select id="labelPartNumber" name="label_part_number" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
-                                <option value="">Selecciona SKU / Label PN disponible</option>
-                                @foreach($labelSkus as $sku)
-                                    <option value="{{ $sku->label_part_number }}"
-                                            data-sku="{{ $sku->sku }}"
-                                            data-standard="{{ $sku->serial_standard ?? 'UL' }}"
-                                            data-description="{{ $sku->description }}"
-                                            @selected(old('label_part_number') === $sku->label_part_number)>
-                                        {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }} · {{ $sku->description }}
-                                    </option>
-                                @endforeach
-                           </select>
-                            <p id="labelHint" class="mt-2 text-xs text-slate-500">Selecciona un registro para mostrar su descripción en el resumen.</p>
-                        </div>
-
-                        <div>
-                            <label class="text-sm font-medium text-slate-700">Cantidad</label>
-                            <input id="quantityRequested"
-                                   type="number"
-                                   name="quantity_requested"
-                                   min="1"
-                                   value="{{ old('quantity_requested') }}"
-                                   placeholder="Ej: 250"
-                                   required
-                                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm font-medium text-slate-700">Tipo de etiqueta</label>
-                        <p class="mt-1 text-xs text-slate-500">Selecciona al menos una opción para indicar qué impresión necesita producción.</p>
-
-                        <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
-                                <input id="includeSerial" type="checkbox" name="include_serial" value="1" @checked(old('include_serial')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
-                                <div>
-                                    <div class="font-medium text-slate-900">Serial</div>
-                                    <p class="mt-1 text-sm text-slate-500">Incluye numeración serial para identificación y trazabilidad.</p>
-                                </div>
-                            </label>
-
-                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
-                                <input id="includeRating" type="checkbox" name="include_rating" value="1" @checked(old('include_rating')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
-                                <div>
-                                    <div class="font-medium text-slate-900">Rating</div>
-                                    <p class="mt-1 text-sm text-slate-500">Agrega la etiqueta con información técnica y especificaciones del producto.</p>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </details>
-
-            <details open class="group rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
-                    <div>
-                        <div class="text-base font-semibold text-slate-900">3) Datos del Job y autollenado Oracle</div>
+                        <div class="text-base font-semibold text-slate-900">2) Datos del Job y autollenado Oracle</div>
                         <div class="mt-1 text-sm text-slate-500">Ingresa el Job para consultar Oracle y recuperar PO / destino automáticamente cuando exista coincidencia.</div>
                     </div>
                     <span class="text-slate-400 transition group-open:rotate-180">⌄</span>
@@ -283,6 +202,89 @@
                                    pattern="[A-Za-z0-9\-\/_\s]+"
                                    placeholder="Se autollenará si Oracle lo trae"
                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <details open class="group rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
+                    <div>
+                        <div class="text-base font-semibold text-slate-900">3) Selección de etiqueta</div>
+                        <div class="mt-1 text-sm text-slate-500">Elige el Label PN activo, indica la cantidad y marca el tipo de impresión requerido.</div>
+                    </div>
+                    <span class="text-slate-400 transition group-open:rotate-180">⌄</span>
+                </summary>
+
+                <div class="border-t border-slate-200 p-5 space-y-4">
+                    <div class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Solo se muestran SKUs con formato de serial activo para evitar capturas inválidas.
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-medium text-slate-700">Estándar serial</label>
+                            <select id="serialStandard" name="serial_standard" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
+                                @foreach(($serialStandards ?? ['UL', 'EMEA']) as $standard)
+                                    <option value="{{ $standard }}" @selected(old('serial_standard', $defaultStandard ?? 'UL') === $standard)>
+                                        {{ $standard }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-sm font-medium text-slate-700">SKU / Label PN</label>
+                            <select id="labelPartNumber" name="label_part_number" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
+                                <option value="">Selecciona SKU / Label PN disponible</option>
+                                @foreach($labelSkus as $sku)
+                                    <option value="{{ $sku->label_part_number }}"
+                                            data-sku="{{ $sku->sku }}"
+                                            data-standard="{{ $sku->serial_standard ?? 'UL' }}"
+                                            data-description="{{ $sku->description }}"
+                                            data-assembly-part-number="{{ $sku->assembly_part_number }}"
+                                            data-packaging-part-number="{{ $sku->packaging_part_number }}"
+                                            @selected(old('label_part_number') === $sku->label_part_number)>
+                                        {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }} · {{ $sku->description }}
+                                    </option>
+                                @endforeach
+                           </select>
+                            <p id="labelHint" class="mt-2 text-xs text-slate-500">Selecciona un registro para mostrar su descripción en el resumen.</p>
+                        </div>
+
+                        <div>
+                            <label class="text-sm font-medium text-slate-700">Cantidad</label>
+                            <input id="quantityRequested"
+                                   type="number"
+                                   name="quantity_requested"
+                                   min="1"
+                                   value="{{ old('quantity_requested') }}"
+                                   placeholder="Ej: 250"
+                                   required
+                                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-medium text-slate-700">Tipo de etiqueta</label>
+                        <p class="mt-1 text-xs text-slate-500">Selecciona al menos una opción para indicar qué impresión necesita producción.</p>
+
+                        <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
+                                <input id="includeSerial" type="checkbox" name="include_serial" value="1" @checked(old('include_serial')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
+                                <div>
+                                    <div class="font-medium text-slate-900">Serial</div>
+                                    <p class="mt-1 text-sm text-slate-500">Incluye numeración serial para identificación y trazabilidad.</p>
+                                </div>
+                            </label>
+
+                            <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
+                                <input id="includeRating" type="checkbox" name="include_rating" value="1" @checked(old('include_rating')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
+                                <div>
+                                    <div class="font-medium text-slate-900">Rating</div>
+                                    <p class="mt-1 text-sm text-slate-500">Agrega la etiqueta con información técnica y especificaciones del producto.</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -378,8 +380,8 @@
                 <div class="text-base font-semibold">¿Cómo usar esta vista?</div>
                 <ol class="mt-3 space-y-3 text-sm text-slate-300">
                     <li><span class="font-semibold text-white">1.</span> Completa primero la información general.</li>
-                    <li><span class="font-semibold text-white">2.</span> Elige el Label PN y el tipo de etiqueta requerido.</li>
-                    <li><span class="font-semibold text-white">3.</span> Captura el Job para validar datos en Oracle.</li>
+                    <li><span class="font-semibold text-white">2.</span> Captura el Job para validar datos en Oracle.</li>
+                    <li><span class="font-semibold text-white">3.</span> Elige el Label PN y el tipo de etiqueta requerido.</li>
                     <li><span class="font-semibold text-white">4.</span> Revisa el resumen lateral y guarda la requisición.</li>
                 </ol>
             </div>
