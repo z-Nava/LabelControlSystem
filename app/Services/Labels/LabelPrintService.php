@@ -239,8 +239,9 @@ class LabelPrintService
     {
         $year = (int) $labelRequest->request_date->format('Y');
         $cycleValue = $this->resolveSerialCycleValue($labelRequest, $serialFormat);
+        $usesMonthlyCycle = $this->usesMonthlySerialCycle($labelRequest, $serialFormat);
 
-        return SerialWeek::query()->firstOrCreate(
+        $week = SerialWeek::query()->firstOrCreate(
             [
                 'label_part_number' => $labelRequest->label_part_number,
                 'serial_standard' => (string) ($labelRequest->serial_standard ?? 'UL'),
@@ -252,6 +253,12 @@ class LabelPrintService
                 'last_serial_number' => 0,
             ],
         );
+
+        if ($usesMonthlyCycle) {
+            $this->syncMonthlyCycleCounterFromExistingData($week, $labelRequest, $cycleValue, $year);
+        }
+
+        return $week;
     }
 
     private function resolveActiveLabelSku(LabelRequest $labelRequest): ?LabelSku
@@ -456,6 +463,52 @@ class LabelPrintService
             && $serialFormat->isEmea()
             && $serialFormat->serial_scheme === 'emea_rating'
         );
+    }
+
+    private function syncMonthlyCycleCounterFromExistingData(
+        SerialWeek $week,
+        LabelRequest $labelRequest,
+        int $cycleMonth,
+        int $year
+    ): void {
+        $candidateWeeks = SerialWeek::query()
+            ->where('label_part_number', (string) $labelRequest->label_part_number)
+            ->where('serial_standard', (string) ($labelRequest->serial_standard ?? 'UL'))
+            ->where('year', $year)
+            ->get(['id', 'week']);
+
+        $candidateWeekIds = $candidateWeeks
+            ->filter(function (SerialWeek $candidate) use ($week, $cycleMonth, $year) {
+                if ((int) $candidate->id === (int) $week->id) {
+                    return true;
+                }
+
+                $weekValue = (int) $candidate->week;
+                if ($weekValue < 1 || $weekValue > 53 || $weekValue <= 12) {
+                    return false;
+                }
+
+                try {
+                    $isoMonth = Carbon::now()->setISODate($year, $weekValue, 1)->month;
+                } catch (\Throwable) {
+                    return false;
+                }
+
+                return $isoMonth === $cycleMonth;
+            })
+            ->pluck('id');
+
+        if ($candidateWeekIds->isEmpty()) {
+            return;
+        }
+
+        $maxSerial = (int) SerialUnit::query()
+            ->whereIn('serial_week_id', $candidateWeekIds)
+            ->max('serial_number');
+
+        if ($maxSerial > (int) $week->last_serial_number) {
+            $week->update(['last_serial_number' => $maxSerial]);
+        }
     }
 
     private function normalizeSerialPattern(string $pattern): string
