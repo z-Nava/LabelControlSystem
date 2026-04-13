@@ -46,7 +46,7 @@ class SerialTemplateZplBuilder
             '^CI28',
             sprintf('^FO%d,%d', $qr['x'], $qr['y']),
             sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
-            '^FDLA,{{serial_full}}^FS',
+            $isRatingLabel ? '^FDLA,{{rating_qr_code}}^FS' : '^FDLA,{{serial_full}}^FS',
         ];
 
         if (!$hideSkuOnEmeaRating) {

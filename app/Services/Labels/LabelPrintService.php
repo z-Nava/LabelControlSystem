@@ -319,7 +319,7 @@ class LabelPrintService
                 'serial_standard' => (string) ($labelRequest->serial_standard ?? 'UL'),
                 'serial_number' => $number,
                 'serial_full' => $serialFull,
-                'rating_qr_code' => $this->buildRatingQrCode($serialFull),
+                'rating_qr_code' => $this->buildRatingQrCode($labelRequest, $week, $serialFormat, $number, $serialFull),
                 'status' => 'allocated',
                 'printed_at' => null,
             ]);
@@ -330,8 +330,22 @@ class LabelPrintService
         return $units;
     }
 
-    private function buildRatingQrCode(string $serialFull): string
+    private function buildRatingQrCode(
+        LabelRequest $labelRequest,
+        SerialWeek $week,
+        ?SkuSerialFormat $serialFormat,
+        int $serialNumber,
+        string $serialFull
+    ): string
     {
+        if (
+            $serialFormat
+            && $serialFormat->isEmea()
+            && $serialFormat->serial_scheme === 'emea_rating'
+        ) {
+            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
+        }
+
         return $serialFull;
     }
 
@@ -405,7 +419,13 @@ class LabelPrintService
             ->implode($separator);
     }
 
-    private function formatEmeaRatingFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber, ?int $requestMonth = null): string
+    private function formatEmeaRatingFromComponents(
+        SerialWeek $week,
+        SkuSerialFormat $serialFormat,
+        int $serialNumber,
+        ?int $requestMonth = null,
+        bool $forRatingQr = false
+    ): string
     {
         $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 6, '0', STR_PAD_LEFT);
         $monthYear = $this->resolveEmeaMonthCode($week, $requestMonth) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
@@ -419,6 +439,9 @@ class LabelPrintService
         ];
 
         $separator = (string) ($serialFormat->separator ?? '');
+        if (!$forRatingQr && $separator === '|') {
+            $separator = ' ';
+        }
 
         return collect($components)
             ->filter(fn (string $component) => $component !== '')
