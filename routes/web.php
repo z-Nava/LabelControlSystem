@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
+use App\Http\Controllers\Labels\DummyRequestController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -98,6 +99,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
         Route::get('/label-requests/lookup-job', [LabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+
+        Route::get('/dummy-requests/lookup-job', [DummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
+
+        Route::get('/dummy-requests', [DummyRequestController::class, 'index'])->name('dummy_requests.index');
+        Route::get('/dummy-requests/create', [DummyRequestController::class, 'create'])->name('dummy_requests.create');
+        Route::post('/dummy-requests', [DummyRequestController::class, 'store'])->name('dummy_requests.store');
+        Route::get('/dummy-requests/{id}', [DummyRequestController::class, 'show'])->name('dummy_requests.show');
 
         Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
         Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');

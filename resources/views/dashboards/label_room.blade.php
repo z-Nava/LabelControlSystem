@@ -56,6 +56,17 @@
                         <div class="text-lg font-semibold text-slate-800">Retrabajo etiquetas</div>
                         <div class="text-sm text-slate-600 mt-1">Reimprime seriales y ratings por job</div>
                     </a>
+
+                    <a href="{{ route('dummy_requests.create') }}" class="rounded-2xl bg-indigo-600 text-white p-6 hover:bg-indigo-500 transition">
+                        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Dummy QR</div>
+                        <div class="text-lg font-semibold mt-1">Nueva requisición Dummy QR</div>
+                        <div class="text-sm opacity-90 mt-1">Trazabilidad de herramientas con consecutivo por Job</div>
+                    </a>
+
+                    <a href="{{ route('dummy_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
+                        <div class="text-lg font-semibold text-slate-800">Historial Dummy QR</div>
+                        <div class="text-sm text-slate-600 mt-1">Requisiciones, rangos y lotes por job</div>
+                    </a>
                 </div>
             </section>
 

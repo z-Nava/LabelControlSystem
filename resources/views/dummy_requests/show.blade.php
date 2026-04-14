@@ -1,0 +1,131 @@
+@extends('layouts.app', ['title' => 'Detalle de requisición Dummy QR'])
+
+@section('content')
+<div class="bg-white rounded-2xl shadow p-6">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h1 class="text-2xl font-semibold text-slate-900">Requisición Dummy QR #{{ $dummyRequest->id }}</h1>
+            <p class="text-slate-600 mt-1">{{ $dummyRequest->line?->code }} · Turno {{ $dummyRequest->shift?->code }} · {{ $dummyRequest->request_date?->format('Y-m-d') }}</p>
+        </div>
+
+        <div class="flex gap-2">
+            <a href="{{ route('dummy_requests.index') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Volver al listado</a>
+        </div>
+    </div>
+
+    @if(session('success'))
+        <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+
+    @php
+        $statusText = match ($dummyRequest->status) {
+            'requested' => 'Solicitada',
+            'in_progress' => 'En proceso',
+            'completed' => 'Completada',
+            default => ucfirst(str_replace('_', ' ', (string) $dummyRequest->status)),
+        };
+        $statusClasses = match ($dummyRequest->status) {
+            'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            'in_progress' => 'bg-amber-100 text-amber-700 border-amber-200',
+            default => 'bg-sky-100 text-sky-700 border-sky-200',
+        };
+        $title = $dummyRequest->request_type === 'rework' ? 'RW Dummy QR' : 'RMT Dummy QR';
+        $printedQty = (int) $dummyRequest->printBatches->sum('quantity');
+    @endphp
+
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-500">Resumen</div>
+            <div class="font-semibold mt-1">{{ $title }}</div>
+            <div class="text-slate-700">Qty solicitada: {{ number_format($dummyRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">Qty impresa (batches): {{ number_format($printedQty) }}</div>
+            <div class="text-slate-700">Rango:</div>
+            <div class="font-mono text-xs">{{ str_pad((string) $dummyRequest->range_from, 10, '0', STR_PAD_LEFT) }} - {{ str_pad((string) $dummyRequest->range_to, 10, '0', STR_PAD_LEFT) }}</div>
+            <div class="mt-1 text-slate-700">Estatus:
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold {{ $statusClasses }}">
+                    {{ $statusText }}
+                </span>
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-500">Datos del Job</div>
+            <div class="font-semibold mt-1">Job: {{ $dummyRequest->job_number }}</div>
+            <div class="text-slate-700">FG: {{ $dummyRequest->fg_code }}</div>
+            <div class="text-slate-700">Solicitante: {{ $dummyRequest->requested_by_name }}</div>
+            <div class="text-slate-700">Líder: {{ $dummyRequest->leader_name }}</div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-500">Notas</div>
+            <div class="mt-1 text-slate-700 text-sm">{{ $dummyRequest->notes ?: 'Sin notas.' }}</div>
+        </div>
+    </div>
+
+    <div class="mt-6 rounded-xl border border-slate-200">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h2 class="font-semibold text-slate-900">Historial de impresiones (batches)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                <tr class="text-left text-slate-500 border-b border-slate-200">
+                    <th class="py-3 px-4">Fecha</th>
+                    <th class="py-3 px-4">Tipo</th>
+                    <th class="py-3 px-4">Cantidad</th>
+                    <th class="py-3 px-4">Impreso por</th>
+                    <th class="py-3 px-4">Motivo</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y">
+                @forelse($dummyRequest->printBatches as $batch)
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                        <td class="py-3 px-4">{{ $batch->batch_type }}</td>
+                        <td class="py-3 px-4">{{ number_format((int) $batch->quantity) }}</td>
+                        <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
+                        <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados para esta requisición.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-6 rounded-xl border border-slate-200">
+        <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+            <h2 class="font-semibold text-slate-900">Etiquetas Dummy generadas (primeros 200 registros)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-slate-500 border-b border-slate-200">
+                        <th class="py-3 px-4">Consecutivo</th>
+                        <th class="py-3 px-4">Tipo</th>
+                        <th class="py-3 px-4">QR payload</th>
+                        <th class="py-3 px-4">Reimpresiones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    @forelse($dummyRequest->items as $item)
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-mono">{{ $item->consecutive_10d }}</td>
+                            <td class="py-3 px-4">{{ strtoupper($item->dummy_type) }}</td>
+                            <td class="py-3 px-4 font-mono text-xs">{{ $item->qr_payload }}</td>
+                            <td class="py-3 px-4">{{ number_format((int) $item->print_count) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="px-4 py-6 text-center text-slate-500">No hay etiquetas generadas para esta requisición.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endsection
