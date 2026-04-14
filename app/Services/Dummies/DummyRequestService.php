@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 class DummyRequestService
 {
     private const STATUS_REQUESTED = 'requested';
+    private const STATUS_COMPLETED = 'completed';
+    private const STATUS_CANCELLED = 'cancelled';
 
     public function __construct(
         private readonly OracleJobLookupService $oracleJobLookup,
@@ -90,6 +92,32 @@ class DummyRequestService
 
             return $request->load(['line', 'shift']);
         });
+    }
+
+    public function complete(DummyRequest $dummyRequest): DummyRequest
+    {
+        if ($dummyRequest->status === self::STATUS_CANCELLED) {
+            throw ValidationException::withMessages([
+                'status' => 'No se puede completar una requisición cancelada.',
+            ]);
+        }
+
+        $dummyRequest->update(['status' => self::STATUS_COMPLETED]);
+
+        return $dummyRequest->refresh();
+    }
+
+    public function cancel(DummyRequest $dummyRequest): DummyRequest
+    {
+        if (in_array($dummyRequest->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED], true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Solo se pueden cancelar requisiciones abiertas (requested o in_progress).',
+            ]);
+        }
+
+        $dummyRequest->update(['status' => self::STATUS_CANCELLED]);
+
+        return $dummyRequest->refresh();
     }
 
     public function lookupOracleJob(string $jobNumber): array

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
+use App\Http\Controllers\Dummies\DummyPrintController;
 use App\Http\Controllers\Dummies\DummyRequestController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
@@ -115,6 +116,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/dummy-requests/create', [DummyRequestController::class, 'create'])->name('dummy_requests.create');
         Route::post('/dummy-requests', [DummyRequestController::class, 'store'])->name('dummy_requests.store');
         Route::get('/dummy-requests/{id}', [DummyRequestController::class, 'show'])->name('dummy_requests.show');
+        Route::post('/dummy-requests/{dummy_request}/cancel', [DummyRequestController::class, 'cancel'])->name('dummy_requests.cancel');
+        Route::post('/dummy-requests/{dummy_request}/complete', [DummyRequestController::class, 'complete'])->name('dummy_requests.complete');
+
+        Route::get('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'create'])->name('dummy_requests.print.create');
+        Route::post('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'store'])->name('dummy_requests.print.store');
+        Route::get('/dummy-requests/{dummy_request}/print-batches/{batch}/print', [DummyPrintController::class, 'print'])->name('dummy_requests.print_batches.print');
 
         Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
         Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');

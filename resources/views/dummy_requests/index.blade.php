@@ -53,7 +53,7 @@
             <label class="text-sm text-slate-600">Status</label>
             <select name="status" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                 <option value="">Todos</option>
-                @foreach(['requested','in_progress','completed'] as $status)
+                @foreach(['requested','in_progress','completed','cancelled'] as $status)
                     <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $status }}</option>
                 @endforeach
             </select>
@@ -77,6 +77,7 @@
                     <th class="py-3 px-4">Línea / Turno</th>
                     <th class="py-3 px-4">Job / FG</th>
                     <th class="py-3 px-4">Tipo</th>
+                    <th class="py-3 px-4">Estatus</th>
                     <th class="py-3 px-4">Rango consecutivo</th>
                     <th class="py-3 px-4">Qty</th>
                     <th class="py-3 px-4">Acciones</th>
@@ -96,6 +97,7 @@
                             <div class="text-xs text-slate-500">FG: {{ $request->fg_code }}</div>
                         </td>
                         <td class="py-3 px-4">{{ $typeLabel }}</td>
+                        <td class="py-3 px-4">{{ ucfirst(str_replace('_', ' ', $request->status)) }}</td>
                         <td class="py-3 px-4 font-mono text-xs">
                             {{ str_pad((string) $request->range_from, 10, '0', STR_PAD_LEFT) }}
                             -
@@ -111,7 +113,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-6 text-center text-slate-500">No hay requisiciones Dummy QR con los filtros seleccionados.</td>
+                        <td colspan="8" class="px-4 py-6 text-center text-slate-500">No hay requisiciones Dummy QR con los filtros seleccionados.</td>
                     </tr>
                 @endforelse
             </tbody>

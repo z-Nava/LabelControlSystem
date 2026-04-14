@@ -8,13 +8,25 @@
             <p class="text-slate-600 mt-1">{{ $dummyRequest->line?->code }} · Turno {{ $dummyRequest->shift?->code }} · {{ $dummyRequest->request_date?->format('Y-m-d') }}</p>
         </div>
 
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
             <a href="{{ route('dummy_requests.index') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Volver al listado</a>
+            @if(in_array($dummyRequest->status, ['requested', 'in_progress'], true))
+                <a href="{{ route('dummy_requests.print.create', $dummyRequest) }}" class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500">Ir a imprimir</a>
+            @endif
         </div>
     </div>
 
     @if(session('success'))
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+    @if($errors->any())
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <ul class="list-disc list-inside space-y-1">
+                @foreach($errors->all() as $message)
+                    <li>{{ $message }}</li>
+                @endforeach
+            </ul>
+        </div>
     @endif
 
     @php
@@ -22,16 +34,28 @@
             'requested' => 'Solicitada',
             'in_progress' => 'En proceso',
             'completed' => 'Completada',
+            'cancelled' => 'Cancelada',
             default => ucfirst(str_replace('_', ' ', (string) $dummyRequest->status)),
         };
         $statusClasses = match ($dummyRequest->status) {
             'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+            'cancelled' => 'bg-red-100 text-red-700 border-red-200',
             'in_progress' => 'bg-amber-100 text-amber-700 border-amber-200',
             default => 'bg-sky-100 text-sky-700 border-sky-200',
         };
         $title = $dummyRequest->request_type === 'rework' ? 'RW Dummy QR' : 'RMT Dummy QR';
         $printedQty = (int) $dummyRequest->printBatches->sum('quantity');
     @endphp
+
+    <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <h2 class="text-base font-semibold text-blue-900">Flujo sugerido</h2>
+        <ol class="mt-2 list-decimal list-inside text-sm text-blue-900 space-y-1">
+            <li>Validar resumen y rango consecutivo del Job.</li>
+            <li>Entrar a <span class="font-semibold">Ir a imprimir</span> para generar el batch inicial o reimpresiones.</li>
+            <li>Cuando la producción termine, marcar como <span class="font-semibold">Completada</span>.</li>
+            <li>Si se detecta error operativo antes de cerrar, usar <span class="font-semibold">Cancelar</span>.</li>
+        </ol>
+    </div>
 
     <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -57,8 +81,25 @@
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-500">Notas</div>
-            <div class="mt-1 text-slate-700 text-sm">{{ $dummyRequest->notes ?: 'Sin notas.' }}</div>
+            <div class="text-xs uppercase tracking-wide text-slate-500">Acciones de estado</div>
+            <p class="mt-1 text-xs text-slate-600">Estas acciones cierran el ciclo operativo de la requisición.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @if(in_array($dummyRequest->status, ['requested', 'in_progress'], true))
+                    <form method="POST" action="{{ route('dummy_requests.complete', $dummyRequest) }}">
+                        @csrf
+                        <button class="rounded-lg border border-emerald-200 text-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-50">Marcar como completada</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('dummy_requests.cancel', $dummyRequest) }}">
+                        @csrf
+                        <button class="rounded-lg border border-red-200 text-red-700 px-3 py-1.5 text-sm hover:bg-red-50" onclick="return confirm('¿Seguro que deseas cancelar la requisición dummy?')">Cancelar</button>
+                    </form>
+                @else
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                        Esta requisición ya no permite cambios de estado.
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -75,20 +116,24 @@
                     <th class="py-3 px-4">Cantidad</th>
                     <th class="py-3 px-4">Impreso por</th>
                     <th class="py-3 px-4">Motivo</th>
+                    <th class="py-3 px-4 text-right">Acción</th>
                 </tr>
                 </thead>
                 <tbody class="divide-y">
                 @forelse($dummyRequest->printBatches as $batch)
                     <tr class="hover:bg-slate-50">
                         <td class="py-3 px-4">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '-' }}</td>
-                        <td class="py-3 px-4">{{ $batch->batch_type }}</td>
+                        <td class="py-3 px-4">{{ strtoupper($batch->batch_type) }}</td>
                         <td class="py-3 px-4">{{ number_format((int) $batch->quantity) }}</td>
                         <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                         <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
+                        <td class="py-3 px-4 text-right">
+                            <a href="{{ route('dummy_requests.print_batches.print', ['dummy_request' => $dummyRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados para esta requisición.</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-slate-500">Aún no hay batches registrados para esta requisición.</td>
                     </tr>
                 @endforelse
                 </tbody>

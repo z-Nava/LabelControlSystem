@@ -7,6 +7,7 @@ use App\Http\Requests\Dummies\IndexDummyRequestRequest;
 use App\Http\Requests\Dummies\LookupOracleDummyJobRequest;
 use App\Http\Requests\Dummies\StoreDummyRequestRequest;
 use App\Services\Dummies\DummyRequestReadService;
+use App\Models\DummyRequest;
 use App\Services\Dummies\DummyRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -47,6 +48,21 @@ class DummyRequestController extends Controller
         $dummyRequest = $this->readService->findForShow($id);
 
         return view('dummy_requests.show', compact('dummyRequest'));
+    }
+
+
+    public function cancel(DummyRequest $dummy_request): RedirectResponse
+    {
+        $this->service->cancel($dummy_request);
+
+        return redirect()->route('dummy_requests.show', $dummy_request)->with('success', 'Requisición dummy cancelada.');
+    }
+
+    public function complete(DummyRequest $dummy_request): RedirectResponse
+    {
+        $this->service->complete($dummy_request);
+
+        return redirect()->route('dummy_requests.show', $dummy_request)->with('success', 'Requisición dummy completada.');
     }
 
     public function lookup(LookupOracleDummyJobRequest $request): JsonResponse

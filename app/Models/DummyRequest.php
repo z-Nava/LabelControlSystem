@@ -71,6 +71,6 @@ class DummyRequest extends Model
 
     public function scopeClosed($query)
     {
-        return $query->where('status', 'completed');
+        return $query->whereIn('status', ['completed', 'cancelled']);
     }
 }
