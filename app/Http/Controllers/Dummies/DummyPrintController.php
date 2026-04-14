@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dummies;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dummies\StoreDummyPrintBatchRequest;
 use App\Models\DummyPrintBatch;
+use App\Models\DummyQrTemplate;
 use App\Models\DummyRequest;
 use App\Services\Dummies\DummyPrintService;
 use Illuminate\Http\RedirectResponse;
@@ -49,9 +50,19 @@ class DummyPrintController extends Controller
             'items.requestItem:id,dummy_request_id,consecutive,consecutive_10d,dummy_type,qr_payload',
         ]);
 
+        $templates = DummyQrTemplate::query()
+            ->whereIn('dummy_type', ['rmt', 'rw'])
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('dummy_type');
+
         return view('dummy_print.print', [
             'dummyRequest' => $dummy_request,
             'batch' => $batch,
+            'templatesByType' => [
+                'rmt' => optional($templates->get('rmt'))->zpl,
+                'rw' => optional($templates->get('rw'))->zpl,
+            ],
         ]);
     }
 }
