@@ -25,10 +25,7 @@
                         <div class="text-sm text-slate-600 mt-1">Catálogo de líneas (MXC007, MXMR003...).</div>
                     </a>
 
-                    <a href="{{ route('stock_locators.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                        <div class="font-semibold">Locals by Oracle Line</div>
-                        <div class="text-sm text-slate-600 mt-1">Mapeo de STOCK_LOCATOR → SUBINVENTORY para masters.</div>
-                    </a>
+                    
                 </div>
             </section>
 
@@ -39,28 +36,10 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <a href="{{ route('admin.sku_template_configurations.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                        <div class="font-semibold">Templates por SKU</div>
-                        <div class="text-sm text-slate-600 mt-1">Templates ZPL + Print Profiles en una vista por SKU/PN.</div>
-                    </a>
-                </div>
-            </section>
 
-            <section>
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm">O</span>
-                    <h2 class="text-lg font-semibold text-slate-900">Oracle</h2>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <a href="{{ route('oracle_jobs.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                        <div class="font-semibold">Oracle Jobs</div>
-                        <div class="text-sm text-slate-600 mt-1">Fuente central de producción (Excel).</div>
-                    </a>
-
-                    <a href="{{ route('oracle_jobs.import_view') }}" class="rounded-2xl border p-5 hover:shadow transition">
-                        <div class="font-semibold">Importar Oracle Jobs</div>
-                        <div class="text-sm text-slate-600 mt-1">Cargar archivo Excel desde Oracle.</div>
+                    <a href="{{ route('stock_locators.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Locals by Oracle Line</div>
+                        <div class="text-sm text-slate-600 mt-1">Mapeo de STOCK_LOCATOR → SUBINVENTORY para masters.</div>
                     </a>
                 </div>
             </section>
@@ -82,9 +61,41 @@
                         <div class="text-sm text-slate-600 mt-1">Definir segmentos UL/EMEA y formatos serial.</div>
                     </a>
 
+                    <a href="{{ route('admin.sku_template_configurations.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Templates por SKU</div>
+                        <div class="text-sm text-slate-600 mt-1">Templates ZPL + Print Profiles en una vista por SKU/PN.</div>
+                    </a>
+                </div>
+            </section>
+            <section>
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-sm">D</span>
+                    <h2 class="text-lg font-semibold text-slate-900">Dummies QR</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <a href="{{ route('admin.dummy_qr_templates.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                         <div class="font-semibold">Templates Dummy QR (RMT/RW)</div>
                         <div class="text-sm text-slate-600 mt-1">Configura posiciones FG/JOB/Consecutivo y prueba Zebra.</div>
+                    </a>
+                </div>
+            </section>
+
+            <section>
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm">O</span>
+                    <h2 class="text-lg font-semibold text-slate-900">Oracle</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <a href="{{ route('oracle_jobs.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Oracle Jobs</div>
+                        <div class="text-sm text-slate-600 mt-1">Fuente central de producción (Excel).</div>
+                    </a>
+
+                    <a href="{{ route('oracle_jobs.import_view') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Importar Oracle Jobs</div>
+                        <div class="text-sm text-slate-600 mt-1">Cargar archivo Excel desde Oracle.</div>
                     </a>
                 </div>
             </section>
