@@ -9,6 +9,7 @@ import './pages/oracle-jobs-import';
 import './pages/master-print-template';
 import './pages/label-requests-create';
 import './pages/sku-template-configurations-form';
+import './pages/dummy-requests-create';
 
 // opcional: hacerlo global
 window.Swal = Swal

@@ -52,6 +52,17 @@ class StoreDummyRequestRequest extends FormRequest
 
             if (!$job) {
                 $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
+                return;
+            }
+
+            $requestedQty = (int) $this->input('quantity_requested');
+            $jobQty = (int) $job->job_qty;
+
+            if ($jobQty > 0 && $requestedQty > $jobQty) {
+                $validator->errors()->add(
+                    'quantity_requested',
+                    "La cantidad solicitada ({$requestedQty}) no puede superar el Job Qty ({$jobQty}) para el Job {$jobNumber}."
+                );
             }
         });
     }

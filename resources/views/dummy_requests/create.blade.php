@@ -33,7 +33,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('dummy_requests.store') }}" class="space-y-4">
+    <form method="POST" action="{{ route('dummy_requests.store') }}" data-lookup-url="{{ route('dummy_requests.lookup_job') }}" id="dummyRequestCreate" class="space-y-4">
         @csrf
 
         <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
@@ -77,12 +77,19 @@
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div>
                     <label class="text-sm font-medium text-slate-700">Job producción</label>
-                    <input type="text" name="job_number" value="{{ old('job_number') }}" maxlength="40" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase" />
+                    <input id="jobNumber" type="text" name="job_number" value="{{ old('job_number') }}" maxlength="40" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase" />
                     <p class="mt-1 text-xs text-slate-500">El FG se toma automáticamente desde Oracle usando este Job.</p>
+                    <p id="jobInfoHint" class="mt-1 text-xs text-emerald-700"></p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Assembly (informativo)</label>
+                    <input id="jobAssembly" type="text" readonly tabindex="-1" class="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-700" />
+                    <p class="mt-1 text-xs text-slate-500">Se muestra automáticamente al validar el Job de producción.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Cantidad solicitada</label>
-                    <input type="number" name="quantity_requested" min="1" max="100000" value="{{ old('quantity_requested') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <input id="quantityRequested" type="number" name="quantity_requested" min="1" max="100000" value="{{ old('quantity_requested') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <p id="quantityHint" class="mt-1 text-xs text-slate-500">La cantidad no puede exceder el Job Qty de Oracle.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Tipo de requisición</label>
