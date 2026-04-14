@@ -57,15 +57,27 @@
                         <div class="text-sm text-slate-600 mt-1">Reimprime seriales y ratings por job</div>
                     </a>
 
+                </div>
+            </section>
+
+
+            {{-- Dummy QR --}}
+            <section>
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-sm">D</span>
+                    <h2 class="text-lg font-semibold text-slate-900">Dummy QR</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <a href="{{ route('dummy_requests.create') }}" class="rounded-2xl bg-indigo-600 text-white p-6 hover:bg-indigo-500 transition">
-                        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Dummy QR</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Paso 1</div>
                         <div class="text-lg font-semibold mt-1">Nueva requisición Dummy QR</div>
-                        <div class="text-sm opacity-90 mt-1">Trazabilidad de herramientas con consecutivo por Job</div>
+                        <div class="text-sm opacity-90 mt-1">Genera lote de dummys con consecutivo único por Job</div>
                     </a>
 
                     <a href="{{ route('dummy_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
                         <div class="text-lg font-semibold text-slate-800">Historial Dummy QR</div>
-                        <div class="text-sm text-slate-600 mt-1">Requisiciones, rangos y lotes por job</div>
+                        <div class="text-sm text-slate-600 mt-1">Consulta requisiciones, rangos y estatus por job</div>
                     </a>
                 </div>
             </section>

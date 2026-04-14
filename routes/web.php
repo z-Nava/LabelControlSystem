@@ -7,7 +7,7 @@ use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
-use App\Http\Controllers\Labels\DummyRequestController;
+use App\Http\Controllers\Dummies\DummyRequestController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
 use App\Http\Controllers\Admin\SkuTemplateConfigurationController;
 use App\Http\Controllers\Admin\StockLocatorController;
+use App\Http\Controllers\Admin\DummyQrTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -77,6 +78,14 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/sku-template-configurations/{configuration}/edit', [SkuTemplateConfigurationController::class, 'edit'])->name('admin.sku_template_configurations.edit');
         Route::put('/sku-template-configurations/{configuration}', [SkuTemplateConfigurationController::class, 'update'])->name('admin.sku_template_configurations.update');
         Route::post('/sku-template-configurations/{configuration}/toggle', [SkuTemplateConfigurationController::class, 'toggle'])->name('admin.sku_template_configurations.toggle');
+
+
+        Route::get('/dummy-qr-templates', [DummyQrTemplateController::class, 'index'])->name('admin.dummy_qr_templates.index');
+        Route::get('/dummy-qr-templates/create', [DummyQrTemplateController::class, 'create'])->name('admin.dummy_qr_templates.create');
+        Route::post('/dummy-qr-templates', [DummyQrTemplateController::class, 'store'])->name('admin.dummy_qr_templates.store');
+        Route::get('/dummy-qr-templates/{dummy_qr_template}/edit', [DummyQrTemplateController::class, 'edit'])->name('admin.dummy_qr_templates.edit');
+        Route::put('/dummy-qr-templates/{dummy_qr_template}', [DummyQrTemplateController::class, 'update'])->name('admin.dummy_qr_templates.update');
+        Route::post('/dummy-qr-templates/{dummy_qr_template}/toggle', [DummyQrTemplateController::class, 'toggle'])->name('admin.dummy_qr_templates.toggle');
 
 
     });
