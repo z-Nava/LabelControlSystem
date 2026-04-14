@@ -69,7 +69,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <a href="{{ route('dummy_requests.create') }}" class="rounded-2xl bg-indigo-600 text-white p-6 hover:bg-indigo-500 transition">
+                    <a href="{{ route('dummy_requests.create') }}" class="rounded-2xl bg-slate-900 text-white p-6 hover:bg-slate-800 transition">
                         <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Paso 1</div>
                         <div class="text-lg font-semibold mt-1">Nueva requisición Dummy QR</div>
                         <div class="text-sm opacity-90 mt-1">Genera lote de dummys con consecutivo único por Job</div>
@@ -91,15 +91,15 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <a href="{{ route('oracle_jobs.index') }}"
-                        class="rounded-2xl border p-5 hover:shadow transition">
+                        class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
                         <div class="font-semibold">Consultar Jobs</div>
-                        <div class="text-sm text-slate-600 mt-1">
+                        <div class="text-sm opacity-90 mt-1">
                             Buscar jobs para requisiciones
                         </div>
                     </a>
 
                     <a href="{{ route('oracle_jobs.import_view') }}"
-                        class="rounded-2xl bg-red-600 text-white p-5 hover:bg-red-500 transition">
+                        class="rounded-2xl border p-6 hover:shadow transition">
                         <div class="font-semibold">Cargar Excel Oracle</div>
                         <div class="text-sm opacity-90 mt-1">
                             Actualizar información de jobs
