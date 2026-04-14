@@ -47,14 +47,17 @@
             </thead>
             <tbody class="divide-y">
             @foreach($batch->items as $item)
-                <tr class="hover:bg-slate-50" data-item='@json([
-                    'dummy_type' => strtolower((string) $item->requestItem?->dummy_type),
-                    'copies' => (int) $item->copies,
-                    'job_number' => (string) ($dummyRequest->job_number ?? ''),
-                    'fg_code' => (string) ($dummyRequest->fg_code ?? ''),
-                    'consecutive_10d' => (string) ($item->requestItem?->consecutive_10d ?? ''),
-                    'qr_payload' => (string) ($item->requestItem?->qr_payload ?? ''),
-                ])'>
+                @php
+                    $rowPayload = [
+                        'dummy_type' => strtolower((string) $item->requestItem?->dummy_type),
+                        'copies' => (int) $item->copies,
+                        'job_number' => (string) ($dummyRequest->job_number ?? ''),
+                        'fg_code' => (string) ($dummyRequest->fg_code ?? ''),
+                        'consecutive_10d' => (string) ($item->requestItem?->consecutive_10d ?? ''),
+                        'qr_payload' => (string) ($item->requestItem?->qr_payload ?? ''),
+                    ];
+                @endphp
+                <tr class="hover:bg-slate-50" data-item='@json($rowPayload)'>
                     <td class="py-3 px-4 font-mono">{{ $item->requestItem?->consecutive_10d }}</td>
                     <td class="py-3 px-4">{{ strtoupper($item->requestItem?->dummy_type ?? '-') }}</td>
                     <td class="py-3 px-4">{{ number_format((int) $item->copies) }}</td>
