@@ -154,11 +154,29 @@
             throw new Error(`No existe template activo para tipo ${String(item.dummy_type).toUpperCase()}.`);
         }
 
-        return template
+        const qrPayload = String(item.qr_payload || '');
+        const qrPayloadHex = qrPayload
+            .replaceAll('\\', '\\5C')
+            .replaceAll('^', '\\5E')
+            .replaceAll('~', '\\7E');
+        const normalizedQrField = `^FH\\^FDLA,${qrPayloadHex}^FS`;
+
+        let zpl = template;
+        ['N', 'R', 'I', 'B'].forEach((orientation) => {
+            zpl = zpl.replaceAll(`^FD${orientation},A^DM^^FG^^JOB^^CONSECUTIVO^^^FS`, normalizedQrField);
+        });
+
+        zpl = zpl
+            .replaceAll('^FH\\^FDLA,^DM^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
+            .replaceAll('^FDLA,^DM^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
+            .replaceAll('^DM^^FG^^JOB^^CONSECUTIVO^^', qrPayloadHex)
+            .replaceAll('^FDLA,', '^FH\\^FDLA,')
+            .replaceAll('^FH\\^FH\\^FDLA,', '^FH\\^FDLA,')
             .replaceAll('^FG^', item.fg_code)
             .replaceAll('^JOB^', item.job_number)
-            .replaceAll('^CONSECUTIVO^', item.consecutive_10d)
-            .replaceAll('^DM^^FG^^JOB^^CONSECUTIVO^^', item.qr_payload);
+            .replaceAll('^CONSECUTIVO^', item.consecutive_10d);
+
+        return zpl;
     };
 
     const sendToPrinter = (zplChunk) => new Promise((resolve, reject) => {
