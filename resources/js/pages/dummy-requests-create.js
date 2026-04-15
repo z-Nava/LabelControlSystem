@@ -10,11 +10,14 @@ import { debounce } from './utils/debounce';
     const lookupUrl = form.dataset.lookupUrl;
     const jobInput = form.querySelector('#jobNumber');
     const assemblyInput = form.querySelector('#jobAssembly');
+    const lineInput = form.querySelector('#jobLine');
     const quantityInput = form.querySelector('#quantityRequested');
     const jobInfoHint = form.querySelector('#jobInfoHint');
     const quantityHint = form.querySelector('#quantityHint');
+    const lineTypeSelect = form.querySelector('#lineTypeSelect');
+    const lineIdSelect = form.querySelector('#lineIdSelect');
 
-    if (!lookupUrl || !jobInput || !assemblyInput || !quantityInput || !jobInfoHint || !quantityHint) {
+    if (!lookupUrl || !jobInput || !assemblyInput || !lineInput || !quantityInput || !jobInfoHint || !quantityHint) {
         return;
     }
 
@@ -23,6 +26,7 @@ import { debounce } from './utils/debounce';
 
     const clearOracleInfo = () => {
         assemblyInput.value = '';
+        lineInput.value = '';
         jobInfoHint.textContent = '';
         quantityHint.textContent = 'La cantidad no puede exceder el Job Qty de Oracle.';
         jobQtyLimit = null;
@@ -83,11 +87,13 @@ import { debounce } from './utils/debounce';
 
             jobInput.setCustomValidity('');
             const assembly = String(data.assembly || '').trim();
+            const oracleLine = String(data.line || '').trim();
             const partDescription = String(data.part_description || '').trim();
             const jobQty = Number(data.job_qty);
 
             assemblyInput.value = assembly;
-            jobInfoHint.textContent = `NP: ${assembly || '-'} | ${partDescription || ''}`;
+            lineInput.value = oracleLine;
+            jobInfoHint.textContent = `NP: ${assembly || '-'} | Línea: ${oracleLine || '-'}${partDescription ? ` | ${partDescription}` : ''}`;
 
             if (Number.isFinite(jobQty) && jobQty > 0) {
                 jobQtyLimit = jobQty;
@@ -117,5 +123,33 @@ import { debounce } from './utils/debounce';
 
     if (jobInput.value.trim() !== '') {
         lookupJob();
+    }
+
+    if (lineTypeSelect && lineIdSelect) {
+        const lineOptions = Array.from(lineIdSelect.options)
+            .filter((option) => option.value !== '');
+
+        const filterLinesByType = () => {
+            const selectedType = lineTypeSelect.value.trim();
+            let shouldResetLineSelection = true;
+
+            lineOptions.forEach((option) => {
+                const lineType = String(option.dataset.lineType || '').trim();
+                const visible = selectedType === '' || lineType === selectedType;
+
+                option.hidden = !visible;
+
+                if (visible && option.value === lineIdSelect.value) {
+                    shouldResetLineSelection = false;
+                }
+            });
+
+            if (shouldResetLineSelection) {
+                lineIdSelect.value = '';
+            }
+        };
+
+        lineTypeSelect.addEventListener('change', filterLinesByType);
+        filterLinesByType();
     }
 })();

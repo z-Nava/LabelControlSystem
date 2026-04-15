@@ -52,11 +52,35 @@
                     <input type="text" name="leader_name" value="{{ old('leader_name') }}" minlength="3" maxlength="120" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
                 </div>
                 <div>
+                    <label class="text-sm font-medium text-slate-700">Tipo de línea</label>
+                    @php
+                        $lineTypes = $lines
+                            ->pluck('line_type')
+                            ->filter()
+                            ->unique()
+                            ->sort()
+                            ->values();
+                        $selectedLineType = old('line_type');
+                    @endphp
+                    <select id="lineTypeSelect" name="line_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5">
+                        <option value="">Todas las líneas</option>
+                        @foreach($lineTypes as $lineType)
+                            <option value="{{ $lineType }}" @selected((string) $selectedLineType === (string) $lineType)>{{ $lineType }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="text-sm font-medium text-slate-700">Línea</label>
-                    <select name="line_id" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5">
+                    <select id="lineIdSelect" name="line_id" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5">
                         <option value="">Selecciona una línea</option>
                         @foreach($lines as $line)
-                            <option value="{{ $line->id }}" @selected((string) old('line_id') === (string) $line->id)>{{ $line->code }} · {{ $line->line_type }}</option>
+                            <option
+                                value="{{ $line->id }}"
+                                data-line-type="{{ $line->line_type }}"
+                                @selected((string) old('line_id') === (string) $line->id)
+                            >
+                                {{ $line->code }} · {{ $line->line_type }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -85,6 +109,11 @@
                     <label class="text-sm font-medium text-slate-700">Assembly (informativo)</label>
                     <input id="jobAssembly" type="text" readonly tabindex="-1" class="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-700" />
                     <p class="mt-1 text-xs text-slate-500">Se muestra automáticamente al validar el Job de producción.</p>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-slate-700">Línea Oracle (informativo)</label>
+                    <input id="jobLine" type="text" readonly tabindex="-1" class="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-700" />
+                    <p class="mt-1 text-xs text-slate-500">Se muestra automáticamente desde Oracle al validar el Job.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Cantidad solicitada</label>
