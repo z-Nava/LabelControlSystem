@@ -79,8 +79,8 @@
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 flex items-center justify-center border-r border-black px-3 py-2">
                 <img
-                    src="{{ Vite::asset('resources/img/LOGO-MILWAUKEE.png') }}"
-                    alt="Milwaukee"
+                    src="{{ asset('images/LOGO-MILWAUKEE.png') }}"
+                    alt="Logo Milwaukee Tool"
                     class="max-h-[12mm] w-auto object-contain"
                 >
             </div>
