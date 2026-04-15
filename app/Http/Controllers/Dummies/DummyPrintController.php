@@ -17,13 +17,20 @@ class DummyPrintController extends Controller
         private readonly DummyPrintService $service,
     ) {}
 
-    public function create(DummyRequest $dummy_request): View
+    public function create(DummyRequest $dummy_request): View|RedirectResponse
     {
         $dummyRequest = $dummy_request->loadCount('items')->load('printBatches');
+        $hasPrintBatch = $dummyRequest->printBatches->contains(fn ($batch) => $batch->batch_type === 'print');
+
+        if ($dummyRequest->status === 'completed' && $hasPrintBatch) {
+            return redirect()
+                ->route('dummy_requests.show', $dummyRequest)
+                ->with('error', 'Esta requisición ya fue confirmada como completada. No puedes volver a entrar al centro de impresión inicial.');
+        }
 
         return view('dummy_print.create', [
             'dummyRequest' => $dummyRequest,
-            'hasPrintBatch' => $dummyRequest->printBatches->contains(fn ($batch) => $batch->batch_type === 'print'),
+            'hasPrintBatch' => $hasPrintBatch,
         ]);
     }
 
@@ -40,9 +47,14 @@ class DummyPrintController extends Controller
             ->with('success', 'Batch dummy generado correctamente.');
     }
 
-    public function print(DummyRequest $dummy_request, DummyPrintBatch $batch): View
+    public function print(DummyRequest $dummy_request, DummyPrintBatch $batch): View|RedirectResponse
     {
         abort_unless($batch->dummy_request_id === $dummy_request->id, 404);
+        if ($dummy_request->status === 'completed' && $batch->batch_type === 'print') {
+            return redirect()
+                ->route('dummy_requests.show', $dummy_request)
+                ->with('error', 'Esta requisición ya fue confirmada como completada. No puedes volver a abrir el centro de impresión del batch inicial.');
+        }
 
         $batch->load([
             'dummyRequest.line:id,code,name',

@@ -19,6 +19,9 @@
     @if(session('success'))
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
+    @endif
     @if($errors->any())
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ul class="list-disc list-inside space-y-1">
@@ -128,7 +131,13 @@
                         <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                         <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
                         <td class="py-3 px-4 text-right">
-                            <a href="{{ route('dummy_requests.print_batches.print', ['dummy_request' => $dummyRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                            @if($dummyRequest->status === 'completed' && $batch->batch_type === 'print')
+                                <span class="inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs text-slate-500 cursor-not-allowed" title="Bloqueado para evitar duplicaciones tras confirmar la impresión inicial.">
+                                    Centro de impresión bloqueado
+                                </span>
+                            @else
+                                <a href="{{ route('dummy_requests.print_batches.print', ['dummy_request' => $dummyRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
+                            @endif
                         </td>
                     </tr>
                 @empty
