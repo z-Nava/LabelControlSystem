@@ -88,6 +88,19 @@
                     @php
                         $printedQty = (int) ($request->printed_qty ?? 0);
                         $typeLabel = $request->request_type === 'rework' ? 'RW Dummy QR' : 'RMT Dummy QR';
+                        $statusLabel = match ($request->status) {
+                            'in_progress' => 'In Progress',
+                            'completed' => 'Completed',
+                            'cancelled' => 'Cancelled',
+                            default => 'Requested',
+                        };
+                        $statusClasses = match ($request->status) {
+                            'completed' => 'bg-green-100 text-green-800',
+                            'in_progress' => 'bg-amber-100 text-amber-800',
+                            'requested' => 'bg-blue-100 text-blue-800',
+                            'cancelled' => 'bg-slate-200 text-slate-700',
+                            default => 'bg-slate-100 text-slate-700',
+                        };
                     @endphp
                     <tr class="hover:bg-slate-50">
                         <td class="py-3 px-4">{{ $request->request_date?->format('Y-m-d') }}</td>
@@ -97,7 +110,11 @@
                             <div class="text-xs text-slate-500">FG: {{ $request->fg_code }}</div>
                         </td>
                         <td class="py-3 px-4">{{ $typeLabel }}</td>
-                        <td class="py-3 px-4">{{ ucfirst(str_replace('_', ' ', $request->status)) }}</td>
+                        <td class="py-3 px-4">
+                            <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $statusClasses }}">
+                                {{ $statusLabel }}
+                            </span>
+                        </td>
                         <td class="py-3 px-4 font-mono text-xs">
                             {{ str_pad((string) $request->range_from, 10, '0', STR_PAD_LEFT) }}
                             -
