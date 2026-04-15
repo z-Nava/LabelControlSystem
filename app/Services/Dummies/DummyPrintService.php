@@ -60,7 +60,7 @@ class DummyPrintService
                 'printed_by_user_id' => $printedByUserId,
                 'printed_by_name' => $printedByName,
                 'quantity' => $items->count() * $copies,
-                'printed_at' => now(),
+                'printed_at' => null,
             ]);
 
             $payload = $items->map(fn ($item) => [

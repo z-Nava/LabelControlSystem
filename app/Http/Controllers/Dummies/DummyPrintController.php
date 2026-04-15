@@ -8,7 +8,9 @@ use App\Models\DummyPrintBatch;
 use App\Models\DummyQrTemplate;
 use App\Models\DummyRequest;
 use App\Services\Dummies\DummyPrintService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DummyPrintController extends Controller
@@ -50,10 +52,10 @@ class DummyPrintController extends Controller
     public function print(DummyRequest $dummy_request, DummyPrintBatch $batch): View|RedirectResponse
     {
         abort_unless($batch->dummy_request_id === $dummy_request->id, 404);
-        if ($dummy_request->status === 'completed' && $batch->batch_type === 'print') {
+        if ($batch->batch_type === 'print' && $batch->printed_at !== null) {
             return redirect()
                 ->route('dummy_requests.show', $dummy_request)
-                ->with('error', 'Esta requisición ya fue confirmada como completada. No puedes volver a abrir el centro de impresión del batch inicial.');
+                ->with('error', 'El batch inicial ya fue impreso y confirmado. El Centro de impresión está bloqueado para evitar duplicados.');
         }
 
         $batch->load([
@@ -71,10 +73,43 @@ class DummyPrintController extends Controller
         return view('dummy_print.print', [
             'dummyRequest' => $dummy_request,
             'batch' => $batch,
+            'alreadyPrinted' => $batch->printed_at !== null,
             'templatesByType' => [
                 'rmt' => optional($templates->get('rmt'))->zpl,
                 'rw' => optional($templates->get('rw'))->zpl,
             ],
+        ]);
+    }
+
+    public function confirm(Request $request, DummyRequest $dummy_request, DummyPrintBatch $batch): JsonResponse
+    {
+        abort_unless((int) $batch->dummy_request_id === (int) $dummy_request->id, 404);
+
+        $data = $request->validate([
+            'printed_ok' => ['required', 'boolean'],
+        ]);
+
+        if (!$data['printed_ok']) {
+            return response()->json(['message' => 'Impresión no confirmada por el cliente.'], 422);
+        }
+
+        if ($batch->printed_at !== null) {
+            return response()->json([
+                'message' => 'Este batch ya estaba confirmado como impreso.',
+                'batch_id' => $batch->id,
+                'already_printed' => true,
+            ]);
+        }
+
+        $batch->forceFill([
+            'printed_at' => now(),
+        ])->save();
+
+        return response()->json([
+            'message' => 'Impresión confirmada correctamente.',
+            'batch_id' => $batch->id,
+            'printed_at' => optional($batch->printed_at)->toDateTimeString(),
+            'already_printed' => false,
         ]);
     }
 }

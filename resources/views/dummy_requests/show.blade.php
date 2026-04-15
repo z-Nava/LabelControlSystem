@@ -125,13 +125,13 @@
                 <tbody class="divide-y">
                 @forelse($dummyRequest->printBatches as $batch)
                     <tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                        <td class="py-3 px-4">{{ $batch->printed_at?->format('Y-m-d H:i') ?? $batch->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                         <td class="py-3 px-4">{{ strtoupper($batch->batch_type) }}</td>
                         <td class="py-3 px-4">{{ number_format((int) $batch->quantity) }}</td>
                         <td class="py-3 px-4">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '-' }}</td>
                         <td class="py-3 px-4">{{ $batch->reason ?: '-' }}</td>
                         <td class="py-3 px-4 text-right">
-                            @if($dummyRequest->status === 'completed' && $batch->batch_type === 'print')
+                            @if($batch->batch_type === 'print' && $batch->printed_at)
                                 <span class="inline-flex rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs text-slate-500 cursor-not-allowed" title="Bloqueado para evitar duplicaciones tras confirmar la impresión inicial.">
                                     Centro de impresión bloqueado
                                 </span>

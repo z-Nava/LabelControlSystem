@@ -122,6 +122,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'create'])->name('dummy_requests.print.create');
         Route::post('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'store'])->name('dummy_requests.print.store');
         Route::get('/dummy-requests/{dummy_request}/print-batches/{batch}/print', [DummyPrintController::class, 'print'])->name('dummy_requests.print_batches.print');
+        Route::post('/dummy-requests/{dummy_request}/print-batches/{batch}/confirm', [DummyPrintController::class, 'confirm'])->name('dummy_requests.print_batches.confirm');
 
         Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
         Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');

@@ -16,6 +16,12 @@ import { debounce } from './utils/debounce';
     const quantityHint = form.querySelector('#quantityHint');
     const lineTypeSelect = form.querySelector('#lineTypeSelect');
     const lineIdSelect = form.querySelector('#lineIdSelect');
+    const requestDateInput = form.querySelector('input[name="request_date"]');
+    const weekInput = form.querySelector('input[name="week"]');
+    const leaderInput = form.querySelector('input[name="leader_name"]');
+    const shiftSelect = form.querySelector('select[name="shift_id"]');
+    const requestTypeSelect = form.querySelector('select[name="request_type"]');
+    const notesInput = form.querySelector('textarea[name="notes"]');
 
     if (!lookupUrl || !jobInput || !assemblyInput || !lineInput || !quantityInput || !jobInfoHint || !quantityHint) {
         return;
@@ -23,6 +29,12 @@ import { debounce } from './utils/debounce';
 
     let latestLookupToken = 0;
     let jobQtyLimit = null;
+    const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 
     const clearOracleInfo = () => {
         assemblyInput.value = '';
@@ -152,4 +164,46 @@ import { debounce } from './utils/debounce';
         lineTypeSelect.addEventListener('change', filterLinesByType);
         filterLinesByType();
     }
+
+    form.addEventListener('submit', async (event) => {
+        if (!window.Swal) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const selectedLine = lineIdSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Sin línea seleccionada';
+        const selectedShift = shiftSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Sin turno seleccionado';
+        const selectedRequestType = requestTypeSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Sin tipo seleccionado';
+        const notesPreview = (notesInput?.value || '').trim();
+
+        const result = await window.Swal.fire({
+            title: '¿Confirmas crear la requisición Dummy QR?',
+            icon: 'question',
+            html: `
+                <div class="text-left text-sm space-y-1">
+                    <p><strong>Job:</strong> ${escapeHtml(jobInput.value.trim().toUpperCase() || '-')}</p>
+                    <p><strong>Cantidad solicitada:</strong> ${escapeHtml(quantityInput.value || '-')}</p>
+                    <p><strong>Tipo de requisición:</strong> ${escapeHtml(selectedRequestType)}</p>
+                    <p><strong>Fecha / Semana:</strong> ${escapeHtml(requestDateInput?.value || '-')} / ${escapeHtml(weekInput?.value || '-')}</p>
+                    <p><strong>Líder:</strong> ${escapeHtml(leaderInput?.value?.trim() || '-')}</p>
+                    <p><strong>Línea:</strong> ${escapeHtml(selectedLine)}</p>
+                    <p><strong>Turno:</strong> ${escapeHtml(selectedShift)}</p>
+                    <p><strong>Assembly:</strong> ${escapeHtml(assemblyInput.value || '-')}</p>
+                    <p><strong>Línea Oracle:</strong> ${escapeHtml(lineInput.value || '-')}</p>
+                    ${notesPreview ? `<p><strong>Notas:</strong> ${escapeHtml(notesPreview)}</p>` : ''}
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, crear requisición',
+            cancelButtonText: 'Cancelar',
+            focusCancel: true,
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        form.submit();
+    });
 })();

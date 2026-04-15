@@ -2,7 +2,10 @@
 
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6" id="dummy-print-center"
-     data-templates='@json($templatesByType)'>
+     data-templates='@json($templatesByType)'
+     data-confirm-url="{{ route('dummy_requests.print_batches.confirm', ['dummy_request' => $dummyRequest, 'batch' => $batch]) }}"
+     data-csrf-token="{{ csrf_token() }}"
+     data-already-printed="{{ $alreadyPrinted ? '1' : '0' }}">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Centro de impresión Dummy QR</h1>
@@ -21,7 +24,7 @@
 
     <div class="mt-6 flex flex-wrap gap-2">
         <button id="connect-printer" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Conectar impresora</button>
-        <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Imprimir</button>
+        <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-slate-400">Imprimir</button>
     </div>
 
     <div class="mt-4 grid gap-4 md:grid-cols-2">
@@ -83,6 +86,8 @@
 
     const templatesByType = JSON.parse(root.dataset.templates || '{}');
     const items = Array.from(root.querySelectorAll('tbody tr[data-item]')).map((row) => JSON.parse(row.dataset.item));
+    const alreadyPrinted = root.dataset.alreadyPrinted === '1';
+    const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
     let selectedDevice = null;
 
     const setStatus = (message, isError = false) => {
@@ -183,8 +188,42 @@
         selectedDevice.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
     });
 
+    const setPrintBlocked = (message) => {
+        if (printButton) {
+            printButton.disabled = true;
+            printButton.title = message;
+        }
+
+        setStatus(message, true);
+    };
+
+    const confirmPrinted = async () => {
+        const response = await fetch(root.dataset.confirmUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ printed_ok: true }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'No se pudo confirmar impresión.');
+        }
+
+        return response.json();
+    };
+
     const printBatch = async () => {
         try {
+            if (printButton?.disabled) {
+                return;
+            }
+
             if (!selectedDevice) {
                 setStatus('Primero conecta una impresora.', true);
                 return;
@@ -210,7 +249,8 @@
                 await sendToPrinter(chunk);
             }
 
-            setStatus('Impresión enviada correctamente a la impresora conectada.');
+            const result = await confirmPrinted();
+            setPrintBlocked(result.message || 'Batch confirmado como impreso. Botón bloqueado para evitar duplicidad.');
         } catch (error) {
             setStatus(`Error en impresión: ${error.message}`, true);
         }
@@ -220,6 +260,10 @@
     printButton?.addEventListener('click', printBatch);
 
     restoreStoredPrinter();
+
+    if (alreadyPrinted) {
+        setPrintBlocked('Este batch ya fue confirmado como impreso. El botón se bloqueó para evitar duplicidad.');
+    }
 })();
 </script>
 @endsection
