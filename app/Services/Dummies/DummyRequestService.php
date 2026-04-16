@@ -41,6 +41,7 @@ class DummyRequestService
             $quantityRequested = (int) $data['quantity_requested'];
             $requestType = (string) $data['request_type'];
             $dummyType = $requestType === 'rework' ? 'rw' : 'rmt';
+            $qrPrefix = $dummyType === 'rw' ? 'RW' : 'DM';
 
             $currentMaxConsecutive = (int) DummyRequestItem::query()
                 ->where('job_number', $jobNumber)
@@ -80,7 +81,7 @@ class DummyRequestService
                     'consecutive' => $consecutive,
                     'consecutive_10d' => $consecutive10d,
                     'dummy_type' => $dummyType,
-                    'qr_payload' => "^DM^{$fgCode}^{$jobNumber}^{$consecutive10d}^",
+                    'qr_payload' => "^{$qrPrefix}^{$fgCode}^{$jobNumber}^{$consecutive10d}^",
                     'print_count' => 0,
                     'last_printed_at' => null,
                     'created_at' => now(),

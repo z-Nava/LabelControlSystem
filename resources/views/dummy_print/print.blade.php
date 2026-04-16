@@ -169,12 +169,16 @@
         let zpl = template;
         ['N', 'R', 'I', 'B'].forEach((orientation) => {
             zpl = zpl.replaceAll(`^FD${orientation},A^DM^^FG^^JOB^^CONSECUTIVO^^^FS`, normalizedQrField);
+            zpl = zpl.replaceAll(`^FD${orientation},A^RW^^FG^^JOB^^CONSECUTIVO^^^FS`, normalizedQrField);
         });
 
         zpl = zpl
             .replaceAll('^FH\\^FDLA,^DM^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
+            .replaceAll('^FH\\^FDLA,^RW^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
             .replaceAll('^FDLA,^DM^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
+            .replaceAll('^FDLA,^RW^^FG^^JOB^^CONSECUTIVO^^^FS', normalizedQrField)
             .replaceAll('^DM^^FG^^JOB^^CONSECUTIVO^^', qrPayloadHex)
+            .replaceAll('^RW^^FG^^JOB^^CONSECUTIVO^^', qrPayloadHex)
             .replaceAll('^FDLA,', '^FH\\^FDLA,')
             .replaceAll('^FH\\^FH\\^FDLA,', '^FH\\^FDLA,')
             .replaceAll('^FG^', item.fg_code)

@@ -11,7 +11,8 @@ class DummyQrTemplateZplBuilder
         $job = '^JOB^';
         $fg = '^FG^';
         $consecutive = '^CONSECUTIVO^';
-        $qrPayload = '^DM^^FG^^JOB^^CONSECUTIVO^^';
+        $qrPrefix = ($layout['dummy_type'] ?? 'rmt') === 'rw' ? '^RW^' : '^DM^';
+        $qrPayload = "{$qrPrefix}^FG^^JOB^^CONSECUTIVO^^";
 
         $titleX = (int) ($layout['title_x'] ?? 20);
         $titleY = (int) ($layout['title_y'] ?? 20);
