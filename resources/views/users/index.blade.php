@@ -42,6 +42,7 @@
                     <th class="py-3 pr-3">No. Empleado</th>
                     <th class="py-3 pr-3">Nombre</th>
                     <th class="py-3 pr-3">Roles</th>
+                    <th class="py-3 pr-3">Módulos Label Room</th>
                     <th class="py-3 pr-3">Turno</th>
                     <th class="py-3 pr-3">Estado</th>
                     <th class="py-3 pr-3">Último acceso</th>
@@ -59,6 +60,21 @@
                                     <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-slate-700">{{ $role->name }}</span>
                                 @endforeach
                             </div>
+                        </td>
+                        <td class="py-3 pr-3">
+                            @if($user->hasRole('label_room'))
+                                @if(empty($user->module_permissions))
+                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Todos</span>
+                                @else
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($user->module_permissions as $permission)
+                                            <span class="inline-flex rounded-full bg-blue-100 px-3 py-1 text-blue-800">{{ $permission }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            @else
+                                <span class="text-slate-500">N/A</span>
+                            @endif
                         </td>
                         <td class="py-3 pr-3">{{ $user->shift_label ?? 'Sin turno' }}</td>
                         <td class="py-3 pr-3">
@@ -90,7 +106,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="py-6 text-center text-slate-500">No hay usuarios registrados.</td>
+                        <td colspan="8" class="py-6 text-center text-slate-500">No hay usuarios registrados.</td>
                     </tr>
                 @endforelse
             </tbody>

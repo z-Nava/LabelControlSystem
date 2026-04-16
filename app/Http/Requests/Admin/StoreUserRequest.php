@@ -21,6 +21,8 @@ class StoreUserRequest extends FormRequest
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'exists:roles,id'],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
+            'module_permissions' => ['nullable', 'array'],
+            'module_permissions.*' => ['required', 'string', 'in:master,labels,dummy,oracle'],
         ];
     }
 
@@ -28,6 +30,7 @@ class StoreUserRequest extends FormRequest
     {
         $this->merge([
             'is_active' => $this->boolean('is_active'),
+            'module_permissions' => array_values(array_unique($this->input('module_permissions', []))),
         ]);
     }
 

@@ -9,6 +9,14 @@ use App\Models\Shift;
 
 class User extends Authenticatable
 {
+
+    public const AVAILABLE_MODULE_PERMISSIONS = [
+        'master',
+        'labels',
+        'dummy',
+        'oracle',
+    ];
+
     use Notifiable;
 
     protected $fillable = [
@@ -16,6 +24,7 @@ class User extends Authenticatable
         'name',
         'password',
         'is_active',
+        'module_permissions',
         'last_login_at',
         'shift_id',
     ];
@@ -28,6 +37,7 @@ class User extends Authenticatable
     protected $casts = [
         'is_active' => 'boolean',
         'last_login_at' => 'datetime',
+        'module_permissions' => 'array',
     ];
 
     public function roles(): BelongsToMany
@@ -38,6 +48,26 @@ class User extends Authenticatable
     public function hasRole(string $roleName): bool
     {
         return $this->roles()->where('name', $roleName)->exists();
+    }
+
+
+    public function hasModuleAccess(string $module): bool
+    {
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        if (!$this->hasRole('label_room')) {
+            return false;
+        }
+
+        $permissions = $this->module_permissions;
+
+        if (empty($permissions)) {
+            return true;
+        }
+
+        return in_array($module, $permissions, true);
     }
 
     public function shift()

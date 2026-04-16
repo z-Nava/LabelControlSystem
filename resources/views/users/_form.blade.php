@@ -46,18 +46,47 @@
         <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
             @php
                 $selectedRoles = old('roles', isset($user) ? $user->roles->pluck('id')->all() : []);
+                $selectedModulePermissions = old('module_permissions', $user->module_permissions ?? []);
             @endphp
 
             @foreach($roles as $role)
                 <label class="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
-                    <input type="checkbox" name="roles[]" value="{{ $role->id }}" class="rounded border-slate-300"
-                           @checked(in_array($role->id, $selectedRoles))>
+                    <input
+                        type="checkbox"
+                        name="roles[]"
+                        value="{{ $role->id }}"
+                        class="rounded border-slate-300 js-role-checkbox"
+                        data-role-name="{{ $role->name }}"
+                        @checked(in_array($role->id, $selectedRoles))
+                    >
                     <span class="text-sm">{{ $role->name }}</span>
                 </label>
             @endforeach
         </div>
         @error('roles') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         @error('roles.*') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    </div>
+
+    <div class="md:col-span-2" id="module-permissions-section">
+        <label class="block text-sm font-medium text-slate-700">Módulos habilitados para Label Room</label>
+        <p class="text-xs text-slate-500 mt-1">Si no seleccionas módulos, tendrá acceso total a Label Room por compatibilidad.</p>
+
+        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+            @foreach($availableModulePermissions as $permission)
+                <label class="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
+                    <input
+                        type="checkbox"
+                        name="module_permissions[]"
+                        value="{{ $permission }}"
+                        class="rounded border-slate-300"
+                        @checked(in_array($permission, $selectedModulePermissions, true))
+                    >
+                    <span class="text-sm capitalize">{{ $permission }}</span>
+                </label>
+            @endforeach
+        </div>
+        @error('module_permissions') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+        @error('module_permissions.*') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
     <div>
@@ -77,3 +106,28 @@
                placeholder="******" />
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const roleCheckboxes = Array.from(document.querySelectorAll('.js-role-checkbox'));
+        const moduleSection = document.getElementById('module-permissions-section');
+
+        if (!moduleSection || roleCheckboxes.length === 0) {
+            return;
+        }
+
+        const toggleModuleSection = () => {
+            const hasLabelRoomRole = roleCheckboxes.some((checkbox) => {
+                return checkbox.checked && checkbox.dataset.roleName === 'label_room';
+            });
+
+            moduleSection.classList.toggle('hidden', !hasLabelRoomRole);
+        };
+
+        roleCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', toggleModuleSection);
+        });
+
+        toggleModuleSection();
+    });
+</script>

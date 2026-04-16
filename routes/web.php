@@ -95,56 +95,62 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('role:label_room')->group(function () {
         Route::get('/label-room', function () { return 'Label Room Area'; })->name('labelroom.home');
 
-        Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
-        Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
-        Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
-        Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
+        Route::middleware('module_access:master')->group(function () {
+            Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
+            Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
+            Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
+            Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
 
-        Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
-        Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
-        Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
-        Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
-        Route::get('/master-print-batches/{batch}/pdf', [MasterPrintController::class, 'pdf'])->name('master_print_batches.pdf');
+            Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
+            Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
+            Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
+            Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
+            Route::get('/master-print-batches/{batch}/pdf', [MasterPrintController::class, 'pdf'])->name('master_print_batches.pdf');
+            Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
+        });
+        Route::middleware('module_access:dummy')->group(function () {
+            Route::get('/dummy-requests/lookup-job', [DummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
+            Route::get('/dummy-requests', [DummyRequestController::class, 'index'])->name('dummy_requests.index');
+            Route::get('/dummy-requests/create', [DummyRequestController::class, 'create'])->name('dummy_requests.create');
+            Route::post('/dummy-requests', [DummyRequestController::class, 'store'])->name('dummy_requests.store');
+            Route::get('/dummy-requests/{id}', [DummyRequestController::class, 'show'])->name('dummy_requests.show');
+            Route::post('/dummy-requests/{dummy_request}/cancel', [DummyRequestController::class, 'cancel'])->name('dummy_requests.cancel');
+            Route::post('/dummy-requests/{dummy_request}/complete', [DummyRequestController::class, 'complete'])->name('dummy_requests.complete');
 
-        Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
-        Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
-        Route::get('/label-requests/lookup-job', [LabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+            Route::get('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'create'])->name('dummy_requests.print.create');
+            Route::post('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'store'])->name('dummy_requests.print.store');
+            Route::get('/dummy-requests/{dummy_request}/print-batches/{batch}/print', [DummyPrintController::class, 'print'])->name('dummy_requests.print_batches.print');
+            Route::post('/dummy-requests/{dummy_request}/print-batches/{batch}/confirm', [DummyPrintController::class, 'confirm'])->name('dummy_requests.print_batches.confirm');
+        });
 
-        Route::get('/dummy-requests/lookup-job', [DummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
+        Route::middleware('module_access:labels')->group(function () {
+            Route::get('/label-requests/lookup-job', [LabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+            Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
+            Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');
+            Route::post('/label-requests', [LabelRequestController::class, 'store'])->name('label_requests.store');
+            Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->name('label_requests.show');
+            Route::post('/label-requests/{label_request}/cancel', [LabelRequestController::class, 'cancel'])->name('label_requests.cancel');
+            Route::post('/label-requests/{label_request}/complete', [LabelRequestController::class, 'complete'])->name('label_requests.complete');
 
-        Route::get('/dummy-requests', [DummyRequestController::class, 'index'])->name('dummy_requests.index');
-        Route::get('/dummy-requests/create', [DummyRequestController::class, 'create'])->name('dummy_requests.create');
-        Route::post('/dummy-requests', [DummyRequestController::class, 'store'])->name('dummy_requests.store');
-        Route::get('/dummy-requests/{id}', [DummyRequestController::class, 'show'])->name('dummy_requests.show');
-        Route::post('/dummy-requests/{dummy_request}/cancel', [DummyRequestController::class, 'cancel'])->name('dummy_requests.cancel');
-        Route::post('/dummy-requests/{dummy_request}/complete', [DummyRequestController::class, 'complete'])->name('dummy_requests.complete');
+            Route::get('/label-requests/{label_request}/print', [LabelPrintController::class, 'create'])->name('label_requests.print.create');
+            Route::post('/label-requests/{label_request}/print', [LabelPrintController::class, 'store'])->name('label_requests.print.store');
+            Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
+            Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
+            Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
 
-        Route::get('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'create'])->name('dummy_requests.print.create');
-        Route::post('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'store'])->name('dummy_requests.print.store');
-        Route::get('/dummy-requests/{dummy_request}/print-batches/{batch}/print', [DummyPrintController::class, 'print'])->name('dummy_requests.print_batches.print');
-        Route::post('/dummy-requests/{dummy_request}/print-batches/{batch}/confirm', [DummyPrintController::class, 'confirm'])->name('dummy_requests.print_batches.confirm');
+            Route::get('/label-reworks', [LabelReworkController::class, 'search'])->name('label_reworks.search');
+            Route::get('/label-reworks/{label_request}', [LabelReworkController::class, 'show'])->name('label_reworks.show');
+            Route::post('/label-reworks/{label_request}/reprint', [LabelReworkController::class, 'store'])->name('label_reworks.store');
+        });
 
-        Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
-        Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');
-        Route::post('/label-requests', [LabelRequestController::class, 'store'])->name('label_requests.store');
-        Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->name('label_requests.show');
-        Route::post('/label-requests/{label_request}/cancel', [LabelRequestController::class, 'cancel'])->name('label_requests.cancel');
-        Route::post('/label-requests/{label_request}/complete', [LabelRequestController::class, 'complete'])->name('label_requests.complete');
-
-        Route::get('/label-requests/{label_request}/print', [LabelPrintController::class, 'create'])->name('label_requests.print.create');
-        Route::post('/label-requests/{label_request}/print', [LabelPrintController::class, 'store'])->name('label_requests.print.store');
-        Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
-        Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
-        Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
-
-        Route::get('/label-reworks', [LabelReworkController::class, 'search'])->name('label_reworks.search');
-        Route::get('/label-reworks/{label_request}', [LabelReworkController::class, 'show'])->name('label_reworks.show');
-        Route::post('/label-reworks/{label_request}/reprint', [LabelReworkController::class, 'store'])->name('label_reworks.store');
+        Route::middleware('module_access:master')->group(function () {
+            Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
+        });
 
 
     });
 
-    Route::middleware('role_any:admin,label_room')->group(function () {
+    Route::middleware(['role_any:admin,label_room', 'module_access:oracle'])->group(function () {
         Route::get('/oracle-jobs', [OracleJobController::class, 'index'])->name('oracle_jobs.index');
         Route::get('/oracle-jobs/import', [OracleJobController::class, 'importView'])->name('oracle_jobs.import_view');
         Route::post('/oracle-jobs/import', [OracleJobController::class, 'import'])->name('oracle_jobs.import');

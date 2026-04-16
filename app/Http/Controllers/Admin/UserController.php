@@ -39,6 +39,7 @@ class UserController extends Controller
         return view('users.create', [
             'roles' => Role::orderBy('name')->get(),
             'shifts' => Shift::orderBy('code')->get(),
+            'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
         ]);
     }
 
@@ -46,12 +47,17 @@ class UserController extends Controller
     {
         $data = $request->validated();
 
+        $roles = Role::query()->whereIn('id', $data['roles'])->pluck('name')->all();
+
         $user = User::create([
             'employee_no' => $data['employee_no'],
             'name' => $data['name'],
             'password' => Hash::make($data['password'] ?? Str::random(32)),
             'shift_id' => $data['shift_id'] ?? null,
             'is_active' => $data['is_active'] ?? true,
+            'module_permissions' => in_array('label_room', $roles, true)
+                ? ($data['module_permissions'] ?? null)
+                : null,
         ]);
 
         $user->roles()->sync($data['roles']);
@@ -67,6 +73,7 @@ class UserController extends Controller
             'user' => $user,
             'roles' => Role::orderBy('name')->get(),
             'shifts' => Shift::orderBy('code')->get(),
+            'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
         ]);
     }
 
@@ -74,11 +81,16 @@ class UserController extends Controller
     {
         $data = $request->validated();
 
+        $roles = Role::query()->whereIn('id', $data['roles'])->pluck('name')->all();
+
         $payload = [
             'employee_no' => $data['employee_no'],
             'name' => $data['name'],
             'shift_id' => $data['shift_id'] ?? null,
             'is_active' => $data['is_active'] ?? false,
+            'module_permissions' => in_array('label_room', $roles, true)
+                ? ($data['module_permissions'] ?? null)
+                : null,
         ];
 
         if (!empty($data['password'])) {

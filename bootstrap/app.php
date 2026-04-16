@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'role'   => \App\Http\Middleware\RequireRole::class,
             'role_any' => \App\Http\Middleware\RoleAny::class,
+            'module_access' => \App\Http\Middleware\EnsureModuleAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
