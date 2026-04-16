@@ -159,10 +159,25 @@
             <p class="mt-1 text-xs text-slate-600">
                 Mueve X/Y y tamaños para ver en tiempo real cómo quedarán QR, FG, JOB, Consecutivo y Título.
             </p>
+            <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-700">Datos detectados de impresora</h4>
+                    <button id="read-printer-media" type="button" class="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">
+                        Consultar tamaño/media
+                    </button>
+                </div>
+                <div class="mt-2 grid grid-cols-1 gap-2 text-xs text-slate-700 sm:grid-cols-2">
+                    <div><span class="font-semibold">ezpl.print_width:</span> <span id="printer-print-width">—</span></div>
+                    <div><span class="font-semibold">zpl.label_length:</span> <span id="printer-label-length">—</span></div>
+                    <div><span class="font-semibold">media.type:</span> <span id="printer-media-type">—</span></div>
+                    <div><span class="font-semibold">print.tone:</span> <span id="printer-print-tone">—</span></div>
+                </div>
+            </div>
             <div class="mt-3 overflow-auto">
                 <div
                     id="layout-preview-stage"
-                    class="relative h-[220px] min-w-[451px] rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
+                    class="relative rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
+                    style="width: 451px; height: 220px;"
                 >
                     <div id="layout-preview-title" class="absolute font-semibold text-red-700">RMT Dummy QR</div>
                     <div id="layout-preview-qr" class="absolute grid place-items-center border-2 border-slate-900 bg-slate-100 text-[10px] font-semibold text-slate-700">QR</div>
@@ -203,13 +218,16 @@
     const layoutPreviewFg = document.getElementById('layout-preview-fg');
     const layoutPreviewJob = document.getElementById('layout-preview-job');
     const layoutPreviewConsecutive = document.getElementById('layout-preview-consecutive');
+    const printerPrintWidthEl = document.getElementById('printer-print-width');
+    const printerLabelLengthEl = document.getElementById('printer-label-length');
+    const printerMediaTypeEl = document.getElementById('printer-media-type');
+    const printerPrintToneEl = document.getElementById('printer-print-tone');
+    const readPrinterMediaButton = document.getElementById('read-printer-media');
     let availableUsbPrinters = [];
-    const sourceWidth = 820;
-    const sourceHeight = 400;
-    const previewWidth = 451;
-    const previewHeight = 220;
-    const scaleX = previewWidth / sourceWidth;
-    const scaleY = previewHeight / sourceHeight;
+    let sourceWidth = 820;
+    let sourceHeight = 400;
+    let previewWidth = 451;
+    let previewHeight = 220;
 
     const getValue = (id, fallback = '') => document.getElementById(id)?.value ?? fallback;
     const getNumericValue = (id, fallback = 0) => {
@@ -221,7 +239,87 @@
         statusEl.classList.toggle('text-red-700', isError);
         statusEl.classList.toggle('text-slate-700', !isError);
     };
+    const getScaleX = () => previewWidth / sourceWidth;
+    const getScaleY = () => previewHeight / sourceHeight;
     const toPx = (value, scale) => `${Math.max(0, Math.round(value * scale))}px`;
+    const parsePrinterVarValue = (rawValue) => {
+        const cleanedValue = String(rawValue || '').trim();
+        const matchedQuotedValue = cleanedValue.match(/"([^"]+)"/);
+        if (matchedQuotedValue?.[1]) {
+            return matchedQuotedValue[1];
+        }
+
+        const matchedAssignValue = cleanedValue.match(/=\s*([^\r\n]+)/);
+        if (matchedAssignValue?.[1]) {
+            return matchedAssignValue[1].replace(/^"|"$/g, '').trim();
+        }
+
+        return cleanedValue.replace(/^"|"$/g, '');
+    };
+    const setPreviewStageSize = (widthDots, heightDots) => {
+        if (!layoutPreviewStage) {
+            return;
+        }
+
+        const safeWidth = Math.max(200, Number(widthDots) || 820);
+        const safeHeight = Math.max(120, Number(heightDots) || 400);
+
+        sourceWidth = safeWidth;
+        sourceHeight = safeHeight;
+
+        const maxWidth = 560;
+        const maxHeight = 260;
+        const fitScale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+
+        previewWidth = Math.max(260, Math.round(sourceWidth * fitScale));
+        previewHeight = Math.max(140, Math.round(sourceHeight * fitScale));
+
+        layoutPreviewStage.style.width = `${previewWidth}px`;
+        layoutPreviewStage.style.height = `${previewHeight}px`;
+    };
+    const showPrinterMediaValues = ({ printWidth, labelLength, mediaType, printTone }) => {
+        if (printerPrintWidthEl) {
+            printerPrintWidthEl.textContent = printWidth || '—';
+        }
+        if (printerLabelLengthEl) {
+            printerLabelLengthEl.textContent = labelLength || '—';
+        }
+        if (printerMediaTypeEl) {
+            printerMediaTypeEl.textContent = mediaType || '—';
+        }
+        if (printerPrintToneEl) {
+            printerPrintToneEl.textContent = printTone || '—';
+        }
+    };
+    const readPrinterVariable = (printer, variableName) => {
+        return new Promise((resolve, reject) => {
+            const command = `! U1 getvar "${variableName}"\n`;
+            const onSuccess = (response) => resolve(parsePrinterVarValue(response));
+            const onError = (error) => reject(error);
+
+            if (typeof printer.sendThenRead === 'function') {
+                printer.sendThenRead(command, onSuccess, onError);
+                return;
+            }
+
+            printer.send(command,
+                () => printer.read(onSuccess, onError),
+                onError
+            );
+        });
+    };
+    const readPrinterMediaInfo = async (printer) => {
+        const [printWidth, labelLength, mediaType, printTone] = await Promise.all([
+            readPrinterVariable(printer, 'ezpl.print_width'),
+            readPrinterVariable(printer, 'zpl.label_length'),
+            readPrinterVariable(printer, 'media.type'),
+            readPrinterVariable(printer, 'print.tone'),
+        ]);
+
+        showPrinterMediaValues({ printWidth, labelLength, mediaType, printTone });
+        setPreviewStageSize(Number(printWidth), Number(labelLength));
+        renderLayoutPreview();
+    };
 
     const renderLayoutPreview = () => {
         if (!layoutPreviewStage) {
@@ -251,6 +349,8 @@
         const consecutiveX = getNumericValue('consecutive_x', 380);
         const consecutiveY = getNumericValue('consecutive_y', 250);
         const consecutiveFont = getNumericValue('consecutive_font_size', 58);
+        const scaleX = getScaleX();
+        const scaleY = getScaleY();
 
         layoutPreviewTitle.textContent = titleText;
         layoutPreviewTitle.style.left = toPx(titleX, scaleX);
@@ -598,6 +698,42 @@
         setStatus(`Impresora seleccionada: ${selected.name || 'Sin nombre'}.`);
     });
 
+    readPrinterMediaButton?.addEventListener('click', () => {
+        if (!ensureBrowserPrint()) {
+            return;
+        }
+
+        const connectionType = connectionTypeInput?.value || 'usb';
+        setStatus('Consultando variables de media en impresora...');
+
+        if (connectionType === 'network') {
+            validateNetworkPrinter(
+                async (printer, ip) => {
+                    try {
+                        await readPrinterMediaInfo(printer);
+                        setStatus(`Variables de media leídas por red (${ip}).`);
+                    } catch (error) {
+                        setStatus(`No fue posible leer variables por red: ${error}`, true);
+                    }
+                },
+                (error) => setStatus(error, true)
+            );
+            return;
+        }
+
+        resolveUsbPrinter(
+            async (printer) => {
+                try {
+                    await readPrinterMediaInfo(printer);
+                    setStatus(`Variables de media leídas por USB (${printer.name || 'impresora'}).`);
+                } catch (error) {
+                    setStatus(`No fue posible leer variables por USB: ${error}`, true);
+                }
+            },
+            (error) => setStatus(error, true)
+        );
+    });
+
     if (connectionTypeInput) {
         connectionTypeInput.dispatchEvent(new Event('change'));
     }
@@ -625,6 +761,7 @@
         field?.addEventListener('change', renderLayoutPreview);
     });
 
+    setPreviewStageSize(sourceWidth, sourceHeight);
     renderLayoutPreview();
 
     if (ensureBrowserPrint()) {
