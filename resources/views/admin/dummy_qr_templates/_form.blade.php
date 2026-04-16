@@ -68,6 +68,16 @@
                 </select>
             </div>
             <div>
+                <div class="flex items-end justify-between gap-2">
+                    <label class="block text-sm font-medium text-slate-700">Impresoras USB detectadas</label>
+                    <button id="refresh-printers" type="button" class="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">Actualizar</button>
+                </div>
+                <select id="usb_printer_select" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                    <option value="">Detecta impresoras para seleccionar...</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Si hay varias impresoras conectadas, elige aquí cuál usar.</p>
+            </div>
+            <div>
                 <label class="block text-sm font-medium text-slate-700">Printer name (opcional)</label>
                 <input name="default_printer_name" id="default_printer_name" value="{{ old('default_printer_name', $template->default_printer_name ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
             </div>
@@ -166,6 +176,9 @@
     const defaultPrinterNameInput = document.getElementById('default_printer_name');
     const defaultPrinterIpInput = document.getElementById('default_printer_ip');
     const connectionTypeInput = document.getElementById('connection_type');
+    const printerSelectInput = document.getElementById('usb_printer_select');
+    const refreshPrintersButton = document.getElementById('refresh-printers');
+    let availableUsbPrinters = [];
 
     const getValue = (id, fallback = '') => document.getElementById(id)?.value ?? fallback;
     const setStatus = (message, isError = false) => {
@@ -209,30 +222,178 @@
         return true;
     };
 
-    const resolveUsbPrinter = (onSuccess, onError) => {
-        window.BrowserPrint.getDefaultDevice('printer',
-            function (printer) {
-                if (printer && String(printer.connection || '').toLowerCase().includes('usb')) {
-                    onSuccess(printer);
-                    return;
-                }
+    const getUsbPrinterId = (printer) => {
+        return [printer?.name || '', printer?.uid || '', printer?.connection || 'usb'].join('::');
+    };
 
+    const renderUsbPrinterOptions = (selectedId = '') => {
+        if (!printerSelectInput) {
+            return;
+        }
+
+        printerSelectInput.innerHTML = '';
+
+        if (!availableUsbPrinters.length) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'No se detectaron impresoras USB';
+            printerSelectInput.appendChild(placeholder);
+            return;
+        }
+
+        const hintOption = document.createElement('option');
+        hintOption.value = '';
+        hintOption.textContent = 'Selecciona una impresora USB...';
+        printerSelectInput.appendChild(hintOption);
+
+        availableUsbPrinters.forEach((printer) => {
+            const option = document.createElement('option');
+            option.value = getUsbPrinterId(printer);
+            option.textContent = `${printer.name || 'Sin nombre'} (${printer.connection || 'usb'})`;
+            printerSelectInput.appendChild(option);
+        });
+
+        if (selectedId) {
+            printerSelectInput.value = selectedId;
+        }
+    };
+
+    const pickSelectedPrinter = () => {
+        if (!availableUsbPrinters.length) {
+            return null;
+        }
+
+        const selectedId = printerSelectInput?.value || '';
+        if (selectedId) {
+            const selected = availableUsbPrinters.find((printer) => getUsbPrinterId(printer) === selectedId);
+            if (selected) {
+                return selected;
+            }
+        }
+
+        const currentName = (defaultPrinterNameInput?.value || '').trim();
+        if (currentName) {
+            const sameName = availableUsbPrinters.find((printer) => (printer.name || '').trim() === currentName);
+            if (sameName) {
+                if (printerSelectInput) {
+                    printerSelectInput.value = getUsbPrinterId(sameName);
+                }
+                return sameName;
+            }
+        }
+
+        return availableUsbPrinters[0];
+    };
+
+    const listUsbPrinters = ({ silent = false, afterLoad = null } = {}) => {
+        window.BrowserPrint.getDefaultDevice('printer',
+            function (defaultPrinter) {
                 window.BrowserPrint.getLocalDevices((devices) => {
-                    const usbPrinter = (devices || []).find((candidate) => {
+                    const usbPrinters = (devices || []).filter((candidate) => {
                         return candidate.deviceType === 'printer'
                             && String(candidate.connection || '').toLowerCase().includes('usb');
                     });
 
-                    if (!usbPrinter) {
+                    if (
+                        defaultPrinter
+                        && defaultPrinter.deviceType === 'printer'
+                        && String(defaultPrinter.connection || '').toLowerCase().includes('usb')
+                    ) {
+                        const exists = usbPrinters.some((printer) => getUsbPrinterId(printer) === getUsbPrinterId(defaultPrinter));
+                        if (!exists) {
+                            usbPrinters.unshift(defaultPrinter);
+                        }
+                    }
+
+                    availableUsbPrinters = usbPrinters;
+                    const selected = pickSelectedPrinter();
+                    renderUsbPrinterOptions(selected ? getUsbPrinterId(selected) : '');
+
+                    if (selected && defaultPrinterNameInput && !defaultPrinterNameInput.value.trim()) {
+                        defaultPrinterNameInput.value = selected.name || '';
+                    }
+
+                    if (!silent) {
+                        if (!availableUsbPrinters.length) {
+                            setStatus('No se detectaron impresoras USB disponibles.', true);
+                        } else {
+                            setStatus(`Se detectaron ${availableUsbPrinters.length} impresora(s) USB.`);
+                        }
+                    }
+
+                    afterLoad?.();
+                }, () => {
+                    availableUsbPrinters = [];
+                    renderUsbPrinterOptions('');
+                    if (!silent) {
+                        setStatus('No fue posible listar impresoras USB.', true);
+                    }
+                }, 'printer');
+            },
+            () => {
+                window.BrowserPrint.getLocalDevices((devices) => {
+                    availableUsbPrinters = (devices || []).filter((candidate) => {
+                        return candidate.deviceType === 'printer'
+                            && String(candidate.connection || '').toLowerCase().includes('usb');
+                    });
+                    const selected = pickSelectedPrinter();
+                    renderUsbPrinterOptions(selected ? getUsbPrinterId(selected) : '');
+                    afterLoad?.();
+                }, () => {
+                    availableUsbPrinters = [];
+                    renderUsbPrinterOptions('');
+                    if (!silent) {
+                        setStatus('No fue posible listar impresoras USB.', true);
+                    }
+                }, 'printer');
+            }
+        );
+    };
+
+    const validateUsbPrinter = (printer, onSuccess, onError) => {
+        if (!printer) {
+            onError('Selecciona una impresora USB para validar conexión.');
+            return;
+        }
+
+        printer.read(
+            () => onSuccess(printer),
+            () => onError(`No se pudo validar conexión con ${printer.name || 'impresora USB seleccionada'}.`)
+        );
+    };
+
+    const resolveUsbPrinter = (onSuccess, onError) => {
+        if (!availableUsbPrinters.length) {
+            listUsbPrinters({
+                silent: true,
+                afterLoad: () => {
+                    const selected = pickSelectedPrinter();
+                    if (!selected) {
                         onError('No se detectó impresora Zebra USB conectada.');
                         return;
                     }
 
-                    onSuccess(usbPrinter);
-                }, () => onError('No fue posible listar impresoras USB.'), 'printer');
-            },
-            () => onError('No fue posible obtener impresora por default.')
-        );
+                    if (defaultPrinterNameInput) {
+                        defaultPrinterNameInput.value = selected.name || '';
+                    }
+
+                    onSuccess(selected);
+                },
+            });
+            return;
+        }
+
+        const selected = pickSelectedPrinter();
+        if (!selected) {
+            onError('No se detectó impresora Zebra USB conectada.');
+            return;
+        }
+
+        if (defaultPrinterNameInput) {
+            defaultPrinterNameInput.value = selected.name || '';
+        }
+
+        onSuccess(selected);
     };
 
     const validateNetworkPrinter = (onSuccess, onError) => {
@@ -273,10 +434,11 @@
         setStatus('Buscando impresora USB...');
         resolveUsbPrinter(
             (printer) => {
-                setStatus(`Conexión USB OK: ${printer.name}`);
-                if (defaultPrinterNameInput && !defaultPrinterNameInput.value) {
-                    defaultPrinterNameInput.value = printer.name || '';
-                }
+                validateUsbPrinter(
+                    printer,
+                    (checkedPrinter) => setStatus(`Conexión USB OK: ${checkedPrinter.name}`),
+                    (error) => setStatus(error, true)
+                );
             },
             (error) => setStatus(error, true)
         );
@@ -307,10 +469,6 @@
         setStatus('Verificando impresora USB antes de imprimir...');
         resolveUsbPrinter(
             (printer) => {
-                if (defaultPrinterNameInput && !defaultPrinterNameInput.value) {
-                    defaultPrinterNameInput.value = printer.name || '';
-                }
-
                 printer.send(zpl,
                     () => setStatus(`Impresión de prueba enviada a ${printer.name}.`),
                     (error) => setStatus(`Error de impresión USB: ${error}`, true)
@@ -319,5 +477,45 @@
             (error) => setStatus(error, true)
         );
     });
+
+    connectionTypeInput?.addEventListener('change', () => {
+        const isUsb = (connectionTypeInput.value || 'usb') === 'usb';
+        if (printerSelectInput) {
+            printerSelectInput.disabled = !isUsb;
+        }
+        if (refreshPrintersButton) {
+            refreshPrintersButton.disabled = !isUsb;
+        }
+    });
+
+    refreshPrintersButton?.addEventListener('click', () => {
+        if (!ensureBrowserPrint()) {
+            return;
+        }
+
+        setStatus('Buscando impresoras USB disponibles...');
+        listUsbPrinters();
+    });
+
+    printerSelectInput?.addEventListener('change', () => {
+        const selected = pickSelectedPrinter();
+        if (!selected) {
+            return;
+        }
+
+        if (defaultPrinterNameInput) {
+            defaultPrinterNameInput.value = selected.name || '';
+        }
+
+        setStatus(`Impresora seleccionada: ${selected.name || 'Sin nombre'}.`);
+    });
+
+    if (connectionTypeInput) {
+        connectionTypeInput.dispatchEvent(new Event('change'));
+    }
+
+    if (ensureBrowserPrint()) {
+        listUsbPrinters({ silent: true });
+    }
 })();
 </script>
