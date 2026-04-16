@@ -153,6 +153,25 @@
                 </div>
             </div>
         </div>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <h3 class="text-sm font-semibold text-slate-900">Vista previa de posiciones</h3>
+            <p class="mt-1 text-xs text-slate-600">
+                Mueve X/Y y tamaños para ver en tiempo real cómo quedarán QR, FG, JOB, Consecutivo y Título.
+            </p>
+            <div class="mt-3 overflow-auto">
+                <div
+                    id="layout-preview-stage"
+                    class="relative h-[220px] min-w-[451px] rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
+                >
+                    <div id="layout-preview-title" class="absolute font-semibold text-red-700">RMT Dummy QR</div>
+                    <div id="layout-preview-qr" class="absolute grid place-items-center border-2 border-slate-900 bg-slate-100 text-[10px] font-semibold text-slate-700">QR</div>
+                    <div id="layout-preview-fg" class="absolute font-semibold text-slate-900">FG: 479124001</div>
+                    <div id="layout-preview-job" class="absolute font-semibold text-slate-900">JOB: 999999</div>
+                    <div id="layout-preview-consecutive" class="absolute font-bold text-slate-900">0000000014</div>
+                </div>
+            </div>
+        </div>
     </section>
 
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -178,13 +197,82 @@
     const connectionTypeInput = document.getElementById('connection_type');
     const printerSelectInput = document.getElementById('usb_printer_select');
     const refreshPrintersButton = document.getElementById('refresh-printers');
+    const layoutPreviewStage = document.getElementById('layout-preview-stage');
+    const layoutPreviewTitle = document.getElementById('layout-preview-title');
+    const layoutPreviewQr = document.getElementById('layout-preview-qr');
+    const layoutPreviewFg = document.getElementById('layout-preview-fg');
+    const layoutPreviewJob = document.getElementById('layout-preview-job');
+    const layoutPreviewConsecutive = document.getElementById('layout-preview-consecutive');
     let availableUsbPrinters = [];
+    const sourceWidth = 820;
+    const sourceHeight = 400;
+    const previewWidth = 451;
+    const previewHeight = 220;
+    const scaleX = previewWidth / sourceWidth;
+    const scaleY = previewHeight / sourceHeight;
 
     const getValue = (id, fallback = '') => document.getElementById(id)?.value ?? fallback;
+    const getNumericValue = (id, fallback = 0) => {
+        const parsedValue = Number(getValue(id, fallback));
+        return Number.isFinite(parsedValue) ? parsedValue : fallback;
+    };
     const setStatus = (message, isError = false) => {
         statusEl.textContent = message;
         statusEl.classList.toggle('text-red-700', isError);
         statusEl.classList.toggle('text-slate-700', !isError);
+    };
+    const toPx = (value, scale) => `${Math.max(0, Math.round(value * scale))}px`;
+
+    const renderLayoutPreview = () => {
+        if (!layoutPreviewStage) {
+            return;
+        }
+
+        const dummyType = getValue('dummy_type', 'rmt');
+        const titleText = dummyType === 'rw' ? 'RW Dummy QR' : 'RMT Dummy QR';
+
+        const titleX = getNumericValue('title_x', 20);
+        const titleY = getNumericValue('title_y', 20);
+        const titleFont = getNumericValue('title_font_size', 44);
+
+        const qrX = getNumericValue('qr_x', 30);
+        const qrY = getNumericValue('qr_y', 65);
+        const qrMagnification = Math.max(1, getNumericValue('qr_magnification', 4));
+        const qrSize = Math.max(26, Math.round(qrMagnification * 18));
+
+        const fgX = getNumericValue('fg_x', 360);
+        const fgY = getNumericValue('fg_y', 70);
+        const fgFont = getNumericValue('fg_font_size', 40);
+
+        const jobX = getNumericValue('job_x', 360);
+        const jobY = getNumericValue('job_y', 130);
+        const jobFont = getNumericValue('job_font_size', 34);
+
+        const consecutiveX = getNumericValue('consecutive_x', 380);
+        const consecutiveY = getNumericValue('consecutive_y', 250);
+        const consecutiveFont = getNumericValue('consecutive_font_size', 58);
+
+        layoutPreviewTitle.textContent = titleText;
+        layoutPreviewTitle.style.left = toPx(titleX, scaleX);
+        layoutPreviewTitle.style.top = toPx(titleY, scaleY);
+        layoutPreviewTitle.style.fontSize = toPx(titleFont, scaleY);
+
+        layoutPreviewQr.style.left = toPx(qrX, scaleX);
+        layoutPreviewQr.style.top = toPx(qrY, scaleY);
+        layoutPreviewQr.style.width = toPx(qrSize, scaleX);
+        layoutPreviewQr.style.height = toPx(qrSize, scaleY);
+
+        layoutPreviewFg.style.left = toPx(fgX, scaleX);
+        layoutPreviewFg.style.top = toPx(fgY, scaleY);
+        layoutPreviewFg.style.fontSize = toPx(fgFont, scaleY);
+
+        layoutPreviewJob.style.left = toPx(jobX, scaleX);
+        layoutPreviewJob.style.top = toPx(jobY, scaleY);
+        layoutPreviewJob.style.fontSize = toPx(jobFont, scaleY);
+
+        layoutPreviewConsecutive.style.left = toPx(consecutiveX, scaleX);
+        layoutPreviewConsecutive.style.top = toPx(consecutiveY, scaleY);
+        layoutPreviewConsecutive.style.fontSize = toPx(consecutiveFont, scaleY);
     };
 
     const buildZpl = () => {
@@ -513,6 +601,31 @@
     if (connectionTypeInput) {
         connectionTypeInput.dispatchEvent(new Event('change'));
     }
+
+    [
+        'dummy_type',
+        'qr_x',
+        'qr_y',
+        'qr_magnification',
+        'fg_x',
+        'fg_y',
+        'fg_font_size',
+        'job_x',
+        'job_y',
+        'job_font_size',
+        'consecutive_x',
+        'consecutive_y',
+        'consecutive_font_size',
+        'title_x',
+        'title_y',
+        'title_font_size',
+    ].forEach((fieldId) => {
+        const field = document.getElementById(fieldId);
+        field?.addEventListener('input', renderLayoutPreview);
+        field?.addEventListener('change', renderLayoutPreview);
+    });
+
+    renderLayoutPreview();
 
     if (ensureBrowserPrint()) {
         listUsbPrinters({ silent: true });
