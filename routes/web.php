@@ -9,6 +9,7 @@ use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
 use App\Http\Controllers\Dummies\DummyPrintController;
 use App\Http\Controllers\Dummies\DummyRequestController;
+use App\Http\Controllers\Dummies\DummyReprintController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
@@ -121,6 +122,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('/dummy-requests/{dummy_request}/print', [DummyPrintController::class, 'store'])->name('dummy_requests.print.store');
             Route::get('/dummy-requests/{dummy_request}/print-batches/{batch}/print', [DummyPrintController::class, 'print'])->name('dummy_requests.print_batches.print');
             Route::post('/dummy-requests/{dummy_request}/print-batches/{batch}/confirm', [DummyPrintController::class, 'confirm'])->name('dummy_requests.print_batches.confirm');
+
+            Route::get('/dummy-reprints', [DummyReprintController::class, 'search'])->name('dummy_reprints.search');
+            Route::get('/dummy-reprints/{dummy_request}', [DummyReprintController::class, 'show'])->name('dummy_reprints.show');
+            Route::post('/dummy-reprints/{dummy_request}/reprint', [DummyReprintController::class, 'store'])->name('dummy_reprints.store');
         });
 
         Route::middleware('module_access:labels')->group(function () {

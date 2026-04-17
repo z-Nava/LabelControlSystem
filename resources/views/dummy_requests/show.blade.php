@@ -13,6 +13,7 @@
             @if(in_array($dummyRequest->status, ['requested', 'in_progress'], true))
                 <a href="{{ route('dummy_requests.print.create', $dummyRequest) }}" class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500">Ir a imprimir</a>
             @endif
+            <a href="{{ route('dummy_reprints.show', $dummyRequest) }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Reimpresión por selección</a>
         </div>
     </div>
 
@@ -106,7 +107,7 @@
         </div>
     </div>
 
-    <div class="mt-6 rounded-xl border border-slate-200">
+    <div class="mt-6 rounded-xl border border-slate-200" id="historial-impresiones">
         <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
             <h2 class="font-semibold text-slate-900">Historial de impresiones (batches)</h2>
         </div>

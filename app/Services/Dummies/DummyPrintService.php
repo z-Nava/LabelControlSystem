@@ -44,7 +44,19 @@ class DummyPrintService
             }
 
             $copies = (int) ($data['copies'] ?? 1);
-            $items = $dummyRequest->items()->select('id')->orderBy('consecutive')->get();
+            $selectedIds = collect($data['selected_dummy_request_item_ids'] ?? [])
+                ->filter()
+                ->map(fn ($value) => (int) $value)
+                ->unique()
+                ->values();
+
+            $itemsQuery = $dummyRequest->items()->select('id')->orderBy('consecutive');
+
+            if (!$isPrintBatch && $selectedIds->isNotEmpty()) {
+                $itemsQuery->whereIn('id', $selectedIds->all());
+            }
+
+            $items = $itemsQuery->get();
 
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages([
@@ -73,7 +85,10 @@ class DummyPrintService
 
             DummyPrintBatchItem::query()->insert($payload);
 
-            $dummyRequest->items()->increment('print_count', $copies, ['last_printed_at' => now()]);
+            $itemIds = $items->pluck('id')->all();
+            $dummyRequest->items()
+                ->whereIn('id', $itemIds)
+                ->increment('print_count', $copies, ['last_printed_at' => now()]);
 
             if ($dummyRequest->status === 'requested') {
                 $dummyRequest->update(['status' => 'in_progress']);

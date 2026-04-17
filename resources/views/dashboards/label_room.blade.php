@@ -80,6 +80,11 @@
                             <div class="text-lg font-semibold text-slate-800">Historial Dummy QR</div>
                             <div class="text-sm text-slate-600 mt-1">Consulta requisiciones, rangos y estatus por job</div>
                         </a>
+
+                        <a href="{{ route('dummy_reprints.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
+                            <div class="text-lg font-semibold text-slate-800">Reimpresión Dummy QR</div>
+                            <div class="text-sm text-slate-600 mt-1">Selecciona 1 o varios dummys por requisición y revisa historial</div>
+                        </a>
                     </div>
                 </section>
             @endif
