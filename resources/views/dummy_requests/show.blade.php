@@ -3,12 +3,6 @@
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        @php
-            $hasPrintedPrintBatch = $dummyRequest->printBatches->contains(
-                fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at
-            );
-            $canUseSelectionReprint = $dummyRequest->status !== 'requested' && $hasPrintedPrintBatch;
-        @endphp
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Requisición Dummy QR #{{ $dummyRequest->id }}</h1>
             <p class="text-slate-600 mt-1">{{ $dummyRequest->line?->code }} · Turno {{ $dummyRequest->shift?->code }} · {{ $dummyRequest->request_date?->format('Y-m-d') }}</p>
@@ -18,15 +12,6 @@
             <a href="{{ route('dummy_requests.index') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Volver al listado</a>
             @if(in_array($dummyRequest->status, ['requested', 'in_progress'], true))
                 <a href="{{ route('dummy_requests.print.create', $dummyRequest) }}" class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500">Ir a imprimir</a>
-                @if($canUseSelectionReprint)
-                    <a href="{{ route('dummy_requests.print.create', ['dummy_request' => $dummyRequest, 'mode' => 'reprint']) }}" class="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-slate-50">
-                        Reimpresión por selección
-                    </a>
-                @else
-                    <button type="button" disabled class="rounded-xl border border-slate-200 bg-slate-100 text-slate-500 px-4 py-2 text-sm font-semibold cursor-not-allowed" title="Disponible solo cuando exista un batch print confirmado como impreso y la requisición ya no esté en requested.">
-                        Reimpresión por selección
-                    </button>
-                @endif
             @endif
             <a href="{{ route('dummy_reprints.show', $dummyRequest) }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Reimpresión por selección</a>
         </div>

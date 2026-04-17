@@ -3,13 +3,7 @@
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
     @php
-        $defaultBatchType = 'print';
-
-        if (($mode ?? '') === 'reprint' && $hasPrintedPrintBatch) {
-            $defaultBatchType = 'reprint';
-        } elseif ($hasPrintedPrintBatch) {
-            $defaultBatchType = 'reprint';
-        }
+        $defaultBatchType = $hasPrintedPrintBatch ? 'reprint' : 'print';
     @endphp
 
     <div class="flex items-center justify-between gap-3">

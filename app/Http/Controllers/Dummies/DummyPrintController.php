@@ -26,14 +26,6 @@ class DummyPrintController extends Controller
         $hasPrintedPrintBatch = $dummyRequest->printBatches->contains(
             fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at !== null
         );
-        $mode = trim((string) $request->query('mode', ''));
-
-        if ($mode === 'reprint' && !$hasPrintedPrintBatch) {
-            return redirect()
-                ->route('dummy_requests.show', $dummyRequest)
-                ->with('error', 'Reimpresión por selección bloqueada: primero debes tener un batch print confirmado como impreso.');
-        }
-
         if ($dummyRequest->status === 'completed' && $hasPrintBatch) {
             return redirect()
                 ->route('dummy_requests.show', $dummyRequest)
@@ -44,7 +36,6 @@ class DummyPrintController extends Controller
             'dummyRequest' => $dummyRequest,
             'hasPrintBatch' => $hasPrintBatch,
             'hasPrintedPrintBatch' => $hasPrintedPrintBatch,
-            'mode' => $mode,
         ]);
     }
 
