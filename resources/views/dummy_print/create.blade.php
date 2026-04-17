@@ -2,6 +2,16 @@
 
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
+    @php
+        $defaultBatchType = 'print';
+
+        if (($mode ?? '') === 'reprint' && $hasPrintedPrintBatch) {
+            $defaultBatchType = 'reprint';
+        } elseif ($hasPrintedPrintBatch) {
+            $defaultBatchType = 'reprint';
+        }
+    @endphp
+
     <div class="flex items-center justify-between gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Registrar batch de impresión Dummy QR</h1>
@@ -20,7 +30,11 @@
         <p class="text-xs text-slate-500">Usa <span class="font-semibold">print</span> solo una vez por requisición. Para corridas adicionales, usa <span class="font-semibold">reprint</span>.</p>
     </div>
 
-    @if($hasPrintBatch)
+    @if($hasPrintBatch && !$hasPrintedPrintBatch)
+        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Ya existe un batch <span class="font-semibold">print</span>, pero aún no está confirmado como impreso. Por ahora no se permite <span class="font-semibold">reprint</span>.
+        </div>
+    @elseif($hasPrintedPrintBatch)
         <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Esta requisición ya tiene un batch <span class="font-semibold">print</span>. Solo se permite <span class="font-semibold">reprint</span>.
         </div>
@@ -32,9 +46,12 @@
         <div>
             <label class="text-sm text-slate-600">Tipo de batch</label>
             <select name="batch_type" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
-                <option value="print" @selected(old('batch_type', $hasPrintBatch ? 'reprint' : 'print') === 'print') @disabled($hasPrintBatch)>Impresión inicial</option>
-                <option value="reprint" @selected(old('batch_type', $hasPrintBatch ? 'reprint' : null) === 'reprint')>Reimpresión</option>
+                <option value="print" @selected(old('batch_type', $defaultBatchType) === 'print') @disabled($hasPrintedPrintBatch)>Impresión inicial</option>
+                <option value="reprint" @selected(old('batch_type', $defaultBatchType) === 'reprint') @disabled(!$hasPrintedPrintBatch)>Reimpresión</option>
             </select>
+            @if(!$hasPrintedPrintBatch)
+                <p class="mt-1 text-xs text-slate-500">La reimpresión se habilita únicamente cuando ya existe un batch print confirmado como impreso.</p>
+            @endif
         </div>
 
         <div>

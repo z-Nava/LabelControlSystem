@@ -30,6 +30,10 @@ class DummyPrintService
             $alreadyHasPrintBatch = $dummyRequest->printBatches()
                 ->where('batch_type', 'print')
                 ->exists();
+            $alreadyHasPrintedPrintBatch = $dummyRequest->printBatches()
+                ->where('batch_type', 'print')
+                ->whereNotNull('printed_at')
+                ->exists();
 
             if ($isPrintBatch && $alreadyHasPrintBatch) {
                 throw ValidationException::withMessages([
@@ -40,6 +44,12 @@ class DummyPrintService
             if (!$isPrintBatch && !$alreadyHasPrintBatch) {
                 throw ValidationException::withMessages([
                     'batch_type' => 'Primero debes crear un batch de tipo print.',
+                ]);
+            }
+
+            if (!$isPrintBatch && !$alreadyHasPrintedPrintBatch) {
+                throw ValidationException::withMessages([
+                    'batch_type' => 'Solo puedes crear reprint cuando exista un batch print confirmado como impreso.',
                 ]);
             }
 

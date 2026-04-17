@@ -19,10 +19,20 @@ class DummyPrintController extends Controller
         private readonly DummyPrintService $service,
     ) {}
 
-    public function create(DummyRequest $dummy_request): View|RedirectResponse
+    public function create(Request $request, DummyRequest $dummy_request): View|RedirectResponse
     {
         $dummyRequest = $dummy_request->loadCount('items')->load('printBatches');
         $hasPrintBatch = $dummyRequest->printBatches->contains(fn ($batch) => $batch->batch_type === 'print');
+        $hasPrintedPrintBatch = $dummyRequest->printBatches->contains(
+            fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at !== null
+        );
+        $mode = trim((string) $request->query('mode', ''));
+
+        if ($mode === 'reprint' && !$hasPrintedPrintBatch) {
+            return redirect()
+                ->route('dummy_requests.show', $dummyRequest)
+                ->with('error', 'Reimpresión por selección bloqueada: primero debes tener un batch print confirmado como impreso.');
+        }
 
         if ($dummyRequest->status === 'completed' && $hasPrintBatch) {
             return redirect()
@@ -33,6 +43,8 @@ class DummyPrintController extends Controller
         return view('dummy_print.create', [
             'dummyRequest' => $dummyRequest,
             'hasPrintBatch' => $hasPrintBatch,
+            'hasPrintedPrintBatch' => $hasPrintedPrintBatch,
+            'mode' => $mode,
         ]);
     }
 
@@ -52,10 +64,10 @@ class DummyPrintController extends Controller
     public function print(DummyRequest $dummy_request, DummyPrintBatch $batch): View|RedirectResponse
     {
         abort_unless($batch->dummy_request_id === $dummy_request->id, 404);
-        if ($batch->batch_type === 'print' && $batch->printed_at !== null) {
+        if ($batch->printed_at !== null) {
             return redirect()
                 ->route('dummy_requests.show', $dummy_request)
-                ->with('error', 'El batch inicial ya fue impreso y confirmado. El Centro de impresión está bloqueado para evitar duplicados.');
+                ->with('error', 'Este batch ya fue impreso y confirmado. El Centro de impresión está bloqueado para evitar duplicados.');
         }
 
         $batch->load([
