@@ -28,9 +28,22 @@ class SkuTemplateConfigurationController extends Controller
     public function index(): View
     {
         $search = request('q');
+        $sort = request('sort', 'sku');
+
+        $sorts = [
+            'sku' => 'SKU (A → Z)',
+            'type' => 'Tipo de etiqueta',
+            'updated' => 'Última actualización',
+        ];
+
+        if (!array_key_exists($sort, $sorts)) {
+            $sort = 'sku';
+        }
 
         $configs = LabelPrintProfile::query()
             ->with(['sku', 'template'])
+            ->leftJoin('label_skus', 'label_skus.id', '=', 'label_print_profiles.label_sku_id')
+            ->select('label_print_profiles.*')
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhere('label_type', 'like', "%{$search}%")
@@ -38,12 +51,24 @@ class SkuTemplateConfigurationController extends Controller
                         ->where('sku', 'like', "%{$search}%")
                         ->orWhere('label_part_number', 'like', "%{$search}%"));
             })
-            ->orderByDesc('is_active')
-            ->orderByDesc('updated_at')
+            ->when($sort === 'sku', function ($query) {
+                $query->orderByRaw("CASE WHEN label_skus.sku IS NULL OR label_skus.sku = '' THEN 1 ELSE 0 END")
+                    ->orderBy('label_skus.sku')
+                    ->orderBy('label_skus.label_part_number')
+                    ->orderBy('label_print_profiles.label_type')
+                    ->orderBy('label_print_profiles.name');
+            })
+            ->when($sort === 'type', function ($query) {
+                $query->orderBy('label_print_profiles.label_type')
+                    ->orderBy('label_skus.sku')
+                    ->orderBy('label_print_profiles.name');
+            })
+            ->when($sort === 'updated', fn ($query) => $query->orderByDesc('label_print_profiles.updated_at'))
+            ->orderByDesc('label_print_profiles.is_active')
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.sku_template_configurations.index', compact('configs', 'search'));
+        return view('admin.sku_template_configurations.index', compact('configs', 'search', 'sort', 'sorts'));
     }
 
     public function create(): View

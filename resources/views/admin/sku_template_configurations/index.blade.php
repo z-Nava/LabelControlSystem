@@ -14,15 +14,25 @@
         <div class="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{{ session('success') }}</div>
     @endif
 
-    <form class="mt-5 flex gap-2" method="GET" action="{{ route('admin.sku_template_configurations.index') }}">
+    <form class="mt-5 grid gap-2 md:grid-cols-[1fr_auto_auto]" method="GET" action="{{ route('admin.sku_template_configurations.index') }}">
         <input name="q" value="{{ $search }}" class="w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Buscar por SKU, número de parte, tipo o nombre..." />
-        <button class="rounded-xl bg-slate-900 text-white px-4 py-2">Buscar</button>
+        <select name="sort" class="rounded-xl border border-slate-300 px-3 py-2 bg-white">
+            @foreach($sorts as $sortValue => $sortLabel)
+                <option value="{{ $sortValue }}" @selected($sort === $sortValue)>{{ $sortLabel }}</option>
+            @endforeach
+        </select>
+        <button class="rounded-xl bg-slate-900 text-white px-4 py-2">Aplicar</button>
     </form>
+
+    <div class="mt-3 text-sm text-slate-600">
+        Mostrando <span class="font-semibold">{{ $configs->firstItem() ?? 0 }}</span>–<span class="font-semibold">{{ $configs->lastItem() ?? 0 }}</span> de
+        <span class="font-semibold">{{ $configs->total() }}</span> configuraciones.
+    </div>
 
     <div class="mt-5 overflow-x-auto">
         <table class="w-full text-sm">
             <thead>
-                <tr class="text-left text-slate-500 border-b">
+                <tr class="text-left text-slate-500 border-b bg-slate-50">
                     <th class="py-3 pr-3">SKU</th>
                     <th class="py-3 pr-3">Part Number</th>
                     <th class="py-3 pr-3">Tipo</th>
@@ -37,10 +47,18 @@
                     <tr>
                         <td class="py-3 pr-3 font-semibold text-slate-900">{{ $config->sku?->sku ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $config->sku?->label_part_number ?? '-' }}</td>
-                        <td class="py-3 pr-3">{{ ucfirst($config->label_type ?? 'general') }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                                {{ ucfirst($config->label_type ?? 'general') }}
+                            </span>
+                        </td>
                         <td class="py-3 pr-3">{{ $config->template?->name ?? 'Sin template' }}</td>
                         <td class="py-3 pr-3">{{ $config->name }}</td>
-                        <td class="py-3 pr-3">{{ $config->is_active ? 'Sí' : 'No' }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $config->is_active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600' }}">
+                                {{ $config->is_active ? 'Activo' : 'Inactivo' }}
+                            </span>
+                        </td>
                         <td class="py-3 text-right">
                             <div class="inline-flex gap-2">
                                 <a href="{{ route('admin.sku_template_configurations.edit', $config) }}" class="rounded-xl border px-3 py-2">Editar</a>
