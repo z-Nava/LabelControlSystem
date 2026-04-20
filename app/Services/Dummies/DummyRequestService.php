@@ -45,6 +45,7 @@ class DummyRequestService
 
             $currentMaxConsecutive = (int) DummyRequestItem::query()
                 ->where('job_number', $jobNumber)
+                ->where('dummy_type', $dummyType)
                 ->lockForUpdate()
                 ->max('consecutive');
 
