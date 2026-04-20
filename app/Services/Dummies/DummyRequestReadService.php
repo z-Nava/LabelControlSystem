@@ -68,6 +68,18 @@ class DummyRequestReadService
                 'items' => fn ($query) => $query->orderBy('consecutive')->limit(200),
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
             ])
+            ->withSum('printBatches as printed_qty', 'quantity')
             ->findOrFail($id);
+    }
+
+    public function buildShowViewData(int $id): array
+    {
+        $dummyRequest = $this->findForShow($id);
+
+        return [
+            'dummyRequest' => $dummyRequest,
+            'canAccessSelectionReprint' => $dummyRequest->canAccessSelectionReprint(),
+            'selectionReprintBlockedReason' => $dummyRequest->selectionReprintBlockedReason(),
+        ];
     }
 }

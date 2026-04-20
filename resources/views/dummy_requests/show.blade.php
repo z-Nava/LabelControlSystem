@@ -13,8 +13,17 @@
             @if(in_array($dummyRequest->status, ['requested', 'in_progress'], true))
                 <a href="{{ route('dummy_requests.print.create', $dummyRequest) }}" class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500">Ir a imprimir</a>
             @endif
-            <a href="{{ route('dummy_reprints.show', $dummyRequest) }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Reimpresión por selección</a>
+            @if($canAccessSelectionReprint)
+                <a href="{{ route('dummy_reprints.show', $dummyRequest) }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Reimpresión por selección</a>
+            @else
+                <span class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-500 cursor-not-allowed" title="{{ $selectionReprintBlockedReason }}">
+                    Reimpresión por selección
+                </span>
+            @endif
         </div>
+        @if(!$canAccessSelectionReprint && filled($selectionReprintBlockedReason))
+            <p class="text-xs text-slate-500">{{ $selectionReprintBlockedReason }}</p>
+        @endif
     </div>
 
     @if(session('success'))
@@ -33,24 +42,6 @@
         </div>
     @endif
 
-    @php
-        $statusText = match ($dummyRequest->status) {
-            'requested' => 'Solicitada',
-            'in_progress' => 'En proceso',
-            'completed' => 'Completada',
-            'cancelled' => 'Cancelada',
-            default => ucfirst(str_replace('_', ' ', (string) $dummyRequest->status)),
-        };
-        $statusClasses = match ($dummyRequest->status) {
-            'completed' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-            'cancelled' => 'bg-red-100 text-red-700 border-red-200',
-            'in_progress' => 'bg-amber-100 text-amber-700 border-amber-200',
-            default => 'bg-sky-100 text-sky-700 border-sky-200',
-        };
-        $title = $dummyRequest->request_type === 'rework' ? 'RW Dummy QR' : 'RMT Dummy QR';
-        $printedQty = (int) $dummyRequest->printBatches->sum('quantity');
-    @endphp
-
     <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4">
         <h2 class="text-base font-semibold text-blue-900">Flujo sugerido</h2>
         <ol class="mt-2 list-decimal list-inside text-sm text-blue-900 space-y-1">
@@ -64,14 +55,14 @@
     <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Resumen</div>
-            <div class="font-semibold mt-1">{{ $title }}</div>
+            <div class="font-semibold mt-1">{{ $dummyRequest->requestTypeTitle() }}</div>
             <div class="text-slate-700">Qty solicitada: {{ number_format($dummyRequest->quantity_requested) }}</div>
-            <div class="text-slate-700">Qty impresa (batches): {{ number_format($printedQty) }}</div>
+            <div class="text-slate-700">Qty impresa (batches): {{ number_format($dummyRequest->printedQuantity()) }}</div>
             <div class="text-slate-700">Rango:</div>
             <div class="font-mono text-xs">{{ str_pad((string) $dummyRequest->range_from, 10, '0', STR_PAD_LEFT) }} - {{ str_pad((string) $dummyRequest->range_to, 10, '0', STR_PAD_LEFT) }}</div>
             <div class="mt-1 text-slate-700">Estatus:
-                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold {{ $statusClasses }}">
-                    {{ $statusText }}
+                <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold {{ $dummyRequest->statusBadgeClasses() }}">
+                    {{ $dummyRequest->statusLabel() }}
                 </span>
             </div>
         </div>

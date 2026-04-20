@@ -45,9 +45,7 @@ class DummyRequestController extends Controller
 
     public function show(int $id): View
     {
-        $dummyRequest = $this->readService->findForShow($id);
-
-        return view('dummy_requests.show', compact('dummyRequest'));
+        return view('dummy_requests.show', $this->readService->buildShowViewData($id));
     }
 
 

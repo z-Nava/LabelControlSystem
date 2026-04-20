@@ -25,7 +25,10 @@ class DummyReprintController extends Controller
             ->with(['line:id,code,name', 'shift:id,code,name'])
             ->withCount('items')
             ->withCount('printBatches')
-            ->whereHas('printBatches', fn ($query) => $query->where('batch_type', 'print'))
+            ->whereIn('status', DummyRequest::REPRINT_SELECTION_ELIGIBLE_STATUSES)
+            ->whereHas('printBatches', fn ($query) => $query
+                ->where('batch_type', 'print')
+                ->whereNotNull('printed_at'))
             ->when($job !== '', fn ($query) => $query->where('job_number', 'like', "%{$job}%"))
             ->when(in_array($requestType, ['first_time', 'rework'], true), fn ($query) => $query->where('request_type', $requestType))
             ->orderByDesc('request_date')
@@ -43,7 +46,10 @@ class DummyReprintController extends Controller
     public function show(DummyRequest $dummy_request): View
     {
         $dummyRequest = DummyRequest::query()
-            ->whereHas('printBatches', fn ($query) => $query->where('batch_type', 'print'))
+            ->whereIn('status', DummyRequest::REPRINT_SELECTION_ELIGIBLE_STATUSES)
+            ->whereHas('printBatches', fn ($query) => $query
+                ->where('batch_type', 'print')
+                ->whereNotNull('printed_at'))
             ->with([
                 'line:id,code,name',
                 'shift:id,code,name',
@@ -63,7 +69,7 @@ class DummyReprintController extends Controller
 
     public function store(Request $request, DummyRequest $dummy_request): RedirectResponse
     {
-        abort_unless($dummy_request->printBatches()->where('batch_type', 'print')->exists(), 404);
+        abort_unless($dummy_request->canAccessSelectionReprint(), 404);
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:255'],
             'printer_name' => ['required', 'string', 'max:255'],
