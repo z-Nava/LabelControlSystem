@@ -50,7 +50,7 @@ class SerialTemplateZplBuilder
             '^CI28',
             sprintf('^FO%d,%d', $qr['x'], $qr['y']),
             sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
-            $isRatingLabel ? '^FDLA,{{rating_qr_code}}^FS' : '^FDLA,{{serial_full}}^FS',
+            sprintf('^FDLA,%s^FS', $this->resolveQrPayload($qr, $isRatingLabel)),
         ];
 
         if (!$hideSkuOnEmeaRating) {
@@ -87,7 +87,76 @@ class SerialTemplateZplBuilder
             'y' => (int) ($layout['y'] ?? 30),
             'orientation' => $this->normalizeOrientation((string) ($layout['orientation'] ?? 'N')),
             'magnification' => max(1, min(10, (int) ($layout['magnification'] ?? 4))),
+            'content_mode' => (string) ($layout['content_mode'] ?? 'auto'),
+            'separator' => (string) ($layout['separator'] ?? 'pipe'),
+            'serial_style' => (string) ($layout['serial_style'] ?? 'as_is'),
+            'custom_fields' => array_values(array_filter((array) ($layout['custom_fields'] ?? []))),
         ];
+    }
+
+    private function resolveQrPayload(array $qr, bool $isRatingLabel): string
+    {
+        $mode = strtolower(trim((string) ($qr['content_mode'] ?? 'auto')));
+
+        if ($mode === 'custom') {
+            $tokens = collect($qr['custom_fields'] ?? [])
+                ->map(fn ($token) => $this->mapQrToken((string) $token, (string) ($qr['serial_style'] ?? 'as_is')))
+                ->filter(fn ($token) => $token !== '')
+                ->values();
+
+            if ($tokens->isNotEmpty()) {
+                return $tokens->implode($this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe')));
+            }
+        }
+
+        if ($mode === 'serial_full') {
+            return $this->serialPlaceholder('serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
+        }
+
+        if ($mode === 'rating_qr') {
+            return $this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
+        }
+
+        return $isRatingLabel
+            ? $this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'))
+            : $this->serialPlaceholder('serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
+    }
+
+    private function resolveQrSeparator(string $separator): string
+    {
+        return match (strtolower(trim($separator))) {
+            'space' => ' ',
+            'none' => '',
+            default => ' | ',
+        };
+    }
+
+    private function mapQrToken(string $token, string $serialStyle = 'as_is'): string
+    {
+        return match (strtolower(trim($token))) {
+            'fixed_103' => '103',
+            'serial_full' => $this->serialPlaceholder('serial_full', $serialStyle),
+            'rating_qr_code' => $this->serialPlaceholder('rating_qr_code', $serialStyle),
+            'sku' => '{{sku}}',
+            'label_part_number' => '{{label_part_number}}',
+            'console_sku' => '{{console_sku}}',
+            'assembly_part_number' => '{{assembly_part_number}}',
+            'packaging_part_number' => '{{packaging_part_number}}',
+            'emea_sku' => '{{emea_sku}}',
+            'anz_sku' => '{{anz_sku}}',
+            default => '',
+        };
+    }
+
+    private function serialPlaceholder(string $baseField, string $style): string
+    {
+        $normalizedStyle = strtolower(trim($style));
+
+        return match ($normalizedStyle) {
+            'segmented' => '{{'.$baseField.'_spaced}}',
+            'compact' => '{{'.$baseField.'_compact}}',
+            default => '{{'.$baseField.'}}',
+        };
     }
 
     private function normalizeOrientation(string $orientation): string

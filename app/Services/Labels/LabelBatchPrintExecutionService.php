@@ -30,7 +30,17 @@ class LabelBatchPrintExecutionService
         }
 
         $sku = LabelSku::query()
-            ->select(['id', 'sku', 'label_part_number', 'serial_standard'])
+            ->select([
+                'id',
+                'sku',
+                'label_part_number',
+                'serial_standard',
+                'console_sku',
+                'assembly_part_number',
+                'packaging_part_number',
+                'emea_sku',
+                'anz_sku',
+            ])
             ->where('label_part_number', $batch->labelRequest?->label_part_number)
             ->where('serial_standard', (string) ($batch->labelRequest?->serial_standard ?? 'UL'))
             ->first();
@@ -62,7 +72,7 @@ class LabelBatchPrintExecutionService
                     continue;
                 }
 
-                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku?->sku);
+                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku);
                 $templateZpl = $this->resolveTemplateZpl($template, $labelType, $standard);
                 $rendered = $this->renderTemplate($templateZpl, $payload);
 
@@ -126,22 +136,52 @@ class LabelBatchPrintExecutionService
         });
     }
 
-    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType, ?string $sku): array
+    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType, ?LabelSku $sku): array
     {
         return [
             'serial_full' => $serialUnit->serial_full,
+            'serial_full_spaced' => $this->toSegmentedSerial((string) $serialUnit->serial_full),
+            'serial_full_compact' => $this->toCompactSerial((string) $serialUnit->serial_full),
             'rating_qr_code' => (string) ($serialUnit->rating_qr_code ?? ''),
+            'rating_qr_code_spaced' => $this->toSegmentedSerial((string) ($serialUnit->rating_qr_code ?? '')),
+            'rating_qr_code_compact' => $this->toCompactSerial((string) ($serialUnit->rating_qr_code ?? '')),
             'serial_number' => (string) $serialUnit->serial_number,
-            'sku' => (string) ($sku?->sku ?? ''),
             'label_type' => $labelType,
             'label_request_id' => (string) $batch->label_request_id,
             'batch_id' => (string) $batch->id,
             'label_part_number' => (string) ($batch->labelRequest?->label_part_number ?? ''),
-            'sku' => (string) ($sku ?? ''),
+            'sku' => (string) ($sku?->sku ?? ''),
+            'console_sku' => (string) ($sku?->console_sku ?? ''),
+            'assembly_part_number' => (string) ($sku?->assembly_part_number ?? ''),
+            'packaging_part_number' => (string) ($sku?->packaging_part_number ?? ''),
+            'emea_sku' => (string) ($sku?->emea_sku ?? ''),
+            'anz_sku' => (string) ($sku?->anz_sku ?? ''),
             'week' => (string) ($batch->labelRequest?->week ?? ''),
             'year' => (string) ($batch->labelRequest?->request_date?->format('Y') ?? ''),
             'serial_standard' => (string) ($batch->labelRequest?->serial_standard ?? 'UL'),
         ];
+    }
+
+    private function toCompactSerial(string $value): string
+    {
+        return preg_replace('/[\s\|]+/', '', trim($value)) ?? trim($value);
+    }
+
+    private function toSegmentedSerial(string $value): string
+    {
+        $compact = strtoupper($this->toCompactSerial($value));
+
+        if (!preg_match('/^[A-Z0-9]{19}$/', $compact)) {
+            return trim($value);
+        }
+
+        return implode(' ', [
+            substr($compact, 0, 4),
+            substr($compact, 4, 2),
+            substr($compact, 6, 2),
+            substr($compact, 8, 6),
+            substr($compact, 14, 5),
+        ]);
     }
 
     private function renderTemplate(string $template, array $payload): string

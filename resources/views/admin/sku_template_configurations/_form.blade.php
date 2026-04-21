@@ -36,6 +36,12 @@
                         <option value="{{ $sku->id }}"
                                 data-sku-code="{{ $sku->sku }}"
                                 data-serial-standard="{{ $sku->serial_standard ?? 'UL' }}"
+                                data-label-part-number="{{ $sku->label_part_number }}"
+                                data-console-sku="{{ $sku->console_sku }}"
+                                data-assembly-part-number="{{ $sku->assembly_part_number }}"
+                                data-packaging-part-number="{{ $sku->packaging_part_number }}"
+                                data-emea-sku="{{ $sku->emea_sku }}"
+                                data-anz-sku="{{ $sku->anz_sku }}"
                                 @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
                             {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }}
                         </option>
@@ -73,7 +79,7 @@
                            {{ old('rating_hide_sku', ($formState['rating_hide_sku'] ?? false)) ? 'checked' : '' }}>
                     Ocultar SKU en Rating con QR (solo SN + QR)
                 </label>
-                <p class="mt-1 text-xs text-slate-500">Útil para SKU específicos de UL que requieren solo SN + QR.</p>
+                <p class="mt-1 text-xs text-slate-500">En EMEA/ANZ normalmente se oculta SKU para imprimir solo SN + QR.</p>
             </div>
         </div>
     </section>
@@ -120,7 +126,7 @@
         <div class="mb-4 border-b border-slate-100 pb-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 3</p>
             <h2 class="text-lg font-semibold text-slate-900">Define layout de impresión (ZPL)</h2>
-            <p class="mt-1 text-xs text-slate-500">Serial usa QR + SKU + SN. Rating usa SN y opcionalmente QR (en EMEA se oculta SKU).</p>
+            <p class="mt-1 text-xs text-slate-500">Serial usa QR + SKU + SN. Rating usa SN y opcionalmente QR (en EMEA/ANZ puede ocultarse SKU).</p>
         </div>
 
         <div class="rounded-2xl border border-slate-200 p-4" data-layout-section="rating">
@@ -187,6 +193,34 @@
                     </select>
                     @error('qr_orientation') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Contenido QR</label>
+                    <select name="qr_content_mode" id="qr_content_mode" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                        <option value="auto" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'auto')>Automático por tipo (recomendado)</option>
+                        <option value="serial_full" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'serial_full')>Solo Serial completo</option>
+                        <option value="rating_qr" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'rating_qr')>Solo QR rating (EMEA/ANZ)</option>
+                        <option value="custom" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'custom')>Personalizado (hasta 3 bloques)</option>
+                    </select>
+                    @error('qr_content_mode') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Separador QR</label>
+                    <select name="qr_separator" id="qr_separator" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                        <option value="pipe" @selected(old('qr_separator', $formState['qr_layout']['separator'] ?? 'pipe') === 'pipe')>Pipe ( | )</option>
+                        <option value="space" @selected(old('qr_separator', $formState['qr_layout']['separator'] ?? 'pipe') === 'space')>Espacio</option>
+                        <option value="none" @selected(old('qr_separator', $formState['qr_layout']['separator'] ?? 'pipe') === 'none')>Sin separador</option>
+                    </select>
+                    @error('qr_separator') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Formato SN en QR</label>
+                    <select name="qr_serial_style" id="qr_serial_style" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                        <option value="as_is" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'as_is')>Como viene del serial</option>
+                        <option value="segmented" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'segmented')>Separado (5055 36 01 000002 A2026)</option>
+                        <option value="compact" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'compact')>Junto (50553601000002A2026)</option>
+                    </select>
+                    @error('qr_serial_style') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
 
                 <div data-layout-group="sku">
                     <label class="block text-sm font-medium text-slate-700">SKU X</label>
@@ -241,6 +275,40 @@
                     <label class="block text-sm font-medium text-slate-700">Prefijo texto SN</label>
                     <input name="sn_prefix" value="{{ old('sn_prefix', $formState['sn_layout']['prefix'] ?? 'SN:') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                     @error('sn_prefix') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            <div id="qr-custom-fields-wrapper" class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <h4 class="text-sm font-semibold text-slate-900">Bloques de QR personalizado</h4>
+                <p class="mt-1 text-xs text-slate-500">Ejemplo EMEA: 103 | Serial | EMEA SKU. Ejemplo alterno: EMEA SKU | Serial | EMEA SKU.</p>
+                <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    @php
+                        $qrCustomOptions = [
+                            '' => 'Vacío',
+                            'fixed_103' => 'Valor fijo 103',
+                            'serial_full' => 'Serial completo',
+                            'rating_qr_code' => 'QR rating',
+                            'sku' => 'SKU',
+                            'label_part_number' => 'Label part number',
+                            'console_sku' => 'Console SKU',
+                            'assembly_part_number' => 'Assembly part number',
+                            'packaging_part_number' => 'Packaging part number',
+                            'emea_sku' => 'EMEA SKU',
+                            'anz_sku' => 'ANZ SKU',
+                        ];
+                        $customFields = old('qr_custom_fields', $formState['qr_layout']['custom_fields'] ?? []);
+                    @endphp
+                    @foreach([1,2,3] as $position)
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700">Bloque {{ $position }}</label>
+                            <select name="qr_custom_field_{{ $position }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                                @foreach($qrCustomOptions as $value => $label)
+                                    <option value="{{ $value }}" @selected(old('qr_custom_field_'.$position, $customFields[$position - 1] ?? '') === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('qr_custom_field_'.$position) <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>

@@ -18,7 +18,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
         $labelType = $this->input('label_type', 'serial');
         $sku = LabelSku::query()->find($this->input('label_sku_id'));
         $serialStandard = strtoupper(trim((string) ($sku?->serial_standard ?? $this->input('serial_standard', 'UL'))));
-        $forceRatingQr = $labelType === 'rating' && $serialStandard === 'EMEA';
+        $forceRatingQr = $labelType === 'rating' && in_array($serialStandard, ['EMEA', 'ANZ'], true);
 
         $this->merge([
             'template_is_active' => $this->boolean('template_is_active', true),
@@ -42,7 +42,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 Rule::exists('label_skus', 'id')->where('serial_standard', strtoupper(trim((string) $this->input('serial_standard', 'UL')))),
             ],
             'label_type' => ['required', 'in:serial,rating'],
-            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
+            'serial_standard' => ['required', Rule::in(['UL', 'EMEA', 'ANZ'])],
             'rating_with_qr' => ['nullable', 'boolean'],
             'rating_hide_sku' => ['nullable', 'boolean'],
 
@@ -54,6 +54,12 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'qr_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'qr_orientation' => ['nullable', 'in:N,R,I,B'],
             'qr_magnification' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'qr_content_mode' => ['nullable', 'in:auto,serial_full,rating_qr,custom'],
+            'qr_separator' => ['nullable', 'in:pipe,space,none'],
+            'qr_serial_style' => ['nullable', 'in:as_is,segmented,compact'],
+            'qr_custom_field_1' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku'],
+            'qr_custom_field_2' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku'],
+            'qr_custom_field_3' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku'],
             'sku_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sku_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sku_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
@@ -124,6 +130,20 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 }
 
                 $validator->errors()->add($field, 'Este campo es requerido para etiquetas Serial.');
+            }
+
+            if (($this->input('qr_content_mode') ?? 'auto') !== 'custom') {
+                return;
+            }
+
+            $customFields = collect([
+                $this->input('qr_custom_field_1'),
+                $this->input('qr_custom_field_2'),
+                $this->input('qr_custom_field_3'),
+            ])->filter(fn ($value) => filled($value))->values();
+
+            if ($customFields->isEmpty()) {
+                $validator->errors()->add('qr_custom_field_1', 'Debes seleccionar al menos un campo para el QR personalizado.');
             }
         });
     }

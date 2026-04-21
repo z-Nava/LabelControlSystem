@@ -46,6 +46,10 @@ const initSkuTemplateConfigurationsForm = () => {
     const qrLayoutTitle = document.getElementById('qr-layout-title');
     const qrLayoutDescription = document.getElementById('qr-layout-description');
     const snPrefixWrapper = document.getElementById('sn-prefix-wrapper');
+    const qrContentModeSelect = document.getElementById('qr_content_mode');
+    const qrCustomFieldsWrapper = document.getElementById('qr-custom-fields-wrapper');
+    const qrSeparatorSelect = document.getElementById('qr_separator');
+    const qrSerialStyleSelect = document.getElementById('qr_serial_style');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -65,11 +69,14 @@ const initSkuTemplateConfigurationsForm = () => {
     };
 
     const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || defaultSku;
+    const getSelectedSkuData = () => skuSelect?.selectedOptions?.[0]?.dataset || {};
     const getSelectedSkuStandard = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.serialStandard || 'UL').toUpperCase();
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
     const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
-    const isEmeaRatingWithQr = () => isRatingWithQrEnabled() && getSelectedSerialStandard() === 'EMEA';
-    const hideSkuOnRatingWithQr = () => isRatingWithQrEnabled() && (isEmeaRatingWithQr() || Boolean(ratingHideSkuCheckbox?.checked));
+    const isEmeaOrAnzRatingWithQr = () => isRatingWithQrEnabled() && ['EMEA', 'ANZ'].includes(getSelectedSerialStandard());
+    const hideSkuOnRatingWithQr = () => isRatingWithQrEnabled() && (isEmeaOrAnzRatingWithQr() || Boolean(ratingHideSkuCheckbox?.checked));
+    const getQrContentMode = () => String(qrContentModeSelect?.value || 'auto').toLowerCase();
+    const getQrSerialStyle = () => String(qrSerialStyleSelect?.value || 'as_is').toLowerCase();
 
     const syncSerialStandardFromSku = () => {
         const standard = getSelectedSkuStandard();
@@ -144,8 +151,12 @@ const initSkuTemplateConfigurationsForm = () => {
 
         if (qrLayoutDescription) {
             qrLayoutDescription.textContent = isRatingWithQr
-                ? 'El QR codifica el serial completo para la etiqueta Rating. En EMEA o cuando actives "Ocultar SKU", se imprime solo SN + QR del SN.'
+                ? 'El QR codifica el serial completo para la etiqueta Rating. En EMEA/ANZ o cuando actives "Ocultar SKU", se imprime solo SN + QR del SN.'
                 : 'El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.';
+        }
+
+        if (qrCustomFieldsWrapper) {
+            qrCustomFieldsWrapper.style.display = getQrContentMode() === 'custom' ? 'block' : 'none';
         }
 
         setStatus(isSerial
@@ -211,6 +222,80 @@ const initSkuTemplateConfigurationsForm = () => {
         });
     };
 
+    const getQrSeparator = () => {
+        const value = String(qrSeparatorSelect?.value || 'pipe').toLowerCase();
+
+        if (value === 'space') {
+            return ' ';
+        }
+
+        if (value === 'none') {
+            return '';
+        }
+
+        return ' | ';
+    };
+
+    const resolveTokenValue = (token, serial, ratingSerial) => {
+        const skuData = getSelectedSkuData();
+        const values = {
+            fixed_103: '103',
+            serial_full: applySerialStyle(serial),
+            rating_qr_code: applySerialStyle(ratingSerial),
+            sku: getSelectedSkuCode(),
+            label_part_number: skuData.labelPartNumber || '',
+            console_sku: skuData.consoleSku || '',
+            assembly_part_number: skuData.assemblyPartNumber || '',
+            packaging_part_number: skuData.packagingPartNumber || '',
+            emea_sku: skuData.emeaSku || '',
+            anz_sku: skuData.anzSku || '',
+        };
+
+        return values[token] || '';
+    };
+
+    const applySerialStyle = (value) => {
+        const style = getQrSerialStyle();
+        const compact = String(value || '').replace(/[\s|]+/g, '').trim().toUpperCase();
+
+        if (style === 'compact') {
+            return compact;
+        }
+
+        if (style === 'segmented' && compact.length === 19) {
+            return `${compact.slice(0, 4)} ${compact.slice(4, 6)} ${compact.slice(6, 8)} ${compact.slice(8, 14)} ${compact.slice(14)}`;
+        }
+
+        return String(value || '').trim();
+    };
+
+    const resolveQrPayload = (labelType, serial) => {
+        const mode = getQrContentMode();
+        const ratingSerial = serial;
+
+        if (mode === 'serial_full') {
+            return applySerialStyle(serial);
+        }
+
+        if (mode === 'rating_qr') {
+            return applySerialStyle(ratingSerial);
+        }
+
+        if (mode === 'custom') {
+            const tokens = [1, 2, 3]
+                .map((index) => document.querySelector(`[name="qr_custom_field_${index}"]`)?.value || '')
+                .filter((token) => token.length > 0)
+                .map((token) => resolveTokenValue(token, serial, ratingSerial))
+                .filter((value) => value.length > 0);
+
+            if (tokens.length > 0) {
+                return tokens.join(getQrSeparator());
+            }
+        }
+
+        return labelType === 'rating' ? applySerialStyle(ratingSerial) : applySerialStyle(serial);
+    };
+
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
         const isRatingWithQr = isRatingWithQrEnabled();
@@ -249,12 +334,13 @@ const initSkuTemplateConfigurationsForm = () => {
         const snLine = labelType === 'rating'
             ? serialPrint
             : (snPrefix ? `${snPrefix} ${serialPrint}` : serialPrint);
+        const qrPayload = resolveQrPayload(labelType, serial);
         const zpl = [
             '^XA',
             '^CI28',
             `^FO${qrX},${qrY}`,
             `^BQ${qrOrientation},2,${qrMagnification}`,
-            `^FDLA,${serial}^FS`,
+            `^FDLA,${qrPayload}^FS`,
         ];
 
         if (!hideSkuOnEmeaRating) {
@@ -294,8 +380,8 @@ const initSkuTemplateConfigurationsForm = () => {
             const isRatingWithQr = isRatingWithQrEnabled();
 
             setStatus((isSerial || isRatingWithQr)
-                ? (isEmeaRatingWithQr()
-                    ? 'Impresión de prueba enviada por USB con QR + SN EMEA (sin SKU).'
+                ? (isEmeaOrAnzRatingWithQr()
+                    ? 'Impresión de prueba enviada por USB con QR + SN EMEA/ANZ (sin SKU).'
                     : 'Impresión de prueba enviada por USB con QR, SKU y SN de referencia.')
                 : 'Impresión de prueba enviada por USB con SN de referencia.');
         }, (error) => {
@@ -307,6 +393,8 @@ const initSkuTemplateConfigurationsForm = () => {
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
     ratingHideSkuCheckbox?.addEventListener('change', toggleLayoutSections);
+    qrContentModeSelect?.addEventListener('change', toggleLayoutSections);
+    qrSerialStyleSelect?.addEventListener('change', toggleLayoutSections);
     skuSelect?.addEventListener('change', () => {
         syncSerialStandardFromSku();
         toggleLayoutSections();
