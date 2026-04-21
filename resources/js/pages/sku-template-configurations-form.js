@@ -50,6 +50,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const qrCustomFieldsWrapper = document.getElementById('qr-custom-fields-wrapper');
     const qrSeparatorSelect = document.getElementById('qr_separator');
     const qrSerialStyleSelect = document.getElementById('qr_serial_style');
+    const skuStandardFilterButtons = document.querySelectorAll('[data-sku-standard-filter]');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -88,6 +89,47 @@ const initSkuTemplateConfigurationsForm = () => {
         if (serialStandardDisplay) {
             serialStandardDisplay.value = standard;
         }
+    };
+
+    const setSkuStandardFilter = (standard) => {
+        if (!skuSelect) {
+            return;
+        }
+
+        const nextStandard = String(standard || 'UL').toUpperCase();
+        const options = Array.from(skuSelect.options || []);
+        let currentOptionStillVisible = false;
+
+        options.forEach((option) => {
+            const optionStandard = String(option.dataset.serialStandard || 'UL').toUpperCase();
+            const visible = optionStandard === nextStandard;
+
+            option.hidden = !visible;
+            option.disabled = !visible;
+
+            if (visible && option.selected) {
+                currentOptionStillVisible = true;
+            }
+        });
+
+        if (!currentOptionStillVisible) {
+            const firstVisible = options.find((option) => !option.hidden && !option.disabled);
+
+            if (firstVisible) {
+                firstVisible.selected = true;
+            }
+        }
+
+        skuStandardFilterButtons.forEach((button) => {
+            const isActive = String(button.dataset.skuStandardFilter || '').toUpperCase() === nextStandard;
+
+            button.classList.toggle('bg-slate-900', isActive);
+            button.classList.toggle('text-white', isActive);
+            button.classList.toggle('text-slate-600', !isActive);
+            button.classList.toggle('hover:bg-slate-100', !isActive);
+        });
+
+        syncSerialStandardFromSku();
     };
 
     const toggleRatingQrControl = () => {
@@ -395,6 +437,13 @@ const initSkuTemplateConfigurationsForm = () => {
     ratingHideSkuCheckbox?.addEventListener('change', toggleLayoutSections);
     qrContentModeSelect?.addEventListener('change', toggleLayoutSections);
     qrSerialStyleSelect?.addEventListener('change', toggleLayoutSections);
+    skuStandardFilterButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setSkuStandardFilter(button.dataset.skuStandardFilter || 'UL');
+            toggleLayoutSections();
+        });
+    });
+
     skuSelect?.addEventListener('change', () => {
         syncSerialStandardFromSku();
         toggleLayoutSections();
@@ -402,7 +451,7 @@ const initSkuTemplateConfigurationsForm = () => {
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
 
-    syncSerialStandardFromSku();
+    setSkuStandardFilter(serialStandardInput?.value || getSelectedSkuStandard());
     toggleConnectionFields();
     toggleLayoutSections();
 };

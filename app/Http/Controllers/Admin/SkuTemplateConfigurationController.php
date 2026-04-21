@@ -6,13 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSkuTemplateConfigurationRequest;
 use App\Http\Requests\Admin\UpdateSkuTemplateConfigurationRequest;
 use App\Models\LabelPrintProfile;
-use App\Models\LabelSku;
-use App\Models\SkuSerialFormat;
 use App\Services\Catalogs\LabelPrintProfileService;
 use App\Services\Catalogs\LabelTemplateService;
+use App\Services\Catalogs\SkuTemplateConfigurationFormService;
 use App\Services\Labels\SerialTemplateZplBuilder;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -22,6 +20,7 @@ class SkuTemplateConfigurationController extends Controller
         private readonly LabelTemplateService $templateService,
         private readonly LabelPrintProfileService $profileService,
         private readonly SerialTemplateZplBuilder $zplBuilder,
+        private readonly SkuTemplateConfigurationFormService $formService,
     ) {
     }
 
@@ -29,6 +28,7 @@ class SkuTemplateConfigurationController extends Controller
     {
         $search = request('q');
         $sort = request('sort', 'sku');
+        $serialStandard = strtoupper(trim((string) request('serial_standard', 'ALL')));
 
         $sorts = [
             'sku' => 'SKU (A → Z)',
@@ -38,6 +38,10 @@ class SkuTemplateConfigurationController extends Controller
 
         if (!array_key_exists($sort, $sorts)) {
             $sort = 'sku';
+        }
+
+        if (!in_array($serialStandard, ['ALL', 'UL', 'EMEA', 'ANZ'], true)) {
+            $serialStandard = 'ALL';
         }
 
         $configs = LabelPrintProfile::query()
@@ -51,6 +55,7 @@ class SkuTemplateConfigurationController extends Controller
                         ->where('sku', 'like', "%{$search}%")
                         ->orWhere('label_part_number', 'like', "%{$search}%"));
             })
+            ->when($serialStandard !== 'ALL', fn ($query) => $query->where('label_skus.serial_standard', $serialStandard))
             ->when($sort === 'sku', function ($query) {
                 $query->orderByRaw("CASE WHEN label_skus.sku IS NULL OR label_skus.sku = '' THEN 1 ELSE 0 END")
                     ->orderBy('label_skus.sku')
@@ -68,16 +73,15 @@ class SkuTemplateConfigurationController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('admin.sku_template_configurations.index', compact('configs', 'search', 'sort', 'sorts'));
+        return view('admin.sku_template_configurations.index', compact('configs', 'search', 'sort', 'sorts', 'serialStandard'));
     }
 
     public function create(): View
     {
         $configuration = new LabelPrintProfile();
-        $labelSkus = $this->skuOptionsWithSerialFormat();
-        $formState = $this->buildFormState($configuration);
+        $formData = $this->formService->build($configuration);
 
-        return view('admin.sku_template_configurations.create', compact('configuration', 'labelSkus', 'formState'));
+        return view('admin.sku_template_configurations.create', compact('configuration') + $formData);
     }
 
     public function store(StoreSkuTemplateConfigurationRequest $request): RedirectResponse
@@ -96,10 +100,9 @@ class SkuTemplateConfigurationController extends Controller
     public function edit(LabelPrintProfile $configuration): View
     {
         $configuration->load('template');
-        $labelSkus = $this->skuOptionsWithSerialFormat();
-        $formState = $this->buildFormState($configuration);
+        $formData = $this->formService->build($configuration);
 
-        return view('admin.sku_template_configurations.edit', compact('configuration', 'labelSkus', 'formState'));
+        return view('admin.sku_template_configurations.edit', compact('configuration') + $formData);
     }
 
     public function update(UpdateSkuTemplateConfigurationRequest $request, LabelPrintProfile $configuration): RedirectResponse
@@ -134,20 +137,6 @@ class SkuTemplateConfigurationController extends Controller
             ->with('success', 'Estado de la configuración actualizado.');
     }
 
-    private function skuOptionsWithSerialFormat(): Collection
-    {
-        return LabelSku::query()
-            ->active()
-            ->whereExists(function ($query) {
-                $query->selectRaw('1')
-                    ->from((new SkuSerialFormat())->getTable())
-                    ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
-                    ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
-                    ->where('sku_serial_formats.is_active', true);
-            })
-            ->orderBy('sku')
-            ->get();
-    }
 
     private function templatePayload(array $data): array
     {
@@ -237,35 +226,4 @@ class SkuTemplateConfigurationController extends Controller
         ];
     }
 
-    private function buildFormState(LabelPrintProfile $configuration): array
-    {
-        $resolvedLayout = $configuration->template?->resolved_serial_layout
-            ?? data_get($configuration->template?->meta, 'serial_layout', []);
-        $layout = old('serial_layout', $resolvedLayout);
-
-        return [
-            'text_layout' => $layout['text'] ?? $layout,
-            'qr_layout' => $layout['qr'] ?? [],
-            'sku_layout' => $layout['sku'] ?? [],
-            'sn_layout' => $layout['sn'] ?? [],
-            'connection_type' => old(
-                'connection_type',
-                data_get(
-                    old('profile_settings', $configuration->settings ?? []),
-                    'connection_type',
-                    $configuration->default_printer_ip ? 'network' : 'usb'
-                )
-            ),
-            'selected_label_type' => old(
-                'label_type',
-                $configuration->label_type ?? $configuration->template?->label_type ?? 'serial'
-            ),
-            'selected_serial_standard' => old(
-                'serial_standard',
-                $configuration->serial_standard ?? $configuration->template?->serial_standard ?? 'UL'
-            ),
-            'rating_qr' => (bool) old('rating_with_qr', data_get($layout, 'rating_qr', false)),
-            'rating_hide_sku' => (bool) old('rating_hide_sku', data_get($layout, 'rating_hide_sku', false)),
-        ];
-    }
 }

@@ -14,11 +14,17 @@
         <div class="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800">{{ session('success') }}</div>
     @endif
 
-    <form class="mt-5 grid gap-2 md:grid-cols-[1fr_auto_auto]" method="GET" action="{{ route('admin.sku_template_configurations.index') }}">
+    <form class="mt-5 grid gap-2 md:grid-cols-[1fr_auto_auto_auto]" method="GET" action="{{ route('admin.sku_template_configurations.index') }}">
         <input name="q" value="{{ $search }}" class="w-full rounded-xl border border-slate-300 px-3 py-2" placeholder="Buscar por SKU, número de parte, tipo o nombre..." />
         <select name="sort" class="rounded-xl border border-slate-300 px-3 py-2 bg-white">
             @foreach($sorts as $sortValue => $sortLabel)
                 <option value="{{ $sortValue }}" @selected($sort === $sortValue)>{{ $sortLabel }}</option>
+            @endforeach
+        </select>
+
+        <select name="serial_standard" class="rounded-xl border border-slate-300 px-3 py-2 bg-white">
+            @foreach(['ALL' => 'Todos los mercados', 'UL' => 'UL', 'EMEA' => 'EMEA', 'ANZ' => 'ANZ'] as $standardValue => $standardLabel)
+                <option value="{{ $standardValue }}" @selected(($serialStandard ?? 'ALL') === $standardValue)>{{ $standardLabel }}</option>
             @endforeach
         </select>
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2">Aplicar</button>
@@ -35,6 +41,7 @@
                 <tr class="text-left text-slate-500 border-b bg-slate-50">
                     <th class="py-3 pr-3">SKU</th>
                     <th class="py-3 pr-3">Part Number</th>
+                    <th class="py-3 pr-3">Mercado</th>
                     <th class="py-3 pr-3">Tipo</th>
                     <th class="py-3 pr-3">Template</th>
                     <th class="py-3 pr-3">Print Profile</th>
@@ -47,6 +54,9 @@
                     <tr>
                         <td class="py-3 pr-3 font-semibold text-slate-900">{{ $config->sku?->sku ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $config->sku?->label_part_number ?? '-' }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="inline-flex rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700">{{ $config->sku?->serial_standard ?? '-' }}</span>
+                        </td>
                         <td class="py-3 pr-3">
                             <span class="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                                 {{ ucfirst($config->label_type ?? 'general') }}
@@ -70,7 +80,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="py-6 text-center text-slate-500">No hay configuraciones registradas.</td></tr>
+                    <tr><td colspan="8" class="py-6 text-center text-slate-500">No hay configuraciones registradas.</td></tr>
                 @endforelse
             </tbody>
         </table>

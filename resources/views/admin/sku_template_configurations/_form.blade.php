@@ -31,23 +31,38 @@
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
                 <label class="block text-sm font-medium text-slate-700">SKU</label>
-                <select name="label_sku_id" id="label_sku_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-                    @foreach($labelSkus as $sku)
-                        <option value="{{ $sku->id }}"
-                                data-sku-code="{{ $sku->sku }}"
-                                data-serial-standard="{{ $sku->serial_standard ?? 'UL' }}"
-                                data-label-part-number="{{ $sku->label_part_number }}"
-                                data-console-sku="{{ $sku->console_sku }}"
-                                data-assembly-part-number="{{ $sku->assembly_part_number }}"
-                                data-packaging-part-number="{{ $sku->packaging_part_number }}"
-                                data-emea-sku="{{ $sku->emea_sku }}"
-                                data-anz-sku="{{ $sku->anz_sku }}"
-                                @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
-                            {{ $sku->serial_standard ?? 'UL' }} · {{ $sku->sku }} · {{ $sku->label_part_number }}
-                        </option>
+                <div class="mt-2 inline-flex rounded-xl border border-slate-200 p-1" role="group" aria-label="Filtro de estándar SKU">
+                    @foreach(($availableStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
+                        @php($isSelectedStandard = ($formState['selected_serial_standard'] ?? 'UL') === $standard)
+                        <button type="button"
+                                data-sku-standard-filter="{{ $standard }}"
+                                class="rounded-lg px-3 py-1 text-xs font-semibold transition {{ $isSelectedStandard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100' }}">
+                            {{ $standard }}
+                            <span class="ml-1 text-[10px] opacity-80">({{ ($skuGroups[$standard] ?? collect())->count() }})</span>
+                        </button>
+                    @endforeach
+                </div>
+                <select name="label_sku_id" id="label_sku_id" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2" required>
+                    @foreach(($availableStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
+                        <optgroup label="{{ $standard }}">
+                            @foreach(($skuGroups[$standard] ?? collect()) as $sku)
+                                <option value="{{ $sku->id }}"
+                                        data-sku-code="{{ $sku->sku }}"
+                                        data-serial-standard="{{ $sku->serial_standard ?? 'UL' }}"
+                                        data-label-part-number="{{ $sku->label_part_number }}"
+                                        data-console-sku="{{ $sku->console_sku }}"
+                                        data-assembly-part-number="{{ $sku->assembly_part_number }}"
+                                        data-packaging-part-number="{{ $sku->packaging_part_number }}"
+                                        data-emea-sku="{{ $sku->emea_sku }}"
+                                        data-anz-sku="{{ $sku->anz_sku }}"
+                                        @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
+                                    {{ $sku->sku }} · {{ $sku->label_part_number }}
+                                </option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-slate-500">Solo se listan SKU con serial format activo.</p>
+                <p class="mt-1 text-xs text-slate-500">Selecciona el mercado (UL / EMEA / ANZ) y luego el SKU con serial format activo.</p>
             </div>
 
             <div>
