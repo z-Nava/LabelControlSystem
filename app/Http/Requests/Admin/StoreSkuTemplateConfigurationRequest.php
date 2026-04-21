@@ -24,6 +24,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'template_is_active' => $this->boolean('template_is_active', true),
             'profile_is_active' => $this->boolean('profile_is_active', true),
             'rating_with_qr' => $forceRatingQr ? true : $this->boolean('rating_with_qr', false),
+            'rating_hide_sku' => $this->boolean('rating_hide_sku', false),
             'connection_type' => $this->input('connection_type', 'usb'),
             'sn_prefix' => trim((string) $this->input('sn_prefix', 'SN:')),
             'label_type' => $labelType,
@@ -43,6 +44,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'label_type' => ['required', 'in:serial,rating'],
             'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
             'rating_with_qr' => ['nullable', 'boolean'],
+            'rating_hide_sku' => ['nullable', 'boolean'],
 
             'template_name' => ['required', 'string', 'max:120'],
             'template_dpi' => ['required', 'integer', 'in:203,300'],

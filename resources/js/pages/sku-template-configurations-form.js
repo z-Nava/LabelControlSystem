@@ -39,6 +39,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const serialStandardInput = document.querySelector('[name="serial_standard"]');
     const serialStandardDisplay = document.getElementById('serial_standard_display');
     const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
+    const ratingHideSkuCheckbox = document.querySelector('[name="rating_hide_sku"]');
     const ratingQrToggleWrapper = document.getElementById('rating-qr-toggle-wrapper');
     const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
     const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
@@ -68,6 +69,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
     const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
     const isEmeaRatingWithQr = () => isRatingWithQrEnabled() && getSelectedSerialStandard() === 'EMEA';
+    const hideSkuOnRatingWithQr = () => isRatingWithQrEnabled() && (isEmeaRatingWithQr() || Boolean(ratingHideSkuCheckbox?.checked));
 
     const syncSerialStandardFromSku = () => {
         const standard = getSelectedSkuStandard();
@@ -107,7 +109,7 @@ const initSkuTemplateConfigurationsForm = () => {
         toggleRatingQrControl();
         const isSerial = labelTypeSelect?.value === 'serial';
         const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
-        const hideSkuLayout = isEmeaRatingWithQr();
+        const hideSkuLayout = hideSkuOnRatingWithQr();
         const requiresQr = isSerial || isRatingWithQr;
 
         serialSections.forEach((section) => {
@@ -142,7 +144,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
         if (qrLayoutDescription) {
             qrLayoutDescription.textContent = isRatingWithQr
-                ? 'El QR codifica el serial completo para la etiqueta Rating. En EMEA se imprime solo SN + QR del SN (sin SKU).'
+                ? 'El QR codifica el serial completo para la etiqueta Rating. En EMEA o cuando actives "Ocultar SKU", se imprime solo SN + QR del SN.'
                 : 'El QR codifica el serial completo; además se muestra el SKU grande y el SN en texto pequeño.';
         }
 
@@ -214,7 +216,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const isRatingWithQr = isRatingWithQrEnabled();
         const serial = getSelectedSerialStandard() === 'EMEA' ? defaultSerialEmea : defaultSerialUl;
         const serialPrint = getSelectedSerialStandard() === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
-        const hideSkuOnEmeaRating = isEmeaRatingWithQr();
+        const hideSkuOnEmeaRating = hideSkuOnRatingWithQr();
 
         if (labelType !== 'serial' && !isRatingWithQr) {
             const x = readInt('[name="serial_position_x"]', 40);
@@ -304,6 +306,7 @@ const initSkuTemplateConfigurationsForm = () => {
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
+    ratingHideSkuCheckbox?.addEventListener('change', toggleLayoutSections);
     skuSelect?.addEventListener('change', () => {
         syncSerialStandardFromSku();
         toggleLayoutSections();

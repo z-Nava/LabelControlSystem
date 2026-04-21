@@ -186,6 +186,7 @@ class SkuTemplateConfigurationController extends Controller
                 'magnification' => $data['qr_magnification'] ?? 4,
             ],
             'rating_qr' => (bool) ($data['rating_with_qr'] ?? false),
+            'rating_hide_sku' => (bool) ($data['rating_hide_sku'] ?? false),
             'sku' => [
                 'x' => $data['sku_position_x'] ?? 170,
                 'y' => $data['sku_position_y'] ?? 35,
@@ -256,6 +257,7 @@ class SkuTemplateConfigurationController extends Controller
                 $configuration->serial_standard ?? $configuration->template?->serial_standard ?? 'UL'
             ),
             'rating_qr' => (bool) old('rating_with_qr', data_get($layout, 'rating_qr', false)),
+            'rating_hide_sku' => (bool) old('rating_hide_sku', data_get($layout, 'rating_hide_sku', false)),
         ];
     }
 }

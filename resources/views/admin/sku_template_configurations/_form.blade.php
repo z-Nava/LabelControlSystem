@@ -67,6 +67,13 @@
                     Habilitar QR en etiquetas Rating
                 </label>
                 <p class="mt-1 text-xs text-slate-500">Solo aplica para tipo Rating.</p>
+
+                <label class="mt-3 inline-flex items-center gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="rating_hide_sku" value="1" class="rounded border-slate-300"
+                           {{ old('rating_hide_sku', ($formState['rating_hide_sku'] ?? false)) ? 'checked' : '' }}>
+                    Ocultar SKU en Rating con QR (solo SN + QR)
+                </label>
+                <p class="mt-1 text-xs text-slate-500">Útil para SKU específicos de UL que requieren solo SN + QR.</p>
             </div>
         </div>
     </section>

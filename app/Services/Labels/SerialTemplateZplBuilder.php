@@ -35,7 +35,11 @@ class SerialTemplateZplBuilder
         $sn = $isRatingLabel
             ? $this->normalizeTextLayout($layout['text'] ?? ($layout['sn'] ?? []))
             : $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
-        $hideSkuOnEmeaRating = $labelType === 'rating' && strtoupper($serialStandard) === 'EMEA';
+        $hideSkuOnEmeaRating = $labelType === 'rating'
+            && (
+                strtoupper($serialStandard) === 'EMEA'
+                || (bool) ($layout['rating_hide_sku'] ?? false)
+            );
         $prefix = trim((string) ($layout['sn']['prefix'] ?? 'SN:'));
         $snText = $isRatingLabel || $prefix === ''
             ? '{{serial_full}}'

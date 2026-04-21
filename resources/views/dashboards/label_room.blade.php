@@ -50,7 +50,7 @@
                         <a href="{{ route('label_requests.create') }}" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
                             <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Paso 1</div>
                             <div class="text-lg font-semibold mt-1">Nueva requisición de Etiquetas</div>
-                            <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial / Shipping</div>
+                            <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial</div>
                         </a>
 
                         <a href="{{ route('label_reworks.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
