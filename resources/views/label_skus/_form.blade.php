@@ -58,10 +58,11 @@
     </div>
 
     <div>
-        <label class="block text-sm font-medium text-slate-700">Packaging Part Number</label>
+        <label class="block text-sm font-medium text-slate-700">Packaging Part Number(s)</label>
         <input name="packaging_part_number" value="{{ old('packaging_part_number', $labelSku->packaging_part_number ?? '') }}"
                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="018920001" />
+               placeholder="018920001, 055920001" />
+        <p class="mt-1 text-xs text-slate-500">Puedes capturar más de un Packaging PN separado por coma, espacio, punto y coma o |.</p>
         @error('packaging_part_number') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 

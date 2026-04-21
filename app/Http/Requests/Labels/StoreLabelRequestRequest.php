@@ -154,17 +154,27 @@ class StoreLabelRequestRequest extends FormRequest
 
         $oracleAssembly = strtoupper(trim((string) $job->assembly));
         $assemblyPartNumber = strtoupper(trim((string) $labelSku->assembly_part_number));
-        $packagingPartNumber = strtoupper(trim((string) $labelSku->packaging_part_number));
+        $packagingPartNumbers = $this->normalizePartNumberList((string) $labelSku->packaging_part_number);
 
         if ($oracleAssembly === '') {
             return;
         }
 
-        if ($oracleAssembly === $assemblyPartNumber || $oracleAssembly === $packagingPartNumber) {
+        if ($oracleAssembly === $assemblyPartNumber || in_array($oracleAssembly, $packagingPartNumbers, true)) {
             return;
         }
 
-        $validator->errors()->add('job_number', 'El assembly del Job en Oracle debe coincidir con Assembly PN o Packaging PN del Label SKU.');
+        $validator->errors()->add('job_number', 'El assembly del Job en Oracle debe coincidir con Assembly PN o alguno de los Packaging PN del Label SKU.');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizePartNumberList(string $value): array
+    {
+        $tokens = preg_split('/[\s,;|]+/', strtoupper(trim($value))) ?: [];
+
+        return array_values(array_filter($tokens, static fn ($token) => $token !== ''));
     }
 
     private function oracleJobLookup(): OracleJobLookupService

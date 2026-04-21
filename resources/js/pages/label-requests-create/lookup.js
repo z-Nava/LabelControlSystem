@@ -13,22 +13,36 @@ function trimLeadingZeros(value) {
     return value.replace(/^0+/, '') || '0';
 }
 
+function splitPartNumbers(value) {
+    return String(value || '')
+        .split(/[\s,;|]+/)
+        .map((token) => token.trim())
+        .filter(Boolean);
+}
+
 function partNumbersMatch(jobAssembly, skuPartNumber) {
     const normalizedJobAssembly = normalizePartNumber(jobAssembly);
-    const normalizedSkuPartNumber = normalizePartNumber(skuPartNumber);
 
-    if (!normalizedJobAssembly || !normalizedSkuPartNumber) {
+    if (!normalizedJobAssembly) {
         return false;
     }
 
-    if (normalizedJobAssembly === normalizedSkuPartNumber) {
-        return true;
-    }
+    return splitPartNumbers(skuPartNumber).some((partNumber) => {
+        const normalizedSkuPartNumber = normalizePartNumber(partNumber);
 
-    const jobAssemblyWithoutZeros = trimLeadingZeros(normalizedJobAssembly);
-    const skuPartNumberWithoutZeros = trimLeadingZeros(normalizedSkuPartNumber);
+        if (!normalizedSkuPartNumber) {
+            return false;
+        }
 
-    return jobAssemblyWithoutZeros === skuPartNumberWithoutZeros;
+        if (normalizedJobAssembly === normalizedSkuPartNumber) {
+            return true;
+        }
+
+        const jobAssemblyWithoutZeros = trimLeadingZeros(normalizedJobAssembly);
+        const skuPartNumberWithoutZeros = trimLeadingZeros(normalizedSkuPartNumber);
+
+        return jobAssemblyWithoutZeros === skuPartNumberWithoutZeros;
+    });
 }
 
 function autoSelectSkuByAssembly(elements, assembly) {
