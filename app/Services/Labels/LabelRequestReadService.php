@@ -7,6 +7,7 @@ use App\Models\LabelSku;
 use App\Models\ProductionLine;
 use App\Models\SkuSerialFormat;
 use App\Models\Shift;
+use App\Support\SerialStandards;
 
 class LabelRequestReadService
 {
@@ -60,7 +61,7 @@ class LabelRequestReadService
             'defaultDate' => now()->toDateString(),
             'defaultWeek' => (int) now()->isoWeek(),
             'defaultStandard' => 'UL',
-            'serialStandards' => ['UL', 'EMEA'],
+            'serialStandards' => SerialStandards::requestFlow(),
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
             'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
             'labelSkus' => LabelSku::query()

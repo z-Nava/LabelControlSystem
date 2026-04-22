@@ -5,6 +5,7 @@ namespace App\Http\Requests\Labels;
 use App\Models\LabelSku;
 use App\Models\SkuSerialFormat;
 use App\Services\Oracle\OracleJobLookupService;
+use App\Support\SerialStandards;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -29,7 +30,7 @@ class StoreLabelRequestRequest extends FormRequest
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
             'shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'leader_name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
-            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
+            'serial_standard' => ['required', Rule::in(SerialStandards::requestFlow())],
             'label_part_number' => ['required', 'string', 'max:80'],
             'quantity_requested' => ['required', 'integer', 'min:1', 'max:100000'],
             'include_serial' => ['nullable', 'boolean'],

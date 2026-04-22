@@ -9,14 +9,12 @@
         </div>
 
         <div class="flex flex-col sm:flex-row gap-2">
-            <a href="{{ route('sku_serial_formats.create', ['standard' => 'UL']) }}"
-               class="rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold hover:bg-slate-800 transition text-center">
-                + Agregar formato UL
-            </a>
-            <a href="{{ route('sku_serial_formats.create', ['standard' => 'EMEA']) }}"
-               class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition text-center">
-                + Agregar formato EMEA
-            </a>
+            @foreach(['UL' => 'bg-slate-900 hover:bg-slate-800', 'EMEA' => 'bg-red-600 hover:bg-red-500', 'ANZ' => 'bg-indigo-600 hover:bg-indigo-500'] as $standard => $buttonClasses)
+                <a href="{{ route('sku_serial_formats.create', ['standard' => $standard]) }}"
+                   class="rounded-xl {{ $buttonClasses }} text-white px-4 py-2 font-semibold transition text-center">
+                    + Agregar formato {{ $standard }}
+                </a>
+            @endforeach
         </div>
     </div>
 
@@ -32,22 +30,16 @@
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">Buscar</button>
     </form>
 
-    @include('sku_serial_formats._table', [
-        'title' => 'Estándar UL',
-        'formats' => $ulFormats,
-        'emptyMessage' => 'No hay formatos UL registrados.',
-        'prefixLabel' => 'UL Prefix',
-        'breakLabel' => 'UL Break',
-        'plantLabel' => 'UL Plant',
-    ])
-
-    @include('sku_serial_formats._table', [
-        'title' => 'Estándar EMEA',
-        'formats' => $emeaFormats,
-        'emptyMessage' => 'No hay formatos EMEA registrados.',
-        'prefixLabel' => 'EMEA Base',
-        'breakLabel' => 'EMEA Conformity',
-        'plantLabel' => 'EMEA Plant/Line',
-    ])
+    @foreach(['UL', 'EMEA', 'ANZ'] as $standard)
+        @php($isUl = $standard === 'UL')
+        @include('sku_serial_formats._table', [
+            'title' => "Estándar {$standard}",
+            'formats' => $formatsByStandard[$standard] ?? collect(),
+            'emptyMessage' => "No hay formatos {$standard} registrados.",
+            'prefixLabel' => $isUl ? 'UL Prefix' : 'Base code',
+            'breakLabel' => $isUl ? 'UL Break' : 'Version code',
+            'plantLabel' => $isUl ? 'UL Plant' : 'Plant/Line (opcional)',
+        ])
+    @endforeach
 </div>
 @endsection

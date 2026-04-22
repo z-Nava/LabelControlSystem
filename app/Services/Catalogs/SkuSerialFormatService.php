@@ -3,6 +3,8 @@
 namespace App\Services\Catalogs;
 
 use App\Models\SkuSerialFormat;
+use App\Support\SerialSchemes;
+use App\Support\SerialStandards;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
@@ -76,12 +78,15 @@ class SkuSerialFormatService
 
     private function normalizeData(array $data, bool $defaultActive, ?int $updatedByUserId): array
     {
-        $serialStandard = strtoupper(trim((string) ($data['serial_standard'] ?? 'UL')));
+        $serialStandard = SerialStandards::normalize((string) ($data['serial_standard'] ?? SerialStandards::UL));
+        $defaultScheme = SerialStandards::isInternational($serialStandard)
+            ? ($serialStandard === SerialStandards::ANZ ? SerialSchemes::ANZ_STANDARD : SerialSchemes::EMEA_RATING)
+            : SerialSchemes::UL_STANDARD;
 
         $normalized = [
             'sku' => strtoupper(trim($data['sku'])),
             'serial_standard' => $serialStandard,
-            'serial_scheme' => trim((string) ($data['serial_scheme'] ?? 'ul_standard')),
+            'serial_scheme' => trim((string) ($data['serial_scheme'] ?? $defaultScheme)),
             'separator' => $this->normalizeSeparator($data['separator'] ?? ''),
             'year_digits' => (int) ($data['year_digits'] ?? 2),
             'week_digits' => (int) ($data['week_digits'] ?? 2),
@@ -93,7 +98,7 @@ class SkuSerialFormatService
             'updated_by_user_id' => $updatedByUserId,
         ];
 
-        if ($serialStandard === 'EMEA') {
+        if (SerialStandards::isInternational($serialStandard)) {
             $normalized['emea_prefix'] = $this->nullableUpper($data['emea_prefix'] ?? null);
             $normalized['emea_conformity_code'] = $this->nullableUpper($data['emea_conformity_code'] ?? null);
             $normalized['emea_plant_code'] = $this->nullableUpper($data['emea_plant_code'] ?? null);

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SerialStandards;
 use Illuminate\Database\Eloquent\Model;
 
 class SkuSerialFormat extends Model
@@ -48,21 +49,26 @@ class SkuSerialFormat extends Model
 
     public function isEmea(): bool
     {
-        return strtoupper((string) $this->serial_standard) === 'EMEA';
+        return strtoupper((string) $this->serial_standard) === SerialStandards::EMEA;
+    }
+
+    public function isInternational(): bool
+    {
+        return SerialStandards::isInternational((string) $this->serial_standard);
     }
 
     public function componentPrefix(): string
     {
-        return (string) ($this->isEmea() ? $this->emea_prefix : $this->ul_prefix);
+        return (string) ($this->isInternational() ? $this->emea_prefix : $this->ul_prefix);
     }
 
     public function componentBreak(): string
     {
-        return (string) ($this->isEmea() ? $this->emea_conformity_code : $this->ul_serial_break);
+        return (string) ($this->isInternational() ? $this->emea_conformity_code : $this->ul_serial_break);
     }
 
     public function componentPlantCode(): string
     {
-        return (string) ($this->isEmea() ? $this->emea_plant_code : $this->ul_plant_code);
+        return (string) ($this->isInternational() ? $this->emea_plant_code : $this->ul_plant_code);
     }
 }

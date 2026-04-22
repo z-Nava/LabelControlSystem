@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreLabelSkuRequest;
 use App\Http\Requests\Admin\UpdateLabelSkuRequest;
 use App\Models\LabelSku;
 use App\Services\Catalogs\LabelSkuService;
+use App\Support\SerialStandards;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -26,10 +27,7 @@ class LabelSkuController extends Controller
 
     public function create(): View
     {
-        $serialStandard = strtoupper(trim((string) request('serial_standard', 'UL')));
-        if (!in_array($serialStandard, ['UL', 'EMEA', 'ANZ'], true)) {
-            $serialStandard = 'UL';
-        }
+        $serialStandard = SerialStandards::normalize((string) request('serial_standard', SerialStandards::UL));
 
         return view('label_skus.create', compact('serialStandard'));
     }

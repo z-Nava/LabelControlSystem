@@ -3,6 +3,7 @@
 namespace App\Services\Catalogs;
 
 use App\Models\LabelSku;
+use App\Support\SerialStandards;
 use Illuminate\Support\Collection;
 
 class LabelSkuService
@@ -27,11 +28,9 @@ class LabelSkuService
             ->orderBy('sku')
             ->orderBy('label_part_number');
 
-        return [
-            'UL' => $this->forStandard($baseQuery, 'UL'),
-            'EMEA' => $this->forStandard($baseQuery, 'EMEA'),
-            'ANZ' => $this->forStandard($baseQuery, 'ANZ'),
-        ];
+        return collect(SerialStandards::all())
+            ->mapWithKeys(fn (string $standard) => [$standard => $this->forStandard($baseQuery, $standard)])
+            ->all();
     }
 
     public function create(array $data, ?int $updatedByUserId = null): LabelSku

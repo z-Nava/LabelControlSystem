@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateSkuSerialFormatRequest;
 use App\Models\LabelSku;
 use App\Models\SkuSerialFormat;
 use App\Services\Catalogs\SkuSerialFormatService;
+use App\Support\SerialStandards;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -20,16 +21,17 @@ class SkuSerialFormatController extends Controller
     public function index(): View
     {
         $search = request('q');
-        $ulFormats = $this->service->listByStandard('UL', $search);
-        $emeaFormats = $this->service->listByStandard('EMEA', $search);
+        $formatsByStandard = collect(SerialStandards::all())
+            ->mapWithKeys(fn (string $standard) => [$standard => $this->service->listByStandard($standard, $search)])
+            ->all();
 
-        return view('sku_serial_formats.index', compact('ulFormats', 'emeaFormats', 'search'));
+        return view('sku_serial_formats.index', compact('formatsByStandard', 'search'));
     }
 
     public function create(): View
     {
         $forcedStandard = strtoupper((string) request('standard', ''));
-        $forcedStandard = in_array($forcedStandard, ['UL', 'EMEA'], true) ? $forcedStandard : null;
+        $forcedStandard = in_array($forcedStandard, SerialStandards::all(), true) ? $forcedStandard : null;
 
         $activeSkus = LabelSku::query()
             ->active()

@@ -13,7 +13,7 @@
         <select name="serial_standard" id="serialStandard"
                 class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                 required @disabled($lockedStandard !== null)>
-            @foreach(['UL', 'EMEA'] as $standard)
+            @foreach(['UL', 'EMEA', 'ANZ'] as $standard)
                 <option value="{{ $standard }}" @selected(old('serial_standard', $format->serial_standard ?? $lockedStandard ?? 'UL') === $standard)>
                     {{ $standard }}
                 </option>
@@ -29,6 +29,7 @@
                 required>
             <option value="ul_standard" @selected(old('serial_scheme', $format->serial_scheme ?? 'ul_standard') === 'ul_standard')>UL Standard</option>
             <option value="emea_rating" @selected(old('serial_scheme', $format->serial_scheme ?? 'ul_standard') === 'emea_rating')>EMEA Rating</option>
+            <option value="anz_standard" @selected(old('serial_scheme', $format->serial_scheme ?? 'ul_standard') === 'anz_standard')>ANZ Standard</option>
         </select>
         @error('serial_scheme') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
@@ -93,26 +94,26 @@
         </div>
     </div>
 
-    <div id="emeaFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
+    <div id="internationalFields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
         <div class="md:col-span-3">
-            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estructura EMEA</p>
+            <p id="internationalStructureTitle" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Estructura internacional</p>
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700">EMEA Base code</label>
+            <label class="block text-sm font-medium text-slate-700">Base code</label>
             <input name="emea_prefix" value="{{ old('emea_prefix', $format->emea_prefix ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                    maxlength="10" placeholder="5055 54" />
             @error('emea_prefix') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700">EMEA Conformity code</label>
+            <label class="block text-sm font-medium text-slate-700">Conformity / Version code</label>
             <input name="emea_conformity_code" value="{{ old('emea_conformity_code', $format->emea_conformity_code ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                    maxlength="10" placeholder="01" />
             @error('emea_conformity_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
         <div>
-            <label class="block text-sm font-medium text-slate-700">EMEA Plant / line code (opcional)</label>
+            <label class="block text-sm font-medium text-slate-700">Plant / line code (opcional)</label>
             <input name="emea_plant_code" value="{{ old('emea_plant_code', $format->emea_plant_code ?? '') }}"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                    maxlength="10" placeholder="(vacío)" />
@@ -187,7 +188,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const skuSelect = document.getElementById('sku');
     const skuLabelPartNumber = document.getElementById('skuLabelPartNumber');
     const ulFields = document.getElementById('ulFields');
-    const emeaFields = document.getElementById('emeaFields');
+    const internationalFields = document.getElementById('internationalFields');
+    const internationalStructureTitle = document.getElementById('internationalStructureTitle');
     const weekDigitsGroup = document.getElementById('weekDigitsGroup');
     const includeWeekWrapper = document.getElementById('includeWeekWrapper');
     const includeWeekCheckbox = document.getElementById('includeWeekCheckbox');
@@ -201,23 +203,31 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const applyStandardUi = (standard) => {
-        const isEmea = standard === 'EMEA';
+        const isInternational = standard === 'EMEA' || standard === 'ANZ';
+        const isAnz = standard === 'ANZ';
 
-        serialSchemeSelect.value = isEmea ? 'emea_rating' : 'ul_standard';
-        ulFields?.classList.toggle('hidden', isEmea);
-        emeaFields?.classList.toggle('hidden', !isEmea);
+        serialSchemeSelect.value = isInternational
+            ? (isAnz ? 'anz_standard' : 'emea_rating')
+            : 'ul_standard';
+        ulFields?.classList.toggle('hidden', isInternational);
+        internationalFields?.classList.toggle('hidden', !isInternational);
+        if (internationalStructureTitle) {
+            internationalStructureTitle.textContent = isAnz ? 'Estructura ANZ' : 'Estructura EMEA';
+        }
 
-        if (isEmea) {
+        if (isInternational) {
             if (expectedExampleText) {
-                expectedExampleText.textContent = '5055 54 + 01 + 000001 + A2026 = 5055 54 01 000001 A2026';
+                expectedExampleText.textContent = isAnz
+                    ? 'PPPPPPPP + A + XXXXX + MYYYY = PPPPPPPP A XXXXX M2026'
+                    : '5055 54 + 01 + 000001 + A2026 = 5055 54 01 000001 A2026';
             }
             if (yearDigits) yearDigits.value = '4';
             if (includeYearCheckbox) includeYearCheckbox.checked = true;
             if (includeWeekCheckbox) includeWeekCheckbox.checked = false;
             weekDigitsGroup?.classList.add('hidden');
             includeWeekWrapper?.classList.add('hidden');
-            if (unitLength && (unitLength.value === '' || unitLength.value === '5')) {
-                unitLength.value = '6';
+            if (unitLength && (unitLength.value === '' || unitLength.value === '5' || unitLength.value === '6')) {
+                unitLength.value = isAnz ? '5' : '6';
             }
         } else {
             if (expectedExampleText) {
@@ -235,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         skuLabelPartNumber.textContent = labelPartNumber ? `Label Part Number: ${labelPartNumber}` : '';
 
-        if (skuSerialStandard === 'UL' || skuSerialStandard === 'EMEA') {
+        if (skuSerialStandard === 'UL' || skuSerialStandard === 'EMEA' || skuSerialStandard === 'ANZ') {
             serialStandardSelect.value = skuSerialStandard;
         }
 

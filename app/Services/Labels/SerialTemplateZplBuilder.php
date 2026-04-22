@@ -37,7 +37,7 @@ class SerialTemplateZplBuilder
             : $this->normalizeTextLayout($layout['sn'] ?? ($layout['text'] ?? []), 22);
         $hideSkuOnEmeaRating = $labelType === 'rating'
             && (
-                strtoupper($serialStandard) === 'EMEA'
+                in_array(strtoupper($serialStandard), ['EMEA', 'ANZ'], true)
                 || (bool) ($layout['rating_hide_sku'] ?? false)
             );
         $prefix = trim((string) ($layout['sn']['prefix'] ?? 'SN:'));

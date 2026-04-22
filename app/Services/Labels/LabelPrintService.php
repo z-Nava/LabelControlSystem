@@ -10,6 +10,8 @@ use App\Models\SerialRange;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
 use App\Models\SkuSerialFormat;
+use App\Support\SerialSchemes;
+use App\Support\SerialStandards;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -340,10 +342,10 @@ class LabelPrintService
     {
         if (
             $serialFormat
-            && $serialFormat->isEmea()
-            && $serialFormat->serial_scheme === 'emea_rating'
+            && $serialFormat->isInternational()
+            && in_array($serialFormat->serial_scheme, [SerialSchemes::EMEA_RATING, SerialSchemes::ANZ_STANDARD], true)
         ) {
-            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
+            return $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
         }
 
         return $serialFull;
@@ -392,8 +394,11 @@ class LabelPrintService
 
     private function formatFromComponents(SerialWeek $week, SkuSerialFormat $serialFormat, int $serialNumber, ?int $requestMonth = null): string
     {
-        if ($serialFormat->isEmea() && $serialFormat->serial_scheme === 'emea_rating') {
-            return $this->formatEmeaRatingFromComponents($week, $serialFormat, $serialNumber, $requestMonth);
+        if (
+            $serialFormat->isInternational()
+            && in_array($serialFormat->serial_scheme, [SerialSchemes::EMEA_RATING, SerialSchemes::ANZ_STANDARD], true)
+        ) {
+            return $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, $requestMonth);
         }
 
         $components = [
@@ -419,7 +424,7 @@ class LabelPrintService
             ->implode($separator);
     }
 
-    private function formatEmeaRatingFromComponents(
+    private function formatInternationalRatingFromComponents(
         SerialWeek $week,
         SkuSerialFormat $serialFormat,
         int $serialNumber,
@@ -427,7 +432,8 @@ class LabelPrintService
         bool $forRatingQr = false
     ): string
     {
-        $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? 6, '0', STR_PAD_LEFT);
+        $defaultLength = $serialFormat->serial_scheme === SerialSchemes::ANZ_STANDARD ? 5 : 6;
+        $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? $defaultLength, '0', STR_PAD_LEFT);
         $monthYear = $this->resolveEmeaMonthCode($week, $requestMonth) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
 
         $components = [
@@ -477,14 +483,14 @@ class LabelPrintService
     {
         $standard = strtoupper((string) ($labelRequest->serial_standard ?? 'UL'));
 
-        if (in_array($standard, ['EMEA', 'ANZ'], true)) {
+        if (SerialStandards::isInternational($standard)) {
             return true;
         }
 
         return (bool) (
             $serialFormat
-            && $serialFormat->isEmea()
-            && $serialFormat->serial_scheme === 'emea_rating'
+            && $serialFormat->isInternational()
+            && in_array($serialFormat->serial_scheme, [SerialSchemes::EMEA_RATING, SerialSchemes::ANZ_STANDARD], true)
         );
     }
 

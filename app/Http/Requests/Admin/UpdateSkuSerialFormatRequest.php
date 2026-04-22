@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\SerialSchemes;
+use App\Support\SerialStandards;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,8 +19,8 @@ class UpdateSkuSerialFormatRequest extends FormRequest
         $id = $this->route('sku_serial_format')?->id ?? null;
 
         return [
-            'serial_standard' => ['required', Rule::in(['UL', 'EMEA'])],
-            'serial_scheme' => ['required', Rule::in(['ul_standard', 'emea_rating'])],
+            'serial_standard' => ['required', Rule::in(SerialStandards::all())],
+            'serial_scheme' => ['required', Rule::in(SerialSchemes::all())],
             'sku' => [
                 'required',
                 'string',

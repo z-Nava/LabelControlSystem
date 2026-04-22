@@ -58,7 +58,7 @@
 
                     <a href="{{ route('sku_serial_formats.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                         <div class="font-semibold">SKU Serial Formats</div>
-                        <div class="text-sm text-slate-600 mt-1">Definir segmentos UL/EMEA y formatos serial.</div>
+                        <div class="text-sm text-slate-600 mt-1">Definir segmentos UL/EMEA/ANZ y formatos serial.</div>
                     </a>
 
                     <a href="{{ route('admin.sku_template_configurations.index') }}" class="rounded-2xl border p-5 hover:shadow transition">

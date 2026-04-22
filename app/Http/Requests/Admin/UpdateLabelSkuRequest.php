@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\SerialStandards;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,8 +16,8 @@ class UpdateLabelSkuRequest extends FormRequest
     public function rules(): array
     {
         $id = $this->route('label_sku')?->id ?? null;
-        $serialStandard = strtoupper(trim((string) $this->input('serial_standard', 'UL')));
-        $isEmeaOrAnz = in_array($serialStandard, ['EMEA', 'ANZ'], true);
+        $serialStandard = SerialStandards::normalize((string) $this->input('serial_standard', SerialStandards::UL));
+        $isEmeaOrAnz = SerialStandards::isInternational($serialStandard);
 
         return [
             'sku' => [
@@ -27,7 +28,7 @@ class UpdateLabelSkuRequest extends FormRequest
                     ->ignore($id)
                     ->where('serial_standard', $serialStandard),
             ],
-            'serial_standard' => ['required', Rule::in(['UL', 'EMEA', 'ANZ'])],
+            'serial_standard' => ['required', Rule::in(SerialStandards::all())],
             'label_part_number' => ['required', 'string', 'max:80'],
             'description' => ['nullable', 'string', 'max:160'],
             'console_sku' => [$isEmeaOrAnz ? 'required' : 'nullable', 'string', 'max:80'],

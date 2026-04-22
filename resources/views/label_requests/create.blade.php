@@ -225,7 +225,7 @@
                         <div>
                             <label class="text-sm font-medium text-slate-700">Estándar serial</label>
                             <select id="serialStandard" name="serial_standard" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
-                                @foreach(($serialStandards ?? ['UL', 'EMEA']) as $standard)
+                                @foreach(($serialStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
                                     <option value="{{ $standard }}" @selected(old('serial_standard', $defaultStandard ?? 'UL') === $standard)>
                                         {{ $standard }}
                                     </option>
