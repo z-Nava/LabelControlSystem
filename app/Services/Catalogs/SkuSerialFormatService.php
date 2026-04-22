@@ -22,6 +22,7 @@ class SkuSerialFormatService
                     ->orWhere('emea_prefix', 'like', "%{$search}%")
                     ->orWhere('emea_conformity_code', 'like', "%{$search}%")
                     ->orWhere('emea_plant_code', 'like', "%{$search}%")
+                    ->orWhere('anz_customer_tool_code', 'like', "%{$search}%")
                     ->orWhere('separator', 'like', "%{$search}%")
                     ->orWhere('pattern', 'like', "%{$search}%");
             })
@@ -45,6 +46,7 @@ class SkuSerialFormatService
                         ->orWhere('emea_prefix', 'like', "%{$search}%")
                         ->orWhere('emea_conformity_code', 'like', "%{$search}%")
                         ->orWhere('emea_plant_code', 'like', "%{$search}%")
+                        ->orWhere('anz_customer_tool_code', 'like', "%{$search}%")
                         ->orWhere('separator', 'like', "%{$search}%")
                         ->orWhere('pattern', 'like', "%{$search}%");
                 });
@@ -102,6 +104,9 @@ class SkuSerialFormatService
             $normalized['emea_prefix'] = $this->nullableUpper($data['emea_prefix'] ?? null);
             $normalized['emea_conformity_code'] = $this->nullableUpper($data['emea_conformity_code'] ?? null);
             $normalized['emea_plant_code'] = $this->nullableUpper($data['emea_plant_code'] ?? null);
+            $normalized['anz_customer_tool_code'] = $serialStandard === SerialStandards::ANZ
+                ? $this->nullableUpper($data['anz_customer_tool_code'] ?? null)
+                : null;
             $normalized['ul_prefix'] = null;
             $normalized['ul_serial_break'] = null;
             $normalized['ul_plant_code'] = null;
@@ -112,6 +117,7 @@ class SkuSerialFormatService
             $normalized['emea_prefix'] = null;
             $normalized['emea_conformity_code'] = null;
             $normalized['emea_plant_code'] = null;
+            $normalized['anz_customer_tool_code'] = null;
         }
 
         return $normalized;

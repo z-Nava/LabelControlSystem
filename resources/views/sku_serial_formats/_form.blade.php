@@ -10,15 +10,20 @@
         @if($lockedStandard)
             <input type="hidden" name="serial_standard" value="{{ $lockedStandard }}">
         @endif
-        <select name="serial_standard" id="serialStandard"
-                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                required @disabled($lockedStandard !== null)>
-            @foreach(['UL', 'EMEA', 'ANZ'] as $standard)
-                <option value="{{ $standard }}" @selected(old('serial_standard', $format->serial_standard ?? $lockedStandard ?? 'UL') === $standard)>
-                    {{ $standard }}
-                </option>
-            @endforeach
-        </select>
+        @if($lockedStandard)
+            <input type="text" value="{{ $lockedStandard }}"
+                   class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" readonly>
+        @else
+            <select name="serial_standard" id="serialStandard"
+                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    required>
+                @foreach(['UL', 'EMEA', 'ANZ'] as $standard)
+                    <option value="{{ $standard }}" @selected(old('serial_standard', $format->serial_standard ?? $lockedStandard ?? 'UL') === $standard)>
+                        {{ $standard }}
+                    </option>
+                @endforeach
+            </select>
+        @endif
         @error('serial_standard') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
@@ -119,6 +124,15 @@
                    maxlength="10" placeholder="(vacío)" />
             @error('emea_plant_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         </div>
+
+        <div id="anzCustomerToolCodeWrapper" class="md:col-span-3 hidden">
+            <label class="block text-sm font-medium text-slate-700">ANZ Customer tool code (CCCC)</label>
+            <input name="anz_customer_tool_code" value="{{ old('anz_customer_tool_code', $format->anz_customer_tool_code ?? '') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                   maxlength="10" placeholder="M12" />
+            <p class="mt-1 text-xs text-slate-500">Se usa para QR ANZ: <strong>CCCC | PPPPPPPP A XXXXX MJJJJ</strong>.</p>
+            @error('anz_customer_tool_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+        </div>
     </div>
 
     <div>
@@ -191,6 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const internationalFields = document.getElementById('internationalFields');
     const internationalStructureTitle = document.getElementById('internationalStructureTitle');
     const weekDigitsGroup = document.getElementById('weekDigitsGroup');
+    const anzCustomerToolCodeWrapper = document.getElementById('anzCustomerToolCodeWrapper');
     const includeWeekWrapper = document.getElementById('includeWeekWrapper');
     const includeWeekCheckbox = document.getElementById('includeWeekCheckbox');
     const includeYearCheckbox = document.getElementById('includeYearCheckbox');
@@ -214,6 +229,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (internationalStructureTitle) {
             internationalStructureTitle.textContent = isAnz ? 'Estructura ANZ' : 'Estructura EMEA';
         }
+        anzCustomerToolCodeWrapper?.classList.toggle('hidden', !isAnz);
 
         if (isInternational) {
             if (expectedExampleText) {

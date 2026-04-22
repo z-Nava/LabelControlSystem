@@ -19,6 +19,7 @@ class SkuSerialFormat extends Model
         'emea_prefix',
         'emea_conformity_code',
         'emea_plant_code',
+        'anz_customer_tool_code',
         'separator',
         'year_digits',
         'week_digits',
@@ -52,6 +53,11 @@ class SkuSerialFormat extends Model
         return strtoupper((string) $this->serial_standard) === SerialStandards::EMEA;
     }
 
+    public function isAnz(): bool
+    {
+        return strtoupper((string) $this->serial_standard) === SerialStandards::ANZ;
+    }
+
     public function isInternational(): bool
     {
         return SerialStandards::isInternational((string) $this->serial_standard);
@@ -70,5 +76,10 @@ class SkuSerialFormat extends Model
     public function componentPlantCode(): string
     {
         return (string) ($this->isInternational() ? $this->emea_plant_code : $this->ul_plant_code);
+    }
+
+    public function anzQrCustomerToolCode(): string
+    {
+        return strtoupper(trim((string) $this->anz_customer_tool_code));
     }
 }

@@ -345,7 +345,13 @@ class LabelPrintService
             && $serialFormat->isInternational()
             && in_array($serialFormat->serial_scheme, [SerialSchemes::EMEA_RATING, SerialSchemes::ANZ_STANDARD], true)
         ) {
-            return $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
+            $baseSerial = $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
+
+            if ($serialFormat->isAnz() && $serialFormat->anzQrCustomerToolCode() !== '') {
+                return $serialFormat->anzQrCustomerToolCode().' | '.$baseSerial;
+            }
+
+            return $baseSerial;
         }
 
         return $serialFull;
