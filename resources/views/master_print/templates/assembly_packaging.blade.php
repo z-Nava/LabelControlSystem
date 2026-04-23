@@ -346,14 +346,28 @@
                 </div>
             </div>
 
-            <div class="col-span-2 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
-                <div class="mt-1 text-[12px] font-bold text-black">
-                    {{ $s['qty_pallet'] ?? '' }}
+            <div class="col-span-3 border-r border-black">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-7 border-r border-black p-2">
+                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                        <div class="mt-1 text-[12px] font-bold text-black">
+                            {{ $s['qty_pallet'] ?? '' }}
+                        </div>
+                    </div>
+                    <div class="col-span-5 p-1.5 text-center">
+                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
+                        <div class="qr-box mt-1 flex min-h-[15mm] items-center justify-center">
+                            @if(!empty($s['qty_pallet']))
+                                <div class="js-qr h-[13mm] w-[13mm] overflow-hidden"
+                                     data-size="56"
+                                     data-value="{{ $s['qty_pallet'] }}"></div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-span-4 p-2">
+            <div class="col-span-3 p-2">
                 <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
                 <div class="mt-1 h-[6mm] rounded-[2mm] border border-black px-2 py-1 text-[9px] text-black"></div>
             </div>
