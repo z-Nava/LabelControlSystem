@@ -76,7 +76,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700">Customer tool code (CCCC)</label>
-                    <input id="anzCustomerCode" name="anz_customer_tool_code" value="{{ old('anz_customer_tool_code', $format->anz_customer_tool_code ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" maxlength="10" placeholder="M12" />
+                    <input id="anzCustomerCode" name="anz_customer_tool_code" value="{{ old('anz_customer_tool_code', $format->anz_customer_tool_code ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" maxlength="12" placeholder="M12" />
                     @error('anz_customer_tool_code') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
                 </div>
                 <div>

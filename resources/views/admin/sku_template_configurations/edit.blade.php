@@ -11,4 +11,5 @@
 </div>
 @vite('resources/js/app.js')
 <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 @endsection
