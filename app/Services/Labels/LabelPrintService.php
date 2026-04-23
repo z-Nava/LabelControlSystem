@@ -347,16 +347,6 @@ class LabelPrintService
         ) {
             $baseSerial = $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
 
-            if (
-                $serialFormat->isAnz()
-                && $serialFormat->shouldIncludeAnzCustomerToolCodeInQr()
-                && $serialFormat->anzQrCustomerToolCode() !== ''
-            ) {
-                $qrSeparator = $serialFormat->anz_qr_separator ?? ' | ';
-
-                return $serialFormat->anzQrCustomerToolCode().$qrSeparator.$baseSerial;
-            }
-
             return $baseSerial;
         }
 
@@ -461,7 +451,7 @@ class LabelPrintService
         if ($serialFormat->isAnz()) {
             $serialFormatMode = (string) ($serialFormat->anz_serial_print_format ?? 'spaces');
             if ($forRatingQr) {
-                $separator = (string) ($serialFormat->anz_qr_separator ?? ' | ');
+                $separator = $serialFormatMode === 'no_spaces' ? '' : ' ';
             } elseif ($serialFormatMode === 'no_spaces') {
                 $separator = '';
             } else {

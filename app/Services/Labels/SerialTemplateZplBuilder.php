@@ -118,9 +118,13 @@ class SerialTemplateZplBuilder
         }
 
         if ($mode === 'anz_customer_tool_serial') {
-            return '{{anz_customer_tool_code}}'
-                .$this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe'))
-                .$this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
+            if ($isRatingLabel) {
+                return '{{anz_customer_tool_code}}'
+                    .$this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe'))
+                    .$this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
+            }
+
+            return $this->serialPlaceholder('serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
         }
 
         return $isRatingLabel
