@@ -160,11 +160,18 @@ const initSkuTemplateConfigurationsForm = () => {
         const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
         const hideSkuLayout = hideSkuOnRatingWithQr();
         const requiresQr = isSerial || isRatingWithQr;
+        const isCustomQrMode = getQrContentMode() === 'custom';
 
         serialSections.forEach((section) => {
             section.style.display = requiresQr ? 'block' : 'none';
 
             section.querySelectorAll('input, select').forEach((field) => {
+                if (field.name.startsWith('qr_custom_field_')) {
+                    field.required = requiresQr && isCustomQrMode;
+
+                    return;
+                }
+
                 field.required = requiresQr;
             });
         });
