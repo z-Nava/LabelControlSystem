@@ -10,4 +10,5 @@
     </form>
 </div>
 @vite('resources/js/app.js')
+<script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
 @endsection
