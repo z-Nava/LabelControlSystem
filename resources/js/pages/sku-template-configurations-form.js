@@ -84,7 +84,15 @@ const initSkuTemplateConfigurationsForm = () => {
     const getSelectedSkuStandard = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.serialStandard || 'UL').toUpperCase();
     const getSelectedSkuExampleSerial = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.exampleSerial || '').trim();
     const getSelectedAnzCustomerToolCode = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.anzCustomerToolCode || '').trim().toUpperCase();
-    const getSelectedAnzQrSeparator = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.anzQrSeparator || '').trim() || ' | ';
+    const getSelectedAnzQrSeparator = () => {
+        const separator = String(skuSelect?.selectedOptions?.[0]?.dataset?.anzQrSeparator || '');
+
+        if (separator.trim() === '') {
+            return ' | ';
+        }
+
+        return separator;
+    };
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
     const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
     const isEmeaOrAnzRatingWithQr = () => isRatingWithQrEnabled() && ['EMEA', 'ANZ'].includes(getSelectedSerialStandard());
@@ -352,7 +360,7 @@ const initSkuTemplateConfigurationsForm = () => {
                 return serialValue;
             }
 
-            return `${customerToolCode}${getSelectedAnzQrSeparator()}${serialValue}`;
+            return `${customerToolCode}${getQrSeparator()}${serialValue}`;
         }
 
         if (mode === 'custom') {
