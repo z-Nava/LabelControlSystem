@@ -54,6 +54,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
+    const defaultSerialAnz = form.dataset.defaultSerialAnz || 'AF02F2019 A 00001 A2026';
     const defaultSku = form.dataset.defaultSku || '2978-OCUT';
     const skuLayoutGroups = document.querySelectorAll('[data-layout-group="sku"]');
 
@@ -72,6 +73,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const getSelectedSkuCode = () => skuSelect?.selectedOptions?.[0]?.dataset?.skuCode || defaultSku;
     const getSelectedSkuData = () => skuSelect?.selectedOptions?.[0]?.dataset || {};
     const getSelectedSkuStandard = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.serialStandard || 'UL').toUpperCase();
+    const getSelectedSkuExampleSerial = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.exampleSerial || '').trim();
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
     const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
     const isEmeaOrAnzRatingWithQr = () => isRatingWithQrEnabled() && ['EMEA', 'ANZ'].includes(getSelectedSerialStandard());
@@ -348,8 +350,15 @@ const initSkuTemplateConfigurationsForm = () => {
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
         const isRatingWithQr = isRatingWithQrEnabled();
-        const serial = getSelectedSerialStandard() === 'EMEA' ? defaultSerialEmea : defaultSerialUl;
-        const serialPrint = getSelectedSerialStandard() === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
+        const serialStandard = getSelectedSerialStandard();
+        const skuExampleSerial = getSelectedSkuExampleSerial();
+        const defaultSerialByStandard = {
+            UL: defaultSerialUl,
+            EMEA: defaultSerialEmea,
+            ANZ: defaultSerialAnz,
+        };
+        const serial = skuExampleSerial || defaultSerialByStandard[serialStandard] || defaultSerialUl;
+        const serialPrint = serialStandard === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
         const hideSkuOnEmeaRating = hideSkuOnRatingWithQr();
 
         if (labelType !== 'serial' && !isRatingWithQr) {

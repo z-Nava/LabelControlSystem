@@ -19,6 +19,7 @@
     id="sku-template-configuration-form"
     data-default-serial-ul="L36BH2606007A7"
     data-default-serial-emea="50555401123456A1234"
+    data-default-serial-anz="AF02F2019 A 00001 A2026"
     data-default-sku="2978-OCUT">
 
     <section class="rounded-2xl border border-slate-200 p-4">
@@ -54,6 +55,7 @@
                                         data-packaging-part-number="{{ $sku->packaging_part_number }}"
                                         data-emea-sku="{{ $sku->emea_sku }}"
                                         data-anz-sku="{{ $sku->anz_sku }}"
+                                        data-example-serial="{{ $skuPreviewSerials[$sku->id] ?? '' }}"
                                         @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
                                     {{ $sku->sku }} · {{ $sku->label_part_number }}
                                 </option>
