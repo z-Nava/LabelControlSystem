@@ -78,10 +78,30 @@ class SkuTemplateConfigurationController extends Controller
 
     public function create(): View
     {
+        return $this->buildCreateView('UL');
+    }
+
+    public function createByStandard(string $standard): View
+    {
+        return $this->buildCreateView(strtoupper($standard));
+    }
+
+    private function buildCreateView(string $forcedStandard): View
+    {
         $configuration = new LabelPrintProfile();
         $formData = $this->formService->build($configuration);
+        $formData['formState']['selected_serial_standard'] = $forcedStandard;
+        $formData['forcedStandard'] = $forcedStandard;
 
-        return view('admin.sku_template_configurations.create', compact('configuration') + $formData);
+        $viewByStandard = [
+            'UL' => 'admin.sku_template_configurations.create_ul',
+            'EMEA' => 'admin.sku_template_configurations.create_emea',
+            'ANZ' => 'admin.sku_template_configurations.create_anz',
+        ];
+
+        $view = $viewByStandard[$forcedStandard] ?? $viewByStandard['UL'];
+
+        return view($view, compact('configuration') + $formData);
     }
 
     public function store(StoreSkuTemplateConfigurationRequest $request): RedirectResponse

@@ -51,6 +51,15 @@ const initSkuTemplateConfigurationsForm = () => {
     const qrSeparatorSelect = document.getElementById('qr_separator');
     const qrSerialStyleSelect = document.getElementById('qr_serial_style');
     const skuStandardFilterButtons = document.querySelectorAll('[data-sku-standard-filter]');
+    const livePreviewQr = document.getElementById('live-preview-qr');
+    const livePreviewSkuLine = document.getElementById('live-preview-sku-line');
+    const livePreviewSnLine = document.getElementById('live-preview-sn-line');
+    const livePreviewStandard = document.getElementById('live-preview-standard');
+    const livePreviewLabelType = document.getElementById('live-preview-label-type');
+    const livePreviewQrMode = document.getElementById('live-preview-qr-mode');
+    const livePreviewSerialStyle = document.getElementById('live-preview-serial-style');
+    const livePreviewQrPayload = document.getElementById('live-preview-qr-payload');
+    const livePreviewWarning = document.getElementById('live-preview-warning');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -361,6 +370,110 @@ const initSkuTemplateConfigurationsForm = () => {
         return labelType === 'rating' ? applySerialStyle(ratingSerial) : applySerialStyle(serial);
     };
 
+    const renderLivePreviewQr = (payload, shouldRenderQr) => {
+        if (!livePreviewQr) {
+            return;
+        }
+
+        livePreviewQr.innerHTML = '';
+        livePreviewQr.classList.remove('text-red-600');
+        livePreviewQr.classList.add('text-slate-500');
+
+        if (!shouldRenderQr) {
+            livePreviewQr.textContent = 'Sin QR para la configuración actual.';
+
+            return;
+        }
+
+        if (!payload) {
+            livePreviewQr.textContent = 'No hay payload QR disponible.';
+
+            return;
+        }
+
+        if (typeof window.QRCode !== 'function') {
+            livePreviewQr.textContent = 'No se pudo renderizar QR (QRCode no disponible).';
+            livePreviewQr.classList.remove('text-slate-500');
+            livePreviewQr.classList.add('text-red-600');
+
+            return;
+        }
+
+        // eslint-disable-next-line no-new
+        new window.QRCode(livePreviewQr, {
+            text: payload,
+            width: 132,
+            height: 132,
+            correctLevel: window.QRCode.CorrectLevel.M,
+        });
+    };
+
+    const updateLivePreview = () => {
+        if (!livePreviewSnLine || !livePreviewSkuLine || !livePreviewQrPayload) {
+            return;
+        }
+
+        const labelType = labelTypeSelect?.value || 'serial';
+        const isRatingWithQr = isRatingWithQrEnabled();
+        const serialStandard = getSelectedSerialStandard();
+        const skuExampleSerial = getSelectedSkuExampleSerial();
+        const defaultSerialByStandard = {
+            UL: defaultSerialUl,
+            EMEA: defaultSerialEmea,
+            ANZ: defaultSerialAnz,
+        };
+        const serial = skuExampleSerial || defaultSerialByStandard[serialStandard] || defaultSerialUl;
+        const serialPrint = serialStandard === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
+        const hideSku = hideSkuOnRatingWithQr();
+        const shouldRenderQr = labelType === 'serial' || isRatingWithQr;
+        const shouldRenderSku = shouldRenderQr && !hideSku;
+        const snPrefix = (document.querySelector('[name="sn_prefix"]')?.value ?? 'SN:').trim();
+        const snLine = labelType === 'rating'
+            ? serialPrint
+            : (snPrefix ? `${snPrefix} ${serialPrint}` : serialPrint);
+        const qrPayload = shouldRenderQr ? resolveQrPayload(labelType, serial) : '';
+        const qrMode = getQrContentMode();
+        const serialStyle = getQrSerialStyle();
+
+        livePreviewSkuLine.textContent = shouldRenderSku
+            ? `SKU: ${getSelectedSkuCode()}`
+            : 'SKU: (oculto para esta configuración)';
+        livePreviewSnLine.textContent = `SN: ${snLine}`;
+        livePreviewQrPayload.textContent = qrPayload || '(sin QR)';
+
+        if (livePreviewStandard) {
+            livePreviewStandard.textContent = serialStandard;
+        }
+
+        if (livePreviewLabelType) {
+            livePreviewLabelType.textContent = labelType === 'rating' ? 'Rating' : 'Serial';
+        }
+
+        if (livePreviewQrMode) {
+            livePreviewQrMode.textContent = shouldRenderQr ? qrMode : 'sin_qr';
+        }
+
+        if (livePreviewSerialStyle) {
+            livePreviewSerialStyle.textContent = shouldRenderQr ? serialStyle : '(no aplica)';
+        }
+
+        if (livePreviewWarning) {
+            const anzToolCodeMissing = qrMode === 'anz_customer_tool_serial'
+                && serialStandard === 'ANZ'
+                && !getSelectedAnzCustomerToolCode();
+
+            if (anzToolCodeMissing) {
+                livePreviewWarning.textContent = 'Falta customer_tool_code ANZ; se usará solo el serial en el QR.';
+                livePreviewWarning.classList.remove('hidden');
+            } else {
+                livePreviewWarning.classList.add('hidden');
+                livePreviewWarning.textContent = '';
+            }
+        }
+
+        renderLivePreviewQr(qrPayload, shouldRenderQr);
+    };
+
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
         const isRatingWithQr = isRatingWithQrEnabled();
@@ -463,27 +576,40 @@ const initSkuTemplateConfigurationsForm = () => {
 
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
+    labelTypeSelect?.addEventListener('change', updateLivePreview);
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
+    ratingWithQrCheckbox?.addEventListener('change', updateLivePreview);
     ratingHideSkuCheckbox?.addEventListener('change', toggleLayoutSections);
+    ratingHideSkuCheckbox?.addEventListener('change', updateLivePreview);
     qrContentModeSelect?.addEventListener('change', toggleLayoutSections);
+    qrContentModeSelect?.addEventListener('change', updateLivePreview);
     qrSerialStyleSelect?.addEventListener('change', toggleLayoutSections);
+    qrSerialStyleSelect?.addEventListener('change', updateLivePreview);
     skuStandardFilterButtons.forEach((button) => {
         button.addEventListener('click', () => {
             setSkuStandardFilter(button.dataset.skuStandardFilter || 'UL');
             toggleLayoutSections();
+            updateLivePreview();
         });
     });
 
     skuSelect?.addEventListener('change', () => {
         syncSerialStandardFromSku();
         toggleLayoutSections();
+        updateLivePreview();
     });
+    qrSeparatorSelect?.addEventListener('change', updateLivePreview);
+    [1, 2, 3].forEach((index) => {
+        document.querySelector(`[name="qr_custom_field_${index}"]`)?.addEventListener('change', updateLivePreview);
+    });
+    document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
 
     setSkuStandardFilter(serialStandardInput?.value || getSelectedSkuStandard());
     toggleConnectionFields();
     toggleLayoutSections();
+    updateLivePreview();
 };
 
 initSkuTemplateConfigurationsForm();

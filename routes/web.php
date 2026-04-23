@@ -76,6 +76,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/sku-template-configurations', [SkuTemplateConfigurationController::class, 'index'])->name('admin.sku_template_configurations.index');
         Route::get('/sku-template-configurations/create', [SkuTemplateConfigurationController::class, 'create'])->name('admin.sku_template_configurations.create');
+        Route::get('/sku-template-configurations/create/{standard}', [SkuTemplateConfigurationController::class, 'createByStandard'])
+            ->whereIn('standard', ['UL', 'EMEA', 'ANZ'])
+            ->name('admin.sku_template_configurations.create_by_standard');
         Route::post('/sku-template-configurations', [SkuTemplateConfigurationController::class, 'store'])->name('admin.sku_template_configurations.store');
         Route::get('/sku-template-configurations/{configuration}/edit', [SkuTemplateConfigurationController::class, 'edit'])->name('admin.sku_template_configurations.edit');
         Route::put('/sku-template-configurations/{configuration}', [SkuTemplateConfigurationController::class, 'update'])->name('admin.sku_template_configurations.update');

@@ -1,4 +1,47 @@
 @csrf
+@php($marketStandards = isset($forcedStandard) ? [$forcedStandard] : ($availableStandards ?? ['UL', 'EMEA', 'ANZ']))
+@php($activeStandard = strtoupper((string) ($forcedStandard ?? ($formState['selected_serial_standard'] ?? 'UL'))))
+@php($qrContentOptions = [
+    'auto' => 'Automático por tipo (recomendado)',
+    'serial_full' => 'Solo Serial completo',
+    'rating_qr' => 'Solo QR rating (EMEA)',
+    'anz_customer_tool_serial' => 'ANZ customer_tool_code + Serial (CCCC | Serial)',
+    'custom' => 'Personalizado (hasta 3 bloques)',
+])
+@php($allowedQrContentByStandard = [
+    'UL' => ['auto', 'serial_full', 'custom'],
+    'EMEA' => ['auto', 'serial_full', 'rating_qr', 'custom'],
+    'ANZ' => ['auto', 'serial_full', 'anz_customer_tool_serial', 'custom'],
+])
+@php($qrSerialStyles = [
+    'as_is' => 'Como viene del serial',
+    'segmented' => 'Separado (5055 36 01 000002 A2026)',
+    'compact' => 'Junto (50553601000002A2026)',
+])
+@php($allowedQrSerialStylesByStandard = [
+    'UL' => ['as_is', 'compact'],
+    'EMEA' => ['as_is', 'segmented', 'compact'],
+    'ANZ' => ['as_is', 'compact'],
+])
+@php($qrCustomOptions = [
+    '' => 'Vacío',
+    'fixed_103' => 'Valor fijo 103',
+    'serial_full' => 'Serial completo',
+    'rating_qr_code' => 'QR rating',
+    'sku' => 'SKU',
+    'label_part_number' => 'Label part number',
+    'console_sku' => 'Console SKU',
+    'assembly_part_number' => 'Assembly part number',
+    'packaging_part_number' => 'Packaging part number',
+    'emea_sku' => 'EMEA SKU',
+    'anz_sku' => 'ANZ SKU',
+    'anz_customer_tool_code' => 'ANZ customer_tool_code',
+])
+@php($allowedQrCustomByStandard = [
+    'UL' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'console_sku', 'assembly_part_number', 'packaging_part_number'],
+    'EMEA' => ['', 'fixed_103', 'serial_full', 'rating_qr_code', 'sku', 'label_part_number', 'emea_sku'],
+    'ANZ' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'anz_sku', 'anz_customer_tool_code'],
+])
 @if ($errors->any())
     <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
         <p class="font-semibold">No se pudo guardar la configuración.</p>
@@ -33,7 +76,7 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700">SKU</label>
                 <div class="mt-2 inline-flex rounded-xl border border-slate-200 p-1" role="group" aria-label="Filtro de estándar SKU">
-                    @foreach(($availableStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
+                    @foreach($marketStandards as $standard)
                 <button type="button"
                         data-sku-standard-filter="{{ $standard }}"
                         class="rounded-lg px-3 py-1 text-xs font-semibold transition {{ (($formState['selected_serial_standard'] ?? 'UL') === $standard) ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100' }}">
@@ -43,7 +86,7 @@
                     @endforeach
                 </div>
                 <select name="label_sku_id" id="label_sku_id" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2" required>
-                    @foreach(($availableStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
+                    @foreach($marketStandards as $standard)
                         <optgroup label="{{ $standard }}">
                             @foreach(($skuGroups[$standard] ?? collect()) as $sku)
                                 <option value="{{ $sku->id }}"
@@ -65,7 +108,13 @@
                         </optgroup>
                     @endforeach
                 </select>
-                <p class="mt-1 text-xs text-slate-500">Selecciona el mercado (UL / EMEA / ANZ) y luego el SKU con serial format activo.</p>
+                <p class="mt-1 text-xs text-slate-500">
+                    @if(isset($forcedStandard))
+                        Formulario dedicado {{ $forcedStandard }}: selecciona un SKU con serial format activo para este mercado.
+                    @else
+                        Selecciona el mercado (UL / EMEA / ANZ) y luego el SKU con serial format activo.
+                    @endif
+                </p>
             </div>
 
             <div>
@@ -214,11 +263,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700">Contenido QR</label>
                     <select name="qr_content_mode" id="qr_content_mode" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
-                        <option value="auto" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'auto')>Automático por tipo (recomendado)</option>
-                        <option value="serial_full" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'serial_full')>Solo Serial completo</option>
-                        <option value="rating_qr" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'rating_qr')>Solo QR rating (EMEA/ANZ)</option>
-                        <option value="anz_customer_tool_serial" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'anz_customer_tool_serial')>ANZ customer_tool_code + Serial (CCCC | Serial)</option>
-                        <option value="custom" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'custom')>Personalizado (hasta 3 bloques)</option>
+                        @foreach(($allowedQrContentByStandard[$activeStandard] ?? $allowedQrContentByStandard['UL']) as $value)
+                            <option value="{{ $value }}" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === $value)>{{ $qrContentOptions[$value] ?? $value }}</option>
+                        @endforeach
                     </select>
                     @error('qr_content_mode') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
                 </div>
@@ -234,9 +281,9 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700">Formato SN en QR</label>
                     <select name="qr_serial_style" id="qr_serial_style" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
-                        <option value="as_is" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'as_is')>Como viene del serial</option>
-                        <option value="segmented" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'segmented')>Separado (5055 36 01 000002 A2026)</option>
-                        <option value="compact" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === 'compact')>Junto (50553601000002A2026)</option>
+                        @foreach(($allowedQrSerialStylesByStandard[$activeStandard] ?? $allowedQrSerialStylesByStandard['UL']) as $value)
+                            <option value="{{ $value }}" @selected(old('qr_serial_style', $formState['qr_layout']['serial_style'] ?? 'as_is') === $value)>{{ $qrSerialStyles[$value] ?? $value }}</option>
+                        @endforeach
                     </select>
                     @error('qr_serial_style') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
                 </div>
@@ -301,34 +348,69 @@
                 <h4 class="text-sm font-semibold text-slate-900">Bloques de QR personalizado</h4>
                 <p class="mt-1 text-xs text-slate-500">Ejemplo EMEA: 103 | Serial | EMEA SKU. Ejemplo alterno: EMEA SKU | Serial | EMEA SKU.</p>
                 <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    @php
-                        $qrCustomOptions = [
-                            '' => 'Vacío',
-                            'fixed_103' => 'Valor fijo 103',
-                            'serial_full' => 'Serial completo',
-                            'rating_qr_code' => 'QR rating',
-                            'sku' => 'SKU',
-                            'label_part_number' => 'Label part number',
-                            'console_sku' => 'Console SKU',
-                            'assembly_part_number' => 'Assembly part number',
-                            'packaging_part_number' => 'Packaging part number',
-                            'emea_sku' => 'EMEA SKU',
-                            'anz_sku' => 'ANZ SKU',
-                            'anz_customer_tool_code' => 'ANZ customer_tool_code',
-                        ];
-                        $customFields = old('qr_custom_fields', $formState['qr_layout']['custom_fields'] ?? []);
-                    @endphp
+                    @php($customFields = old('qr_custom_fields', $formState['qr_layout']['custom_fields'] ?? []))
                     @foreach([1,2,3] as $position)
                         <div>
                             <label class="block text-sm font-medium text-slate-700">Bloque {{ $position }}</label>
                             <select name="qr_custom_field_{{ $position }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
-                                @foreach($qrCustomOptions as $value => $label)
+                                @foreach(($allowedQrCustomByStandard[$activeStandard] ?? $allowedQrCustomByStandard['UL']) as $value)
+                                    @php($label = $qrCustomOptions[$value] ?? $value)
                                     <option value="{{ $value }}" @selected(old('qr_custom_field_'.$position, $customFields[$position - 1] ?? '') === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             @error('qr_custom_field_'.$position) <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
                         </div>
                     @endforeach
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4" id="live-print-preview">
+            <div class="mb-3 border-b border-slate-100 pb-3">
+                <h3 class="font-semibold text-slate-900">Vista previa en vivo (contenido real)</h3>
+                <p class="mt-1 text-xs text-slate-500">Valida QR y textos tal como se construirán para impresión. Esta vista no representa posiciones X/Y.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Etiqueta simulada</p>
+                    <div class="mt-3 flex min-h-[180px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white p-4">
+                        <div id="live-preview-qr" class="flex h-36 w-36 items-center justify-center text-center text-xs text-slate-500">
+                            QR no disponible
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-2 text-sm text-slate-700">
+                        <div id="live-preview-sku-line" class="rounded-md bg-white px-3 py-2 font-semibold">SKU: —</div>
+                        <div id="live-preview-sn-line" class="rounded-md bg-white px-3 py-2 font-mono">SN: —</div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Detalle técnico</p>
+                    <dl class="mt-3 space-y-3 text-sm text-slate-700">
+                        <div>
+                            <dt class="font-medium text-slate-900">Mercado</dt>
+                            <dd id="live-preview-standard">—</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-900">Tipo de etiqueta</dt>
+                            <dd id="live-preview-label-type">—</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-900">Modo QR</dt>
+                            <dd id="live-preview-qr-mode">—</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-900">Formato SN en QR</dt>
+                            <dd id="live-preview-serial-style">—</dd>
+                        </div>
+                        <div>
+                            <dt class="font-medium text-slate-900">Payload QR final</dt>
+                            <dd class="mt-1 rounded-md bg-white px-3 py-2 font-mono text-xs text-slate-800" id="live-preview-qr-payload">—</dd>
+                        </div>
+                    </dl>
+
+                    <div id="live-preview-warning" class="mt-4 hidden rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"></div>
                 </div>
             </div>
         </div>

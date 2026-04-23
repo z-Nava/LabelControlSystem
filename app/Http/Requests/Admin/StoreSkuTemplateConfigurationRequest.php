@@ -8,6 +8,24 @@ use Illuminate\Validation\Rule;
 
 class StoreSkuTemplateConfigurationRequest extends FormRequest
 {
+    private const QR_CONTENT_MODES_BY_STANDARD = [
+        'UL' => ['auto', 'serial_full', 'custom'],
+        'EMEA' => ['auto', 'serial_full', 'rating_qr', 'custom'],
+        'ANZ' => ['auto', 'serial_full', 'anz_customer_tool_serial', 'custom'],
+    ];
+
+    private const QR_SERIAL_STYLES_BY_STANDARD = [
+        'UL' => ['as_is', 'compact'],
+        'EMEA' => ['as_is', 'segmented', 'compact'],
+        'ANZ' => ['as_is', 'compact'],
+    ];
+
+    private const QR_CUSTOM_FIELDS_BY_STANDARD = [
+        'UL' => ['fixed_103', 'serial_full', 'sku', 'label_part_number', 'console_sku', 'assembly_part_number', 'packaging_part_number'],
+        'EMEA' => ['fixed_103', 'serial_full', 'rating_qr_code', 'sku', 'label_part_number', 'emea_sku'],
+        'ANZ' => ['fixed_103', 'serial_full', 'sku', 'label_part_number', 'anz_sku', 'anz_customer_tool_code'],
+    ];
+
     public function authorize(): bool
     {
         return true;
@@ -35,6 +53,11 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
 
     public function rules(): array
     {
+        $standard = strtoupper(trim((string) $this->input('serial_standard', 'UL')));
+        $qrContentModes = $this->allowedQrContentModes($standard);
+        $qrSerialStyles = $this->allowedQrSerialStyles($standard);
+        $qrCustomFields = $this->allowedQrCustomFields($standard);
+
         return [
             'label_sku_id' => [
                 'required',
@@ -54,12 +77,12 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'qr_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'qr_orientation' => ['nullable', 'in:N,R,I,B'],
             'qr_magnification' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'qr_content_mode' => ['nullable', 'in:auto,serial_full,rating_qr,anz_customer_tool_serial,custom'],
+            'qr_content_mode' => ['nullable', Rule::in($qrContentModes)],
             'qr_separator' => ['nullable', 'in:pipe,space,none'],
-            'qr_serial_style' => ['nullable', 'in:as_is,segmented,compact'],
-            'qr_custom_field_1' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku,anz_customer_tool_code'],
-            'qr_custom_field_2' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku,anz_customer_tool_code'],
-            'qr_custom_field_3' => ['nullable', 'in:fixed_103,serial_full,rating_qr_code,sku,label_part_number,console_sku,assembly_part_number,packaging_part_number,emea_sku,anz_sku,anz_customer_tool_code'],
+            'qr_serial_style' => ['nullable', Rule::in($qrSerialStyles)],
+            'qr_custom_field_1' => ['nullable', Rule::in($qrCustomFields)],
+            'qr_custom_field_2' => ['nullable', Rule::in($qrCustomFields)],
+            'qr_custom_field_3' => ['nullable', Rule::in($qrCustomFields)],
             'sku_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sku_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'sku_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
@@ -146,5 +169,20 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
                 $validator->errors()->add('qr_custom_field_1', 'Debes seleccionar al menos un campo para el QR personalizado.');
             }
         });
+    }
+
+    private function allowedQrContentModes(string $standard): array
+    {
+        return self::QR_CONTENT_MODES_BY_STANDARD[$standard] ?? self::QR_CONTENT_MODES_BY_STANDARD['UL'];
+    }
+
+    private function allowedQrSerialStyles(string $standard): array
+    {
+        return self::QR_SERIAL_STYLES_BY_STANDARD[$standard] ?? self::QR_SERIAL_STYLES_BY_STANDARD['UL'];
+    }
+
+    private function allowedQrCustomFields(string $standard): array
+    {
+        return self::QR_CUSTOM_FIELDS_BY_STANDARD[$standard] ?? self::QR_CUSTOM_FIELDS_BY_STANDARD['UL'];
     }
 }

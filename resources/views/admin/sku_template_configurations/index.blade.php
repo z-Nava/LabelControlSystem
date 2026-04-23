@@ -7,7 +7,11 @@
             <h1 class="text-2xl font-semibold text-slate-900">Templates + Print Profiles</h1>
             <p class="text-slate-600 mt-1">Vista unificada por SKU y número de parte.</p>
         </div>
-        <a href="{{ route('admin.sku_template_configurations.create') }}" class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition">+ Nueva configuración</a>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.sku_template_configurations.create_by_standard', ['standard' => 'UL']) }}" class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition">+ Nueva UL</a>
+            <a href="{{ route('admin.sku_template_configurations.create_by_standard', ['standard' => 'EMEA']) }}" class="rounded-xl bg-slate-900 text-white px-4 py-2 font-semibold hover:bg-slate-800 transition">+ Nueva EMEA</a>
+            <a href="{{ route('admin.sku_template_configurations.create_by_standard', ['standard' => 'ANZ']) }}" class="rounded-xl bg-slate-700 text-white px-4 py-2 font-semibold hover:bg-slate-600 transition">+ Nueva ANZ</a>
+        </div>
     </div>
 
     @if(session('success'))
