@@ -33,10 +33,9 @@
                 <label class="block text-sm font-medium text-slate-700">SKU</label>
                 <div class="mt-2 inline-flex rounded-xl border border-slate-200 p-1" role="group" aria-label="Filtro de estándar SKU">
                     @foreach(($availableStandards ?? ['UL', 'EMEA', 'ANZ']) as $standard)
-                        @php($isSelectedStandard = ($formState['selected_serial_standard'] ?? 'UL') === $standard)
-                        <button type="button"
-                                data-sku-standard-filter="{{ $standard }}"
-                                class="rounded-lg px-3 py-1 text-xs font-semibold transition {{ $isSelectedStandard ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100' }}">
+                <button type="button"
+                        data-sku-standard-filter="{{ $standard }}"
+                        class="rounded-lg px-3 py-1 text-xs font-semibold transition {{ (($formState['selected_serial_standard'] ?? 'UL') === $standard) ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100' }}">
                             {{ $standard }}
                             <span class="ml-1 text-[10px] opacity-80">({{ ($skuGroups[$standard] ?? collect())->count() }})</span>
                         </button>
