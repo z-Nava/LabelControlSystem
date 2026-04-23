@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SkuSerialFormat extends Model
 {
+    private const STANDARD_BY_SCHEME = [
+        'ul_standard' => SerialStandards::UL,
+        'emea_rating' => SerialStandards::EMEA,
+        'anz_standard' => SerialStandards::ANZ,
+    ];
+
     protected $table = 'sku_serial_formats';
 
     protected $fillable = [
@@ -98,17 +104,32 @@ class SkuSerialFormat extends Model
 
     public function isEmea(): bool
     {
-        return strtoupper((string) $this->serial_standard) === SerialStandards::EMEA;
+        return $this->resolvedSerialStandard() === SerialStandards::EMEA;
     }
 
     public function isAnz(): bool
     {
-        return strtoupper((string) $this->serial_standard) === SerialStandards::ANZ;
+        return $this->resolvedSerialStandard() === SerialStandards::ANZ;
     }
 
     public function isInternational(): bool
     {
-        return SerialStandards::isInternational((string) $this->serial_standard);
+        return SerialStandards::isInternational($this->resolvedSerialStandard());
+    }
+
+    public function resolvedSerialStandard(): string
+    {
+        $scheme = strtolower(trim((string) $this->serial_scheme));
+        if (isset(self::STANDARD_BY_SCHEME[$scheme])) {
+            return self::STANDARD_BY_SCHEME[$scheme];
+        }
+
+        $market = strtoupper(trim((string) $this->market));
+        if (in_array($market, SerialStandards::all(), true)) {
+            return $market;
+        }
+
+        return SerialStandards::normalize((string) $this->serial_standard);
     }
 
     public function componentPrefix(): string

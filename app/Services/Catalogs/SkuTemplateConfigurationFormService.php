@@ -11,6 +11,11 @@ use Illuminate\Support\Collection;
 class SkuTemplateConfigurationFormService
 {
     private const SUPPORTED_STANDARDS = ['UL', 'EMEA', 'ANZ'];
+    private const STANDARD_BY_SCHEME = [
+        'ul_standard' => SerialStandards::UL,
+        'emea_rating' => SerialStandards::EMEA,
+        'anz_standard' => SerialStandards::ANZ,
+    ];
 
     public function build(LabelPrintProfile $configuration): array
     {
@@ -52,17 +57,12 @@ class SkuTemplateConfigurationFormService
         $formats = SkuSerialFormat::query()
             ->with(['ulConfig', 'emeaConfig', 'anzConfig'])
             ->active()
-            ->whereIn('sku', $labelSkus->pluck('sku')->all())
             ->where(function ($query) {
                 $query->whereIn('serial_standard', self::SUPPORTED_STANDARDS)
                     ->orWhereIn('market', self::SUPPORTED_STANDARDS);
             })
             ->get()
-            ->keyBy(function (SkuSerialFormat $format): string {
-                $standard = strtoupper(trim((string) ($format->serial_standard ?: $format->market ?: SerialStandards::UL)));
-
-                return $standard.'|'.strtoupper(trim((string) $format->sku));
-            });
+            ->groupBy(fn (SkuSerialFormat $format) => $this->resolveFormatStandard($format));
 
         $previewSerials = [];
         $anzCustomerCodes = [];
@@ -70,9 +70,11 @@ class SkuTemplateConfigurationFormService
 
         foreach ($labelSkus as $sku) {
             /** @var LabelSku $sku */
-            $standard = strtoupper(trim((string) ($sku->serial_standard ?? SerialStandards::UL)));
-            $key = $standard.'|'.strtoupper(trim((string) $sku->sku));
-            $format = $formats->get($key);
+            $standard = SerialStandards::normalize((string) ($sku->serial_standard ?? SerialStandards::UL));
+            $format = $this->resolveFormatForLabelSku(
+                $formats->get($standard, collect()),
+                $sku
+            );
 
             $previewSerials[$sku->id] = $this->resolvePreviewSerial($standard, $format);
             $anzCustomerCodes[$sku->id] = strtoupper(trim((string) ($format?->anz_customer_tool_code ?? '')));
@@ -126,22 +128,26 @@ class SkuTemplateConfigurationFormService
 
     private function availableSkus(): Collection
     {
+        $formatsByStandard = SkuSerialFormat::query()
+            ->active()
+            ->whereNotNull('sku')
+            ->get(['sku', 'market', 'serial_standard', 'serial_scheme'])
+            ->groupBy(fn (SkuSerialFormat $format) => $this->resolveFormatStandard($format));
+
         return LabelSku::query()
             ->active()
-            ->whereExists(function ($query) {
-                $query->selectRaw('1')
-                    ->from((new SkuSerialFormat())->getTable())
-                    ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
-                    ->where(function ($serialQuery) {
-                        $serialQuery
-                            ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
-                            ->orWhereColumn('sku_serial_formats.market', 'label_skus.serial_standard');
-                    })
-                    ->where('sku_serial_formats.is_active', true);
+            ->get()
+            ->filter(function (LabelSku $sku) use ($formatsByStandard): bool {
+                $skuStandard = SerialStandards::normalize((string) ($sku->serial_standard ?? SerialStandards::UL));
+                $formats = $formatsByStandard->get($skuStandard, collect());
+
+                return $this->resolveFormatForLabelSku($formats, $sku) !== null;
             })
-            ->orderBy('serial_standard')
-            ->orderBy('sku')
-            ->get();
+            ->sortBy([
+                fn (LabelSku $sku) => strtoupper((string) ($sku->serial_standard ?? SerialStandards::UL)),
+                fn (LabelSku $sku) => strtoupper((string) $sku->sku),
+            ])
+            ->values();
     }
 
     private function groupSkusByStandard(Collection $labelSkus): array
@@ -183,5 +189,62 @@ class SkuTemplateConfigurationFormService
             'rating_qr' => (bool) old('rating_with_qr', data_get($layout, 'rating_qr', false)),
             'rating_hide_sku' => (bool) old('rating_hide_sku', data_get($layout, 'rating_hide_sku', false)),
         ];
+    }
+
+    private function resolveFormatStandard(SkuSerialFormat $format): string
+    {
+        $scheme = strtolower(trim((string) $format->serial_scheme));
+        if (isset(self::STANDARD_BY_SCHEME[$scheme])) {
+            return self::STANDARD_BY_SCHEME[$scheme];
+        }
+
+        $market = strtoupper(trim((string) $format->market));
+        if (in_array($market, self::SUPPORTED_STANDARDS, true)) {
+            return $market;
+        }
+
+        return SerialStandards::normalize((string) ($format->serial_standard ?? SerialStandards::UL));
+    }
+
+    private function resolveFormatForLabelSku(Collection $formats, LabelSku $sku): ?SkuSerialFormat
+    {
+        if ($formats->isEmpty()) {
+            return null;
+        }
+
+        $skuVariants = $this->buildSkuVariants([
+            $sku->sku,
+            $sku->anz_sku,
+            $sku->emea_sku,
+            $sku->console_sku,
+            $sku->assembly_part_number,
+            $sku->packaging_part_number,
+        ]);
+
+        return $formats->first(function (SkuSerialFormat $format) use ($skuVariants): bool {
+            $formatVariants = $this->buildSkuVariants([(string) $format->sku]);
+
+            return collect($formatVariants)->intersect($skuVariants)->isNotEmpty();
+        });
+    }
+
+    private function buildSkuVariants(array $values): array
+    {
+        $variants = collect($values)
+            ->filter(fn ($value) => filled($value))
+            ->map(fn ($value) => strtoupper(trim((string) $value)))
+            ->flatMap(function (string $value) {
+                return [
+                    $value,
+                    preg_replace('/\s+/', '', $value),
+                    preg_replace('/-(ANZ|EMEA|UL)$/', '', $value),
+                    preg_replace('/-[A-Z]$/', '', $value),
+                ];
+            })
+            ->filter(fn ($value) => filled($value))
+            ->values()
+            ->all();
+
+        return array_values(array_unique($variants));
     }
 }
