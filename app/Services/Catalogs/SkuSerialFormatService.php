@@ -13,18 +13,22 @@ class SkuSerialFormatService
     public function paginate(int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return SkuSerialFormat::query()
+            ->with(['ulConfig', 'emeaConfig', 'anzConfig'])
             ->when($search, function ($query) use ($search) {
                 $query->where('sku', 'like', "%{$search}%")
                     ->orWhere('serial_standard', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('ul_prefix', 'like', "%{$search}%")
-                    ->orWhere('ul_serial_break', 'like', "%{$search}%")
-                    ->orWhere('ul_plant_code', 'like', "%{$search}%")
-                    ->orWhere('emea_prefix', 'like', "%{$search}%")
-                    ->orWhere('emea_conformity_code', 'like', "%{$search}%")
-                    ->orWhere('anz_product_prefix', 'like', "%{$search}%")
-                    ->orWhere('anz_tool_version', 'like', "%{$search}%")
-                    ->orWhere('anz_customer_tool_code', 'like', "%{$search}%")
+                    ->orWhereHas('ulConfig', fn ($q) => $q
+                        ->where('prefix', 'like', "%{$search}%")
+                        ->orWhere('serial_break', 'like', "%{$search}%")
+                        ->orWhere('plant_code', 'like', "%{$search}%"))
+                    ->orWhereHas('emeaConfig', fn ($q) => $q
+                        ->where('prefix_value', 'like', "%{$search}%")
+                        ->orWhere('conformity_code', 'like', "%{$search}%"))
+                    ->orWhereHas('anzConfig', fn ($q) => $q
+                        ->where('product_prefix', 'like', "%{$search}%")
+                        ->orWhere('tool_version_letter', 'like', "%{$search}%")
+                        ->orWhere('customer_tool_code', 'like', "%{$search}%"))
                     ->orWhere('pattern', 'like', "%{$search}%");
             })
             ->orderBy('is_active', 'desc')
@@ -36,18 +40,22 @@ class SkuSerialFormatService
     public function listByStandard(string $serialStandard, ?string $search = null): Collection
     {
         return SkuSerialFormat::query()
+            ->with(['ulConfig', 'emeaConfig', 'anzConfig'])
             ->where('serial_standard', strtoupper($serialStandard))
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
                     $nestedQuery->where('sku', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhere('ul_prefix', 'like', "%{$search}%")
-                        ->orWhere('ul_serial_break', 'like', "%{$search}%")
-                        ->orWhere('emea_prefix', 'like', "%{$search}%")
-                        ->orWhere('emea_conformity_code', 'like', "%{$search}%")
-                        ->orWhere('anz_product_prefix', 'like', "%{$search}%")
-                        ->orWhere('anz_tool_version', 'like', "%{$search}%")
-                        ->orWhere('anz_customer_tool_code', 'like', "%{$search}%");
+                        ->orWhereHas('ulConfig', fn ($q) => $q
+                            ->where('prefix', 'like', "%{$search}%")
+                            ->orWhere('serial_break', 'like', "%{$search}%"))
+                        ->orWhereHas('emeaConfig', fn ($q) => $q
+                            ->where('prefix_value', 'like', "%{$search}%")
+                            ->orWhere('conformity_code', 'like', "%{$search}%"))
+                        ->orWhereHas('anzConfig', fn ($q) => $q
+                            ->where('product_prefix', 'like', "%{$search}%")
+                            ->orWhere('tool_version_letter', 'like', "%{$search}%")
+                            ->orWhere('customer_tool_code', 'like', "%{$search}%"));
                 });
             })
             ->orderBy('is_active', 'desc')
@@ -57,14 +65,24 @@ class SkuSerialFormatService
 
     public function create(array $data, ?int $updatedByUserId = null): SkuSerialFormat
     {
-        return SkuSerialFormat::query()->create($this->normalizeData($data, true, $updatedByUserId));
+        $normalizedData = $this->stripLegacyMarketColumns(
+            $this->normalizeData($data, true, $updatedByUserId)
+        );
+        $format = SkuSerialFormat::query()->create($normalizedData);
+        $this->syncMarketConfig($format, $data);
+
+        return $format->fresh(['ulConfig', 'emeaConfig', 'anzConfig']);
     }
 
     public function update(SkuSerialFormat $format, array $data, ?int $updatedByUserId = null): SkuSerialFormat
     {
-        $format->update($this->normalizeData($data, false, $updatedByUserId));
+        $normalizedData = $this->stripLegacyMarketColumns(
+            $this->normalizeData($data, false, $updatedByUserId)
+        );
+        $format->update($normalizedData);
+        $this->syncMarketConfig($format, $data);
 
-        return $format;
+        return $format->fresh(['ulConfig', 'emeaConfig', 'anzConfig']);
     }
 
     public function toggleActive(SkuSerialFormat $format, ?int $updatedByUserId = null): SkuSerialFormat
@@ -88,6 +106,7 @@ class SkuSerialFormatService
 
         $normalized = [
             'sku' => strtoupper(trim($data['sku'])),
+            'market' => $serialStandard,
             'serial_standard' => $serialStandard,
             'serial_scheme' => trim((string) ($data['serial_scheme'] ?? $defaultScheme)),
             'description' => $this->nullableString($data['description'] ?? null),
@@ -203,6 +222,106 @@ class SkuSerialFormatService
         $normalized['ul_use_plant_code'] = false;
 
         return $normalized;
+    }
+
+    private function syncMarketConfig(SkuSerialFormat $format, array $data): void
+    {
+        $standard = strtoupper((string) $format->serial_standard);
+        $pattern = $this->nullablePattern($data['pattern'] ?? null);
+        $resetScope = trim((string) ($data['reset_scope'] ?? ($standard === SerialStandards::UL ? 'weekly' : 'monthly')));
+
+        if ($standard === SerialStandards::UL) {
+            $format->ulConfig()->updateOrCreate(
+                ['sku_serial_format_id' => $format->id],
+                [
+                    'prefix' => $this->nullableUpper($data['ul_prefix'] ?? null),
+                    'prefix_length' => $this->nullableInt($data['ul_prefix_length'] ?? null),
+                    'serial_break' => $this->nullableUpper($data['ul_serial_break'] ?? null),
+                    'plant_code' => $this->nullableUpper($data['ul_plant_code'] ?? null),
+                    'use_plant_code' => (bool) ($data['ul_use_plant_code'] ?? true),
+                    'reset_scope' => $resetScope ?: 'weekly',
+                    'pattern' => $pattern,
+                ]
+            );
+            $format->emeaConfig()->delete();
+            $format->anzConfig()->delete();
+
+            return;
+        }
+
+        if ($standard === SerialStandards::EMEA) {
+            $unitDigits = (int) ($data['emea_unit_digits'] ?? $data['unit_digits'] ?? 6);
+            $format->emeaConfig()->updateOrCreate(
+                ['sku_serial_format_id' => $format->id],
+                [
+                    'prefix_value' => $this->nullableUpper($data['emea_prefix'] ?? null),
+                    'prefix_source' => $this->nullableString($data['emea_prefix_source'] ?? 'fixed_value'),
+                    'prefix_digits' => $this->nullableInt($data['emea_prefix_digits'] ?? null),
+                    'conformity_code' => $this->nullableUpper($data['emea_conformity_code'] ?? null),
+                    'plant_code' => $this->nullableUpper($data['emea_plant_code'] ?? null),
+                    'unit_digits' => $unitDigits,
+                    'declaration_required' => (bool) ($data['emea_declaration_required'] ?? false),
+                    'reset_scope' => $resetScope ?: 'monthly',
+                    'pattern' => $pattern,
+                ]
+            );
+            $format->ulConfig()->delete();
+            $format->anzConfig()->delete();
+
+            return;
+        }
+
+        $anzUnitDigits = (int) ($data['anz_unit_digits'] ?? $data['unit_digits'] ?? 5);
+        $format->anzConfig()->updateOrCreate(
+            ['sku_serial_format_id' => $format->id],
+            [
+                'product_prefix' => $this->nullableUpper($data['anz_product_prefix'] ?? null),
+                'product_prefix_length' => $this->nullableInt($data['emea_prefix_digits'] ?? null),
+                'tool_version_letter' => $this->nullableUpper($data['anz_tool_version'] ?? null),
+                'tool_version_required' => (bool) ($data['anz_tool_version_required'] ?? true),
+                'customer_tool_code' => $this->nullableUpper($data['anz_customer_tool_code'] ?? null),
+                'customer_tool_code_required' => false,
+                'unit_digits' => $anzUnitDigits,
+                'qr_separator' => $this->nullableString($data['anz_qr_separator'] ?? ' | '),
+                'include_customer_tool_code_in_qr' => (bool) ($data['anz_include_customer_tool_code_in_qr'] ?? true),
+                'print_format' => $this->nullableString($data['anz_serial_print_format'] ?? 'spaces'),
+                'reset_scope' => $resetScope ?: 'monthly',
+                'pattern' => $pattern,
+                'qr_pattern' => null,
+            ]
+        );
+        $format->ulConfig()->delete();
+        $format->emeaConfig()->delete();
+    }
+
+    private function stripLegacyMarketColumns(array $data): array
+    {
+        foreach ([
+        'ul_prefix',
+        'ul_prefix_length',
+        'ul_serial_break',
+        'ul_plant_code',
+        'ul_use_plant_code',
+        'emea_prefix',
+        'emea_prefix_source',
+        'emea_prefix_digits',
+        'emea_conformity_code',
+        'emea_plant_code',
+        'emea_unit_digits',
+        'emea_declaration_required',
+        'anz_customer_tool_code',
+        'anz_product_prefix',
+        'anz_tool_version',
+        'anz_tool_version_required',
+        'anz_unit_digits',
+        'anz_qr_separator',
+        'anz_include_customer_tool_code_in_qr',
+        'anz_serial_print_format',
+    ] as $legacyColumn) {
+            unset($data[$legacyColumn]);
+        }
+
+        return $data;
     }
 
     private function nullableUpper(?string $value): ?string

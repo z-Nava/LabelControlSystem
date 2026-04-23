@@ -58,6 +58,8 @@ class SkuSerialFormatController extends Controller
 
     public function edit(SkuSerialFormat $sku_serial_format): View
     {
+        $sku_serial_format->load(['ulConfig', 'emeaConfig', 'anzConfig']);
+
         $activeSkus = LabelSku::query()
             ->where(function ($query) use ($sku_serial_format) {
                 $query->active()
@@ -67,9 +69,18 @@ class SkuSerialFormatController extends Controller
             ->orderBy('serial_standard')
             ->get(['sku', 'serial_standard', 'label_part_number']);
 
-        return view('sku_serial_formats.edit', [
+        $serialStandard = SerialStandards::normalize((string) $sku_serial_format->serial_standard);
+        $viewByStandard = [
+            SerialStandards::UL => 'sku_serial_formats.create_ul',
+            SerialStandards::EMEA => 'sku_serial_formats.create_emea',
+            SerialStandards::ANZ => 'sku_serial_formats.create_anz',
+        ];
+
+        return view($viewByStandard[$serialStandard], [
             'format' => $sku_serial_format,
             'activeSkus' => $activeSkus,
+            'forcedStandard' => $serialStandard,
+            'isEdit' => true,
         ]);
     }
 

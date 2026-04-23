@@ -48,6 +48,7 @@ class StoreSkuSerialFormatRequest extends FormRequest
             'include_week' => ['nullable', 'boolean'],
             'pattern' => ['nullable', 'string', 'max:80'],
             'unit_digits' => ['required', 'integer', 'min:1', 'max:10'],
+            'reset_scope' => ['nullable', Rule::in(['weekly', 'monthly', 'yearly', 'never'])],
             'is_active' => ['nullable', 'boolean'],
 
             'ul_prefix' => [Rule::requiredIf($isUl), 'nullable', 'string', 'max:10'],
@@ -125,6 +126,7 @@ class StoreSkuSerialFormatRequest extends FormRequest
             'include_year' => $this->boolean('include_year', true),
             'include_week' => $this->boolean('include_week', $standard === SerialStandards::UL),
             'unit_digits' => (int) $this->input('unit_digits', $standard === SerialStandards::UL ? 5 : ($standard === SerialStandards::ANZ ? 5 : 6)),
+            'reset_scope' => trim((string) $this->input('reset_scope', $standard === SerialStandards::UL ? 'weekly' : 'monthly')),
             'is_active' => $this->boolean('is_active', true),
         ]);
     }

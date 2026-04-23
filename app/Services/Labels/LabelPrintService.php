@@ -503,6 +503,14 @@ class LabelPrintService
 
     private function usesMonthlySerialCycle(LabelRequest $labelRequest, ?SkuSerialFormat $serialFormat): bool
     {
+        $resetScope = strtolower(trim((string) ($serialFormat?->reset_scope ?? '')));
+        if (in_array($resetScope, ['weekly', 'yearly', 'never'], true)) {
+            return false;
+        }
+        if ($resetScope === 'monthly') {
+            return true;
+        }
+
         $standard = strtoupper((string) ($labelRequest->serial_standard ?? 'UL'));
 
         if (SerialStandards::isInternational($standard)) {

@@ -92,6 +92,18 @@
     </div>
 
     <div>
+        <label class="block text-sm font-medium text-slate-700">Reset scope</label>
+        @php($resetScope = old('reset_scope', $format->reset_scope ?? ($selectedStandard === 'UL' ? 'weekly' : 'monthly')))
+        <select name="reset_scope" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+            <option value="weekly" @selected($resetScope === 'weekly')>weekly</option>
+            <option value="monthly" @selected($resetScope === 'monthly')>monthly</option>
+            <option value="yearly" @selected($resetScope === 'yearly')>yearly</option>
+            <option value="never" @selected($resetScope === 'never')>never</option>
+        </select>
+        @error('reset_scope') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    </div>
+
+    <div>
         <label class="block text-sm font-medium text-slate-700">Longitud total del serial (opcional)</label>
         <input type="number" min="4" max="80" name="serial_length" value="{{ old('serial_length', $format->serial_length ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
     </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\SerialStandards;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SkuSerialFormat extends Model
 {
@@ -11,6 +12,7 @@ class SkuSerialFormat extends Model
 
     protected $fillable = [
         'sku',
+        'market',
         'serial_standard',
         'serial_scheme',
         'description',
@@ -73,6 +75,21 @@ class SkuSerialFormat extends Model
         'is_active' => 'boolean',
         'updated_by_user_id' => 'integer',
     ];
+
+    public function ulConfig(): HasOne
+    {
+        return $this->hasOne(SkuSerialFormatUl::class, 'sku_serial_format_id');
+    }
+
+    public function emeaConfig(): HasOne
+    {
+        return $this->hasOne(SkuSerialFormatEmea::class, 'sku_serial_format_id');
+    }
+
+    public function anzConfig(): HasOne
+    {
+        return $this->hasOne(SkuSerialFormatAnz::class, 'sku_serial_format_id');
+    }
 
     public function scopeActive($query)
     {
@@ -142,5 +159,134 @@ class SkuSerialFormat extends Model
         }
 
         return (int) ($this->unit_digits ?: $this->unit_length ?: 5);
+    }
+
+    public function getUlPrefixAttribute($value): ?string
+    {
+        return $this->ulConfig?->prefix ?? $value;
+    }
+
+    public function getUlPrefixLengthAttribute($value): ?int
+    {
+        return $this->ulConfig?->prefix_length ?? $value;
+    }
+
+    public function getUlSerialBreakAttribute($value): ?string
+    {
+        return $this->ulConfig?->serial_break ?? $value;
+    }
+
+    public function getUlPlantCodeAttribute($value): ?string
+    {
+        return $this->ulConfig?->plant_code ?? $value;
+    }
+
+    public function getUlUsePlantCodeAttribute($value): bool
+    {
+        if ($this->ulConfig) {
+            return (bool) $this->ulConfig->use_plant_code;
+        }
+
+        return (bool) $value;
+    }
+
+    public function getEmeaPrefixAttribute($value): ?string
+    {
+        return $this->emeaConfig?->prefix_value ?? $value;
+    }
+
+    public function getEmeaPrefixSourceAttribute($value): ?string
+    {
+        return $this->emeaConfig?->prefix_source ?? $value;
+    }
+
+    public function getEmeaPrefixDigitsAttribute($value): ?int
+    {
+        return $this->emeaConfig?->prefix_digits ?? $value;
+    }
+
+    public function getEmeaConformityCodeAttribute($value): ?string
+    {
+        return $this->emeaConfig?->conformity_code ?? $value;
+    }
+
+    public function getEmeaPlantCodeAttribute($value): ?string
+    {
+        return $this->emeaConfig?->plant_code ?? $value;
+    }
+
+    public function getEmeaUnitDigitsAttribute($value): ?int
+    {
+        return $this->emeaConfig?->unit_digits ?? $value;
+    }
+
+    public function getEmeaDeclarationRequiredAttribute($value): bool
+    {
+        if ($this->emeaConfig) {
+            return (bool) $this->emeaConfig->declaration_required;
+        }
+
+        return (bool) $value;
+    }
+
+    public function getAnzProductPrefixAttribute($value): ?string
+    {
+        return $this->anzConfig?->product_prefix ?? $value;
+    }
+
+    public function getAnzToolVersionAttribute($value): ?string
+    {
+        return $this->anzConfig?->tool_version_letter ?? $value;
+    }
+
+    public function getAnzToolVersionRequiredAttribute($value): bool
+    {
+        if ($this->anzConfig) {
+            return (bool) $this->anzConfig->tool_version_required;
+        }
+
+        return (bool) $value;
+    }
+
+    public function getAnzCustomerToolCodeAttribute($value): ?string
+    {
+        return $this->anzConfig?->customer_tool_code ?? $value;
+    }
+
+    public function getAnzUnitDigitsAttribute($value): ?int
+    {
+        return $this->anzConfig?->unit_digits ?? $value;
+    }
+
+    public function getAnzQrSeparatorAttribute($value): ?string
+    {
+        return $this->anzConfig?->qr_separator ?? $value;
+    }
+
+    public function getAnzIncludeCustomerToolCodeInQrAttribute($value): bool
+    {
+        if ($this->anzConfig) {
+            return (bool) $this->anzConfig->include_customer_tool_code_in_qr;
+        }
+
+        return (bool) $value;
+    }
+
+    public function getAnzSerialPrintFormatAttribute($value): ?string
+    {
+        return $this->anzConfig?->print_format ?? $value;
+    }
+
+    public function getResetScopeAttribute(): string
+    {
+        if ($this->isAnz()) {
+            return (string) ($this->anzConfig?->reset_scope ?: 'monthly');
+        }
+
+        if ($this->isEmea()) {
+            return (string) ($this->emeaConfig?->reset_scope ?: 'monthly');
+        }
+
+        return (string) ($this->ulConfig?->reset_scope ?: 'weekly');
     }
 }

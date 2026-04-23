@@ -42,6 +42,7 @@
                     <th class="py-3 pr-3">Print format</th>
                 @endif
                 <th class="py-3 pr-3">QR payload</th>
+                <th class="py-3 pr-3">Reset scope</th>
                 <th class="py-3 pr-3">Activo</th>
                 <th class="py-3 text-right">Acciones</th>
             </tr>
@@ -76,6 +77,7 @@
                     @endif
 
                     <td class="py-3 pr-3">{{ $format->qr_payload_format ?: '-' }}</td>
+                    <td class="py-3 pr-3">{{ $format->reset_scope }}</td>
                     <td class="py-3 pr-3">
                         @if($format->is_active)
                             <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Sí</span>
