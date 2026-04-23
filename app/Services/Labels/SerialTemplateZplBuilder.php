@@ -144,7 +144,7 @@ class SerialTemplateZplBuilder
     private function mapQrToken(string $token, string $serialStyle = 'as_is'): string
     {
         return match (strtolower(trim($token))) {
-            'fixed_103' => '103',
+            'fixed_103' => '{{fixed_103}}',
             'serial_full' => $this->serialPlaceholder('serial_full', $serialStyle),
             'rating_qr_code' => $this->serialPlaceholder('rating_qr_code', $serialStyle),
             'sku' => '{{sku}}',

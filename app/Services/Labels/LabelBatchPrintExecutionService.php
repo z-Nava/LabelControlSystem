@@ -155,6 +155,7 @@ class LabelBatchPrintExecutionService
             'sku' => (string) ($sku?->sku ?? ''),
             'console_sku' => (string) ($sku?->console_sku ?? ''),
             'assembly_part_number' => (string) ($sku?->assembly_part_number ?? ''),
+            'fixed_103' => (string) (($sku?->assembly_part_number ?: '103')),
             'packaging_part_number' => (string) ($sku?->packaging_part_number ?? ''),
             'emea_sku' => (string) ($sku?->emea_sku ?? ''),
             'anz_sku' => (string) ($sku?->anz_sku ?? ''),

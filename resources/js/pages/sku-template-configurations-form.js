@@ -300,7 +300,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const resolveTokenValue = (token, serial, ratingSerial) => {
         const skuData = getSelectedSkuData();
         const values = {
-            fixed_103: '103',
+            fixed_103: skuData.assemblyPartNumber || '103',
             serial_full: applySerialStyle(serial),
             rating_qr_code: applySerialStyle(ratingSerial),
             sku: getSelectedSkuCode(),

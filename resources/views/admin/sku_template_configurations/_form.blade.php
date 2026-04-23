@@ -25,7 +25,7 @@
 ])
 @php($qrCustomOptions = [
     '' => 'Vacío',
-    'fixed_103' => 'Valor fijo 103',
+    'fixed_103' => 'Ensamble (assembly part number)',
     'serial_full' => 'Serial completo',
     'rating_qr_code' => 'QR rating',
     'sku' => 'SKU',
