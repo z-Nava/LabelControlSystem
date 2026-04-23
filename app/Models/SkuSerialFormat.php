@@ -39,6 +39,7 @@ class SkuSerialFormat extends Model
         'emea_plant_code',
         'emea_unit_digits',
         'emea_declaration_required',
+        'emea_serial_print_format',
         'anz_customer_tool_code',
         'anz_product_prefix',
         'anz_tool_version',
@@ -248,6 +249,11 @@ class SkuSerialFormat extends Model
         }
 
         return (bool) $value;
+    }
+
+    public function getEmeaSerialPrintFormatAttribute($value): ?string
+    {
+        return $this->emeaConfig?->print_format ?? $value;
     }
 
     public function getAnzProductPrefixAttribute($value): ?string

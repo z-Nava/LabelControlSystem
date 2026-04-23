@@ -143,6 +143,7 @@ class SkuSerialFormatService
             $normalized['emea_plant_code'] = null;
             $normalized['emea_unit_digits'] = null;
             $normalized['emea_declaration_required'] = false;
+            $normalized['emea_serial_print_format'] = null;
 
             $normalized['anz_customer_tool_code'] = null;
             $normalized['anz_product_prefix'] = null;
@@ -168,6 +169,7 @@ class SkuSerialFormatService
             $normalized['emea_plant_code'] = $this->nullableUpper($data['emea_plant_code'] ?? null);
             $normalized['emea_unit_digits'] = $emeaUnitDigits;
             $normalized['emea_declaration_required'] = (bool) ($data['emea_declaration_required'] ?? false);
+            $normalized['emea_serial_print_format'] = $this->nullableString($data['emea_serial_print_format'] ?? 'spaces');
 
             $normalized['unit_length'] = $emeaUnitDigits;
             $normalized['unit_digits'] = $emeaUnitDigits;
@@ -211,6 +213,7 @@ class SkuSerialFormatService
         $normalized['emea_prefix_digits'] = $this->nullableInt($data['emea_prefix_digits'] ?? null);
         $normalized['emea_unit_digits'] = $anzUnitDigits;
         $normalized['emea_declaration_required'] = false;
+        $normalized['emea_serial_print_format'] = null;
 
         $normalized['unit_length'] = $anzUnitDigits;
         $normalized['unit_digits'] = $anzUnitDigits;
@@ -261,6 +264,7 @@ class SkuSerialFormatService
                     'plant_code' => $this->nullableUpper($data['emea_plant_code'] ?? null),
                     'unit_digits' => $unitDigits,
                     'declaration_required' => (bool) ($data['emea_declaration_required'] ?? false),
+                    'print_format' => $this->nullableString($data['emea_serial_print_format'] ?? 'spaces'),
                     'reset_scope' => $resetScope ?: 'monthly',
                     'pattern' => $pattern,
                 ]
@@ -309,6 +313,7 @@ class SkuSerialFormatService
         'emea_plant_code',
         'emea_unit_digits',
         'emea_declaration_required',
+        'emea_serial_print_format',
         'anz_customer_tool_code',
         'anz_product_prefix',
         'anz_tool_version',

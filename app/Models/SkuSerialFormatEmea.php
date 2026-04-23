@@ -18,6 +18,7 @@ class SkuSerialFormatEmea extends Model
         'plant_code',
         'unit_digits',
         'declaration_required',
+        'print_format',
         'reset_scope',
         'pattern',
     ];

@@ -136,6 +136,12 @@
                 <option value="packaging_code" @selected($prefixSource === 'packaging_code')>packaging_code</option>
             </select>
             <input type="number" min="1" max="10" name="emea_unit_digits" value="{{ old('emea_unit_digits', $format->emea_unit_digits ?? '') }}" class="rounded-xl border border-slate-300 px-3 py-2" placeholder="EMEA unit digits" />
+            <select name="emea_serial_print_format" class="rounded-xl border border-slate-300 px-3 py-2">
+                @php($emeaPrintFormat = old('emea_serial_print_format', $format->emea_serial_print_format ?? 'spaces'))
+                <option value="spaces" @selected($emeaPrintFormat === 'spaces')>spaces</option>
+                <option value="no_spaces" @selected($emeaPrintFormat === 'no_spaces')>no_spaces</option>
+                <option value="segmented" @selected($emeaPrintFormat === 'segmented')>segmented</option>
+            </select>
         </div>
         <label class="inline-flex items-center gap-2 text-sm text-slate-700 mt-3">
             <input type="checkbox" name="emea_declaration_required" value="1" class="rounded border-slate-300" {{ old('emea_declaration_required', $format->emea_declaration_required ?? false) ? 'checked' : '' }}>

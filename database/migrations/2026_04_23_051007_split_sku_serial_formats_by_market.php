@@ -51,6 +51,7 @@ return new class extends Migration {
             $table->string('plant_code', 10)->nullable();
             $table->unsignedTinyInteger('unit_digits')->nullable();
             $table->boolean('declaration_required')->default(false);
+            $table->string('print_format', 20)->nullable();
             $table->string('reset_scope', 20)->default('monthly');
             $table->string('pattern', 120)->nullable();
             $table->timestamps();
@@ -140,6 +141,7 @@ return new class extends Migration {
                     'plant_code' => $format->emea_plant_code,
                     'unit_digits' => $format->emea_unit_digits,
                     'declaration_required' => (bool) $format->emea_declaration_required,
+                    'print_format' => 'spaces',
                     'reset_scope' => 'monthly',
                     'pattern' => $format->pattern,
                     'created_at' => now(),

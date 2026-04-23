@@ -30,7 +30,9 @@
                     <th class="py-3 pr-3">EMEA Prefix</th>
                     <th class="py-3 pr-3">Prefix source</th>
                     <th class="py-3 pr-3">Conformity</th>
+                    <th class="py-3 pr-3">Plant</th>
                     <th class="py-3 pr-3">Unit digits</th>
+                    <th class="py-3 pr-3">Print format</th>
                     <th class="py-3 pr-3">Month map</th>
                     <th class="py-3 pr-3">Req. declaración</th>
                 @else
@@ -64,7 +66,9 @@
                         <td class="py-3 pr-3">{{ $format->emea_prefix ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_prefix_source ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_conformity_code ?: '-' }}</td>
+                        <td class="py-3 pr-3">{{ $format->emea_plant_code ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_unit_digits ?? $format->unit_digits ?? $format->unit_length }}</td>
+                        <td class="py-3 pr-3">{{ $format->emea_serial_print_format ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->month_letter_map ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_declaration_required ? 'Sí' : 'No' }}</td>
                     @else

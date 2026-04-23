@@ -467,6 +467,15 @@ class LabelPrintService
             } else {
                 $separator = ' ';
             }
+        } elseif ($serialFormat->isEmea()) {
+            $serialFormatMode = (string) ($serialFormat->emea_serial_print_format ?? 'spaces');
+            if ($forRatingQr) {
+                $separator = ' ';
+            } elseif ($serialFormatMode === 'no_spaces') {
+                $separator = '';
+            } else {
+                $separator = ' ';
+            }
         } elseif (!$forRatingQr && $separator === '|') {
             $separator = ' ';
         }

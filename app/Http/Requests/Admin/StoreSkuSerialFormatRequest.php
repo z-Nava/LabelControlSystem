@@ -64,6 +64,7 @@ class StoreSkuSerialFormatRequest extends FormRequest
             'emea_plant_code' => ['nullable', 'string', 'max:10'],
             'emea_unit_digits' => ['nullable', 'integer', 'min:1', 'max:10'],
             'emea_declaration_required' => ['nullable', 'boolean'],
+            'emea_serial_print_format' => ['nullable', Rule::in(['spaces', 'no_spaces', 'segmented'])],
 
             'anz_customer_tool_code' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:10'],
             'anz_product_prefix' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:20'],
@@ -112,6 +113,7 @@ class StoreSkuSerialFormatRequest extends FormRequest
             'emea_plant_code' => $this->input('emea_plant_code'),
             'emea_unit_digits' => $this->input('emea_unit_digits'),
             'emea_declaration_required' => $this->boolean('emea_declaration_required', false),
+            'emea_serial_print_format' => $this->input('emea_serial_print_format', 'spaces'),
             'anz_customer_tool_code' => $this->input('anz_customer_tool_code'),
             'anz_product_prefix' => $this->input('anz_product_prefix'),
             'anz_tool_version' => $this->input('anz_tool_version'),

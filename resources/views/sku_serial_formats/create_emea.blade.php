@@ -25,7 +25,7 @@
 
         <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p class="font-semibold">¿Qué estás configurando en EMEA?</p>
-            <p class="mt-1">Estás armando el formato: <strong>PPPPPP CC SSSSSS MJJJJ</strong> (mes con letra y año de 4 dígitos).</p>
+            <p class="mt-1">Estás armando el formato: <strong>PPPPPP CC [PLANT] SSSSSS MJJJJ</strong> (mes con letra y año de 4 dígitos).</p>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -56,7 +56,7 @@
 
             <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="md:col-span-3">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Paso 2 · Estructura EMEA · PPPPPP CC SSSSSS MJJJJ</p>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Paso 2 · Estructura EMEA · PPPPPP CC [PLANT] SSSSSS MJJJJ</p>
                     <p class="mt-1 text-sm text-slate-600">El prefijo y la conformidad impactan directamente el serial final y trazabilidad.</p>
                 </div>
                 <div>
@@ -84,6 +84,16 @@
                     <input type="number" min="1" max="10" name="emea_unit_digits" value="{{ old('emea_unit_digits', $format->emea_unit_digits ?? 6) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                     @error('emea_unit_digits') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Formato de impresión SN</label>
+                    @php($emeaPrintFormat = old('emea_serial_print_format', $format->emea_serial_print_format ?? 'spaces'))
+                    <select id="emeaPrintFormat" name="emea_serial_print_format" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                        <option value="spaces" @selected($emeaPrintFormat === 'spaces')>Con espacios</option>
+                        <option value="no_spaces" @selected($emeaPrintFormat === 'no_spaces')>Sin espacios</option>
+                        <option value="segmented" @selected($emeaPrintFormat === 'segmented')>Segmentado</option>
+                    </select>
+                    @error('emea_serial_print_format') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+                </div>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700 pt-8">
                     <input type="checkbox" name="emea_declaration_required" value="1" class="rounded border-slate-300" {{ old('emea_declaration_required', $format->emea_declaration_required ?? true) ? 'checked' : '' }}>
                     Requiere declaración de conformidad
@@ -105,7 +115,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     const prefix = document.getElementById('emeaPrefix');
     const conformity = document.getElementById('emeaConformity');
+    const plant = document.querySelector('input[name="emea_plant_code"]');
     const unitDigits = document.getElementById('unitDigits');
+    const printFormat = document.getElementById('emeaPrintFormat');
     const preview = document.getElementById('emeaLivePreview');
     const breakdown = document.getElementById('emeaLiveBreakdown');
 
@@ -120,14 +132,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const units = pad(1, Number(unitDigits?.value || 6));
         const prefixText = (prefix?.value || '505554').toUpperCase();
         const conformityText = (conformity?.value || '01').toUpperCase();
-
-        preview.textContent = `${prefixText} ${conformityText} ${units} ${month}${year}`;
+        const plantText = (plant?.value || '').toUpperCase().trim();
+        const format = printFormat?.value || 'spaces';
+        const serialParts = [prefixText, conformityText];
+        if (plantText !== '') serialParts.push(plantText);
+        serialParts.push(units, `${month}${year}`);
+        const serialWithSpaces = serialParts.join(' ');
+        preview.textContent = format === 'no_spaces' ? serialWithSpaces.replaceAll(' ', '') : serialWithSpaces;
         if (breakdown) {
-            breakdown.textContent = `Prefix=${prefixText} · CC=${conformityText} · Unit=${units} · Date=${month}${year}`;
+            breakdown.textContent = `Prefix=${prefixText} · CC=${conformityText} · Plant=${plantText || '-'} · Unit=${units} · Date=${month}${year}`;
         }
     };
 
-    [prefix, conformity, unitDigits].forEach((el) => el?.addEventListener('input', render));
+    [prefix, conformity, plant, unitDigits, printFormat].forEach((el) => el?.addEventListener('input', render));
     render();
 });
 </script>
