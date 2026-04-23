@@ -347,8 +347,14 @@ class LabelPrintService
         ) {
             $baseSerial = $this->formatInternationalRatingFromComponents($week, $serialFormat, $serialNumber, (int) $labelRequest->request_date->month, true);
 
-            if ($serialFormat->isAnz() && $serialFormat->anzQrCustomerToolCode() !== '') {
-                return $serialFormat->anzQrCustomerToolCode().' | '.$baseSerial;
+            if (
+                $serialFormat->isAnz()
+                && $serialFormat->shouldIncludeAnzCustomerToolCodeInQr()
+                && $serialFormat->anzQrCustomerToolCode() !== ''
+            ) {
+                $qrSeparator = $serialFormat->anz_qr_separator ?? ' | ';
+
+                return $serialFormat->anzQrCustomerToolCode().$qrSeparator.$baseSerial;
             }
 
             return $baseSerial;
@@ -439,7 +445,8 @@ class LabelPrintService
     ): string
     {
         $defaultLength = $serialFormat->serial_scheme === SerialSchemes::ANZ_STANDARD ? 5 : 6;
-        $serial = str_pad((string) $serialNumber, $serialFormat->unit_length ?? $defaultLength, '0', STR_PAD_LEFT);
+        $serialDigits = $serialFormat->effectiveUnitDigits() ?: $defaultLength;
+        $serial = str_pad((string) $serialNumber, $serialDigits, '0', STR_PAD_LEFT);
         $monthYear = $this->resolveEmeaMonthCode($week, $requestMonth) . $this->resolveYearValue($week, (int) ($serialFormat->year_digits ?? 4));
 
         $components = [
@@ -451,7 +458,16 @@ class LabelPrintService
         ];
 
         $separator = (string) ($serialFormat->separator ?? '');
-        if (!$forRatingQr && $separator === '|') {
+        if ($serialFormat->isAnz()) {
+            $serialFormatMode = (string) ($serialFormat->anz_serial_print_format ?? 'spaces');
+            if ($forRatingQr) {
+                $separator = (string) ($serialFormat->anz_qr_separator ?? ' | ');
+            } elseif ($serialFormatMode === 'no_spaces') {
+                $separator = '';
+            } else {
+                $separator = ' ';
+            }
+        } elseif (!$forRatingQr && $separator === '|') {
             $separator = ' ';
         }
 

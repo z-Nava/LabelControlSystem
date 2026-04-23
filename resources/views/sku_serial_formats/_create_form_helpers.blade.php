@@ -1,6 +1,7 @@
 @php
     $showWeekControls = $showWeekControls ?? true;
     $lockYearToFour = $lockYearToFour ?? false;
+    $defaultUnitDigits = $defaultUnitDigits ?? 5;
 @endphp
 
 <div>
@@ -19,16 +20,10 @@
 </div>
 
 <div>
-    <label class="block text-sm font-medium text-slate-700">Separador entre segmentos</label>
-    <select name="separator" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
-        @php($selectedSeparator = old('separator', ''))
-        <option value="" @selected($selectedSeparator === '')>Sin separador</option>
-        <option value="__SPACE__" @selected(in_array($selectedSeparator, [' ', '__SPACE__'], true))>Espacio</option>
-        <option value="-" @selected($selectedSeparator === '-')>- (guion)</option>
-        <option value="_" @selected($selectedSeparator === '_')>_ (guion bajo)</option>
-        <option value="|" @selected($selectedSeparator === '|')>| (pipe)</option>
-    </select>
-    @error('separator') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    <label class="block text-sm font-medium text-slate-700">Descripción del formato</label>
+    <input name="description" value="{{ old('description', '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" maxlength="160"
+           placeholder="Ej. {{ $forcedStandard }} serial format" />
+    @error('description') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
@@ -37,7 +32,7 @@
         <input type="hidden" name="year_digits" value="4">
         <input type="text" value="4 (YYYY)" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" readonly>
     @else
-        <select name="year_digits" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+        <select id="yearDigits" name="year_digits" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
             <option value="2" @selected((int) old('year_digits', 2) === 2)>2 (YY)</option>
             <option value="4" @selected((int) old('year_digits', 2) === 4)>4 (YYYY)</option>
         </select>
@@ -48,39 +43,35 @@
 <div>
     <label class="block text-sm font-medium text-slate-700">Semana (dígitos)</label>
     @if($showWeekControls)
-        <select name="week_digits" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
+        <select id="weekDigits" name="week_digits" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
             <option value="1" @selected((int) old('week_digits', 2) === 1)>1 (W)</option>
             <option value="2" @selected((int) old('week_digits', 2) === 2)>2 (WW)</option>
         </select>
     @else
         <input type="hidden" name="week_digits" value="2">
-        <input type="text" value="No aplica para ANZ" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" readonly>
+        <input type="text" value="No aplica" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" readonly>
     @endif
     @error('week_digits') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
-    <label class="block text-sm font-medium text-slate-700">Unit length</label>
-    <input type="number" min="1" max="10" name="unit_length" value="{{ old('unit_length', 5) }}"
-           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required />
-    @error('unit_length') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    <label class="block text-sm font-medium text-slate-700">Unit digits</label>
+    <input id="unitDigits" type="number" min="1" max="10" name="unit_digits" value="{{ old('unit_digits', $defaultUnitDigits) }}"
+           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+    <p class="mt-1 text-xs text-slate-500">Cuántos dígitos tendrá el consecutivo (ej. 5 = 00001).</p>
+    @error('unit_digits') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div>
-    <label class="block text-sm font-medium text-slate-700">Pattern legacy (opcional)</label>
-    <input name="pattern" value="{{ old('pattern', '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-           placeholder="{PPP}{C}{PL}{YY}{WW}{SSSSS}" />
-    @error('pattern') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    <label class="block text-sm font-medium text-slate-700">Longitud total del serial (opcional)</label>
+    <input type="number" min="4" max="80" name="serial_length" value="{{ old('serial_length', '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+    <p class="mt-1 text-xs text-slate-500">Solo de referencia/validación: largo final esperado.</p>
+    @error('serial_length') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
 </div>
 
 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
     <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-        @if($lockYearToFour)
-            <input type="hidden" name="include_year" value="1">
-            <input type="checkbox" class="rounded border-slate-300" checked disabled>
-        @else
-            <input type="checkbox" name="include_year" value="1" class="rounded border-slate-300" {{ old('include_year', true) ? 'checked' : '' }}>
-        @endif
+        <input type="checkbox" name="include_year" value="1" class="rounded border-slate-300" {{ old('include_year', true) ? 'checked' : '' }}>
         Incluir año
     </label>
 
@@ -89,7 +80,7 @@
             <input type="checkbox" name="include_week" value="1" class="rounded border-slate-300" {{ old('include_week', true) ? 'checked' : '' }}>
         @else
             <input type="hidden" name="include_week" value="0">
-            <input type="checkbox" class="rounded border-slate-300" checked disabled>
+            <input type="checkbox" class="rounded border-slate-300" disabled>
         @endif
         Incluir semana
     </label>

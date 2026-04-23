@@ -26,19 +26,16 @@
 
     <form class="mt-5 flex gap-2" method="GET" action="{{ route('sku_serial_formats.index') }}">
         <input name="q" value="{{ $search }}" class="w-full rounded-xl border border-slate-300 px-3 py-2"
-               placeholder="Buscar por SKU, prefijos, separador o pattern..." />
+               placeholder="Buscar por SKU, descripción o códigos por mercado..." />
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">Buscar</button>
     </form>
 
     @foreach(['UL', 'EMEA', 'ANZ'] as $standard)
-        @php($isUl = $standard === 'UL')
-        @include('sku_serial_formats._table', [
+                @include('sku_serial_formats._table', [
             'title' => "Estándar {$standard}",
             'formats' => $formatsByStandard[$standard] ?? collect(),
             'emptyMessage' => "No hay formatos {$standard} registrados.",
-            'prefixLabel' => $isUl ? 'UL Prefix' : 'Base code',
-            'breakLabel' => $isUl ? 'UL Break' : 'Version code',
-            'plantLabel' => $isUl ? 'UL Plant' : 'Plant/Line (opcional)',
+            'standard' => $standard,
         ])
     @endforeach
 </div>
