@@ -63,8 +63,14 @@ class SkuSerialFormatController extends Controller
         $activeSkus = LabelSku::query()
             ->where(function ($query) use ($sku_serial_format) {
                 $query->active()
-                    ->orWhere('sku', $sku_serial_format->sku);
+                    ->orWhere('sku', $sku_serial_format->sku)
+                    ->orWhere('emea_sku', $sku_serial_format->sku)
+                    ->orWhere('anz_sku', $sku_serial_format->sku)
+                    ->orWhere('console_sku', $sku_serial_format->sku)
+                    ->orWhere('assembly_part_number', $sku_serial_format->sku)
+                    ->orWhere('packaging_part_number', $sku_serial_format->sku);
             })
+            ->where('serial_standard', SerialStandards::normalize((string) $sku_serial_format->serial_standard))
             ->orderBy('sku')
             ->orderBy('serial_standard')
             ->get(['sku', 'serial_standard', 'label_part_number']);

@@ -3,7 +3,9 @@
 namespace App\Services\Catalogs;
 
 use App\Models\LabelSku;
+use App\Models\SkuSerialFormat;
 use App\Support\SerialStandards;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 
 class LabelSkuService
@@ -43,8 +45,38 @@ class LabelSkuService
     public function update(LabelSku $labelSku, array $data, ?int $updatedByUserId = null): LabelSku
     {
         $payload = $this->normalizeData($data, false, $updatedByUserId);
+        $originalSku = strtoupper(trim((string) $labelSku->sku));
+        $originalStandard = strtoupper(trim((string) $labelSku->serial_standard));
 
-        $labelSku->update($payload);
+        DB::transaction(function () use ($labelSku, $payload, $originalSku, $originalStandard): void {
+            $labelSku->update($payload);
+
+            $updatedSku = strtoupper(trim((string) $labelSku->sku));
+            $updatedStandard = strtoupper(trim((string) $labelSku->serial_standard));
+            $skuOrStandardChanged = $originalSku !== $updatedSku || $originalStandard !== $updatedStandard;
+
+            if (!$skuOrStandardChanged) {
+                return;
+            }
+
+            $targetAlreadyExists = SkuSerialFormat::query()
+                ->where('sku', $updatedSku)
+                ->where('serial_standard', $updatedStandard)
+                ->exists();
+
+            if ($targetAlreadyExists) {
+                return;
+            }
+
+            SkuSerialFormat::query()
+                ->where('sku', $originalSku)
+                ->where('serial_standard', $originalStandard)
+                ->update([
+                    'sku' => $updatedSku,
+                    'serial_standard' => $updatedStandard,
+                    'market' => $updatedStandard,
+                ]);
+        });
 
         return $labelSku;
     }

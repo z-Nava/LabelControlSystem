@@ -19,7 +19,7 @@ class SkuTemplateConfigurationFormService
 
     public function build(LabelPrintProfile $configuration): array
     {
-        $labelSkus = $this->availableSkus();
+        $labelSkus = $this->availableSkus($configuration);
         $formState = $this->buildFormState($configuration);
         $skuGroups = $this->groupSkusByStandard($labelSkus);
         $skuQrContext = $this->buildSkuQrContext($labelSkus);
@@ -134,7 +134,7 @@ class SkuTemplateConfigurationFormService
         return "{$prefix}{$break}{$plant}{$yearTwo}01{$unit}";
     }
 
-    private function availableSkus(): Collection
+    private function availableSkus(LabelPrintProfile $configuration): Collection
     {
         $formatsByStandard = SkuSerialFormat::query()
             ->active()
@@ -142,7 +142,7 @@ class SkuTemplateConfigurationFormService
             ->get(['sku', 'market', 'serial_standard', 'serial_scheme'])
             ->groupBy(fn (SkuSerialFormat $format) => $this->resolveFormatStandard($format));
 
-        return LabelSku::query()
+        $availableSkus = LabelSku::query()
             ->active()
             ->get()
             ->filter(function (LabelSku $sku) use ($formatsByStandard): bool {
@@ -151,6 +151,21 @@ class SkuTemplateConfigurationFormService
 
                 return $this->resolveFormatForLabelSku($formats, $sku) !== null;
             })
+            ->sortBy([
+                fn (LabelSku $sku) => strtoupper((string) ($sku->serial_standard ?? SerialStandards::UL)),
+                fn (LabelSku $sku) => strtoupper((string) $sku->sku),
+            ])
+            ->values();
+
+        $selectedSku = $configuration->label_sku_id
+            ? LabelSku::query()->find($configuration->label_sku_id)
+            : null;
+
+        if ($selectedSku && !$availableSkus->contains(fn (LabelSku $sku) => $sku->id === $selectedSku->id)) {
+            $availableSkus->push($selectedSku);
+        }
+
+        return $availableSkus
             ->sortBy([
                 fn (LabelSku $sku) => strtoupper((string) ($sku->serial_standard ?? SerialStandards::UL)),
                 fn (LabelSku $sku) => strtoupper((string) $sku->sku),
