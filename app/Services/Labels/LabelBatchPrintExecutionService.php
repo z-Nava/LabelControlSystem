@@ -7,6 +7,7 @@ use App\Models\LabelPrintProfile;
 use App\Models\LabelSku;
 use App\Models\LabelTemplate;
 use App\Models\SerialUnit;
+use App\Models\SkuSerialFormat;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -46,6 +47,7 @@ class LabelBatchPrintExecutionService
             ->first();
 
         $skuId = $sku?->id;
+        $serialFormat = $this->resolveSerialFormat($sku?->sku, (string) ($batch->labelRequest?->serial_standard ?? 'UL'));
 
         $documents = [];
 
@@ -72,7 +74,7 @@ class LabelBatchPrintExecutionService
                     continue;
                 }
 
-                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku);
+                $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku, $serialFormat);
                 $templateZpl = $this->resolveTemplateZpl($template, $labelType, $standard);
                 $rendered = $this->renderTemplate($templateZpl, $payload);
 
@@ -136,7 +138,7 @@ class LabelBatchPrintExecutionService
         });
     }
 
-    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType, ?LabelSku $sku): array
+    private function buildPayload(LabelPrintBatch $batch, SerialUnit $serialUnit, string $labelType, ?LabelSku $sku, ?SkuSerialFormat $serialFormat): array
     {
         return [
             'serial_full' => $serialUnit->serial_full,
@@ -156,10 +158,31 @@ class LabelBatchPrintExecutionService
             'packaging_part_number' => (string) ($sku?->packaging_part_number ?? ''),
             'emea_sku' => (string) ($sku?->emea_sku ?? ''),
             'anz_sku' => (string) ($sku?->anz_sku ?? ''),
+            'anz_customer_tool_code' => strtoupper(trim((string) ($serialFormat?->anz_customer_tool_code ?? ''))),
             'week' => (string) ($batch->labelRequest?->week ?? ''),
             'year' => (string) ($batch->labelRequest?->request_date?->format('Y') ?? ''),
             'serial_standard' => (string) ($batch->labelRequest?->serial_standard ?? 'UL'),
         ];
+    }
+
+    private function resolveSerialFormat(?string $sku, string $serialStandard): ?SkuSerialFormat
+    {
+        if (!$sku) {
+            return null;
+        }
+
+        return SkuSerialFormat::query()
+            ->with(['ulConfig', 'emeaConfig', 'anzConfig'])
+            ->active()
+            ->where('sku', $sku)
+            ->where(function ($query) use ($serialStandard) {
+                $standard = strtoupper(trim($serialStandard));
+
+                $query->where('serial_standard', $standard)
+                    ->orWhere('market', $standard);
+            })
+            ->latest('id')
+            ->first();
     }
 
     private function toCompactSerial(string $value): string

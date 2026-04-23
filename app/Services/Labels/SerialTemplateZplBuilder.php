@@ -117,6 +117,12 @@ class SerialTemplateZplBuilder
             return $this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
         }
 
+        if ($mode === 'anz_customer_tool_serial') {
+            return '{{anz_customer_tool_code}}'
+                .$this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe'))
+                .$this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
+        }
+
         return $isRatingLabel
             ? $this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'))
             : $this->serialPlaceholder('serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
@@ -144,6 +150,7 @@ class SerialTemplateZplBuilder
             'packaging_part_number' => '{{packaging_part_number}}',
             'emea_sku' => '{{emea_sku}}',
             'anz_sku' => '{{anz_sku}}',
+            'anz_customer_tool_code' => '{{anz_customer_tool_code}}',
             default => '',
         };
     }

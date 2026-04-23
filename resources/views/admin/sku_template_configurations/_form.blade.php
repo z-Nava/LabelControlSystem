@@ -56,6 +56,8 @@
                                         data-emea-sku="{{ $sku->emea_sku }}"
                                         data-anz-sku="{{ $sku->anz_sku }}"
                                         data-example-serial="{{ $skuPreviewSerials[$sku->id] ?? '' }}"
+                                        data-anz-customer-tool-code="{{ $skuAnzCustomerToolCodes[$sku->id] ?? '' }}"
+                                        data-anz-qr-separator="{{ $skuAnzQrSeparators[$sku->id] ?? ' | ' }}"
                                         @selected((string) old('label_sku_id', $configuration->label_sku_id ?? '') === (string) $sku->id)>
                                     {{ $sku->sku }} · {{ $sku->label_part_number }}
                                 </option>
@@ -215,6 +217,7 @@
                         <option value="auto" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'auto')>Automático por tipo (recomendado)</option>
                         <option value="serial_full" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'serial_full')>Solo Serial completo</option>
                         <option value="rating_qr" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'rating_qr')>Solo QR rating (EMEA/ANZ)</option>
+                        <option value="anz_customer_tool_serial" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'anz_customer_tool_serial')>ANZ customer_tool_code + Serial (CCCC | Serial)</option>
                         <option value="custom" @selected(old('qr_content_mode', $formState['qr_layout']['content_mode'] ?? 'auto') === 'custom')>Personalizado (hasta 3 bloques)</option>
                     </select>
                     @error('qr_content_mode') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
@@ -311,6 +314,7 @@
                             'packaging_part_number' => 'Packaging part number',
                             'emea_sku' => 'EMEA SKU',
                             'anz_sku' => 'ANZ SKU',
+                            'anz_customer_tool_code' => 'ANZ customer_tool_code',
                         ];
                         $customFields = old('qr_custom_fields', $formState['qr_layout']['custom_fields'] ?? []);
                     @endphp

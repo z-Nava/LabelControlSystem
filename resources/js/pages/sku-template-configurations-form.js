@@ -74,6 +74,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const getSelectedSkuData = () => skuSelect?.selectedOptions?.[0]?.dataset || {};
     const getSelectedSkuStandard = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.serialStandard || 'UL').toUpperCase();
     const getSelectedSkuExampleSerial = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.exampleSerial || '').trim();
+    const getSelectedAnzCustomerToolCode = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.anzCustomerToolCode || '').trim().toUpperCase();
+    const getSelectedAnzQrSeparator = () => String(skuSelect?.selectedOptions?.[0]?.dataset?.anzQrSeparator || '').trim() || ' | ';
     const isRatingWithQrEnabled = () => labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
     const getSelectedSerialStandard = () => String(serialStandardInput?.value || getSelectedSkuStandard()).toUpperCase();
     const isEmeaOrAnzRatingWithQr = () => isRatingWithQrEnabled() && ['EMEA', 'ANZ'].includes(getSelectedSerialStandard());
@@ -300,6 +302,7 @@ const initSkuTemplateConfigurationsForm = () => {
             packaging_part_number: skuData.packagingPartNumber || '',
             emea_sku: skuData.emeaSku || '',
             anz_sku: skuData.anzSku || '',
+            anz_customer_tool_code: getSelectedAnzCustomerToolCode(),
         };
 
         return values[token] || '';
@@ -330,6 +333,17 @@ const initSkuTemplateConfigurationsForm = () => {
 
         if (mode === 'rating_qr') {
             return applySerialStyle(ratingSerial);
+        }
+
+        if (mode === 'anz_customer_tool_serial') {
+            const customerToolCode = getSelectedAnzCustomerToolCode();
+            const serialValue = applySerialStyle(labelType === 'rating' ? ratingSerial : serial);
+
+            if (!customerToolCode) {
+                return serialValue;
+            }
+
+            return `${customerToolCode}${getSelectedAnzQrSeparator()}${serialValue}`;
         }
 
         if (mode === 'custom') {

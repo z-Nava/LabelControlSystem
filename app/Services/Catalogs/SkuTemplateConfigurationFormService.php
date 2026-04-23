@@ -17,7 +17,7 @@ class SkuTemplateConfigurationFormService
         $labelSkus = $this->availableSkus();
         $formState = $this->buildFormState($configuration);
         $skuGroups = $this->groupSkusByStandard($labelSkus);
-        $skuPreviewSerials = $this->buildSkuPreviewSerials($labelSkus);
+        $skuQrContext = $this->buildSkuQrContext($labelSkus);
 
         $selectedStandard = $formState['selected_serial_standard'] ?? 'UL';
 
@@ -31,35 +31,59 @@ class SkuTemplateConfigurationFormService
         return [
             'labelSkus' => $labelSkus,
             'skuGroups' => $skuGroups,
-            'skuPreviewSerials' => $skuPreviewSerials,
+            'skuPreviewSerials' => $skuQrContext['preview_serials'],
+            'skuAnzCustomerToolCodes' => $skuQrContext['anz_customer_tool_codes'],
+            'skuAnzQrSeparators' => $skuQrContext['anz_qr_separators'],
             'availableStandards' => self::SUPPORTED_STANDARDS,
             'formState' => $formState,
         ];
     }
 
-    private function buildSkuPreviewSerials(Collection $labelSkus): array
+    private function buildSkuQrContext(Collection $labelSkus): array
     {
         if ($labelSkus->isEmpty()) {
-            return [];
+            return [
+                'preview_serials' => [],
+                'anz_customer_tool_codes' => [],
+                'anz_qr_separators' => [],
+            ];
         }
 
         $formats = SkuSerialFormat::query()
             ->with(['ulConfig', 'emeaConfig', 'anzConfig'])
             ->active()
             ->whereIn('sku', $labelSkus->pluck('sku')->all())
-            ->whereIn('serial_standard', self::SUPPORTED_STANDARDS)
-            ->get()
-            ->keyBy(fn (SkuSerialFormat $format) => strtoupper(trim((string) $format->serial_standard)).'|'.strtoupper(trim((string) $format->sku)));
-
-        return $labelSkus
-            ->mapWithKeys(function (LabelSku $sku) use ($formats): array {
-                $standard = strtoupper(trim((string) ($sku->serial_standard ?? SerialStandards::UL)));
-                $key = $standard.'|'.strtoupper(trim((string) $sku->sku));
-                $format = $formats->get($key);
-
-                return [$sku->id => $this->resolvePreviewSerial($standard, $format)];
+            ->where(function ($query) {
+                $query->whereIn('serial_standard', self::SUPPORTED_STANDARDS)
+                    ->orWhereIn('market', self::SUPPORTED_STANDARDS);
             })
-            ->all();
+            ->get()
+            ->keyBy(function (SkuSerialFormat $format): string {
+                $standard = strtoupper(trim((string) ($format->serial_standard ?: $format->market ?: SerialStandards::UL)));
+
+                return $standard.'|'.strtoupper(trim((string) $format->sku));
+            });
+
+        $previewSerials = [];
+        $anzCustomerCodes = [];
+        $anzQrSeparators = [];
+
+        foreach ($labelSkus as $sku) {
+            /** @var LabelSku $sku */
+            $standard = strtoupper(trim((string) ($sku->serial_standard ?? SerialStandards::UL)));
+            $key = $standard.'|'.strtoupper(trim((string) $sku->sku));
+            $format = $formats->get($key);
+
+            $previewSerials[$sku->id] = $this->resolvePreviewSerial($standard, $format);
+            $anzCustomerCodes[$sku->id] = strtoupper(trim((string) ($format?->anz_customer_tool_code ?? '')));
+            $anzQrSeparators[$sku->id] = (string) ($format?->anz_qr_separator ?? ' | ');
+        }
+
+        return [
+            'preview_serials' => $previewSerials,
+            'anz_customer_tool_codes' => $anzCustomerCodes,
+            'anz_qr_separators' => $anzQrSeparators,
+        ];
     }
 
     private function resolvePreviewSerial(string $standard, ?SkuSerialFormat $format): string
@@ -108,7 +132,11 @@ class SkuTemplateConfigurationFormService
                 $query->selectRaw('1')
                     ->from((new SkuSerialFormat())->getTable())
                     ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
-                    ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
+                    ->where(function ($serialQuery) {
+                        $serialQuery
+                            ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
+                            ->orWhereColumn('sku_serial_formats.market', 'label_skus.serial_standard');
+                    })
                     ->where('sku_serial_formats.is_active', true);
             })
             ->orderBy('serial_standard')
