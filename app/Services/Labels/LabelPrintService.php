@@ -30,7 +30,8 @@ class LabelPrintService
         }
 
         return DB::transaction(function () use ($labelRequest, $data, $printedByUserId, $printedByName) {
-            $copies = (int) $data['copies'];
+            $serialCopies = (int) ($data['serial_copies'] ?? $data['copies'] ?? 2);
+            $ratingCopies = (int) ($data['rating_copies'] ?? $data['copies'] ?? 1);
             $isPrintBatch = $data['batch_type'] === 'print';
             $printSerial = (bool) $data['print_serial'];
             $printRating = (bool) $data['print_rating'];
@@ -113,16 +114,17 @@ class LabelPrintService
                     $batch->update(['serial_week_id' => $week->id]);
 
                     foreach ($reservedUnits as $unit) {
-                        LabelPrintBatchItem::query()->create([
-                            'label_print_batch_id' => $batch->id,
-                            'serial_unit_id' => $unit->id,
-                            'print_serial' => $printSerial,
-                            'print_rating' => $printRating,
-                            'copies' => 1,
-                        ]);
+                        $this->appendBatchItemsForUnit(
+                            batch: $batch,
+                            serialUnitId: (int) $unit->id,
+                            printSerial: $printSerial,
+                            printRating: $printRating,
+                            serialCopies: $serialCopies,
+                            ratingCopies: $ratingCopies,
+                        );
                     }
                 } else {
-                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
+                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $serialCopies, $ratingCopies);
                 }
             } else {
                 if ($ranges->isEmpty()) {
@@ -138,10 +140,11 @@ class LabelPrintService
                         ranges: $ranges,
                         selectedSerialUnitIds: $selectedSerialUnitIds,
                         selectedRatingUnitIds: $selectedRatingUnitIds,
-                        copies: $copies,
+                        serialCopies: $serialCopies,
+                        ratingCopies: $ratingCopies,
                     );
                 } else {
-                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $copies);
+                    $this->appendBatchItemsFromRanges($batch, $ranges, $printSerial, $printRating, $serialCopies, $ratingCopies);
                 }
             }
 
@@ -153,7 +156,14 @@ class LabelPrintService
         });
     }
 
-    private function appendBatchItemsFromRanges(LabelPrintBatch $batch, $ranges, bool $printSerial, bool $printRating, int $copies): void
+    private function appendBatchItemsFromRanges(
+        LabelPrintBatch $batch,
+        $ranges,
+        bool $printSerial,
+        bool $printRating,
+        int $serialCopies,
+        int $ratingCopies
+    ): void
     {
         $weekId = (int) $ranges->first()->serial_week_id;
         $batch->update(['serial_week_id' => $weekId]);
@@ -169,13 +179,14 @@ class LabelPrintService
             ->get(['id']);
 
         foreach ($units as $unit) {
-            LabelPrintBatchItem::query()->create([
-                'label_print_batch_id' => $batch->id,
-                'serial_unit_id' => $unit->id,
-                'print_serial' => $printSerial,
-                'print_rating' => $printRating,
-                'copies' => $copies,
-            ]);
+            $this->appendBatchItemsForUnit(
+                batch: $batch,
+                serialUnitId: (int) $unit->id,
+                printSerial: $printSerial,
+                printRating: $printRating,
+                serialCopies: $serialCopies,
+                ratingCopies: $ratingCopies,
+            );
         }
     }
 
@@ -185,7 +196,8 @@ class LabelPrintService
         $ranges,
         Collection $selectedSerialUnitIds,
         Collection $selectedRatingUnitIds,
-        int $copies
+        int $serialCopies,
+        int $ratingCopies
     ): void {
         $weekId = (int) $ranges->first()->serial_week_id;
         $batch->update(['serial_week_id' => $weekId]);
@@ -227,12 +239,43 @@ class LabelPrintService
         }
 
         foreach ($allowedIds as $unitId) {
+            $this->appendBatchItemsForUnit(
+                batch: $batch,
+                serialUnitId: (int) $unitId,
+                printSerial: $selectedSerialUnitIds->contains($unitId),
+                printRating: $selectedRatingUnitIds->contains($unitId),
+                serialCopies: $serialCopies,
+                ratingCopies: $ratingCopies,
+            );
+        }
+    }
+
+
+    private function appendBatchItemsForUnit(
+        LabelPrintBatch $batch,
+        int $serialUnitId,
+        bool $printSerial,
+        bool $printRating,
+        int $serialCopies,
+        int $ratingCopies
+    ): void {
+        if ($printSerial) {
             LabelPrintBatchItem::query()->create([
                 'label_print_batch_id' => $batch->id,
-                'serial_unit_id' => $unitId,
-                'print_serial' => $selectedSerialUnitIds->contains($unitId),
-                'print_rating' => $selectedRatingUnitIds->contains($unitId),
-                'copies' => $copies,
+                'serial_unit_id' => $serialUnitId,
+                'print_serial' => true,
+                'print_rating' => false,
+                'copies' => $serialCopies,
+            ]);
+        }
+
+        if ($printRating) {
+            LabelPrintBatchItem::query()->create([
+                'label_print_batch_id' => $batch->id,
+                'serial_unit_id' => $serialUnitId,
+                'print_serial' => false,
+                'print_rating' => true,
+                'copies' => $ratingCopies,
             ]);
         }
     }

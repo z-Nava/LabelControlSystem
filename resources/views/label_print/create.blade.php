@@ -26,8 +26,9 @@
         </div>
     @endif
 
-    <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="POST" action="{{ route('label_requests.print.store', $labelRequest) }}">
+    <form class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4" method="POST" action="{{ route('label_requests.print.store', $labelRequest) }}">
         @csrf
+        <input type="hidden" name="copies" value="{{ old('copies', 1) }}" />
 
         <div>
             <label class="text-sm text-slate-600">Tipo de batch</label>
@@ -39,9 +40,15 @@
         </div>
 
         <div>
-            <label class="text-sm text-slate-600">Copias</label>
-            <input type="number" name="copies" min="1" value="{{ old('copies', 1) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
-            <p class="mt-1 text-xs text-slate-500">Para <span class="font-medium">print</span> se generan todos los seriales de la requisición con 1 copia por serial.</p>
+            <label class="text-sm text-slate-600">Copias Serial</label>
+            <input type="number" name="serial_copies" min="1" value="{{ old('serial_copies', old('copies', 2)) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <p class="mt-1 text-xs text-slate-500">Por defecto se imprimen <span class="font-medium">2</span> seriales por cada unidad.</p>
+        </div>
+
+        <div>
+            <label class="text-sm text-slate-600">Copias Rating</label>
+            <input type="number" name="rating_copies" min="1" value="{{ old('rating_copies', old('copies', 1)) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <p class="mt-1 text-xs text-slate-500">Por defecto se imprime <span class="font-medium">1</span> rating por cada unidad.</p>
         </div>
 
         <div>
