@@ -32,6 +32,12 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Impresora seleccionada</div>
             <div id="selected-printer" class="mt-1 text-sm text-slate-800">Sin conectar</div>
+            <div class="mt-3">
+                <label for="printer-select" class="text-xs uppercase tracking-wide text-slate-500">Elegir impresora Zebra detectada</label>
+                <select id="printer-select" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Primero detecta impresoras</option>
+                </select>
+            </div>
         </div>
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Estado</div>
@@ -83,6 +89,7 @@
     const prepareButton = document.getElementById('prepare-print');
     const printButton = document.getElementById('print-batch');
     const printerBox = document.getElementById('selected-printer');
+    const printerSelect = document.getElementById('printer-select');
     const statusBox = document.getElementById('print-status');
     const storageKey = 'dummy_print_selected_printer';
 
@@ -91,6 +98,7 @@
     const alreadyPrinted = root.dataset.alreadyPrinted === '1';
     const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
     let selectedDevice = null;
+    let availablePrinters = [];
     let printPrepared = false;
 
     const setStatus = (message, isError = false) => {
@@ -110,6 +118,81 @@
         }
     };
 
+    const getPrinterId = (device) => [device?.name || '', device?.uid || '', device?.connection || ''].join('::');
+
+    const persistSelectedPrinter = (device) => {
+        localStorage.setItem(storageKey, JSON.stringify({
+            name: device.name,
+            uid: device.uid,
+            connection: device.connection,
+        }));
+    };
+
+    const setSelectedPrinter = (device) => {
+        if (!device) {
+            selectedDevice = null;
+            printerBox.textContent = 'Sin conectar';
+            return;
+        }
+
+        selectedDevice = device;
+        persistSelectedPrinter(device);
+        printerBox.textContent = `${device.name} (${device.connection || 'connection'})`;
+    };
+
+    const restorePreferredPrinter = () => {
+        const raw = localStorage.getItem(storageKey);
+        if (!raw) return null;
+
+        try {
+            const parsed = JSON.parse(raw);
+            return availablePrinters.find((printer) => {
+                return (printer.name || '') === (parsed.name || '')
+                    && (printer.uid || '') === (parsed.uid || '')
+                    && (printer.connection || '') === (parsed.connection || '');
+            }) || null;
+        } catch (_error) {
+            localStorage.removeItem(storageKey);
+            return null;
+        }
+    };
+
+    const renderPrinterOptions = (preferredPrinter) => {
+        if (!printerSelect) return;
+
+        printerSelect.innerHTML = '';
+
+        if (!availablePrinters.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No se detectaron impresoras';
+            printerSelect.appendChild(option);
+            printerSelect.value = '';
+            return;
+        }
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecciona una impresora';
+        printerSelect.appendChild(placeholder);
+
+        availablePrinters.forEach((printer) => {
+            const option = document.createElement('option');
+            option.value = getPrinterId(printer);
+            option.textContent = `${printer.name || 'Sin nombre'} (${printer.connection || 'connection'})`;
+            printerSelect.appendChild(option);
+        });
+
+        if (preferredPrinter) {
+            printerSelect.value = getPrinterId(preferredPrinter);
+            setSelectedPrinter(preferredPrinter);
+            return;
+        }
+
+        printerSelect.value = '';
+        setSelectedPrinter(null);
+    };
+
     const connectPrinter = () => {
         if (!window.BrowserPrint) {
             setStatus('No se encontró BrowserPrint. Instala/abre Zebra Browser Print.', true);
@@ -118,42 +201,31 @@
 
         setStatus('Buscando impresoras Zebra...');
 
-        BrowserPrint.getDefaultDevice('printer', (device) => {
-            if (device) {
-                selectedDevice = device;
-                localStorage.setItem(storageKey, JSON.stringify({
-                    name: selectedDevice.name,
-                    uid: selectedDevice.uid,
-                    connection: selectedDevice.connection,
-                }));
+        BrowserPrint.getLocalDevices((devices) => {
+            availablePrinters = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
 
-                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
-                setStatus('Impresora conectada (predeterminada). Ya puedes imprimir.');
+            if (!availablePrinters.length) {
+                renderPrinterOptions(null);
+                setStatus('No se detectaron impresoras locales.', true);
                 return;
             }
 
-            BrowserPrint.getLocalDevices((devices) => {
-                const printers = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
-                if (!printers.length) {
-                    setStatus('No se detectaron impresoras locales.', true);
-                    return;
-                }
+            const preferredPrinter = restorePreferredPrinter();
+            renderPrinterOptions(preferredPrinter);
 
-                selectedDevice = printers[0];
-                localStorage.setItem(storageKey, JSON.stringify({
-                    name: selectedDevice.name,
-                    uid: selectedDevice.uid,
-                    connection: selectedDevice.connection,
-                }));
+            if (availablePrinters.length > 1 && !selectedDevice) {
+                setStatus(`Se detectaron ${availablePrinters.length} impresoras. Elige una para continuar.`);
+                return;
+            }
 
-                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
-                setStatus('Impresora conectada (local). Ya puedes imprimir.');
-            }, (error) => {
-                setStatus(`Error al conectar impresora: ${error}`, true);
-            }, 'printer');
+            if (!selectedDevice && availablePrinters.length === 1) {
+                setSelectedPrinter(availablePrinters[0]);
+            }
+
+            setStatus(`Se detectaron ${availablePrinters.length} impresora(s). ${selectedDevice ? 'Lista para imprimir.' : 'Selecciona una para habilitar impresión.'}`);
         }, (error) => {
-            setStatus(`Error al obtener impresora default: ${error}`, true);
-        });
+            setStatus(`Error al conectar impresora: ${error}`, true);
+        }, 'printer');
     };
 
     const buildItemZpl = (item) => {
@@ -311,6 +383,24 @@
     };
 
     connectButton?.addEventListener('click', connectPrinter);
+    printerSelect?.addEventListener('change', (event) => {
+        const selectedId = event.target.value;
+        if (!selectedId) {
+            setSelectedPrinter(null);
+            setStatus('Selecciona una impresora para continuar.', true);
+            return;
+        }
+
+        const foundPrinter = availablePrinters.find((printer) => getPrinterId(printer) === selectedId);
+        if (!foundPrinter) {
+            setSelectedPrinter(null);
+            setStatus('No se pudo recuperar la impresora seleccionada. Vuelve a detectar impresoras.', true);
+            return;
+        }
+
+        setSelectedPrinter(foundPrinter);
+        setStatus('Impresora seleccionada. Ya puedes preparar e imprimir.');
+    });
     prepareButton?.addEventListener('click', preparePrint);
     printButton?.addEventListener('click', printBatch);
 

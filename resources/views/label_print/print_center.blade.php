@@ -34,12 +34,28 @@
         <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Imprimir ahora</button>
     </div>
 
-    <div class="mt-4 grid gap-4 md:grid-cols-4">
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-500">Impresora seleccionada</div>
-            <div id="selected-printer" class="mt-1 text-sm text-slate-800">Sin conectar</div>
+            <div class="text-xs uppercase tracking-wide text-slate-500">Impresora SERIAL</div>
+            <div id="selected-printer-serial" class="mt-1 text-sm text-slate-800">Sin seleccionar</div>
+            <div class="mt-3">
+                <label for="printer-select-serial" class="text-xs uppercase tracking-wide text-slate-500">Elegir impresora para Serial</label>
+                <select id="printer-select-serial" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Primero detecta impresoras</option>
+                </select>
+            </div>
         </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs uppercase tracking-wide text-slate-500">Impresora RATING</div>
+            <div id="selected-printer-rating" class="mt-1 text-sm text-slate-800">Sin seleccionar</div>
+            <div class="mt-3">
+                <label for="printer-select-rating" class="text-xs uppercase tracking-wide text-slate-500">Elegir impresora para Rating</label>
+                <select id="printer-select-rating" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                    <option value="">Primero detecta impresoras</option>
+                </select>
+            </div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Estado</div>
             <div id="print-status" class="mt-1 text-sm text-slate-700">Pendiente de conexión y preparación de impresión.</div>
         </div>
@@ -64,13 +80,20 @@
     const connectButton = document.getElementById('connect-printer');
     const previewButton = document.getElementById('preview-batch');
     const printButton = document.getElementById('print-batch');
-    const printerBox = document.getElementById('selected-printer');
+    const serialPrinterBox = document.getElementById('selected-printer-serial');
+    const ratingPrinterBox = document.getElementById('selected-printer-rating');
+    const serialPrinterSelect = document.getElementById('printer-select-serial');
+    const ratingPrinterSelect = document.getElementById('printer-select-rating');
     const statusBox = document.getElementById('print-status');
     const confirmationBox = document.getElementById('print-confirmation');
     const previewSummary = document.getElementById('preview-summary');
-    const storageKey = 'label_print_selected_printer';
+    const storageKeys = {
+        serial: 'label_print_selected_printer_serial',
+        rating: 'label_print_selected_printer_rating',
+    };
 
-    let selectedDevice = null;
+    let availablePrinters = [];
+    let selectedPrinters = { serial: null, rating: null };
     let previewPayload = null;
     let printPrepared = false;
 
@@ -90,15 +113,108 @@
         window.alert(`${title}: ${text}`);
     };
 
-    const restoreStoredPrinter = () => {
-        const raw = localStorage.getItem(storageKey);
+    const getPrinterId = (device) => [device?.name || '', device?.uid || '', device?.connection || ''].join('::');
+    const getPrinterLabel = (device) => `${device?.name || 'Sin nombre'} (${device?.connection || 'connection'})`;
+
+    const persistSelectedPrinter = (labelType, device) => {
+        localStorage.setItem(storageKeys[labelType], JSON.stringify({
+            name: device.name,
+            uid: device.uid,
+            connection: device.connection,
+        }));
+    };
+
+    const setSelectedPrinter = (labelType, device) => {
+        if (!['serial', 'rating'].includes(labelType)) return;
+
+        selectedPrinters[labelType] = device || null;
+
+        if (labelType === 'serial' && serialPrinterBox) {
+            serialPrinterBox.textContent = device ? getPrinterLabel(device) : 'Sin seleccionar';
+        }
+
+        if (labelType === 'rating' && ratingPrinterBox) {
+            ratingPrinterBox.textContent = device ? getPrinterLabel(device) : 'Sin seleccionar';
+        }
+
+        if (device) {
+            persistSelectedPrinter(labelType, device);
+        }
+    };
+
+    const restorePreferredPrinter = (labelType) => {
+        const raw = localStorage.getItem(storageKeys[labelType]);
         if (!raw) return;
 
         try {
             const parsed = JSON.parse(raw);
-            printerBox.textContent = `${parsed.name} (${parsed.connection || 'connection'})`;
-        } catch (error) {
-            localStorage.removeItem(storageKey);
+            return availablePrinters.find((printer) => {
+                return (printer.name || '') === (parsed.name || '')
+                    && (printer.uid || '') === (parsed.uid || '')
+                    && (printer.connection || '') === (parsed.connection || '');
+            }) || null;
+        } catch (_error) {
+            localStorage.removeItem(storageKeys[labelType]);
+            return null;
+        }
+    };
+
+    const renderPrinterOptions = (selectElement, preferredPrinter) => {
+        if (!selectElement) return;
+
+        selectElement.innerHTML = '';
+
+        if (!availablePrinters.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No se detectaron impresoras';
+            selectElement.appendChild(option);
+            selectElement.value = '';
+            return;
+        }
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Selecciona una impresora';
+        selectElement.appendChild(placeholder);
+
+        availablePrinters.forEach((printer) => {
+            const option = document.createElement('option');
+            option.value = getPrinterId(printer);
+            option.textContent = getPrinterLabel(printer);
+            selectElement.appendChild(option);
+        });
+
+        if (preferredPrinter) {
+            selectElement.value = getPrinterId(preferredPrinter);
+        } else {
+            selectElement.value = '';
+        }
+    };
+
+    const resolveSelectedPrinter = (labelType) => {
+        if (selectedPrinters[labelType]) {
+            return selectedPrinters[labelType];
+        }
+
+        if (selectedPrinters.serial && selectedPrinters.rating && getPrinterId(selectedPrinters.serial) === getPrinterId(selectedPrinters.rating)) {
+            return selectedPrinters.serial;
+        }
+
+        return null;
+    };
+
+    const validatePrintersForDocuments = (documents = []) => {
+        const requiredTypes = [...new Set(documents.map((doc) => String(doc.label_type || '').toLowerCase()).filter(Boolean))];
+
+        for (const type of requiredTypes) {
+            if (!['serial', 'rating'].includes(type)) {
+                continue;
+            }
+
+            if (!resolveSelectedPrinter(type)) {
+                throw new Error(`Debes seleccionar impresora para ${type.toUpperCase()}.`);
+            }
         }
     };
 
@@ -110,51 +226,47 @@
 
         setStatus('Buscando impresoras Zebra...');
 
-        BrowserPrint.getDefaultDevice('printer', (device) => {
-            if (device) {
-                selectedDevice = device;
-                printPrepared = false;
-                previewPayload = null;
-                localStorage.setItem(storageKey, JSON.stringify({
-                    name: selectedDevice.name,
-                    uid: selectedDevice.uid,
-                    connection: selectedDevice.connection,
-                }));
+        BrowserPrint.getLocalDevices((devices) => {
+            availablePrinters = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
+            printPrepared = false;
+            previewPayload = null;
 
-                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
-                setStatus('Impresora conectada (predeterminada). Ya puedes preparar e imprimir.');
+            const preferredSerial = restorePreferredPrinter('serial');
+            const preferredRating = restorePreferredPrinter('rating');
+            renderPrinterOptions(serialPrinterSelect, preferredSerial);
+            renderPrinterOptions(ratingPrinterSelect, preferredRating);
+
+            setSelectedPrinter('serial', preferredSerial);
+            setSelectedPrinter('rating', preferredRating);
+
+            if (!availablePrinters.length) {
+                setStatus('No se detectaron impresoras locales.', true);
                 return;
             }
 
-            BrowserPrint.getLocalDevices((devices) => {
-                const printers = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
-
-                if (!printers.length) {
-                    setStatus('No se detectaron impresoras locales.', true);
-                    return;
+            if (availablePrinters.length === 1) {
+                const onlyPrinter = availablePrinters[0];
+                if (!selectedPrinters.serial) {
+                    if (serialPrinterSelect) serialPrinterSelect.value = getPrinterId(onlyPrinter);
+                    setSelectedPrinter('serial', onlyPrinter);
                 }
 
-                selectedDevice = printers[0];
-                printPrepared = false;
-                previewPayload = null;
-                localStorage.setItem(storageKey, JSON.stringify({
-                    name: selectedDevice.name,
-                    uid: selectedDevice.uid,
-                    connection: selectedDevice.connection,
-                }));
+                if (!selectedPrinters.rating) {
+                    if (ratingPrinterSelect) ratingPrinterSelect.value = getPrinterId(onlyPrinter);
+                    setSelectedPrinter('rating', onlyPrinter);
+                }
+            }
 
-                printerBox.textContent = `${selectedDevice.name} (${selectedDevice.connection || 'connection'})`;
-                setStatus('Impresora conectada (local). Ya puedes preparar e imprimir.');
-            }, (error) => {
-                setStatus(`Error al conectar impresora: ${error}`, true);
-            }, 'printer');
+            const serialReady = Boolean(selectedPrinters.serial);
+            const ratingReady = Boolean(selectedPrinters.rating);
+            setStatus(`Se detectaron ${availablePrinters.length} impresora(s). Serial: ${serialReady ? 'OK' : 'pendiente'} · Rating: ${ratingReady ? 'OK' : 'pendiente'}.`);
         }, (error) => {
-            setStatus(`Error al obtener impresora default: ${error}`, true);
-        });
+            setStatus(`Error al conectar impresora: ${error}`, true);
+        }, 'printer');
     };
 
-    const sendToPrinter = (zplChunk) => new Promise((resolve, reject) => {
-        selectedDevice.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
+    const sendToPrinter = (device, zplChunk) => new Promise((resolve, reject) => {
+        device.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
     });
 
     const loadPreview = async () => {
@@ -189,28 +301,38 @@
 
     const preparePrint = async () => {
         try {
-            if (!selectedDevice) {
-                setStatus('Primero conecta una impresora.', true);
+            if (!availablePrinters.length) {
+                setStatus('Primero conecta impresoras.', true);
                 showAlert('Impresora requerida', 'Conecta una impresora antes de preparar la impresión.', 'error');
                 return;
             }
 
             await loadPreview();
+            const documents = previewPayload?.documents || [];
+            validatePrintersForDocuments(documents);
 
-            const testZpl = (previewPayload?.documents || []).map((doc) => doc.zpl).find(Boolean) || previewPayload?.zpl || '';
-            if (!testZpl) {
+            const testDocs = documents.filter((doc) => doc?.zpl);
+            if (!testDocs.length) {
                 printPrepared = false;
                 setStatus('No hay contenido de prueba para imprimir.', true);
                 showAlert('Sin contenido', 'No se encontró contenido ZPL para la impresión de prueba.', 'warning');
                 return;
             }
 
-            setStatus('Enviando etiqueta de prueba para validar template...');
-            await sendToPrinter(testZpl);
+            setStatus('Enviando etiqueta(s) de prueba para validar template...');
+            for (const doc of testDocs) {
+                const labelType = String(doc.label_type || '').toLowerCase();
+                const printer = resolveSelectedPrinter(labelType);
+                if (!printer) {
+                    throw new Error(`No hay impresora seleccionada para ${labelType.toUpperCase()}.`);
+                }
+
+                await sendToPrinter(printer, doc.zpl);
+            }
 
             printPrepared = true;
-            setStatus('Impresión de prueba enviada. Si el template está correcto, ya puedes presionar "Imprimir ahora".');
-            showAlert('Preparación completada', 'Se envió una impresión de prueba para validar el template. Si está correcta, ya puedes imprimir el lote.', 'success');
+            setStatus('Impresión de prueba enviada por tipo de etiqueta. Si todo está correcto, ya puedes presionar "Imprimir ahora".');
+            showAlert('Preparación completada', 'Se enviaron pruebas por tipo (serial/rating) a la impresora seleccionada. Si están correctas, ya puedes imprimir el lote.', 'success');
         } catch (error) {
             printPrepared = false;
             setStatus(`Error al preparar impresión: ${error.message}`, true);
@@ -241,8 +363,8 @@
 
     const printBatch = async () => {
         try {
-            if (!selectedDevice) {
-                setStatus('Primero conecta una impresora.', true);
+            if (!availablePrinters.length) {
+                setStatus('Primero conecta impresoras.', true);
                 return;
             }
 
@@ -252,24 +374,30 @@
                 return;
             }
 
-            if (!previewPayload || !previewPayload.zpl) {
+            if (!previewPayload || !previewPayload.documents) {
                 setStatus('No hay preparación activa. Presiona "Preparar impresión" nuevamente.', true);
                 printPrepared = false;
                 return;
             }
 
-            if (!previewPayload?.zpl) {
+            const documents = (previewPayload.documents || []).filter((doc) => doc?.zpl);
+            if (!documents.length) {
                 setStatus('No hay contenido listo para imprimir.', true);
                 return;
             }
 
-            const documents = (previewPayload.documents || []).map((doc) => doc.zpl).filter(Boolean);
-            const queue = documents.length ? documents : [previewPayload.zpl];
+            validatePrintersForDocuments(documents);
 
-            setStatus(`Enviando ${queue.length} documento(s) a la impresora...`);
+            setStatus(`Enviando ${documents.length} documento(s) a las impresoras seleccionadas...`);
 
-            for (const chunk of queue) {
-                await sendToPrinter(chunk);
+            for (const doc of documents) {
+                const labelType = String(doc.label_type || '').toLowerCase();
+                const printer = resolveSelectedPrinter(labelType);
+                if (!printer) {
+                    throw new Error(`No hay impresora seleccionada para ${labelType.toUpperCase()}.`);
+                }
+
+                await sendToPrinter(printer, doc.zpl);
             }
 
             try {
@@ -287,10 +415,35 @@
     };
 
     connectButton?.addEventListener('click', connectPrinter);
+    serialPrinterSelect?.addEventListener('change', (event) => {
+        const selectedId = event.target.value;
+        const device = availablePrinters.find((printer) => getPrinterId(printer) === selectedId) || null;
+        setSelectedPrinter('serial', device);
+        printPrepared = false;
+        if (device) {
+            setStatus('Impresora SERIAL seleccionada. Prepara impresión nuevamente para validar.');
+            return;
+        }
+
+        setStatus('Selecciona una impresora para SERIAL.', true);
+    });
+    ratingPrinterSelect?.addEventListener('change', (event) => {
+        const selectedId = event.target.value;
+        const device = availablePrinters.find((printer) => getPrinterId(printer) === selectedId) || null;
+        setSelectedPrinter('rating', device);
+        printPrepared = false;
+        if (device) {
+            setStatus('Impresora RATING seleccionada. Prepara impresión nuevamente para validar.');
+            return;
+        }
+
+        setStatus('Selecciona una impresora para RATING.', true);
+    });
     previewButton?.addEventListener('click', preparePrint);
     printButton?.addEventListener('click', printBatch);
 
-    restoreStoredPrinter();
+    setSelectedPrinter('serial', null);
+    setSelectedPrinter('rating', null);
 })();
 </script>
 @endsection
