@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\SkuSerialFormatController;
 use App\Http\Controllers\Admin\SkuTemplateConfigurationController;
 use App\Http\Controllers\Admin\StockLocatorController;
 use App\Http\Controllers\Admin\DummyQrTemplateController;
+use App\Http\Controllers\Admin\MasterModelMappingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -92,6 +93,15 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/dummy-qr-templates/{dummy_qr_template}', [DummyQrTemplateController::class, 'update'])->name('admin.dummy_qr_templates.update');
         Route::post('/dummy-qr-templates/{dummy_qr_template}/toggle', [DummyQrTemplateController::class, 'toggle'])->name('admin.dummy_qr_templates.toggle');
 
+        Route::prefix('master-model-mappings/{type}')->whereIn('type', ['assembly', 'assembly_packaging', 'batteries_assembly', 'motors_molding'])->group(function () {
+            Route::get('/', [MasterModelMappingController::class, 'index'])->name('master_model_mappings.index');
+            Route::get('/create', [MasterModelMappingController::class, 'create'])->name('master_model_mappings.create');
+            Route::post('/', [MasterModelMappingController::class, 'store'])->name('master_model_mappings.store');
+            Route::get('/{master_model_mapping}/edit', [MasterModelMappingController::class, 'edit'])->name('master_model_mappings.edit');
+            Route::put('/{master_model_mapping}', [MasterModelMappingController::class, 'update'])->name('master_model_mappings.update');
+            Route::post('/{master_model_mapping}/toggle', [MasterModelMappingController::class, 'toggle'])->name('master_model_mappings.toggle');
+            Route::post('/import', [MasterModelMappingController::class, 'import'])->name('master_model_mappings.import');
+        });
 
     });
 

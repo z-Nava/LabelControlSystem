@@ -41,6 +41,26 @@
                         <div class="font-semibold">Locals by Oracle Line</div>
                         <div class="text-sm text-slate-600 mt-1">Mapeo de STOCK_LOCATOR → SUBINVENTORY para masters.</div>
                     </a>
+
+                    <a href="{{ route('master_model_mappings.index', 'assembly') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">CRUD Ensamble</div>
+                        <div class="text-sm text-slate-600 mt-1">NP/SKU para modelo de hoja master ensamble.</div>
+                    </a>
+
+                    <a href="{{ route('master_model_mappings.index', 'assembly_packaging') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">CRUD Ensamble-Empaque</div>
+                        <div class="text-sm text-slate-600 mt-1">NP/SKU para modelo de hoja master ensamble-empaque.</div>
+                    </a>
+
+                    <a href="{{ route('master_model_mappings.index', 'batteries_assembly') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">CRUD Baterías</div>
+                        <div class="text-sm text-slate-600 mt-1">NP/SKU para hoja master de ensamble baterías.</div>
+                    </a>
+
+                    <a href="{{ route('master_model_mappings.index', 'motors_molding') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">CRUD Motores-Moldeo</div>
+                        <div class="text-sm text-slate-600 mt-1">NP/SKU para hoja master motores y moldeo.</div>
+                    </a>
                 </div>
             </section>
 
