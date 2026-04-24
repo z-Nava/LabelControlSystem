@@ -311,7 +311,7 @@
             const documents = previewPayload?.documents || [];
             validatePrintersForDocuments(documents);
 
-            const testDocs = documents.filter((doc) => doc?.zpl);
+            const testDocs = documents.filter((doc) => doc?.test_zpl);
             if (!testDocs.length) {
                 printPrepared = false;
                 setStatus('No hay contenido de prueba para imprimir.', true);
@@ -327,12 +327,12 @@
                     throw new Error(`No hay impresora seleccionada para ${labelType.toUpperCase()}.`);
                 }
 
-                await sendToPrinter(printer, doc.zpl);
+                await sendToPrinter(printer, doc.test_zpl);
             }
 
             printPrepared = true;
-            setStatus('Impresión de prueba enviada por tipo de etiqueta. Si todo está correcto, ya puedes presionar "Imprimir ahora".');
-            showAlert('Preparación completada', 'Se enviaron pruebas por tipo (serial/rating) a la impresora seleccionada. Si están correctas, ya puedes imprimir el lote.', 'success');
+            setStatus('Impresión de prueba enviada (1 etiqueta por tipo). Si todo está correcto, ya puedes presionar "Imprimir ahora".');
+            showAlert('Preparación completada', 'Se envió 1 etiqueta de prueba por tipo (serial/rating) a la impresora seleccionada. Si están correctas, ya puedes imprimir el lote completo.', 'success');
         } catch (error) {
             printPrepared = false;
             setStatus(`Error al preparar impresión: ${error.message}`, true);

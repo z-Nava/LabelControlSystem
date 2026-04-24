@@ -69,6 +69,7 @@ class LabelBatchPrintExecutionService
             }
 
             $zplLabels = [];
+            $testLabel = null;
             foreach ($items as $item) {
                 if (!(bool) $item->{'print_'.$labelType}) {
                     continue;
@@ -77,6 +78,7 @@ class LabelBatchPrintExecutionService
                 $payload = $this->buildPayload($batch, $item->serialUnit, $labelType, $sku, $serialFormat);
                 $templateZpl = $this->resolveTemplateZpl($template, $labelType, $standard);
                 $rendered = $this->renderTemplate($templateZpl, $payload);
+                $testLabel ??= $rendered;
 
                 for ($copy = 1; $copy <= (int) $item->copies; $copy++) {
                     $zplLabels[] = $rendered;
@@ -96,6 +98,7 @@ class LabelBatchPrintExecutionService
                     'name' => $template->name,
                 ],
                 'units_count' => count($zplLabels),
+                'test_zpl' => (string) ($testLabel ?? ''),
                 'zpl' => implode("\n", $zplLabels),
             ];
         }
