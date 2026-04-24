@@ -72,12 +72,22 @@
 
     let selectedDevice = null;
     let previewPayload = null;
+    let printPrepared = false;
 
     const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
         statusBox.classList.toggle('text-red-700', isError);
+    };
+
+    const showAlert = (title, text, icon = 'error') => {
+        if (window.Swal?.fire) {
+            window.Swal.fire(title, text, icon);
+            return;
+        }
+
+        window.alert(`${title}: ${text}`);
     };
 
     const restoreStoredPrinter = () => {
@@ -103,6 +113,8 @@
         BrowserPrint.getDefaultDevice('printer', (device) => {
             if (device) {
                 selectedDevice = device;
+                printPrepared = false;
+                previewPayload = null;
                 localStorage.setItem(storageKey, JSON.stringify({
                     name: selectedDevice.name,
                     uid: selectedDevice.uid,
@@ -123,6 +135,8 @@
                 }
 
                 selectedDevice = printers[0];
+                printPrepared = false;
+                previewPayload = null;
                 localStorage.setItem(storageKey, JSON.stringify({
                     name: selectedDevice.name,
                     uid: selectedDevice.uid,
@@ -173,6 +187,37 @@
         setStatus('Preparación completada. Revisa el resumen y presiona "Imprimir ahora".');
     };
 
+    const preparePrint = async () => {
+        try {
+            if (!selectedDevice) {
+                setStatus('Primero conecta una impresora.', true);
+                showAlert('Impresora requerida', 'Conecta una impresora antes de preparar la impresión.', 'error');
+                return;
+            }
+
+            await loadPreview();
+
+            const testZpl = (previewPayload?.documents || []).map((doc) => doc.zpl).find(Boolean) || previewPayload?.zpl || '';
+            if (!testZpl) {
+                printPrepared = false;
+                setStatus('No hay contenido de prueba para imprimir.', true);
+                showAlert('Sin contenido', 'No se encontró contenido ZPL para la impresión de prueba.', 'warning');
+                return;
+            }
+
+            setStatus('Enviando etiqueta de prueba para validar template...');
+            await sendToPrinter(testZpl);
+
+            printPrepared = true;
+            setStatus('Impresión de prueba enviada. Si el template está correcto, ya puedes presionar "Imprimir ahora".');
+            showAlert('Preparación completada', 'Se envió una impresión de prueba para validar el template. Si está correcta, ya puedes imprimir el lote.', 'success');
+        } catch (error) {
+            printPrepared = false;
+            setStatus(`Error al preparar impresión: ${error.message}`, true);
+            showAlert('Error de preparación', error.message || 'No se pudo enviar la impresión de prueba.', 'error');
+        }
+    };
+
     const confirmPrinted = async () => {
         const response = await fetch(root.dataset.confirmUrl, {
             method: 'POST',
@@ -201,8 +246,16 @@
                 return;
             }
 
+            if (!printPrepared) {
+                showAlert('Preparación requerida', 'Debes presionar "Preparar impresión" antes de imprimir.', 'error');
+                setStatus('Debes preparar la impresión primero para liberar el botón de imprimir.', true);
+                return;
+            }
+
             if (!previewPayload || !previewPayload.zpl) {
-                await loadPreview();
+                setStatus('No hay preparación activa. Presiona "Preparar impresión" nuevamente.', true);
+                printPrepared = false;
+                return;
             }
 
             if (!previewPayload?.zpl) {
@@ -234,7 +287,7 @@
     };
 
     connectButton?.addEventListener('click', connectPrinter);
-    previewButton?.addEventListener('click', () => loadPreview().catch((error) => setStatus(error.message, true)));
+    previewButton?.addEventListener('click', preparePrint);
     printButton?.addEventListener('click', printBatch);
 
     restoreStoredPrinter();
