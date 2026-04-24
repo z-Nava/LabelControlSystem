@@ -8,10 +8,17 @@
             <p class="text-slate-600 mt-1">Catálogo NP/SKU para resolver el Modelo en hojas master.</p>
         </div>
 
-        <a href="{{ route('master_model_mappings.create', $type) }}"
-           class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition">
-            + Nuevo registro
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('master_model_mappings.types') }}"
+               class="rounded-xl border px-4 py-2 font-semibold hover:shadow transition">
+                Cambiar tipo
+            </a>
+
+            <a href="{{ route('master_model_mappings.create', $type) }}"
+               class="rounded-xl bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-500 transition">
+                + Nuevo registro
+            </a>
+        </div>
     </div>
 
     @if(session('success'))

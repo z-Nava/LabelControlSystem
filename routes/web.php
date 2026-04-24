@@ -93,6 +93,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/dummy-qr-templates/{dummy_qr_template}', [DummyQrTemplateController::class, 'update'])->name('admin.dummy_qr_templates.update');
         Route::post('/dummy-qr-templates/{dummy_qr_template}/toggle', [DummyQrTemplateController::class, 'toggle'])->name('admin.dummy_qr_templates.toggle');
 
+        Route::get('/master-model-mappings', [MasterModelMappingController::class, 'types'])->name('master_model_mappings.types');
+
         Route::prefix('master-model-mappings/{type}')->whereIn('type', ['assembly', 'assembly_packaging', 'batteries_assembly', 'motors_molding'])->group(function () {
             Route::get('/', [MasterModelMappingController::class, 'index'])->name('master_model_mappings.index');
             Route::get('/create', [MasterModelMappingController::class, 'create'])->name('master_model_mappings.create');

@@ -17,6 +17,13 @@ class MasterModelMappingController extends Controller
     {
     }
 
+    public function types(): View
+    {
+        return view('master_model_mappings.types', [
+            'types' => MasterModelMapping::TYPES,
+        ]);
+    }
+
     public function index(string $type): View
     {
         abort_unless(in_array($type, MasterModelMapping::TYPES, true), 404);
