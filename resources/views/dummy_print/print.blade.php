@@ -24,6 +24,7 @@
 
     <div class="mt-6 flex flex-wrap gap-2">
         <button id="connect-printer" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Conectar impresora</button>
+        <button id="prepare-print" type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Preparar impresión</button>
         <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-slate-400">Imprimir</button>
     </div>
 
@@ -79,6 +80,7 @@
     if (!root) return;
 
     const connectButton = document.getElementById('connect-printer');
+    const prepareButton = document.getElementById('prepare-print');
     const printButton = document.getElementById('print-batch');
     const printerBox = document.getElementById('selected-printer');
     const statusBox = document.getElementById('print-status');
@@ -89,6 +91,7 @@
     const alreadyPrinted = root.dataset.alreadyPrinted === '1';
     const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
     let selectedDevice = null;
+    let printPrepared = false;
 
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
@@ -192,6 +195,15 @@
         selectedDevice.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
     });
 
+    const showAlert = (title, text, icon = 'error') => {
+        if (window.Swal?.fire) {
+            window.Swal.fire(title, text, icon);
+            return;
+        }
+
+        window.alert(`${title}: ${text}`);
+    };
+
     const setPrintBlocked = (message) => {
         if (printButton) {
             printButton.disabled = true;
@@ -233,6 +245,12 @@
                 return;
             }
 
+            if (!printPrepared) {
+                showAlert('Preparación requerida', 'Debes presionar "Preparar impresión" antes de imprimir.', 'error');
+                setStatus('Debes preparar la impresión primero para liberar el botón de imprimir.', true);
+                return;
+            }
+
             if (!items.length) {
                 setStatus('No hay dummys para imprimir en este batch.', true);
                 return;
@@ -260,7 +278,40 @@
         }
     };
 
+    const preparePrint = async () => {
+        try {
+            if (printButton?.disabled) {
+                return;
+            }
+
+            if (!selectedDevice) {
+                setStatus('Primero conecta una impresora.', true);
+                showAlert('Impresora requerida', 'Conecta una impresora antes de preparar la impresión.', 'error');
+                return;
+            }
+
+            if (!items.length) {
+                setStatus('No hay dummys para preparar en este batch.', true);
+                return;
+            }
+
+            const firstDummy = items[0];
+            const zpl = buildItemZpl(firstDummy);
+            setStatus('Enviando dummy de prueba para validación...');
+            await sendToPrinter(zpl);
+
+            printPrepared = true;
+            setStatus('Dummy de prueba enviado. Si el template está centrado, ya puedes presionar "Imprimir".');
+            showAlert('Preparación completada', 'Se imprimió el primer dummy de prueba. Verifica centrado y luego imprime el batch completo.', 'success');
+        } catch (error) {
+            printPrepared = false;
+            setStatus(`Error al preparar impresión: ${error.message}`, true);
+            showAlert('Error de preparación', error.message || 'No se pudo enviar el dummy de prueba.', 'error');
+        }
+    };
+
     connectButton?.addEventListener('click', connectPrinter);
+    prepareButton?.addEventListener('click', preparePrint);
     printButton?.addEventListener('click', printBatch);
 
     restoreStoredPrinter();
