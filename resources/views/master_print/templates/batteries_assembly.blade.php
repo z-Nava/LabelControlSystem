@@ -96,7 +96,7 @@
                 </div>
             </div>
 
-            <div class="col-span-3 grid grid-cols-2 text-[10px]">
+            <div class="col-span-3 grid grid-cols-2 text-[12px]">
                 <div class="border-r border-b border-black px-2 py-2 font-bold">Fecha</div>
                 <div class="border-b border-black px-2 py-2 text-right font-semibold">{{ $s['date'] ?? '' }}</div>
 
@@ -108,28 +108,28 @@
         {{-- TOP INFO --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Líder</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Líder</div>
                 <div class="mt-1 text-[13px] font-semibold text-black">
                     {{ $s['leader'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Turno</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Turno</div>
                 <div class="mt-1 text-[13px] font-semibold text-black">
                     {{ $s['shift'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-3 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Línea</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Línea</div>
                 <div class="mt-1 text-[14px] font-semibold text-black">
                     {{ $s['line'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-4 p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
                 <div class="mt-1 text-[14px] font-semibold text-black">
                     {{ $s['model'] ?? '' }}
                 </div>
@@ -139,14 +139,14 @@
         {{-- JOB / NP / LOTE --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black p-3">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job</div>
                 <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
                     {{ $s['job'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-6 border-r border-black p-3">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                     NP Ensamble
                 </div>
                 <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
@@ -158,7 +158,7 @@
             </div>
 
             <div class="col-span-3 p-3">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
                 <div class="mt-1.5 text-[16px] font-extrabold text-black break-all">
                     {{ $s['lote'] ?? '' }}
                 </div>
@@ -168,28 +168,28 @@
         {{-- DATOS / OBSERVACIONES --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
                 <div class="mt-1.5 text-[14px] font-bold text-black">
                     {{ $s['subinventory'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-3 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Local</div>
                 <div class="mt-1.5 text-[14px] font-bold text-black">
                     {{ $s['local'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
                 <div class="mt-1.5 text-[14px] font-bold text-black">
                     {{ $s['qty_pallet'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-4 p-2.5">
-                <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
                 <div class="mt-1.5 h-[8mm] rounded-[2mm] border border-black px-2 py-1 text-[10px] text-black"></div>
             </div>
         </div>
@@ -204,7 +204,7 @@
 
             <div class="grid grid-cols-3">
                 <div class="border-r border-b border-black p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         <div
                             class="js-qr h-[17mm] w-[17mm] overflow-hidden"
@@ -212,13 +212,13 @@
                             data-value="{{ $s['job'] ?? '' }}"
                         ></div>
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['job'] ?? '' }}
                     </div>
                 </div>
 
                 <div class="border-r border-b border-black p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         <div
                             class="js-qr h-[17mm] w-[17mm] overflow-hidden"
@@ -226,13 +226,13 @@
                             data-value="{{ $s['np'] ?? '' }}"
                         ></div>
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['np'] ?? '' }}
                     </div>
                 </div>
 
                 <div class="border-b border-black p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         <div
                             class="js-qr h-[17mm] w-[17mm] overflow-hidden"
@@ -240,13 +240,13 @@
                             data-value="{{ $s['lote'] ?? '' }}"
                         ></div>
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['lote'] ?? '' }}
                     </div>
                 </div>
 
                 <div class="border-r border-black p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         <div
                             class="js-qr h-[17mm] w-[17mm] overflow-hidden"
@@ -254,13 +254,13 @@
                             data-value="{{ $s['subinventory'] ?? '' }}"
                         ></div>
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['subinventory'] ?? '' }}
                     </div>
                 </div>
 
                 <div class="border-r border-black p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Local</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         @if(!empty($s['local']))
                             <div
@@ -270,13 +270,13 @@
                             ></div>
                         @endif
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['local'] ?? '' }}
                     </div>
                 </div>
 
                 <div class="p-2 text-center">
-                    <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
                     <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
                         <div
                             class="js-qr h-[17mm] w-[17mm] overflow-hidden"
@@ -284,7 +284,7 @@
                             data-value="{{ $s['qty_pallet'] ?? '' }}"
                         ></div>
                     </div>
-                    <div class="mt-1 break-all text-[8px] font-semibold text-black">
+                    <div class="mt-1 break-all text-[12px] font-semibold text-black">
                         {{ $s['qty_pallet'] ?? '' }}
                     </div>
                 </div>
@@ -297,21 +297,21 @@
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación IPQC
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[20mm]"></div>
             </div>
 
             <div class="col-span-4 border-r border-black">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación OQC
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[20mm]"></div>
             </div>
 
             <div class="col-span-4">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Production Support
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[20mm]"></div>
             </div>
         </div>
     </section>
