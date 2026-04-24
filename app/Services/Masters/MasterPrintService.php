@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use App\Models\OracleJob;
+use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Catalogs\StockLocatorService;
 
 class MasterPrintService
@@ -17,6 +18,7 @@ class MasterPrintService
     public function __construct(
         private readonly MasterRequestStatusService $statusService,
         private readonly StockLocatorService $stockLocatorService,
+        private readonly MasterModelMappingService $masterModelMappingService,
     ) {}
 
     public function createBatch(
@@ -195,6 +197,11 @@ class MasterPrintService
             $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $mr->line?->code ?? '')));
             $resolvedLocal = $mr->local ? strtoupper(trim((string) $mr->local)) : $oracleLine;
             $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
+            $mappedModel = $this->masterModelMappingService->resolveModelFromJobs(
+                (string) ($mr->request_type ?? ''),
+                $np,
+                $npPackaging
+            );
 
             $lote = $job !== '' ? ($job . '-' . $folioNo) : '';
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : '';
@@ -203,7 +210,7 @@ class MasterPrintService
                 'leader' => (string) $mr->leader_name,
                 'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
                 'line'   => (string) ($mr->line?->code ?? ''),
-                'model' => (string) ($mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? ''),
+                'model' => (string) ($mappedModel ?? $mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? ''),
 
                 
                 'date'   => optional($mr->request_date)->format('d/m/Y'),

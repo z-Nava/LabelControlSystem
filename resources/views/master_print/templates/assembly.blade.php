@@ -139,6 +139,15 @@
                     </div>
                 </div>
 
+                <div class="border-b border-black p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        Modelo
+                    </div>
+                    <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                        {{ $s['model'] ?? '' }}
+                    </div>
+                </div>
+
                 {{-- NP / JOB --}}
                 <div class="grid grid-cols-12 border-b border-black">
                     <div class="col-span-8 border-r border-black p-3">
