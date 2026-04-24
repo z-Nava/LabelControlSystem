@@ -96,7 +96,7 @@
                 </div>
             </div>
 
-            <div class="col-span-3 grid grid-cols-2 text-[9px]">
+            <div class="col-span-3 grid grid-cols-2 text-[15px]">
                 <div class="border-r border-b border-black px-2 py-1.5 font-bold">Fecha</div>
                 <div class="border-b border-black px-2 py-1.5 text-right font-semibold">{{ $s['date'] ?? '' }}</div>
 
@@ -108,42 +108,42 @@
         {{-- TOP INFO --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-2 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Líder</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Líder</div>
                 <div class="mt-1 text-[12px] font-semibold text-black">
                     {{ $s['leader'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-1 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Turno</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Turno</div>
                 <div class="mt-1 text-[12px] font-semibold text-black">
                     {{ $s['shift'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Línea</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Línea</div>
                 <div class="mt-1 text-[13px] font-semibold text-black">
                     {{ $s['line'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
                 <div class="mt-1 text-[13px] font-semibold text-black">
                     {{ $s['model'] ?? '' }}
                 </div>
             </div>
 
             <div class="col-span-2 border-r border-black p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Destino</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Destino</div>
                 <div class="mt-1 text-[11px] font-bold text-black break-words">
                     {{ $s['destination'] ?? ($s['destino'] ?? '') }}
                 </div>
             </div>
 
             <div class="col-span-3 p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Custom PO</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Custom PO</div>
                 <div class="mt-1 text-[11px] font-semibold text-black break-all">
                     {{ $s['po_number'] ?? '' }}
                 </div>
@@ -155,13 +155,13 @@
             <div class="col-span-6 border-r border-black">
                 <div class="grid grid-cols-12">
                     <div class="col-span-8 border-r border-black p-2.5">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Job Ensamble</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Ensamble</div>
                         <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
                             {{ $s['job'] ?? '' }}
                         </div>
                     </div>
                     <div class="col-span-4 p-1.5 text-center">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Job Ensamble</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Ensamble</div>
                         <div class="qr-box mt-1 flex min-h-[17mm] items-center justify-center">
                             <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                  data-size="60"
@@ -174,13 +174,13 @@
             <div class="col-span-6">
                 <div class="grid grid-cols-12">
                     <div class="col-span-8 border-r border-black p-2.5">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Job Empaque</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Empaque</div>
                         <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
                             {{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}
                         </div>
                     </div>
                     <div class="col-span-4 p-1.5 text-center">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Job Empaque</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Empaque</div>
                         <div class="qr-box mt-1 flex min-h-[17mm] items-center justify-center">
                             <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                  data-size="60"
@@ -196,7 +196,7 @@
             <div class="col-span-6 border-r border-black">
                 <div class="grid grid-cols-12">
                     <div class="col-span-8 border-r border-black p-2.5">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                             NP Ensamble
                         </div>
                         <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
@@ -207,7 +207,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                                 Lote Ensamble
                             </div>
                             <div class="mt-1 text-[11px] font-extrabold text-black break-all">
@@ -218,7 +218,7 @@
 
                     <div class="col-span-4 p-1.5">
                         <div class="text-center">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR NP Ensamble</div>
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Ensamble</div>
                             <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
                                 <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                      data-size="60"
@@ -227,7 +227,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Lote Ensamble</div>
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Ensamble</div>
                             <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
                                 <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                      data-size="60"
@@ -241,7 +241,7 @@
             <div class="col-span-6">
                 <div class="grid grid-cols-12">
                     <div class="col-span-8 border-r border-black p-2.5">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                             NP Empaque
                         </div>
                         <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
@@ -252,7 +252,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                                 Lote Empaque
                             </div>
                             <div class="mt-1 text-[11px] font-extrabold text-black break-all">
@@ -261,7 +261,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                                 Custom PO
                             </div>
                             <div class="mt-1 text-[10px] font-semibold text-black break-all">
@@ -272,7 +272,7 @@
 
                     <div class="col-span-4 p-1.5">
                         <div class="text-center">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR NP Empaque</div>
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Empaque</div>
                             <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
                                 <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                      data-size="60"
@@ -281,7 +281,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Lote Empaque</div>
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Empaque</div>
                             <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
                                 <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                      data-size="60"
@@ -290,7 +290,7 @@
                         </div>
 
                         <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
-                            <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Custom PO</div>
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Custom PO</div>
                             <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
                                 @if(!empty($s['po_number']))
                                     <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
@@ -309,13 +309,13 @@
             <div class="col-span-3 border-r border-black">
                 <div class="grid grid-cols-12">
                     <div class="col-span-7 border-r border-black p-2">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['subinventory'] ?? '' }}
                         </div>
                     </div>
                     <div class="col-span-5 p-1.5 text-center">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Subinventory</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Subinventory</div>
                         <div class="qr-box mt-1 flex min-h-[15mm] items-center justify-center">
                             <div class="js-qr h-[13mm] w-[13mm] overflow-hidden"
                                  data-size="56"
@@ -328,7 +328,7 @@
             <div class="col-span-3 border-r border-black">
                 <div class="grid grid-cols-12">
                     <div class="col-span-7 border-r border-black p-2">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Local</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['local'] ?? '' }}
                         </div>
@@ -349,13 +349,13 @@
             <div class="col-span-3 border-r border-black">
                 <div class="grid grid-cols-12">
                     <div class="col-span-7 border-r border-black p-2">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['qty_pallet'] ?? '' }}
                         </div>
                     </div>
                     <div class="col-span-5 p-1.5 text-center">
-                        <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
                         <div class="qr-box mt-1 flex min-h-[15mm] items-center justify-center">
                             @if(!empty($s['qty_pallet']))
                                 <div class="js-qr h-[13mm] w-[13mm] overflow-hidden"
@@ -368,7 +368,7 @@
             </div>
 
             <div class="col-span-3 p-2">
-                <div class="text-[7px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
+                <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
                 <div class="mt-1 h-[6mm] rounded-[2mm] border border-black px-2 py-1 text-[9px] text-black"></div>
             </div>
         </div>
