@@ -38,6 +38,9 @@ class ProductionLineSeeder extends Seeder
                 'MXMR002', 'MXMR003', 'MXMR005', 'MXMR006.1',
                 'MXMR006.2', 'MXMR007', 'MXMR008',
             ],
+            'MX FUEL' => [
+                'MXF001', 'MXF002', 'MXF003', 'MXF004', 'MXF005', 'MXF006', 'MXF007', 'MXF008', 'MXF009',
+            ],
         ];
 
         foreach ($linesByType as $lineType => $codes) {

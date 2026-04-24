@@ -1,5 +1,10 @@
 @csrf
 
+@php
+    $lineTypeOptions = \App\Models\ProductionLine::TYPES;
+    $selectedLineType = old('line_type', $line->line_type ?? '');
+@endphp
+
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm font-medium text-slate-700">Code</label>
@@ -11,9 +16,16 @@
 
     <div>
         <label class="block text-sm font-medium text-slate-700">Type</label>
-        <input name="line_type" value="{{ old('line_type', $line->line_type ?? '') }}"
-               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="consoles / batteries / motors / ops / hydraulics" required />
+        <select name="line_type"
+                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                required>
+            <option value="" disabled @selected($selectedLineType === '')>Selecciona un tipo</option>
+            @foreach($lineTypeOptions as $lineTypeOption)
+                <option value="{{ $lineTypeOption }}" @selected($selectedLineType === $lineTypeOption)>
+                    {{ $lineTypeOption }}
+                </option>
+            @endforeach
+        </select>
         @error('line_type') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
