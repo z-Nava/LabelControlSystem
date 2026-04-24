@@ -202,6 +202,9 @@ class MasterPrintService
                 $np,
                 $npPackaging
             );
+            $resolvedModel = $isAssemblyPackaging
+                ? (string) ($mappedModel ?? '')
+                : (string) ($mappedModel ?? $mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
 
             $lote = $job !== '' ? ($job . '-' . $folioNo) : '';
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : '';
@@ -210,7 +213,7 @@ class MasterPrintService
                 'leader' => (string) $mr->leader_name,
                 'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
                 'line'   => (string) ($mr->line?->code ?? ''),
-                'model' => (string) ($mappedModel ?? $mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? ''),
+                'model' => $resolvedModel,
 
                 
                 'date'   => optional($mr->request_date)->format('d/m/Y'),
