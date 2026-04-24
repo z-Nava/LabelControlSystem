@@ -140,7 +140,7 @@
                 </div>
 
                 <div class="border-b border-black p-3">
-                    <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <div class="text-[20px] font-bold uppercase tracking-wide text-slate-500">
                         Modelo
                     </div>
                     <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
@@ -151,7 +151,7 @@
                 {{-- NP / JOB --}}
                 <div class="grid grid-cols-12 border-b border-black">
                     <div class="col-span-8 border-r border-black p-3">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <div class="text-[20px] font-bold uppercase tracking-wide text-slate-500">
                             NP Ensamble
                         </div>
                         <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
@@ -163,7 +163,7 @@
                     </div>
 
                     <div class="col-span-4 p-3">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                        <div class="text-[20px] font-bold uppercase tracking-wide text-slate-500">
                             Job
                         </div>
                         <div class="mt-1.5 text-[22px] font-extrabold leading-none text-black">
@@ -220,7 +220,7 @@
 
                 <div class="grid grid-cols-2">
                     <div class="border-r border-b border-black p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Job</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">Job</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -228,13 +228,13 @@
                                 data-value="{{ $s['job'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['job'] ?? '' }}
                         </div>
                     </div>
 
                     <div class="border-b border-black p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -242,13 +242,13 @@
                                 data-value="{{ $s['np'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['np'] ?? '' }}
                         </div>
                     </div>
 
                     <div class="border-r border-b border-black p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -256,13 +256,13 @@
                                 data-value="{{ $s['lote'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['lote'] ?? '' }}
                         </div>
                     </div>
 
                     <div class="border-b border-black p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -270,13 +270,13 @@
                                 data-value="{{ $s['subinventory'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['subinventory'] ?? '' }}
                         </div>
                     </div>
 
                     <div class="border-r border-black p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Local</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">Local</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -284,13 +284,13 @@
                                 data-value="{{ $s['local'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['local'] ?? '' }}
                         </div>
                     </div>
 
                     <div class="p-2.5 text-center">
-                        <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500">Cantidad pallet</div>
+                        <div class="text-[15px] font-bold uppercase tracking-wide text-slate-500">Cantidad pallet</div>
                         <div class="qr-box mt-1.5 flex min-h-[23mm] items-center justify-center">
                             <div
                                 class="js-qr h-[20mm] w-[20mm] overflow-hidden"
@@ -298,7 +298,7 @@
                                 data-value="{{ $s['qty_pallet'] ?? '' }}"
                             ></div>
                         </div>
-                        <div class="mt-1.5 break-all text-[9px] font-semibold text-black">
+                        <div class="mt-1.5 break-all text-[12px] font-semibold text-black">
                             {{ $s['qty_pallet'] ?? '' }}
                         </div>
                     </div>
