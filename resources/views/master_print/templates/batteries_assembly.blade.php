@@ -131,7 +131,7 @@
             <div class="col-span-4 p-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
                 <div class="mt-1 text-[14px] font-semibold text-black">
-                    {{-- $s['model'] ?? '' --}}
+                    {{ $s['model'] ?? '' }}
                 </div>
             </div>
         </div>

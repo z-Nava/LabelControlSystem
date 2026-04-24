@@ -197,11 +197,10 @@ class MasterPrintService
             $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $mr->line?->code ?? '')));
             $resolvedLocal = $mr->local ? strtoupper(trim((string) $mr->local)) : $oracleLine;
             $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
-            $mappedModel = $this->masterModelMappingService->resolveModelFromJobs(
-                (string) ($mr->request_type ?? ''),
-                $np,
-                $npPackaging
-            );
+            $requestType = (string) ($mr->request_type ?? '');
+            $mappedModel = $requestType === 'assembly_packaging'
+                ? $this->masterModelMappingService->resolveModelFromJobs($requestType, $npPackaging, $np)
+                : $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
             $resolvedModel = $isAssemblyPackaging
                 ? (string) ($mappedModel ?? '')
                 : (string) ($mappedModel ?? $mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
