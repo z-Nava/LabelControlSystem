@@ -11,8 +11,7 @@ class ProductionLine extends Model
         'BATERIAS',
         'HIDRAULICOS',
         'EMPAQUE',
-        'MOTORES ROTOR',
-        'MOTORES STATOR',
+        'MOTORES',
         'MX FUEL',
     ];
 

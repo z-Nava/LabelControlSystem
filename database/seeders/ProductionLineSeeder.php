@@ -30,11 +30,9 @@ class ProductionLineSeeder extends Seeder
             'BATERIAS' => [
                 'MXB001', 'MXB002', 'MXB003', 'MXB004', 'MXB005', 'MXB006', 'MXB007',
             ],
-            'MOTORES STATOR' => [
+            'MOTORES' => [
                 'MXMS001', 'MXMS002', 'MXMS003', 'MXMS004',
                 'MXMS005', 'MXMS006', 'MXMS007', 'MXMS008',
-            ],
-            'MOTORES ROTOR' => [
                 'MXMR002', 'MXMR003', 'MXMR005', 'MXMR006.1',
                 'MXMR006.2', 'MXMR007', 'MXMR008',
             ],
