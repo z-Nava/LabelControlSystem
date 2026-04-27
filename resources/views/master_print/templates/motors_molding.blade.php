@@ -138,23 +138,23 @@
 
         {{-- JOB / MODELO / REVISION --}}
         <div class="grid grid-cols-12 border-b border-black">
-            <div class="col-span-3 border-r border-black p-3">
+            <div class="col-span-3 border-r border-black px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
-                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1 text-[24px] font-extrabold leading-none text-black">
                     {{ $s['job'] ?? '' }}
                 </div>
             </div>
 
-            <div class="col-span-6 border-r border-black p-3">
+            <div class="col-span-6 border-r border-black px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Modelo</div>
-                <div class="mt-1.5 text-[22px] font-extrabold leading-none text-black">
+                <div class="mt-1 text-[22px] font-extrabold leading-none text-black">
                     {{ $s['model'] ?? '' }}
                 </div>
             </div>
 
-            <div class="col-span-3 p-3">
+            <div class="col-span-3 px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Revisión</div>
-                <div class="mt-1.5 text-[18px] font-extrabold text-black break-all">
+                <div class="mt-1 text-[18px] font-extrabold text-black break-all">
                     {{ $s['revision'] ?? '' }}
                 </div>
             </div>
@@ -162,21 +162,21 @@
 
         {{-- NP / LOTE --}}
         <div class="grid grid-cols-12 border-b border-black">
-            <div class="col-span-9 border-r border-black p-3">
+            <div class="col-span-9 border-r border-black px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">
                     NP Ensamble
                 </div>
-                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1 text-[24px] font-extrabold leading-none text-black">
                     {{ $s['np'] ?? '' }}
                 </div>
-                <div class="mt-2 min-h-[10mm] border-t border-dashed border-slate-400 pt-1.5 text-[10px] leading-snug text-slate-700">
+                <div class="mt-1.5 min-h-[8mm] border-t border-dashed border-slate-400 pt-1 text-[10px] leading-snug text-slate-700">
                     {{ $s['desc'] ?? '' }}
                 </div>
             </div>
 
-            <div class="col-span-3 p-3">
+            <div class="col-span-3 px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
-                <div class="mt-1.5 text-[16px] font-extrabold text-black break-all">
+                <div class="mt-1 text-[16px] font-extrabold text-black break-all">
                     {{ $s['lote'] ?? '' }}
                 </div>
             </div>
@@ -231,12 +231,12 @@
             </div>
 
             <div class="grid grid-cols-3">
-                <div class="border-r border-b border-black p-2 text-center">
+                <div class="border-r border-b border-black p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         <div
-                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                            data-size="72"
+                            class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                            data-size="68"
                             data-value="{{ $s['job'] ?? '' }}"
                         ></div>
                     </div>
@@ -245,12 +245,12 @@
                     </div>
                 </div>
 
-                <div class="border-r border-b border-black p-2 text-center">
+                <div class="border-r border-b border-black p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         <div
-                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                            data-size="72"
+                            class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                            data-size="68"
                             data-value="{{ $s['subinventory'] ?? '' }}"
                         ></div>
                     </div>
@@ -259,13 +259,13 @@
                     </div>
                 </div>
 
-                <div class="border-b border-black p-2 text-center">
+                <div class="border-b border-black p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Local</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         @if(!empty($s['local']))
                             <div
-                                class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                                data-size="72"
+                                class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                                data-size="68"
                                 data-value="{{ $s['local'] }}"
                             ></div>
                         @endif
@@ -275,12 +275,12 @@
                     </div>
                 </div>
 
-                <div class="border-r border-black p-2 text-center">
+                <div class="border-r border-black p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         <div
-                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                            data-size="72"
+                            class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                            data-size="68"
                             data-value="{{ $s['np'] ?? '' }}"
                         ></div>
                     </div>
@@ -289,12 +289,12 @@
                     </div>
                 </div>
 
-                <div class="border-r border-black p-2 text-center">
+                <div class="border-r border-black p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Revisión</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         <div
-                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                            data-size="72"
+                            class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                            data-size="68"
                             data-value="{{ $s['revision'] ?? '' }}"
                         ></div>
                     </div>
@@ -303,12 +303,12 @@
                     </div>
                 </div>
 
-                <div class="p-2 text-center">
+                <div class="p-1.5 text-center">
                     <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Lote</div>
-                    <div class="qr-box mt-1 flex min-h-[20mm] items-center justify-center">
+                    <div class="qr-box mt-0.5 flex min-h-[18mm] items-center justify-center">
                         <div
-                            class="js-qr h-[17mm] w-[17mm] overflow-hidden"
-                            data-size="72"
+                            class="js-qr h-[16mm] w-[16mm] overflow-hidden"
+                            data-size="68"
                             data-value="{{ $s['lote'] ?? '' }}"
                         ></div>
                     </div>
@@ -325,28 +325,28 @@
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación IPQC
                 </div>
-                <div class="h-[22mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
 
             <div class="col-span-3 border-r border-black">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación OQC
                 </div>
-                <div class="h-[22mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
 
             <div class="col-span-3 border-r border-black">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Production Support
                 </div>
-                <div class="h-[22mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
 
             <div class="col-span-3">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Almacén
                 </div>
-                <div class="h-[22mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
         </div>
     </section>
