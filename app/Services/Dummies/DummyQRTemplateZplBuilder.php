@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services\DummyQr;
+namespace App\Services\Dummies;
 
-class DummyQrTemplateZplBuilder
+class DummyQRTemplateZplBuilder
 {
     public function build(array $layout): string
     {

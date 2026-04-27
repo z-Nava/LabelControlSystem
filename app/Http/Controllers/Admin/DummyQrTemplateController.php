@@ -6,14 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreDummyQrTemplateRequest;
 use App\Http\Requests\Admin\UpdateDummyQrTemplateRequest;
 use App\Models\DummyQrTemplate;
-use App\Services\DummyQr\DummyQrTemplateZplBuilder;
+use App\Services\Dummies\DummyQRTemplateZplBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DummyQrTemplateController extends Controller
 {
     public function __construct(
-        private readonly DummyQrTemplateZplBuilder $zplBuilder,
+        private readonly DummyQRTemplateZplBuilder $zplBuilder,
     ) {}
 
     public function index(): View
