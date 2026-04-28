@@ -11,6 +11,11 @@ class MasterRequestBatchItem extends Model
         'master_print_batch_id',
         'master_request_folio_id',
         'copies',
+        'sheet_snapshot',
+    ];
+
+    protected $casts = [
+        'sheet_snapshot' => 'array',
     ];
 
     public function batch(): BelongsTo

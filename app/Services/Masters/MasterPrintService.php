@@ -6,12 +6,13 @@ use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestBatchItem;
 use App\Models\MasterRequestFolio;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 use App\Models\OracleJob;
 use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Catalogs\StockLocatorService;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class MasterPrintService
 {
@@ -33,7 +34,7 @@ class MasterPrintService
         return DB::transaction(function () use (
             $masterRequest, $folioIds, $batchType, $copies, $reason, $printedByUserId, $printedByName
         ) {
-            $masterRequest->refresh();
+            $masterRequest->refresh()->load(['line', 'shift']);
 
             if ($masterRequest->status === 'cancelled') {
                 throw ValidationException::withMessages([
@@ -73,11 +74,15 @@ class MasterPrintService
                 'printed_at' => now(),
             ]);
 
+            $sheetSnapshotsByFolioId = $this->buildSheetsForRequest($masterRequest, $folios)
+                ->keyBy('folio_id');
+
             foreach ($folios as $folio) {
                 MasterRequestBatchItem::create([
                     'master_print_batch_id' => $batch->id,
                     'master_request_folio_id' => $folio->id,
                     'copies' => $copies,
+                    'sheet_snapshot' => $sheetSnapshotsByFolioId->get($folio->id),
                 ]);
             }
 
@@ -181,64 +186,73 @@ class MasterPrintService
             ->where('job_number', $mr->job_packaging)
             ->first();
 
-        // Construimos "sheets" (1 hoja por folio) para NO usar @php en Blade
-        $sheets = $items->map(function ($folio) use ($mr, $oracle, $oraclePackaging) {
+        $sheets = $this->buildSheetsForRequest($mr, $items);
+
+        return compact('batch', 'mr', 'oracle', 'oraclePackaging', 'sheets');
+    }
+
+    protected function buildSheetsForRequest(MasterRequest $masterRequest, Collection $folios): Collection
+    {
+        $oracle = OracleJob::query()
+            ->where('job_number', $masterRequest->job_assembly)
+            ->first();
+
+        $oraclePackaging = OracleJob::query()
+            ->where('job_number', $masterRequest->job_packaging)
+            ->first();
+
+        return $folios->map(function ($folio) use ($masterRequest, $oracle, $oraclePackaging) {
             $folioNo = str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT);
 
-            $job = (string) ($mr->job_assembly ?? '');
-            $jobPackaging = (string) ($mr->job_packaging ?? '');
-            $np  = (string) ($oracle?->assembly ?? '');
+            $job = (string) ($masterRequest->job_assembly ?? '');
+            $jobPackaging = (string) ($masterRequest->job_packaging ?? '');
+            $np = (string) ($oracle?->assembly ?? '');
             $npPackaging = (string) ($oraclePackaging?->assembly ?? '');
             $desc = (string) ($oracle?->part_description ?? '');
             $descPackaging = (string) ($oraclePackaging?->part_description ?? '');
 
-            $isMotors = ($mr->request_type ?? '') === 'motors_molding';
-            $isAssemblyPackaging = ($mr->request_type ?? '') === 'assembly_packaging';
-            $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $mr->line?->code ?? '')));
-            $resolvedLocal = $mr->local ? strtoupper(trim((string) $mr->local)) : $oracleLine;
+            $isMotors = ($masterRequest->request_type ?? '') === 'motors_molding';
+            $isAssemblyPackaging = ($masterRequest->request_type ?? '') === 'assembly_packaging';
+            $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $masterRequest->line?->code ?? '')));
+            $resolvedLocal = $masterRequest->local ? strtoupper(trim((string) $masterRequest->local)) : $oracleLine;
             $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
-            $requestType = (string) ($mr->request_type ?? '');
+            $requestType = (string) ($masterRequest->request_type ?? '');
             $mappedModel = $requestType === 'assembly_packaging'
                 ? $this->masterModelMappingService->resolveModelFromJobs($requestType, $npPackaging, $np)
                 : $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
             $resolvedModel = $isAssemblyPackaging
                 ? (string) ($mappedModel ?? '')
-                : (string) ($mappedModel ?? $mr->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
+                : (string) ($mappedModel ?? $masterRequest->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
 
             $lote = $job !== '' ? ($job . '-' . $folioNo) : '';
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : '';
 
             return [
-                'leader' => (string) $mr->leader_name,
-                'shift'  => (string) ($mr->shift?->code ?? $mr->shift?->name ?? ''),
-                'line'   => (string) ($mr->line?->code ?? ''),
+                'leader' => (string) $masterRequest->leader_name,
+                'shift' => (string) ($masterRequest->shift?->code ?? $masterRequest->shift?->name ?? ''),
+                'line' => (string) ($masterRequest->line?->code ?? ''),
                 'model' => $resolvedModel,
-
-                
-                'date'   => optional($mr->request_date)->format('d/m/Y'),
-                'folio_id'   => $folio->id,
-                'folio_no'   => $folioNo,
-                'job'        => $job,
+                'date' => optional($masterRequest->request_date)->format('d/m/Y'),
+                'folio_id' => $folio->id,
+                'folio_no' => $folioNo,
+                'job' => $job,
                 'job_packaging' => $jobPackaging,
-                'np'         => $np,
+                'np' => $np,
                 'np_packaging' => $npPackaging,
-                'desc'       => $desc,
+                'desc' => $desc,
                 'desc_packaging' => $descPackaging,
-                'lote'       => $lote,
+                'lote' => $lote,
                 'lote_packaging' => $lotePackaging,
-                'revision'   => (string) ($oracle?->bom_revision ?? ''),
-                'po_number'  => (string) ($mr->po_number ?? ''),
-                'destination' => (string) ($mr->destination ?? ''),
+                'revision' => (string) ($oracle?->bom_revision ?? ''),
+                'po_number' => (string) ($masterRequest->po_number ?? ''),
+                'destination' => (string) ($masterRequest->destination ?? ''),
 
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
                 'subinventory' => (string) ($mapping?->subinventory ?? ''),
                 'local' => (string) ($resolvedLocal ?? ''),
-                'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($mr->line?->code ?? '') : 'SMARKET-1'),
-                'qty_pallet'   => (string) ($folio->qty_for_folio ?? $mr->std_pack_qty ?? ($isMotors ? 0 : '')),
+                'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($masterRequest->line?->code ?? '') : 'SMARKET-1'),
+                'qty_pallet' => (string) ($folio->qty_for_folio ?? $masterRequest->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();
-
-        return compact('batch', 'mr', 'oracle', 'oraclePackaging', 'sheets');
     }
-
 }
