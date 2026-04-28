@@ -5,7 +5,7 @@
     <div class="flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Locals by Oracle Line</h1>
-            <p class="text-slate-600 mt-1">Catálogo para mapear STOCK_LOCATOR (línea Oracle) contra SUBINVENTORY (local).</p>
+            <p class="text-slate-600 mt-1">Catálogo único para mapear STOCK_LOCATOR (línea Oracle/local) contra SUBINVENTORY en todas las hojas master.</p>
         </div>
 
         <a href="{{ route('stock_locators.create') }}"
@@ -33,8 +33,8 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-slate-500 border-b">
-                    <th class="py-3 pr-3">STOCK_LOCATOR</th>
-                    <th class="py-3 pr-3">SUBINVENTORY (Local)</th>
+                    <th class="py-3 pr-3">STOCK_LOCATOR (Local)</th>
+                    <th class="py-3 pr-3">SUBINVENTORY</th>
                     <th class="py-3 pr-3">Activo</th>
                     <th class="py-3 text-right">Acciones</th>
                 </tr>
