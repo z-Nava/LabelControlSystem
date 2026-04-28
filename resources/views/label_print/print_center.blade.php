@@ -5,6 +5,7 @@
      data-preview-url="{{ route('label_requests.print_batches.preview', ['label_request' => $labelRequest, 'batch' => $batch]) }}"
      data-confirm-url="{{ route('label_requests.print_batches.confirm', ['label_request' => $labelRequest, 'batch' => $batch]) }}"
      data-csrf-token="{{ csrf_token() }}"
+     data-already-printed="{{ $batch->printed_at ? '1' : '0' }}"
      data-back-url="{{ route('label_requests.show', $labelRequest) }}">
     <div class="flex items-center justify-between gap-3">
         <div>
@@ -102,6 +103,17 @@
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
         statusBox.classList.toggle('text-red-700', isError);
+    };
+
+    const setPrintBlocked = (message) => {
+        if (printButton) {
+            printButton.disabled = true;
+            printButton.title = message;
+            printButton.classList.add('cursor-not-allowed', 'opacity-60');
+        }
+
+        printPrepared = false;
+        setStatus(message, true);
     };
 
     const showAlert = (title, text, icon = 'error') => {
@@ -363,6 +375,10 @@
 
     const printBatch = async () => {
         try {
+            if (printButton?.disabled) {
+                return;
+            }
+
             if (!availablePrinters.length) {
                 setStatus('Primero conecta impresoras.', true);
                 return;
@@ -402,9 +418,10 @@
 
             try {
                 const result = await confirmPrinted();
-                setStatus('Impresión enviada y confirmada correctamente.');
+                setPrintBlocked(result.message || 'Impresión confirmada. Botón bloqueado para evitar duplicidad.');
                 if (confirmationBox) {
-                    confirmationBox.textContent = `Impresión confirmada para el batch #${result.batch_id}. Seriales actualizados: ${result.updated_serial_units}.`;
+                    const printedAt = result.printed_at ? ` · Confirmado en: ${result.printed_at}` : '';
+                    confirmationBox.textContent = `Impresión confirmada para el batch #${result.batch_id}. Seriales actualizados: ${result.updated_serial_units}.${printedAt}`;
                 }
             } catch (error) {
                 setStatus(`Impreso localmente, pero falló confirmación backend: ${error.message}`, true);
@@ -444,6 +461,13 @@
 
     setSelectedPrinter('serial', null);
     setSelectedPrinter('rating', null);
+
+    if (root.dataset.alreadyPrinted === '1') {
+        setPrintBlocked('Este batch ya fue confirmado como impreso. El botón se bloqueó para evitar duplicidad.');
+        if (confirmationBox) {
+            confirmationBox.textContent = 'Este batch ya cuenta con confirmación de impresión previa.';
+        }
+    }
 })();
 </script>
 @endsection
