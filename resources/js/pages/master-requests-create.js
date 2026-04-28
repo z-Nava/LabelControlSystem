@@ -50,31 +50,43 @@ function initializeLineTypeFilter(fields) {
 function initializeLocalFromLine(fields) {
     const lineSelect = fields.lineSelect;
     const localInput = fields.localInput;
+    const requestType = fields.requestType;
 
-    if (!lineSelect || !localInput) {
+    if (!lineSelect || !localInput || !requestType) {
         return;
     }
 
-    const getDefaultLocal = () => {
+    const getSelectedLineCode = () => {
         const selectedLineOption = lineSelect.selectedOptions?.[0];
         return (selectedLineOption?.dataset.lineCode || selectedLineOption?.textContent || '').trim();
     };
 
     const applyDefaultLocal = () => {
+        const requestTypeValue = (requestType.value || '').trim();
+        let defaultLocal = '';
+
+        if (requestTypeValue === 'assembly') {
+            defaultLocal = 'SMARKET-1';
+        } else if (requestTypeValue === 'motors_molding') {
+            defaultLocal = 'WIP-MOTORS';
+        } else if (requestTypeValue === 'batteries_assembly' || requestTypeValue === 'assembly_packaging') {
+            defaultLocal = getSelectedLineCode();
+        }
+
         const localValue = (localInput.value || '').trim();
         const lastAutoValue = localInput.dataset.lastAutoValue || '';
         const canOverride = localValue === '' || localValue === lastAutoValue;
 
-        if (!canOverride) {
+        if (!canOverride && requestTypeValue !== 'assembly' && requestTypeValue !== 'motors_molding') {
             return;
         }
 
-        const defaultLocal = getDefaultLocal();
         localInput.value = defaultLocal;
         localInput.dataset.lastAutoValue = defaultLocal;
     };
 
     lineSelect.addEventListener('change', applyDefaultLocal);
+    requestType.addEventListener('change', applyDefaultLocal);
     applyDefaultLocal();
 }
 

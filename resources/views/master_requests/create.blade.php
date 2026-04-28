@@ -99,13 +99,6 @@
                 </div>
 
                 <div>
-                    <label class="text-sm text-slate-600">Local</label>
-                    <input id="localInput" name="local" value="{{ old('local') }}" maxlength="20"
-                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-600"
-                           placeholder="Se sugiere según la línea, editable">
-                </div>
-
-                <div>
                     <label class="text-sm text-slate-600">Turno</label>
                     <select id="shiftSelect" name="shift_id"
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
@@ -179,6 +172,13 @@
                            placeholder="Opcional">
                     <p id="jobPackagingQty" class="text-md text-slate-600 mt-2">Cantidad del job: —</p>
                     <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="text-sm text-slate-600">Local</label>
+                    <input id="localInput" name="local" value="{{ old('local') }}" maxlength="20"
+                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-600"
+                           placeholder="Se autollenará según el tipo de hoja master y la línea">
                 </div>
 
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -46,10 +46,18 @@ class MasterRequestService
             $manualLocal = strtoupper(trim((string) ($data['local'] ?? '')));
             $lineDefaultLocal = strtoupper(trim((string) ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')));
             $oracleStockLocator = strtoupper(trim((string) ($oracleJob?->line ?? '')));
+            $requestType = (string) ($data['request_type'] ?? '');
 
-            $data['local'] = $manualLocal !== ''
-                ? $manualLocal
-                : ($lineDefaultLocal !== '' ? $lineDefaultLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null));
+            $data['local'] = match ($requestType) {
+                'assembly' => 'SMARKET-1',
+                'motors_molding' => 'WIP-MOTORS',
+                'batteries_assembly', 'assembly_packaging' => $lineDefaultLocal !== ''
+                    ? $lineDefaultLocal
+                    : ($manualLocal !== '' ? $manualLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null)),
+                default => $manualLocal !== ''
+                    ? $manualLocal
+                    : ($lineDefaultLocal !== '' ? $lineDefaultLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null)),
+            };
 
             $mr = MasterRequest::create($data);
 
