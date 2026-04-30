@@ -174,17 +174,12 @@
                 </div>
             </div>
             <div class="mt-3 overflow-auto">
-                <div
+                <canvas
                     id="layout-preview-stage"
-                    class="relative rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
-                    style="width: 451px; height: 220px;"
-                >
-                    <div id="layout-preview-title" class="absolute font-semibold text-red-700">RMT Dummy QR</div>
-                    <div id="layout-preview-qr" class="absolute grid place-items-center border-2 border-slate-900 bg-slate-100 text-[10px] font-semibold text-slate-700">QR</div>
-                    <div id="layout-preview-fg" class="absolute font-semibold text-slate-900">FG: 479124001</div>
-                    <div id="layout-preview-job" class="absolute font-semibold text-slate-900">JOB: 999999</div>
-                    <div id="layout-preview-consecutive" class="absolute font-bold text-slate-900">0000000014</div>
-                </div>
+                    class="rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
+                    width="451"
+                    height="220"
+                ></canvas>
             </div>
         </div>
     </section>
@@ -213,11 +208,7 @@
     const printerSelectInput = document.getElementById('usb_printer_select');
     const refreshPrintersButton = document.getElementById('refresh-printers');
     const layoutPreviewStage = document.getElementById('layout-preview-stage');
-    const layoutPreviewTitle = document.getElementById('layout-preview-title');
-    const layoutPreviewQr = document.getElementById('layout-preview-qr');
-    const layoutPreviewFg = document.getElementById('layout-preview-fg');
-    const layoutPreviewJob = document.getElementById('layout-preview-job');
-    const layoutPreviewConsecutive = document.getElementById('layout-preview-consecutive');
+    const previewCtx = layoutPreviewStage?.getContext('2d');
     const printerPrintWidthEl = document.getElementById('printer-print-width');
     const printerLabelLengthEl = document.getElementById('printer-label-length');
     const printerMediaTypeEl = document.getElementById('printer-media-type');
@@ -228,6 +219,10 @@
     let sourceHeight = 400;
     let previewWidth = 451;
     let previewHeight = 220;
+    let draggableElements = [];
+    let draggingElement = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
 
     const getValue = (id, fallback = '') => document.getElementById(id)?.value ?? fallback;
     const getNumericValue = (id, fallback = 0) => {
@@ -274,8 +269,10 @@
         previewWidth = Math.max(260, Math.round(sourceWidth * fitScale));
         previewHeight = Math.max(140, Math.round(sourceHeight * fitScale));
 
-        layoutPreviewStage.style.width = `${previewWidth}px`;
-        layoutPreviewStage.style.height = `${previewHeight}px`;
+        if (layoutPreviewStage) {
+            layoutPreviewStage.width = previewWidth;
+            layoutPreviewStage.height = previewHeight;
+        }
     };
     const showPrinterMediaValues = ({ printWidth, labelLength, mediaType, printTone }) => {
         if (printerPrintWidthEl) {
@@ -321,8 +318,49 @@
         renderLayoutPreview();
     };
 
+    function syncInputsFromCanvas() {
+        const scaleX = getScaleX();
+        const scaleY = getScaleY();
+        draggableElements.forEach((element) => {
+            const xInput = document.getElementById(element.fieldX);
+            const yInput = document.getElementById(element.fieldY);
+            if (xInput) xInput.value = Math.max(0, Math.round(element.x / scaleX));
+            if (yInput) yInput.value = Math.max(0, Math.round(element.y / scaleY));
+        });
+    }
+
+    function drawCanvasPreview() {
+        if (!previewCtx || !layoutPreviewStage) {
+            return;
+        }
+        previewCtx.clearRect(0, 0, layoutPreviewStage.width, layoutPreviewStage.height);
+        previewCtx.fillStyle = '#ffffff';
+        previewCtx.fillRect(0, 0, layoutPreviewStage.width, layoutPreviewStage.height);
+
+        draggableElements.forEach((element) => {
+            if (element.type === 'qr') {
+                previewCtx.fillStyle = '#f1f5f9';
+                previewCtx.strokeStyle = '#0f172a';
+                previewCtx.lineWidth = 2;
+                previewCtx.fillRect(element.x, element.y, element.w, element.h);
+                previewCtx.strokeRect(element.x, element.y, element.w, element.h);
+                previewCtx.fillStyle = '#334155';
+                previewCtx.font = `700 ${Math.max(9, element.h / 4)}px sans-serif`;
+                previewCtx.textAlign = 'center';
+                previewCtx.textBaseline = 'middle';
+                previewCtx.fillText('QR', element.x + (element.w / 2), element.y + (element.h / 2));
+            } else {
+                previewCtx.fillStyle = element.color;
+                previewCtx.font = `700 ${element.fontSize}px sans-serif`;
+                previewCtx.textAlign = 'left';
+                previewCtx.textBaseline = 'top';
+                previewCtx.fillText(element.text, element.x, element.y);
+            }
+        });
+    }
+
     const renderLayoutPreview = () => {
-        if (!layoutPreviewStage) {
+        if (!layoutPreviewStage || !previewCtx) {
             return;
         }
 
@@ -352,34 +390,21 @@
         const scaleX = getScaleX();
         const scaleY = getScaleY();
 
-        layoutPreviewTitle.textContent = titleText;
-        layoutPreviewTitle.style.left = toPx(titleX, scaleX);
-        layoutPreviewTitle.style.top = toPx(titleY, scaleY);
-        layoutPreviewTitle.style.fontSize = toPx(titleFont, scaleY);
-
-        layoutPreviewQr.style.left = toPx(qrX, scaleX);
-        layoutPreviewQr.style.top = toPx(qrY, scaleY);
-        layoutPreviewQr.style.width = toPx(qrSize, scaleX);
-        layoutPreviewQr.style.height = toPx(qrSize, scaleY);
-
-        layoutPreviewFg.style.left = toPx(fgX, scaleX);
-        layoutPreviewFg.style.top = toPx(fgY, scaleY);
-        layoutPreviewFg.style.fontSize = toPx(fgFont, scaleY);
-
-        layoutPreviewJob.style.left = toPx(jobX, scaleX);
-        layoutPreviewJob.style.top = toPx(jobY, scaleY);
-        layoutPreviewJob.style.fontSize = toPx(jobFont, scaleY);
-
-        layoutPreviewConsecutive.style.left = toPx(consecutiveX, scaleX);
-        layoutPreviewConsecutive.style.top = toPx(consecutiveY, scaleY);
-        layoutPreviewConsecutive.style.fontSize = toPx(consecutiveFont, scaleY);
+        draggableElements = [
+            { id: 'title', type: 'text', text: titleText, x: titleX * scaleX, y: titleY * scaleY, fontSize: Math.max(10, titleFont * scaleY), color: '#b91c1c', fieldX: 'title_x', fieldY: 'title_y' },
+            { id: 'qr', type: 'qr', x: qrX * scaleX, y: qrY * scaleY, w: Math.max(18, qrSize * scaleX), h: Math.max(18, qrSize * scaleY), fieldX: 'qr_x', fieldY: 'qr_y' },
+            { id: 'fg', type: 'text', text: 'FG: 479124001', x: fgX * scaleX, y: fgY * scaleY, fontSize: Math.max(9, fgFont * scaleY), color: '#0f172a', fieldX: 'fg_x', fieldY: 'fg_y' },
+            { id: 'job', type: 'text', text: 'JOB: 999999', x: jobX * scaleX, y: jobY * scaleY, fontSize: Math.max(9, jobFont * scaleY), color: '#0f172a', fieldX: 'job_x', fieldY: 'job_y' },
+            { id: 'consecutive', type: 'text', text: '0000000014', x: consecutiveX * scaleX, y: consecutiveY * scaleY, fontSize: Math.max(9, consecutiveFont * scaleY), color: '#0f172a', fieldX: 'consecutive_x', fieldY: 'consecutive_y' },
+        ];
+        drawCanvasPreview();
     };
 
     const buildZpl = () => {
         const dummyType = getValue('dummy_type', 'rmt');
         const title = dummyType === 'rw' ? 'RW Dummy QR' : 'RMT Dummy QR';
 
-        const qrPayload = '^DM^479124001^QB479124001UN-A01-OP21PSE^0000000014^';
+        const qrPayload = '^DM^479124001^999999^0000000014^';
         const qrPayloadHex = String(qrPayload)
             .replaceAll('\\', '\\5C')
             .replaceAll('^', '\\5E')
@@ -763,6 +788,44 @@
 
     setPreviewStageSize(sourceWidth, sourceHeight);
     renderLayoutPreview();
+
+    const getMousePosition = (event) => {
+        const rect = layoutPreviewStage.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    };
+    const hitTest = (x, y) => {
+        for (let index = draggableElements.length - 1; index >= 0; index -= 1) {
+            const element = draggableElements[index];
+            if (element.type === 'qr') {
+                if (x >= element.x && x <= element.x + element.w && y >= element.y && y <= element.y + element.h) return element;
+                continue;
+            }
+            const measure = previewCtx.measureText(element.text);
+            const width = measure.width;
+            const height = element.fontSize;
+            if (x >= element.x && x <= element.x + width && y >= element.y && y <= element.y + height) return element;
+        }
+        return null;
+    };
+    layoutPreviewStage?.addEventListener('mousedown', (event) => {
+        const { x, y } = getMousePosition(event);
+        const target = hitTest(x, y);
+        if (!target) return;
+        draggingElement = target;
+        dragOffsetX = x - target.x;
+        dragOffsetY = y - target.y;
+    });
+    window.addEventListener('mousemove', (event) => {
+        if (!draggingElement) return;
+        const { x, y } = getMousePosition(event);
+        draggingElement.x = Math.max(0, x - dragOffsetX);
+        draggingElement.y = Math.max(0, y - dragOffsetY);
+        syncInputsFromCanvas();
+        drawCanvasPreview();
+    });
+    window.addEventListener('mouseup', () => {
+        draggingElement = null;
+    });
 
     if (ensureBrowserPrint()) {
         listUsbPrinters({ silent: true });

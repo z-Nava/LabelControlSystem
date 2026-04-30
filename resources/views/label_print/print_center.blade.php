@@ -32,6 +32,7 @@
     <div class="mt-6 flex flex-wrap gap-2">
         <button id="connect-printer" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Conectar impresora</button>
         <button id="preview-batch" type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Preparar impresión</button>
+        <button id="open-alignment-modal" type="button" class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">Ajustar posiciones</button>
         <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Imprimir ahora</button>
     </div>
 
@@ -72,6 +73,42 @@
     </div>
 </div>
 
+
+
+<div id="alignment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+        <div class="border-b px-5 py-4">
+            <h3 class="text-lg font-semibold text-slate-900">Ajuste rápido de posiciones</h3>
+            <p class="mt-1 text-sm text-slate-600">Si la etiqueta salió desfazada, mueve los elementos por pixeles aproximados (X: izquierda/derecha, Y: arriba/abajo).</p>
+        </div>
+        <div class="grid gap-4 p-5 md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 p-3">
+                <div class="text-sm font-semibold text-slate-900">Etiqueta SERIAL</div>
+                <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <label>Texto (SN/SKU) X <input data-align="serial_text_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>Texto (SN/SKU) Y <input data-align="serial_text_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>QR X <input data-align="serial_qr_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>QR Y <input data-align="serial_qr_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                </div>
+            </div>
+            <div class="rounded-xl border border-slate-200 p-3">
+                <div class="text-sm font-semibold text-slate-900">Etiqueta RATING</div>
+                <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <label>Texto (SN) X <input data-align="rating_text_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>Texto (SN) Y <input data-align="rating_text_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>QR X <input data-align="rating_qr_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                    <label>QR Y <input data-align="rating_qr_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2 border-t px-5 py-4">
+            <button id="reset-alignment" type="button" class="rounded-xl border px-4 py-2 text-sm">Reset</button>
+            <button id="close-alignment-modal" type="button" class="rounded-xl border px-4 py-2 text-sm">Cerrar</button>
+            <button id="save-alignment" type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Guardar ajustes</button>
+        </div>
+    </div>
+</div>
+
 <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
 <script>
 (() => {
@@ -88,15 +125,64 @@
     const statusBox = document.getElementById('print-status');
     const confirmationBox = document.getElementById('print-confirmation');
     const previewSummary = document.getElementById('preview-summary');
+    const alignmentModal = document.getElementById('alignment-modal');
+    const openAlignmentModalButton = document.getElementById('open-alignment-modal');
+    const closeAlignmentModalButton = document.getElementById('close-alignment-modal');
+    const saveAlignmentButton = document.getElementById('save-alignment');
+    const resetAlignmentButton = document.getElementById('reset-alignment');
     const storageKeys = {
         serial: 'label_print_selected_printer_serial',
         rating: 'label_print_selected_printer_rating',
+        alignment: 'label_print_alignment_offsets',
     };
 
     let availablePrinters = [];
     let selectedPrinters = { serial: null, rating: null };
     let previewPayload = null;
     let printPrepared = false;
+
+    const defaultAlignment = {
+        serial_text_x: 0, serial_text_y: 0, serial_qr_x: 0, serial_qr_y: 0,
+        rating_text_x: 0, rating_text_y: 0, rating_qr_x: 0, rating_qr_y: 0,
+    };
+
+    const getAlignment = () => {
+        try {
+            return { ...defaultAlignment, ...(JSON.parse(localStorage.getItem(storageKeys.alignment) || '{}')) };
+        } catch (_error) {
+            return { ...defaultAlignment };
+        }
+    };
+
+    const setAlignmentInputs = (values) => {
+        document.querySelectorAll('[data-align]').forEach((input) => {
+            input.value = values[input.dataset.align] ?? 0;
+        });
+    };
+
+    const readAlignmentInputs = () => {
+        const values = { ...defaultAlignment };
+        document.querySelectorAll('[data-align]').forEach((input) => {
+            values[input.dataset.align] = Number(input.value || 0);
+        });
+        return values;
+    };
+
+    const moveFO = (block, dx, dy) => block.replace(/\^FO(-?\d+),(-?\d+)/, (_m, x, y) => `^FO${Number(x)+dx},${Number(y)+dy}`);
+
+    const applyAlignmentToZpl = (zpl, labelType) => {
+        const a = getAlignment();
+        const textDx = labelType === 'rating' ? a.rating_text_x : a.serial_text_x;
+        const textDy = labelType === 'rating' ? a.rating_text_y : a.serial_text_y;
+        const qrDx = labelType === 'rating' ? a.rating_qr_x : a.serial_qr_x;
+        const qrDy = labelType === 'rating' ? a.rating_qr_y : a.serial_qr_y;
+
+        return zpl.replace(/(\^FO-?\d+,-?\d+[\s\S]*?\^FS)/g, (block) => {
+            if (block.includes('^BQN')) return moveFO(block, qrDx, qrDy);
+            return moveFO(block, textDx, textDy);
+        });
+    };
+
 
     const csrfToken = root.dataset.csrfToken || document.querySelector('meta[name="csrf-token"]')?.content || '';
 
@@ -339,7 +425,8 @@
                     throw new Error(`No hay impresora seleccionada para ${labelType.toUpperCase()}.`);
                 }
 
-                await sendToPrinter(printer, doc.test_zpl);
+                const adjustedTestZpl = applyAlignmentToZpl(doc.test_zpl, labelType);
+                await sendToPrinter(printer, adjustedTestZpl);
             }
 
             printPrepared = true;
@@ -413,7 +500,8 @@
                     throw new Error(`No hay impresora seleccionada para ${labelType.toUpperCase()}.`);
                 }
 
-                await sendToPrinter(printer, doc.zpl);
+                const adjustedZpl = applyAlignmentToZpl(doc.zpl, labelType);
+                await sendToPrinter(printer, adjustedZpl);
             }
 
             try {
@@ -457,6 +545,27 @@
         setStatus('Selecciona una impresora para RATING.', true);
     });
     previewButton?.addEventListener('click', preparePrint);
+    openAlignmentModalButton?.addEventListener('click', () => {
+        setAlignmentInputs(getAlignment());
+        alignmentModal?.classList.remove('hidden');
+        alignmentModal?.classList.add('flex');
+    });
+    closeAlignmentModalButton?.addEventListener('click', () => {
+        alignmentModal?.classList.add('hidden');
+        alignmentModal?.classList.remove('flex');
+    });
+    saveAlignmentButton?.addEventListener('click', () => {
+        const values = readAlignmentInputs();
+        localStorage.setItem(storageKeys.alignment, JSON.stringify(values));
+        alignmentModal?.classList.add('hidden');
+        alignmentModal?.classList.remove('flex');
+        printPrepared = false;
+        setStatus('Ajustes guardados. Vuelve a preparar impresión para validar posiciones.');
+    });
+    resetAlignmentButton?.addEventListener('click', () => {
+        localStorage.setItem(storageKeys.alignment, JSON.stringify(defaultAlignment));
+        setAlignmentInputs(defaultAlignment);
+    });
     printButton?.addEventListener('click', printBatch);
 
     setSelectedPrinter('serial', null);
