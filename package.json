@@ -15,6 +15,7 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "fabric": "^7.3.1",
         "sweetalert2": "^11.26.21"
     }
 }
