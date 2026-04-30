@@ -2,6 +2,9 @@ import { buildZpl } from './dummy-qr-templates-create/zpl';
 import { createLayoutPreview } from './dummy-qr-templates-create/layout-preview';
 import { createPrinterService } from './dummy-qr-templates-create/printers';
 import { createStatusSetter, getElement } from './dummy-qr-templates-create/dom';
+import { attachFabricToWindow } from '../lib/fabric-setup';
+
+attachFabricToWindow();
 
 const formRoot = document.getElementById('dummy-template-form');
 if (!formRoot) {
