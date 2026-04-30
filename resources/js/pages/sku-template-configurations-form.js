@@ -35,6 +35,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const testUsbButton = document.getElementById('test-usb-connection');
     const testPrintButton = document.getElementById('test-print');
     const printerNameInput = document.getElementById('default_printer_name');
+    const usbPrintersWrapper = document.getElementById('usb-printers-wrapper');
+    const usbPrinterSelect = document.getElementById('usb_printer_select');
     const skuSelect = document.querySelector('[name="label_sku_id"]');
     const serialStandardInput = document.querySelector('[name="serial_standard"]');
     const serialStandardDisplay = document.getElementById('serial_standard_display');
@@ -152,11 +154,50 @@ const initSkuTemplateConfigurationsForm = () => {
         }
     };
 
+
+    const renderUsbPrinterOptions = (devices = []) => {
+        if (!usbPrinterSelect) {
+            return;
+        }
+
+        usbPrinterSelect.innerHTML = '';
+
+        if (!devices.length) {
+            const option = document.createElement('option');
+
+            option.value = '';
+            option.textContent = 'No se detectaron impresoras USB';
+            usbPrinterSelect.appendChild(option);
+
+            return;
+        }
+
+        const currentName = String(printerNameInput?.value || '').trim();
+
+        devices.forEach((device, index) => {
+            const option = document.createElement('option');
+            const name = device.name || `Impresora USB ${index + 1}`;
+
+            option.value = name;
+            option.textContent = `${name} (${device.uid || device.connection || 'USB'})`;
+            option.selected = currentName ? currentName === name : index === 0;
+            usbPrinterSelect.appendChild(option);
+        });
+
+        if (printerNameInput && usbPrinterSelect.value) {
+            printerNameInput.value = usbPrinterSelect.value;
+        }
+    };
+
     const toggleConnectionFields = () => {
         const isNetwork = connectionSelect?.value === 'network';
 
         if (ipWrapper) {
             ipWrapper.style.display = isNetwork ? 'block' : 'none';
+        }
+
+        if (usbPrintersWrapper) {
+            usbPrintersWrapper.style.display = isNetwork ? 'none' : 'block';
         }
 
         ipInput?.toggleAttribute('required', isNetwork);
@@ -242,45 +283,37 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
-        setStatus('Buscando impresora USB...');
+        setStatus('Buscando impresoras USB...');
 
-        window.BrowserPrint.getDefaultDevice('printer', (device) => {
-            if (device && String(device.connection || '').toLowerCase().includes('usb')) {
-                selectedDevice = device;
-                usbConnectedInput.value = '1';
-                printerNameInput.value = device.name || printerNameInput.value;
-                setStatus(`Conexión USB OK: ${device.name}`);
+        window.BrowserPrint.getLocalDevices((devices) => {
+            const usbPrinters = (devices || []).filter((candidate) => {
+                return candidate.deviceType === 'printer'
+                    && String(candidate.connection || '').toLowerCase().includes('usb');
+            });
+
+            renderUsbPrinterOptions(usbPrinters);
+
+            if (!usbPrinters.length) {
+                selectedDevice = null;
+                usbConnectedInput.value = '0';
+                setStatus('No se detectó impresora USB conectada.', true);
 
                 return;
             }
 
-            window.BrowserPrint.getLocalDevices((devices) => {
-                const usbPrinter = (devices || []).find((candidate) => {
-                    return candidate.deviceType === 'printer'
-                        && String(candidate.connection || '').toLowerCase().includes('usb');
-                });
+            const selectedName = String(usbPrinterSelect?.value || '').trim();
+            const matchedDevice = usbPrinters.find((device) => device.name === selectedName) || usbPrinters[0];
 
-                if (!usbPrinter) {
-                    usbConnectedInput.value = '0';
-                    setStatus('No se detectó impresora USB conectada.', true);
-
-                    return;
-                }
-
-                selectedDevice = usbPrinter;
-                usbConnectedInput.value = '1';
-                printerNameInput.value = usbPrinter.name || printerNameInput.value;
-                setStatus(`Conexión USB OK: ${usbPrinter.name}`);
-            }, (error) => {
-                usbConnectedInput.value = '0';
-                setStatus(`Error al detectar impresora USB: ${error}`, true);
-            }, 'printer');
-        }, () => {
-            window.BrowserPrint.getLocalDevices(() => {}, () => {
-                usbConnectedInput.value = '0';
-                setStatus('No fue posible obtener la impresora default.', true);
-            }, 'printer');
-        });
+            selectedDevice = matchedDevice;
+            usbConnectedInput.value = '1';
+            printerNameInput.value = matchedDevice.name || printerNameInput.value;
+            setStatus(`Conexión USB OK: ${usbPrinters.length} impresora(s) detectada(s). Usando: ${printerNameInput.value}`);
+        }, (error) => {
+            selectedDevice = null;
+            usbConnectedInput.value = '0';
+            renderUsbPrinterOptions([]);
+            setStatus(`Error al detectar impresoras USB: ${error}`, true);
+        }, 'printer');
     };
 
     const getQrSeparator = () => {
@@ -606,6 +639,16 @@ const initSkuTemplateConfigurationsForm = () => {
         document.querySelector(`[name="qr_custom_field_${index}"]`)?.addEventListener('change', updateLivePreview);
     });
     document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
+    usbPrinterSelect?.addEventListener('change', () => {
+        const selectedName = String(usbPrinterSelect.value || '').trim();
+
+        if (!selectedName || !printerNameInput) {
+            return;
+        }
+
+        printerNameInput.value = selectedName;
+        setStatus(`Impresora seleccionada: ${selectedName}`);
+    });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
 

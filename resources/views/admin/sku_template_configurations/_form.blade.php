@@ -440,6 +440,7 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700">Printer name</label>
                 <input name="default_printer_name" id="default_printer_name" value="{{ old('default_printer_name', $configuration->default_printer_name ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
+                <p class="mt-1 text-xs text-slate-500">Se autocompleta al elegir una impresora USB detectada.</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700">Tipo de conexión</label>
@@ -447,6 +448,15 @@
                     <option value="usb" @selected($formState['connection_type'] === 'usb')>USB</option>
                     <option value="network" @selected($formState['connection_type'] === 'network')>Red (IP)</option>
                 </select>
+            </div>
+
+
+            <div id="usb-printers-wrapper" class="md:col-span-2">
+                <label class="block text-sm font-medium text-slate-700">Impresoras USB detectadas</label>
+                <select id="usb_printer_select" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                    <option value="">Primero haz clic en &quot;Probar conexión USB&quot; para listar impresoras</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Si tienes más de una impresora conectada, selecciona aquí cuál quieres usar.</p>
             </div>
 
             <div id="printer-ip-wrapper">
