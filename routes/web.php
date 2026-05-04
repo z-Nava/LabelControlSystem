@@ -123,7 +123,6 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
             Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
             Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
-            Route::get('/master-print-batches/{batch}/pdf', [MasterPrintController::class, 'pdf'])->name('master_print_batches.pdf');
             Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         });
         Route::middleware('module_access:dummy')->group(function () {

@@ -33,18 +33,13 @@
             <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Paso completado</div>
             <h2 class="mt-1 text-base font-semibold text-slate-900">Batch #{{ session('batch_id') }} generado correctamente</h2>
             <p class="mt-1 text-sm text-slate-700">
-                Ya puedes abrir la impresión o descargar el PDF. Si necesitas otro lote, usa el formulario de abajo.
+                Ya puedes abrir la impresión. Si necesitas otro lote, usa el formulario de abajo.
             </p>
 
-            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <a href="{{ route('master_print_batches.print', session('batch_id')) }}" target="_blank"
                     class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
                     Abrir impresión
-                </a>
-
-                <a href="{{ route('master_print_batches.pdf', session('batch_id')) }}" target="_blank"
-                    class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
-                    Descargar PDF
                 </a>
 
                 <a href="{{ route('master_requests.show', $mr->id) }}"

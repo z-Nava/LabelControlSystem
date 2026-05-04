@@ -98,44 +98,6 @@ class MasterPrintService
         });
     }
 
-    public function renderPdf(MasterPrintBatch $batch): View
-    {
-        $batch->load([
-            'masterRequest.line',
-            'masterRequest.shift',
-            'items.folio',
-        ]);
-
-        $mr = $batch->masterRequest;
-        $folios = $batch->items->map(fn($i) => $i->folio)->sortBy('folio_number');
-
-        $view = match ($mr->request_type) {
-            'assembly' => 'master_print.pdf.assembly',
-            'batteries_assembly' => 'master_print.pdf.batteries_assembly',
-            'assembly_packaging' => 'master_print.pdf.assembly_packaging',
-            'motors_molding' => 'master_print.pdf.motors_molding',
-            default => 'master_print.pdf.assembly',
-        };
-
-        return view($view, compact('batch', 'mr', 'folios'));
-    }
-
-    public function downloadPdf(MasterPrintBatch $batch)
-    {
-        $data = $this->buildMasterEnsambleData($batch);
-
-        $suffix = $this->resolveTemplateSuffix($batch->masterRequest?->request_type);
-        $fileName = "master_batch_{$batch->id}_{$suffix}.pdf";
-
-        $templateView = $this->resolveTemplateView($batch->masterRequest?->request_type);
-
-        $pdf = app('dompdf.wrapper');
-        $pdf->loadView($templateView, $data + ['mode' => 'pdf']);
-        $pdf->setPaper('letter', 'landscape');
-
-        return $pdf->download($fileName);
-    }
-
     public function renderPrintable(MasterPrintBatch $batch): View
     {
         $data = $this->buildMasterEnsambleData($batch);
@@ -150,16 +112,6 @@ class MasterPrintService
             'motors_molding' => 'master_print.templates.motors_molding',
             'assembly_packaging' => 'master_print.templates.assembly_packaging',
             default => 'master_print.templates.assembly',
-        };
-    }
-
-    protected function resolveTemplateSuffix(?string $requestType): string
-    {
-        return match ($requestType) {
-            'batteries_assembly' => 'ensamble_baterias',
-            'motors_molding' => 'motores_moldeo',
-            'assembly_packaging' => 'ensamble_empaque',
-            default => 'ensamble',
         };
     }
 

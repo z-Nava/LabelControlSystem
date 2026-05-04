@@ -32,7 +32,7 @@
         <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Acción principal</div>
             <h2 class="mt-1 text-base font-semibold text-slate-900">Impresión inicial</h2>
-            <p class="mt-1 text-sm text-slate-600">Genera un lote y continúa en la pantalla de impresión con los botones de PDF listos.</p>
+            <p class="mt-1 text-sm text-slate-600">Genera un lote y continúa en la pantalla de impresión.</p>
 
             <a href="{{ route('master_requests.print.create', $mr->id) }}"
                 class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
@@ -57,15 +57,10 @@
             <p class="mt-1 text-sm text-slate-600">Consulta rápido el lote más reciente desde esta requisición.</p>
 
             @if(session('batch_id'))
-                <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div class="mt-4 grid grid-cols-1 gap-2">
                     <a href="{{ route('master_print_batches.print', session('batch_id')) }}" target="_blank"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
                         Abrir impresión
-                    </a>
-
-                    <a href="{{ route('master_print_batches.pdf', session('batch_id')) }}" target="_blank"
-                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
-                        Descargar PDF
                     </a>
                 </div>
             @else

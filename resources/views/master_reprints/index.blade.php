@@ -59,9 +59,9 @@
                         </div>
                     </td>
                     <td class="py-3 pl-3 text-right whitespace-nowrap">
-                        <a href="{{ route('master_print_batches.pdf', $batch) }}" target="_blank"
+                        <a href="{{ route('master_print_batches.print', $batch) }}" target="_blank"
                            class="rounded-lg border px-3 py-1.5 hover:bg-slate-50 ml-1">
-                            PDF
+                            Imprimir
                         </a>
                     </td>
                 </tr>
