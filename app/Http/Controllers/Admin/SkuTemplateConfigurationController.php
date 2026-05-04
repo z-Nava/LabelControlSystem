@@ -217,6 +217,10 @@ class SkuTemplateConfigurationController extends Controller
                 'orientation' => $data['sn_orientation'] ?? 'N',
                 'prefix' => $data['sn_prefix'] ?? 'SN:',
             ],
+            'serial_block' => [
+                'count' => max(1, (int) ($data['serial_block_count'] ?? 1)),
+                'offset_y' => (int) ($data['serial_block_offset_y'] ?? 180),
+            ],
         ];
     }
 

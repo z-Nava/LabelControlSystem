@@ -193,6 +193,7 @@ class SkuTemplateConfigurationFormService
             'qr_layout' => $layout['qr'] ?? [],
             'sku_layout' => $layout['sku'] ?? [],
             'sn_layout' => $layout['sn'] ?? [],
+            'serial_block_layout' => $layout['serial_block'] ?? [],
             'connection_type' => old(
                 'connection_type',
                 data_get(

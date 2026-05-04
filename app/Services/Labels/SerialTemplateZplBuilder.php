@@ -31,6 +31,7 @@ class SerialTemplateZplBuilder
     private function buildSerialTemplate(array $layout, string $labelType, string $serialStandard): string
     {
         $qr = $this->normalizeQrLayout($layout['qr'] ?? []);
+        $serialBlock = $this->normalizeSerialBlockLayout($layout['serial_block'] ?? []);
         $isRatingLabel = $labelType === 'rating';
         $sn = $isRatingLabel
             ? $this->normalizeTextLayout($layout['text'] ?? ($layout['sn'] ?? []))
@@ -48,24 +49,28 @@ class SerialTemplateZplBuilder
         $zpl = [
             '^XA',
             '^CI28',
-            sprintf('^FO%d,%d', $qr['x'], $qr['y']),
-            sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']),
-            sprintf('^FDLA,%s^FS', $this->resolveQrPayload($qr, $isRatingLabel)),
         ];
+        $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
 
-        if (!$hideSkuOnEmeaRating) {
-            $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
-            $zpl[] = sprintf('^FO%d,%d', $sku['x'], $sku['y']);
-            $zpl[] = sprintf('^A0%s,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']);
-            $zpl[] = '^FD{{sku}}^FS';
+        for ($blockIndex = 0; $blockIndex < $serialBlock['count']; $blockIndex++) {
+            $yOffset = $blockIndex * $serialBlock['offset_y'];
+
+            $zpl[] = sprintf('^FO%d,%d', $qr['x'], $qr['y'] + $yOffset);
+            $zpl[] = sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']);
+            $zpl[] = sprintf('^FDLA,%s^FS', $this->resolveQrPayload($qr, $isRatingLabel));
+
+            if (!$hideSkuOnEmeaRating) {
+                $zpl[] = sprintf('^FO%d,%d', $sku['x'], $sku['y'] + $yOffset);
+                $zpl[] = sprintf('^A0%s,%d,%d', $sku['orientation'], $sku['font_size'], $sku['font_size']);
+                $zpl[] = '^FD{{sku}}^FS';
+            }
+
+            $zpl[] = sprintf('^FO%d,%d', $sn['x'], $sn['y'] + $yOffset);
+            $zpl[] = sprintf('^A0%s,%d,%d', $sn['orientation'], $sn['font_size'], $sn['font_size']);
+            $zpl[] = sprintf('^FD%s^FS', $snText);
         }
 
-        $zpl = array_merge($zpl, [
-            sprintf('^FO%d,%d', $sn['x'], $sn['y']),
-            sprintf('^A0%s,%d,%d', $sn['orientation'], $sn['font_size'], $sn['font_size']),
-            sprintf('^FD%s^FS', $snText),
-            '^XZ',
-        ]);
+        $zpl[] = '^XZ';
 
         return implode("\n", $zpl);
     }
@@ -91,6 +96,14 @@ class SerialTemplateZplBuilder
             'separator' => (string) ($layout['separator'] ?? 'pipe'),
             'serial_style' => (string) ($layout['serial_style'] ?? 'as_is'),
             'custom_fields' => array_values(array_filter((array) ($layout['custom_fields'] ?? []))),
+        ];
+    }
+
+    private function normalizeSerialBlockLayout(array $layout): array
+    {
+        return [
+            'count' => max(1, min(4, (int) ($layout['count'] ?? 1))),
+            'offset_y' => max(0, (int) ($layout['offset_y'] ?? 180)),
         ];
     }
 

@@ -57,6 +57,12 @@
     <p class="font-semibold text-slate-900">Flujo recomendado</p>
     <p class="mt-1">Completa los pasos en orden: primero define el SKU/tipo de etiqueta, después el template, luego el layout y finalmente el perfil de impresión.</p>
 </div>
+<div class="grid grid-cols-1 gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900 md:grid-cols-4">
+    <div><span class="font-semibold">1.</span> Elige mercado, SKU y tipo.</div>
+    <div><span class="font-semibold">2.</span> Define nombre y medidas del template.</div>
+    <div><span class="font-semibold">3.</span> Ajusta layout y valida vista previa.</div>
+    <div><span class="font-semibold">4.</span> Configura impresora y ejecuta prueba.</div>
+</div>
 
 <div class="space-y-5"
     id="sku-template-configuration-form"
@@ -65,15 +71,15 @@
     data-default-serial-anz="AF02F2019 A 00001 A2026"
     data-default-sku="2978-OCUT">
 
-    <section class="rounded-2xl border border-slate-200 p-4">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 border-b border-slate-100 pb-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 1</p>
             <h2 class="text-lg font-semibold text-slate-900">Selecciona SKU y comportamiento de etiqueta</h2>
             <p class="mt-1 text-xs text-slate-500">Este paso define la base de la configuración y activa campos relevantes para Serial o Rating.</p>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="xl:col-span-2">
                 <label class="block text-sm font-medium text-slate-700">SKU</label>
                 <div class="mt-2 inline-flex rounded-xl border border-slate-200 p-1" role="group" aria-label="Filtro de estándar SKU">
                     @foreach($marketStandards as $standard)
@@ -117,14 +123,14 @@
                 </p>
             </div>
 
-            <div>
+            <div class="xl:col-span-1">
                 <label class="block text-sm font-medium text-slate-700">Estándar serial</label>
                 <input id="serial_standard_display" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700" value="{{ $formState['selected_serial_standard'] ?? 'UL' }}" readonly />
                 <input type="hidden" name="serial_standard" id="serial_standard" value="{{ $formState['selected_serial_standard'] ?? 'UL' }}" />
                 <p class="mt-1 text-xs text-slate-500">Se toma del SKU seleccionado para evitar inconsistencias.</p>
             </div>
 
-            <div>
+            <div class="xl:col-span-1">
                 <label class="block text-sm font-medium text-slate-700">Tipo de etiqueta</label>
                 <select name="label_type" id="label_type" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
                     @foreach(['serial', 'rating'] as $type)
@@ -133,7 +139,7 @@
                 </select>
             </div>
 
-            <div class="md:pt-6" id="rating-qr-toggle-wrapper" @if(($formState['selected_label_type'] ?? 'serial') !== 'rating') style="display:none;" @endif>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 xl:col-span-4" id="rating-qr-toggle-wrapper" @if(($formState['selected_label_type'] ?? 'serial') !== 'rating') style="display:none;" @endif>
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" name="rating_with_qr" value="1" class="rounded border-slate-300"
                            {{ old('rating_with_qr', ($formState['rating_qr'] ?? false)) ? 'checked' : '' }}>
@@ -151,15 +157,15 @@
         </div>
     </section>
 
-    <section class="rounded-2xl border border-slate-200 p-4">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 border-b border-slate-100 pb-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 2</p>
             <h2 class="text-lg font-semibold text-slate-900">Configura el template base</h2>
             <p class="mt-1 text-xs text-slate-500">Define metadatos generales del template y sus dimensiones físicas.</p>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-slate-700">Nombre template</label>
                 <input name="template_name" value="{{ old('template_name', $configuration->template->name ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
             </div>
@@ -181,7 +187,7 @@
                 <input name="template_height_mm" value="{{ old('template_height_mm', $configuration->template->height_mm ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
             </div>
 
-            <div class="md:col-span-2">
+            <div class="md:col-span-2 lg:col-span-4">
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" name="template_is_active" value="1" {{ old('template_is_active', $configuration->template->is_active ?? true) ? 'checked' : '' }}> Template activo
                 </label>
@@ -189,7 +195,7 @@
         </div>
     </section>
 
-    <section class="rounded-2xl border border-slate-200 p-4">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 border-b border-slate-100 pb-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 3</p>
             <h2 class="text-lg font-semibold text-slate-900">Define layout de impresión (ZPL)</h2>
@@ -201,7 +207,7 @@
                 <h3 class="font-semibold text-slate-900">Bloque de texto SN / Rating</h3>
                 <p class="mt-1 text-xs text-slate-500">Este bloque se usa para Rating y como respaldo para layouts simples.</p>
             </div>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700">Posición serial X</label>
                     <input type="number" name="serial_position_x" value="{{ old('serial_position_x', $formState['text_layout']['x'] ?? 40) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
@@ -342,6 +348,16 @@
                     <input name="sn_prefix" value="{{ old('sn_prefix', $formState['sn_layout']['prefix'] ?? 'SN:') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
                     @error('sn_prefix') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Bloques seriales por etiqueta</label>
+                    <input type="number" name="serial_block_count" min="1" max="4" value="{{ old('serial_block_count', $formState['serial_block_layout']['count'] ?? 1) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                    @error('serial_block_count') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Offset vertical entre bloques</label>
+                    <input type="number" name="serial_block_offset_y" min="0" max="5000" value="{{ old('serial_block_offset_y', $formState['serial_block_layout']['offset_y'] ?? 180) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+                    @error('serial_block_offset_y') <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
+                </div>
             </div>
 
             <div id="qr-custom-fields-wrapper" class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -416,7 +432,7 @@
         </div>
     </section>
 
-    <section class="rounded-2xl border border-slate-200 p-4">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="mb-4 border-b border-slate-100 pb-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 4</p>
             <h2 class="text-lg font-semibold text-slate-900">Configura perfil y conexión de impresión</h2>
@@ -424,7 +440,7 @@
         </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
+            <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-slate-700">Nombre profile</label>
                 <input name="profile_name" value="{{ old('profile_name', $configuration->name ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required />
             </div>
@@ -464,7 +480,7 @@
                 <input name="default_printer_ip" id="default_printer_ip" value="{{ old('default_printer_ip', $configuration->default_printer_ip ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
             </div>
 
-            <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="md:col-span-2 lg:col-span-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 class="font-semibold text-slate-900">Pruebas de impresora</h3>
                 <p class="mt-1 text-xs text-slate-600">Para USB, valida conexión antes de guardar y ejecuta impresión de prueba. La prueba cambia según el tipo: Serial imprime QR + SKU + SN; Rating con QR en EMEA imprime solo SN + QR (sin SKU).</p>
                 <div class="mt-3 flex flex-wrap gap-2">
@@ -475,7 +491,7 @@
                 <div id="printer-test-status" class="mt-2 text-sm text-slate-700">Sin prueba de conexión.</div>
             </div>
 
-            <div class="md:col-span-2">
+            <div class="md:col-span-2 lg:col-span-4">
                 <label class="inline-flex items-center gap-2 text-sm text-slate-700">
                     <input type="checkbox" name="profile_is_active" value="1" {{ old('profile_is_active', $configuration->is_active ?? true) ? 'checked' : '' }}> Profile activo
                 </label>

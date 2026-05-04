@@ -98,6 +98,8 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'sn_font_size' => ['nullable', 'integer', 'min:10', 'max:300'],
             'sn_orientation' => ['nullable', 'in:N,R,I,B'],
             'sn_prefix' => ['nullable', 'string', 'max:20'],
+            'serial_block_count' => ['nullable', 'integer', 'min:1', 'max:4'],
+            'serial_block_offset_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'template_is_active' => ['required', 'boolean'],
 
             'profile_name' => ['required', 'string', 'max:120'],
