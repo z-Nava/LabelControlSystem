@@ -20,22 +20,46 @@
         </div>
     @endif
 
-    <form class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3" method="GET" action="{{ route('oracle_jobs.index') }}">
-        <input name="q" value="{{ $filters['q'] ?? '' }}"
-               class="rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="Buscar job/assembly/po/desc..." />
+    <form class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4" method="GET" action="{{ route('oracle_jobs.index') }}">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Filtros de búsqueda</h2>
+                <p class="mt-1 text-xs text-slate-600">Usa estos campos para filtrar la tabla de Oracle Jobs por coincidencias específicas.</p>
+            </div>
+            <a href="{{ route('oracle_jobs.index') }}" class="text-xs font-medium text-slate-600 underline underline-offset-2 hover:text-slate-900">Limpiar filtros</a>
+        </div>
 
-        <input name="line" value="{{ $filters['line'] ?? '' }}"
-               class="rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="LINE (ej. MEXC010)" />
+        <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <label class="block">
+                <span class="text-xs font-medium text-slate-700">Búsqueda general</span>
+                <input name="q" value="{{ $filters['q'] ?? '' }}"
+                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       placeholder="Job, assembly, PO o descripción" />
+                <span class="mt-1 block text-[11px] text-slate-500">Encuentra cualquier registro que contenga ese texto.</span>
+            </label>
 
-        <input name="job_status" value="{{ $filters['job_status'] ?? '' }}"
-               class="rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="Status (Released...)" />
+            <label class="block">
+                <span class="text-xs font-medium text-slate-700">Línea de producción</span>
+                <input name="line" value="{{ $filters['line'] ?? '' }}"
+                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       placeholder="Ejemplo: MEXC010" />
+                <span class="mt-1 block text-[11px] text-slate-500">Muestra solo jobs de una línea específica.</span>
+            </label>
 
-        <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">
-            Filtrar
-        </button>
+            <label class="block">
+                <span class="text-xs font-medium text-slate-700">Estatus del job</span>
+                <input name="job_status" value="{{ $filters['job_status'] ?? '' }}"
+                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                       placeholder="Ejemplo: Released" />
+                <span class="mt-1 block text-[11px] text-slate-500">Filtra por el estado operativo del job.</span>
+            </label>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition">
+                Aplicar filtros
+            </button>
+        </div>
     </form>
 
     <div class="mt-5 overflow-x-auto">
