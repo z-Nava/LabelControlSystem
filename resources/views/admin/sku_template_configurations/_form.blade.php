@@ -1,64 +1,5 @@
 @csrf
 
-@php
-    $marketStandards = isset($forcedStandard)
-        ? [$forcedStandard]
-        : ($availableStandards ?? ['UL', 'EMEA', 'ANZ']);
-
-    $activeStandard = strtoupper((string) ($forcedStandard ?? ($formState['selected_serial_standard'] ?? 'UL')));
-    $selectedLabelType = $formState['selected_label_type'] ?? 'serial';
-    $selectedConnectionType = $formState['connection_type'] ?? 'usb';
-
-    $qrContentOptions = [
-        'auto' => 'Automático por tipo (recomendado)',
-        'serial_full' => 'Solo Serial completo',
-        'rating_qr' => 'Solo QR rating (EMEA)',
-        'anz_customer_tool_serial' => 'ANZ customer_tool_code + Serial (CCCC | Serial)',
-        'custom' => 'Personalizado (hasta 3 bloques)',
-    ];
-
-    $allowedQrContentByStandard = [
-        'UL' => ['auto', 'serial_full', 'custom'],
-        'EMEA' => ['auto', 'serial_full', 'rating_qr', 'custom'],
-        'ANZ' => ['auto', 'serial_full', 'anz_customer_tool_serial', 'custom'],
-    ];
-
-    $qrSerialStyles = [
-        'as_is' => 'Como viene del serial',
-        'segmented' => 'Separado (5055 36 01 000002 A2026)',
-        'compact' => 'Junto (50553601000002A2026)',
-    ];
-
-    $allowedQrSerialStylesByStandard = [
-        'UL' => ['as_is', 'compact'],
-        'EMEA' => ['as_is', 'segmented', 'compact'],
-        'ANZ' => ['as_is', 'compact'],
-    ];
-
-    $qrCustomOptions = [
-        '' => 'Vacío',
-        'fixed_103' => 'Ensamble (assembly part number)',
-        'serial_full' => 'Serial completo',
-        'rating_qr_code' => 'QR rating',
-        'sku' => 'SKU',
-        'label_part_number' => 'Label part number',
-        'console_sku' => 'Console SKU',
-        'assembly_part_number' => 'Assembly part number',
-        'packaging_part_number' => 'Packaging part number',
-        'emea_sku' => 'EMEA SKU',
-        'anz_sku' => 'ANZ SKU',
-        'anz_customer_tool_code' => 'ANZ customer_tool_code',
-    ];
-
-    $allowedQrCustomByStandard = [
-        'UL' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'console_sku', 'assembly_part_number', 'packaging_part_number'],
-        'EMEA' => ['', 'fixed_103', 'serial_full', 'rating_qr_code', 'sku', 'label_part_number', 'emea_sku'],
-        'ANZ' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'anz_sku', 'anz_customer_tool_code'],
-    ];
-
-    $customFields = old('qr_custom_fields', $formState['qr_layout']['custom_fields'] ?? []);
-@endphp
-
 @if ($errors->any())
     <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
         <div class="flex items-start gap-3">
@@ -496,8 +437,7 @@
                                     <label class="block text-sm font-semibold text-slate-700">Bloque {{ $position }}</label>
                                     <select name="qr_custom_field_{{ $position }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100">
                                         @foreach(($allowedQrCustomByStandard[$activeStandard] ?? $allowedQrCustomByStandard['UL']) as $value)
-                                            @php($label = $qrCustomOptions[$value] ?? $value)
-                                            <option value="{{ $value }}" @selected(old('qr_custom_field_'.$position, $customFields[$position - 1] ?? '') === $value)>{{ $label }}</option>
+                                            <option value="{{ $value }}" @selected(old('qr_custom_field_'.$position, $customFields[$position - 1] ?? '') === $value)>{{ $qrCustomOptions[$value] ?? $value }}</option>
                                         @endforeach
                                     </select>
                                     @error('qr_custom_field_'.$position) <div class="mt-1 text-sm text-red-600">{{ $message }}</div> @enderror
