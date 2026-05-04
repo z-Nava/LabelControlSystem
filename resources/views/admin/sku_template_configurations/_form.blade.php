@@ -486,9 +486,14 @@
                 <div class="mt-3 flex flex-wrap gap-2">
                     <button id="test-usb-connection" type="button" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">Probar conexión USB</button>
                     <button id="test-print" type="button" class="rounded-xl bg-slate-900 px-3 py-2 text-sm text-white">Impresión de prueba</button>
+                    <button id="preview-zpl" type="button" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">Ver preview ZPL</button>
                 </div>
                 <input type="hidden" name="usb_connected" id="usb_connected" value="{{ old('usb_connected', '0') }}" />
                 <div id="printer-test-status" class="mt-2 text-sm text-slate-700">Sin prueba de conexión.</div>
+                <div id="zpl-preview-wrapper" class="mt-3 hidden">
+                    <label for="zpl-preview-output" class="block text-xs font-semibold uppercase tracking-wide text-slate-600">ZPL generado para prueba</label>
+                    <textarea id="zpl-preview-output" readonly rows="10" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-mono text-xs text-slate-700"></textarea>
+                </div>
             </div>
 
             <div class="md:col-span-2 lg:col-span-4">

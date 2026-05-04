@@ -34,6 +34,9 @@ const initSkuTemplateConfigurationsForm = () => {
     const statusBox = document.getElementById('printer-test-status');
     const testUsbButton = document.getElementById('test-usb-connection');
     const testPrintButton = document.getElementById('test-print');
+    const previewZplButton = document.getElementById('preview-zpl');
+    const zplPreviewWrapper = document.getElementById('zpl-preview-wrapper');
+    const zplPreviewOutput = document.getElementById('zpl-preview-output');
     const printerNameInput = document.getElementById('default_printer_name');
     const usbPrintersWrapper = document.getElementById('usb-printers-wrapper');
     const usbPrinterSelect = document.getElementById('usb_printer_select');
@@ -556,28 +559,35 @@ const initSkuTemplateConfigurationsForm = () => {
             ? serialPrint
             : (snPrefix ? `${snPrefix} ${serialPrint}` : serialPrint);
         const qrPayload = resolveQrPayload(labelType, serial);
+        const serialBlockCount = Math.min(Math.max(readInt('[name="serial_block_count"]', 1), 1), 4);
+        const serialBlockOffsetY = Math.max(readInt('[name="serial_block_offset_y"]', 180), 0);
         const zpl = [
             '^XA',
             '^CI28',
-            `^FO${qrX},${qrY}`,
-            `^BQ${qrOrientation},2,${qrMagnification}`,
-            `^FDLA,${qrPayload}^FS`,
         ];
 
-        if (!hideSkuOnEmeaRating) {
-            const skuX = readInt('[name="sku_position_x"]', 170);
-            const skuY = readInt('[name="sku_position_y"]', 35);
-            const skuFontSize = readInt('[name="sku_font_size"]', 44);
-            const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
+        const skuX = readInt('[name="sku_position_x"]', 170);
+        const skuY = readInt('[name="sku_position_y"]', 35);
+        const skuFontSize = readInt('[name="sku_font_size"]', 44);
+        const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
 
-            zpl.push(`^FO${skuX},${skuY}`);
-            zpl.push(`^A0${skuOrientation},${skuFontSize},${skuFontSize}`);
-            zpl.push(`^FD${getSelectedSkuCode()}^FS`);
+        for (let blockIndex = 0; blockIndex < serialBlockCount; blockIndex += 1) {
+            const yOffset = blockIndex * serialBlockOffsetY;
+            zpl.push(`^FO${qrX},${qrY + yOffset}`);
+            zpl.push(`^BQ${qrOrientation},2,${qrMagnification}`);
+            zpl.push(`^FDLA,${qrPayload}^FS`);
+
+            if (!hideSkuOnEmeaRating) {
+                zpl.push(`^FO${skuX},${skuY + yOffset}`);
+                zpl.push(`^A0${skuOrientation},${skuFontSize},${skuFontSize}`);
+                zpl.push(`^FD${getSelectedSkuCode()}^FS`);
+            }
+
+            zpl.push(`^FO${snX},${snY + yOffset}`);
+            zpl.push(`^A0${snOrientation},${snFontSize},${snFontSize}`);
+            zpl.push(`^FD${snLine}^FS`);
         }
 
-        zpl.push(`^FO${snX},${snY}`);
-        zpl.push(`^A0${snOrientation},${snFontSize},${snFontSize}`);
-        zpl.push(`^FD${snLine}^FS`);
         zpl.push('^XZ');
 
         return zpl.join('\n');
@@ -608,6 +618,20 @@ const initSkuTemplateConfigurationsForm = () => {
         }, (error) => {
             setStatus(`Falló impresión de prueba: ${error}`, true);
         });
+    };
+
+    const showZplPreview = () => {
+        const zpl = buildTestZpl();
+
+        if (zplPreviewOutput) {
+            zplPreviewOutput.value = zpl;
+        }
+
+        if (zplPreviewWrapper) {
+            zplPreviewWrapper.classList.remove('hidden');
+        }
+
+        setStatus('Preview ZPL generado. Verifica que aparezcan dos bloques si configuraste count=2.');
     };
 
     connectionSelect?.addEventListener('change', toggleConnectionFields);
@@ -651,6 +675,7 @@ const initSkuTemplateConfigurationsForm = () => {
     });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
+    previewZplButton?.addEventListener('click', showZplPreview);
 
     setSkuStandardFilter(serialStandardInput?.value || getSelectedSkuStandard());
     toggleConnectionFields();
