@@ -556,6 +556,14 @@
                     </div>
 
                     <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Layout visual (Fabric.js)</p>
+                        <p class="mt-1 text-xs text-slate-500">Muestra posiciones X/Y de QR, SKU y SN para UL, EMEA o ANZ del SKU seleccionado.</p>
+                        <div class="mt-3 overflow-x-auto rounded-2xl border border-dashed border-slate-300 bg-white p-2">
+                            <canvas id="sku-layout-preview-canvas" width="520" height="280"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Detalle técnico</p>
                         <dl class="mt-3 space-y-3 text-sm text-slate-700">
                             <div class="grid grid-cols-3 gap-2">

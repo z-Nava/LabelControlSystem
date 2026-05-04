@@ -1,3 +1,7 @@
+import { attachFabricToWindow, Canvas, Rect, Text } from '../lib/fabric-setup';
+
+attachFabricToWindow();
+
 const ORIENTATIONS = ['N', 'R', 'I', 'B'];
 
 const normalizeOrientation = (value, fallback = 'N') => {
@@ -65,6 +69,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const livePreviewSerialStyle = document.getElementById('live-preview-serial-style');
     const livePreviewQrPayload = document.getElementById('live-preview-qr-payload');
     const livePreviewWarning = document.getElementById('live-preview-warning');
+    const layoutCanvasElement = document.getElementById('sku-layout-preview-canvas');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -73,6 +78,11 @@ const initSkuTemplateConfigurationsForm = () => {
     const skuLayoutGroups = document.querySelectorAll('[data-layout-group="sku"]');
 
     let selectedDevice = null;
+    const layoutCanvas = layoutCanvasElement ? new Canvas(layoutCanvasElement, {
+        selection: false,
+        preserveObjectStacking: true,
+    }) : null;
+    let previewObjects = null;
 
     const setStatus = (message, isError = false) => {
         if (!statusBox) {
@@ -511,7 +521,158 @@ const initSkuTemplateConfigurationsForm = () => {
         }
 
         renderLivePreviewQr(qrPayload, shouldRenderQr);
+        renderFabricLayoutPreview({ shouldRenderQr, shouldRenderSku, snLine });
     };
+
+    const createPreviewObjects = () => {
+        if (!layoutCanvas) {
+            return null;
+        }
+
+        const background = new Rect({
+            left: 0,
+            top: 0,
+            width: 520,
+            height: 280,
+            fill: '#ffffff',
+            stroke: '#cbd5e1',
+            strokeDashArray: [6, 4],
+            selectable: false,
+            evented: false,
+        });
+        const qr = new Rect({
+            left: 30,
+            top: 30,
+            width: 120,
+            height: 120,
+            fill: '#f1f5f9',
+            stroke: '#0f172a',
+            strokeWidth: 1,
+            selectable: true,
+            evented: true,
+        });
+        qr.set({ data: { fieldX: 'qr_position_x', fieldY: 'qr_position_y', previewType: 'qr' } });
+
+        const qrLabel = new Text('QR', {
+            left: 82,
+            top: 84,
+            fontSize: 20,
+            fill: '#0f172a',
+            selectable: false,
+            evented: false,
+        });
+        const sku = new Text('SKU: —', {
+            left: 170,
+            top: 48,
+            fontSize: 30,
+            fontWeight: 'bold',
+            fill: '#0f172a',
+            selectable: true,
+            evented: true,
+        });
+        sku.set({ data: { fieldX: 'sku_position_x', fieldY: 'sku_position_y', previewType: 'sku' } });
+        const sn = new Text('SN: —', {
+            left: 170,
+            top: 100,
+            fontSize: 22,
+            fontFamily: 'monospace',
+            fill: '#0f172a',
+            selectable: true,
+            evented: true,
+        });
+        sn.set({ data: { fieldX: 'sn_position_x', fieldY: 'sn_position_y', previewType: 'sn' } });
+
+        layoutCanvas.add(background, qr, qrLabel, sku, sn);
+        layoutCanvas.sendObjectToBack(background);
+        return { qr, qrLabel, sku, sn };
+    };
+
+    const syncInputsFromObject = (object) => {
+        const fieldX = object?.data?.fieldX;
+        const fieldY = object?.data?.fieldY;
+
+        if (!fieldX || !fieldY) {
+            return;
+        }
+
+        const xInput = document.querySelector(`[name="${fieldX}"]`);
+        const yInput = document.querySelector(`[name="${fieldY}"]`);
+        const xValue = Math.max(0, Math.round(object.left || 0));
+        const yValue = Math.max(0, Math.round(object.top || 0));
+
+        if (xInput) {
+            xInput.value = String(xValue);
+        }
+
+        if (yInput) {
+            yInput.value = String(yValue);
+        }
+    };
+
+    const renderFabricLayoutPreview = ({ shouldRenderQr, shouldRenderSku, snLine }) => {
+        if (!layoutCanvas) {
+            return;
+        }
+
+        if (!previewObjects) {
+            previewObjects = createPreviewObjects();
+        }
+
+        if (!previewObjects) {
+            return;
+        }
+
+        const qrX = readInt('[name="qr_position_x"]', 30);
+        const qrY = readInt('[name="qr_position_y"]', 30);
+        const snX = readInt('[name="sn_position_x"]', 170);
+        const snY = readInt('[name="sn_position_y"]', 95);
+        const skuX = readInt('[name="sku_position_x"]', 170);
+        const skuY = readInt('[name="sku_position_y"]', 40);
+        const skuFontSize = readInt('[name="sku_font_size"]', 42);
+        const snFontSize = readInt('[name="sn_font_size"]', 22);
+
+        previewObjects.qr.set({ left: qrX, top: qrY, visible: shouldRenderQr });
+        previewObjects.qrLabel.set({ left: qrX + 52, top: qrY + 50, visible: shouldRenderQr });
+        previewObjects.sku.set({
+            left: skuX,
+            top: skuY,
+            fontSize: Math.max(10, Math.round(skuFontSize * 0.7)),
+            text: shouldRenderSku ? `SKU: ${getSelectedSkuCode()}` : 'SKU: (oculto)',
+        });
+        previewObjects.sn.set({
+            left: snX,
+            top: snY,
+            fontSize: Math.max(10, Math.round(snFontSize * 0.9)),
+            text: `SN: ${snLine}`,
+        });
+
+        layoutCanvas.requestRenderAll();
+    };
+
+    if (layoutCanvas) {
+        layoutCanvas.on('object:moving', (event) => {
+            const movedObject = event.target;
+
+            if (!movedObject?.data) {
+                return;
+            }
+
+            movedObject.set({
+                left: Math.max(0, movedObject.left || 0),
+                top: Math.max(0, movedObject.top || 0),
+            });
+
+            if (movedObject?.data?.previewType === 'qr' && previewObjects?.qrLabel) {
+                previewObjects.qrLabel.set({
+                    left: (movedObject.left || 0) + 52,
+                    top: (movedObject.top || 0) + 50,
+                });
+            }
+
+            syncInputsFromObject(movedObject);
+            layoutCanvas.requestRenderAll();
+        });
+    }
 
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
@@ -663,6 +824,15 @@ const initSkuTemplateConfigurationsForm = () => {
         document.querySelector(`[name="qr_custom_field_${index}"]`)?.addEventListener('change', updateLivePreview);
     });
     document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
+    [
+        'qr_position_x', 'qr_position_y', 'sku_position_x', 'sku_position_y', 'sn_position_x', 'sn_position_y',
+        'sku_font_size', 'sn_font_size', 'qr_magnification',
+    ].forEach((fieldName) => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+
+        field?.addEventListener('input', updateLivePreview);
+        field?.addEventListener('change', updateLivePreview);
+    });
     usbPrinterSelect?.addEventListener('change', () => {
         const selectedName = String(usbPrinterSelect.value || '').trim();
 
