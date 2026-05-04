@@ -19,21 +19,30 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    public function showAdminLogin(): View
+    {
+        return view('auth.admin-login');
+    }
+
     public function login(LoginRequest $request): RedirectResponse
     {
         $this->authService->login(
+            employeeNo: $request->string('employee_no')->toString(),
+            remember: (bool) $request->boolean('remember')
+        );
+
+        return redirect()->route('dashboard');
+    }
+
+    public function adminLogin(LoginRequest $request): RedirectResponse
+    {
+        $this->authService->loginAdmin(
             employeeNo: $request->string('employee_no')->toString(),
             password: $request->input('password'),
             remember: (bool) $request->boolean('remember')
         );
 
-        $user = auth()->user();
-
-        if ($user->hasRole('admin')) {
-            return redirect()->route('dashboard'); // tu dashboard ya decide vista admin
-        }
-
-        return redirect()->route('dashboard'); // igual, el dashboard decide label_room
+        return redirect()->route('dashboard');
     }
 
 

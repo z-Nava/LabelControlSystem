@@ -26,6 +26,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/', function () { return redirect()->route('login'); });
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+    Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
+    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.attempt');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {

@@ -15,9 +15,15 @@ class LoginRequest extends FormRequest
 
     public function rules(): array
     {
+        $passwordRules = ['nullable', 'string', 'min:8', 'max:72', 'not_regex:' . self::NO_HTML_PATTERN];
+
+        if ($this->routeIs('admin.login.attempt')) {
+            $passwordRules[0] = 'required';
+        }
+
         return [
             'employee_no' => ['required', 'string', 'min:1', 'max:10', 'regex:/^\d+$/', 'not_regex:' . self::NO_HTML_PATTERN],
-            'password'    => ['nullable', 'string', 'min:8', 'max:72', 'not_regex:' . self::NO_HTML_PATTERN],
+            'password'    => $passwordRules,
         ];
     }
 

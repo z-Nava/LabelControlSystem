@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login | Label Control</title>
+    <title>Login Administrador | Label Control</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-2xl shadow p-6">
-        <h1 class="text-2xl font-semibold text-slate-900">Iniciar sesión</h1>
-        <p class="text-slate-600 mt-1">Acceso de operación por número de empleado.</p>
+        <h1 class="text-2xl font-semibold text-slate-900">Acceso administrador</h1>
+        <p class="text-slate-600 mt-1">Ingresa con número de empleado y contraseña.</p>
 
         @if ($errors->any())
             <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -21,7 +21,7 @@
             </div>
         @endif
 
-        <form class="mt-6 space-y-4" method="POST" action="{{ route('login.attempt') }}">
+        <form class="mt-6 space-y-4" method="POST" action="{{ route('admin.login.attempt') }}">
             @csrf
 
             <div>
@@ -40,17 +40,28 @@
                 />
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    placeholder="********"
+                    autocomplete="current-password"
+                    minlength="8"
+                    maxlength="72"
+                    required
+                />
+            </div>
+
             <div class="flex items-center justify-between">
                 <label class="inline-flex items-center gap-2 text-sm text-slate-600">
                     <input type="checkbox" name="remember" class="rounded border-slate-300">
                     Recuérdame
                 </label>
 
-                <a
-                    href="{{ route('admin.login') }}"
-                    class="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline"
-                >
-                    ¿Eres administrador?
+                <a href="{{ route('login') }}" class="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline">
+                    Volver al login de operación
                 </a>
             </div>
 
