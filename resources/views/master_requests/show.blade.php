@@ -35,6 +35,7 @@
             <p class="mt-1 text-sm text-slate-600">Genera un lote y continúa en la pantalla de impresión.</p>
 
             <a href="{{ route('master_requests.print.create', $mr->id) }}"
+                id="create-batch-print"
                 class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
                 Imprimir requisición
             </a>

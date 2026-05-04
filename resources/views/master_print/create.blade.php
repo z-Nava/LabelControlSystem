@@ -50,7 +50,7 @@
         </div>
     @endif
 
-    <form class="mt-6" method="POST" action="{{ route('master_requests.print.store', $mr) }}">
+    <form id="master-print-create-form" class="mt-6" method="POST" action="{{ route('master_requests.print.store', $mr) }}">
         @csrf
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
