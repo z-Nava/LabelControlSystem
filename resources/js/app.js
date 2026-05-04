@@ -10,6 +10,7 @@ import './pages/master-print-template';
 import './pages/label-requests-create';
 import './pages/sku-template-configurations-form';
 import './pages/dummy-requests-create';
+import './pages/dummy-requests-show';
 import './pages/dummy-qr-templates-create';
 
 // opcional: hacerlo global
