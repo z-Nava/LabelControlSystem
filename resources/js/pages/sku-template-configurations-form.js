@@ -50,8 +50,9 @@ const initSkuTemplateConfigurationsForm = () => {
     const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
     const ratingHideSkuCheckbox = document.querySelector('[name="rating_hide_sku"]');
     const ratingQrToggleWrapper = document.getElementById('rating-qr-toggle-wrapper');
-    const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
-    const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
+    const qrSections = document.querySelectorAll('[data-layout-section="qr"]');
+    const serialTextSections = document.querySelectorAll('[data-layout-section="serial-text"]');
+    const ratingTextSections = document.querySelectorAll('[data-layout-section="rating"]');
     const qrLayoutTitle = document.getElementById('qr-layout-title');
     const qrLayoutDescription = document.getElementById('qr-layout-description');
     const snPrefixWrapper = document.getElementById('sn-prefix-wrapper');
@@ -228,7 +229,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const requiresQr = isSerial || isRatingWithQr;
         const isCustomQrMode = getQrContentMode() === 'custom';
 
-        serialSections.forEach((section) => {
+        qrSections.forEach((section) => {
             section.style.display = requiresQr ? 'block' : 'none';
 
             section.querySelectorAll('input, select').forEach((field) => {
@@ -242,7 +243,13 @@ const initSkuTemplateConfigurationsForm = () => {
             });
         });
 
-        ratingSections.forEach((section) => {
+        serialTextSections.forEach((section) => {
+            section.style.display = isSerial ? 'block' : 'none';
+        });
+
+        ratingTextSections.forEach((section) => {
+            section.style.display = isSerial ? 'none' : 'block';
+
             section.querySelectorAll('input, select').forEach((field) => {
                 if (field.name.startsWith('serial_')) {
                     field.required = true;
@@ -275,10 +282,10 @@ const initSkuTemplateConfigurationsForm = () => {
         }
 
         setStatus(isSerial
-            ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
+            ? 'Configurando etiqueta Serial: usa B (QR) y C (SKU + SN pequeño).'
             : (isRatingWithQr
-                ? 'Configurando etiqueta Rating con QR del serial.'
-                : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.'));
+                ? 'Configurando etiqueta Rating con QR: usa A (texto principal) y B (QR), no C.'
+                : 'Configurando etiqueta Rating simple: usa solo A (texto principal).'));
     };
 
     const ensureBrowserPrint = () => {
@@ -622,14 +629,24 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
+        const labelType = labelTypeSelect?.value || 'serial';
+        const usesRatingTextLayout = labelType === 'rating';
         const qrX = readInt('[name="qr_position_x"]', 30);
         const qrY = readInt('[name="qr_position_y"]', 30);
-        const snX = readInt('[name="sn_position_x"]', 170);
-        const snY = readInt('[name="sn_position_y"]', 95);
+        const snX = usesRatingTextLayout ? readInt('[name="serial_position_x"]', 40) : readInt('[name="sn_position_x"]', 170);
+        const snY = usesRatingTextLayout ? readInt('[name="serial_position_y"]', 40) : readInt('[name="sn_position_y"]', 95);
         const skuX = readInt('[name="sku_position_x"]', 170);
         const skuY = readInt('[name="sku_position_y"]', 40);
         const skuFontSize = readInt('[name="sku_font_size"]', 42);
-        const snFontSize = readInt('[name="sn_font_size"]', 22);
+        const snFontSize = usesRatingTextLayout ? readInt('[name="serial_font_size"]', 40) : readInt('[name="sn_font_size"]', 22);
+
+        previewObjects.sn.set({
+            data: {
+                fieldX: usesRatingTextLayout ? 'serial_position_x' : 'sn_position_x',
+                fieldY: usesRatingTextLayout ? 'serial_position_y' : 'sn_position_y',
+                previewType: 'sn',
+            },
+        });
 
         previewObjects.qr.set({ left: qrX, top: qrY, visible: shouldRenderQr });
         previewObjects.qrLabel.set({ left: qrX + 52, top: qrY + 50, visible: shouldRenderQr });
@@ -638,12 +655,13 @@ const initSkuTemplateConfigurationsForm = () => {
             top: skuY,
             fontSize: Math.max(10, Math.round(skuFontSize * 0.7)),
             text: shouldRenderSku ? `SKU: ${getSelectedSkuCode()}` : 'SKU: (oculto)',
+            visible: shouldRenderSku,
         });
         previewObjects.sn.set({
             left: snX,
             top: snY,
             fontSize: Math.max(10, Math.round(snFontSize * 0.9)),
-            text: `SN: ${snLine}`,
+            text: usesRatingTextLayout ? `Rating: ${snLine}` : `SN: ${snLine}`,
         });
 
         layoutCanvas.requestRenderAll();
@@ -825,6 +843,7 @@ const initSkuTemplateConfigurationsForm = () => {
     });
     document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
     [
+        'serial_position_x', 'serial_position_y', 'serial_font_size',
         'qr_position_x', 'qr_position_y', 'sku_position_x', 'sku_position_y', 'sn_position_x', 'sn_position_y',
         'sku_font_size', 'sn_font_size', 'qr_magnification',
     ].forEach((fieldName) => {
