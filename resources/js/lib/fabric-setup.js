@@ -1,6 +1,6 @@
-import { FabricImage, Canvas, Rect, Text } from 'fabric';
+import { FabricImage, Canvas, Group, Rect, Text } from 'fabric';
 
-export { Canvas, Rect, Text, FabricImage };
+export { Canvas, Group, Rect, Text, FabricImage };
 
 export const attachFabricToWindow = () => {
     if (typeof window === 'undefined') return;
@@ -9,6 +9,7 @@ export const attachFabricToWindow = () => {
         Canvas,
         Rect,
         Text,
+        Group,
         FabricImage,
     };
 };
