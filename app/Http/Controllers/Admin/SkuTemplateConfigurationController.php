@@ -92,6 +92,11 @@ class SkuTemplateConfigurationController extends Controller
         $formData = $this->formService->build($configuration);
         $formData['formState']['selected_serial_standard'] = $forcedStandard;
         $formData['forcedStandard'] = $forcedStandard;
+        $formData['marketStandards'] = [$forcedStandard];
+        $formData['activeStandard'] = $forcedStandard;
+        $formData['selectedLabelType'] = $formData['formState']['selected_label_type'] ?? 'serial';
+        $formData['selectedConnectionType'] = $formData['formState']['connection_type'] ?? 'usb';
+        $formData['customFields'] = old('qr_custom_fields', $formData['formState']['qr_layout']['custom_fields'] ?? []);
 
         $viewByStandard = [
             'UL' => 'admin.sku_template_configurations.create_ul',
@@ -121,6 +126,11 @@ class SkuTemplateConfigurationController extends Controller
     {
         $configuration->load('template');
         $formData = $this->formService->build($configuration);
+        $formData['marketStandards'] = $formData['availableStandards'] ?? ['UL', 'EMEA', 'ANZ'];
+        $formData['activeStandard'] = strtoupper((string) ($formData['formState']['selected_serial_standard'] ?? 'UL'));
+        $formData['selectedLabelType'] = $formData['formState']['selected_label_type'] ?? 'serial';
+        $formData['selectedConnectionType'] = $formData['formState']['connection_type'] ?? 'usb';
+        $formData['customFields'] = old('qr_custom_fields', $formData['formState']['qr_layout']['custom_fields'] ?? []);
 
         return view('admin.sku_template_configurations.edit', compact('configuration') + $formData);
     }

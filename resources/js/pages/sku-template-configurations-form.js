@@ -1,3 +1,7 @@
+import { attachFabricToWindow, Canvas, Rect, Text } from '../lib/fabric-setup';
+
+attachFabricToWindow();
+
 const ORIENTATIONS = ['N', 'R', 'I', 'B'];
 
 const normalizeOrientation = (value, fallback = 'N') => {
@@ -34,6 +38,9 @@ const initSkuTemplateConfigurationsForm = () => {
     const statusBox = document.getElementById('printer-test-status');
     const testUsbButton = document.getElementById('test-usb-connection');
     const testPrintButton = document.getElementById('test-print');
+    const previewZplButton = document.getElementById('preview-zpl');
+    const zplPreviewWrapper = document.getElementById('zpl-preview-wrapper');
+    const zplPreviewOutput = document.getElementById('zpl-preview-output');
     const printerNameInput = document.getElementById('default_printer_name');
     const usbPrintersWrapper = document.getElementById('usb-printers-wrapper');
     const usbPrinterSelect = document.getElementById('usb_printer_select');
@@ -43,8 +50,9 @@ const initSkuTemplateConfigurationsForm = () => {
     const ratingWithQrCheckbox = document.querySelector('[name="rating_with_qr"]');
     const ratingHideSkuCheckbox = document.querySelector('[name="rating_hide_sku"]');
     const ratingQrToggleWrapper = document.getElementById('rating-qr-toggle-wrapper');
-    const serialSections = document.querySelectorAll('[data-layout-section="serial"]');
-    const ratingSections = document.querySelectorAll('[data-layout-section="rating"]');
+    const qrSections = document.querySelectorAll('[data-layout-section="qr"]');
+    const serialTextSections = document.querySelectorAll('[data-layout-section="serial-text"]');
+    const ratingTextSections = document.querySelectorAll('[data-layout-section="rating"]');
     const qrLayoutTitle = document.getElementById('qr-layout-title');
     const qrLayoutDescription = document.getElementById('qr-layout-description');
     const snPrefixWrapper = document.getElementById('sn-prefix-wrapper');
@@ -62,6 +70,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const livePreviewSerialStyle = document.getElementById('live-preview-serial-style');
     const livePreviewQrPayload = document.getElementById('live-preview-qr-payload');
     const livePreviewWarning = document.getElementById('live-preview-warning');
+    const layoutCanvasElement = document.getElementById('sku-layout-preview-canvas');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -70,6 +79,11 @@ const initSkuTemplateConfigurationsForm = () => {
     const skuLayoutGroups = document.querySelectorAll('[data-layout-group="sku"]');
 
     let selectedDevice = null;
+    const layoutCanvas = layoutCanvasElement ? new Canvas(layoutCanvasElement, {
+        selection: false,
+        preserveObjectStacking: true,
+    }) : null;
+    let previewObjects = null;
 
     const setStatus = (message, isError = false) => {
         if (!statusBox) {
@@ -215,7 +229,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const requiresQr = isSerial || isRatingWithQr;
         const isCustomQrMode = getQrContentMode() === 'custom';
 
-        serialSections.forEach((section) => {
+        qrSections.forEach((section) => {
             section.style.display = requiresQr ? 'block' : 'none';
 
             section.querySelectorAll('input, select').forEach((field) => {
@@ -229,7 +243,13 @@ const initSkuTemplateConfigurationsForm = () => {
             });
         });
 
-        ratingSections.forEach((section) => {
+        serialTextSections.forEach((section) => {
+            section.style.display = isSerial ? 'block' : 'none';
+        });
+
+        ratingTextSections.forEach((section) => {
+            section.style.display = isSerial ? 'none' : 'block';
+
             section.querySelectorAll('input, select').forEach((field) => {
                 if (field.name.startsWith('serial_')) {
                     field.required = true;
@@ -262,10 +282,10 @@ const initSkuTemplateConfigurationsForm = () => {
         }
 
         setStatus(isSerial
-            ? 'Configurando etiqueta Serial con QR + SKU + SN pequeño.'
+            ? 'Configurando etiqueta Serial: usa B (QR) y C (SKU + SN pequeño).'
             : (isRatingWithQr
-                ? 'Configurando etiqueta Rating con QR del serial.'
-                : 'Configurando etiqueta simple sin QR; la prueba mostrará solo el SN.'));
+                ? 'Configurando etiqueta Rating con QR: usa A (texto principal) y B (QR), no C.'
+                : 'Configurando etiqueta Rating simple: usa solo A (texto principal).'));
     };
 
     const ensureBrowserPrint = () => {
@@ -508,7 +528,169 @@ const initSkuTemplateConfigurationsForm = () => {
         }
 
         renderLivePreviewQr(qrPayload, shouldRenderQr);
+        renderFabricLayoutPreview({ shouldRenderQr, shouldRenderSku, snLine });
     };
+
+    const createPreviewObjects = () => {
+        if (!layoutCanvas) {
+            return null;
+        }
+
+        const background = new Rect({
+            left: 0,
+            top: 0,
+            width: 520,
+            height: 280,
+            fill: '#ffffff',
+            stroke: '#cbd5e1',
+            strokeDashArray: [6, 4],
+            selectable: false,
+            evented: false,
+        });
+        const qr = new Rect({
+            left: 30,
+            top: 30,
+            width: 120,
+            height: 120,
+            fill: '#f1f5f9',
+            stroke: '#0f172a',
+            strokeWidth: 1,
+            selectable: true,
+            evented: true,
+        });
+        qr.set({ data: { fieldX: 'qr_position_x', fieldY: 'qr_position_y', previewType: 'qr' } });
+
+        const qrLabel = new Text('QR', {
+            left: 82,
+            top: 84,
+            fontSize: 20,
+            fill: '#0f172a',
+            selectable: false,
+            evented: false,
+        });
+        const sku = new Text('SKU: —', {
+            left: 170,
+            top: 48,
+            fontSize: 30,
+            fontWeight: 'bold',
+            fill: '#0f172a',
+            selectable: true,
+            evented: true,
+        });
+        sku.set({ data: { fieldX: 'sku_position_x', fieldY: 'sku_position_y', previewType: 'sku' } });
+        const sn = new Text('SN: —', {
+            left: 170,
+            top: 100,
+            fontSize: 22,
+            fontFamily: 'monospace',
+            fill: '#0f172a',
+            selectable: true,
+            evented: true,
+        });
+        sn.set({ data: { fieldX: 'sn_position_x', fieldY: 'sn_position_y', previewType: 'sn' } });
+
+        layoutCanvas.add(background, qr, qrLabel, sku, sn);
+        layoutCanvas.sendObjectToBack(background);
+        return { qr, qrLabel, sku, sn };
+    };
+
+    const syncInputsFromObject = (object) => {
+        const fieldX = object?.data?.fieldX;
+        const fieldY = object?.data?.fieldY;
+
+        if (!fieldX || !fieldY) {
+            return;
+        }
+
+        const xInput = document.querySelector(`[name="${fieldX}"]`);
+        const yInput = document.querySelector(`[name="${fieldY}"]`);
+        const xValue = Math.max(0, Math.round(object.left || 0));
+        const yValue = Math.max(0, Math.round(object.top || 0));
+
+        if (xInput) {
+            xInput.value = String(xValue);
+        }
+
+        if (yInput) {
+            yInput.value = String(yValue);
+        }
+    };
+
+    const renderFabricLayoutPreview = ({ shouldRenderQr, shouldRenderSku, snLine }) => {
+        if (!layoutCanvas) {
+            return;
+        }
+
+        if (!previewObjects) {
+            previewObjects = createPreviewObjects();
+        }
+
+        if (!previewObjects) {
+            return;
+        }
+
+        const labelType = labelTypeSelect?.value || 'serial';
+        const usesRatingTextLayout = labelType === 'rating';
+        const qrX = readInt('[name="qr_position_x"]', 30);
+        const qrY = readInt('[name="qr_position_y"]', 30);
+        const snX = usesRatingTextLayout ? readInt('[name="serial_position_x"]', 40) : readInt('[name="sn_position_x"]', 170);
+        const snY = usesRatingTextLayout ? readInt('[name="serial_position_y"]', 40) : readInt('[name="sn_position_y"]', 95);
+        const skuX = readInt('[name="sku_position_x"]', 170);
+        const skuY = readInt('[name="sku_position_y"]', 40);
+        const skuFontSize = readInt('[name="sku_font_size"]', 42);
+        const snFontSize = usesRatingTextLayout ? readInt('[name="serial_font_size"]', 40) : readInt('[name="sn_font_size"]', 22);
+
+        previewObjects.sn.set({
+            data: {
+                fieldX: usesRatingTextLayout ? 'serial_position_x' : 'sn_position_x',
+                fieldY: usesRatingTextLayout ? 'serial_position_y' : 'sn_position_y',
+                previewType: 'sn',
+            },
+        });
+
+        previewObjects.qr.set({ left: qrX, top: qrY, visible: shouldRenderQr });
+        previewObjects.qrLabel.set({ left: qrX + 52, top: qrY + 50, visible: shouldRenderQr });
+        previewObjects.sku.set({
+            left: skuX,
+            top: skuY,
+            fontSize: Math.max(10, Math.round(skuFontSize * 0.7)),
+            text: shouldRenderSku ? `SKU: ${getSelectedSkuCode()}` : 'SKU: (oculto)',
+            visible: shouldRenderSku,
+        });
+        previewObjects.sn.set({
+            left: snX,
+            top: snY,
+            fontSize: Math.max(10, Math.round(snFontSize * 0.9)),
+            text: usesRatingTextLayout ? `Rating: ${snLine}` : `SN: ${snLine}`,
+        });
+
+        layoutCanvas.requestRenderAll();
+    };
+
+    if (layoutCanvas) {
+        layoutCanvas.on('object:moving', (event) => {
+            const movedObject = event.target;
+
+            if (!movedObject?.data) {
+                return;
+            }
+
+            movedObject.set({
+                left: Math.max(0, movedObject.left || 0),
+                top: Math.max(0, movedObject.top || 0),
+            });
+
+            if (movedObject?.data?.previewType === 'qr' && previewObjects?.qrLabel) {
+                previewObjects.qrLabel.set({
+                    left: (movedObject.left || 0) + 52,
+                    top: (movedObject.top || 0) + 50,
+                });
+            }
+
+            syncInputsFromObject(movedObject);
+            layoutCanvas.requestRenderAll();
+        });
+    }
 
     const buildTestZpl = () => {
         const labelType = labelTypeSelect?.value;
@@ -556,28 +738,35 @@ const initSkuTemplateConfigurationsForm = () => {
             ? serialPrint
             : (snPrefix ? `${snPrefix} ${serialPrint}` : serialPrint);
         const qrPayload = resolveQrPayload(labelType, serial);
+        const serialBlockCount = Math.min(Math.max(readInt('[name="serial_block_count"]', 1), 1), 4);
+        const serialBlockOffsetY = Math.max(readInt('[name="serial_block_offset_y"]', 180), 0);
         const zpl = [
             '^XA',
             '^CI28',
-            `^FO${qrX},${qrY}`,
-            `^BQ${qrOrientation},2,${qrMagnification}`,
-            `^FDLA,${qrPayload}^FS`,
         ];
 
-        if (!hideSkuOnEmeaRating) {
-            const skuX = readInt('[name="sku_position_x"]', 170);
-            const skuY = readInt('[name="sku_position_y"]', 35);
-            const skuFontSize = readInt('[name="sku_font_size"]', 44);
-            const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
+        const skuX = readInt('[name="sku_position_x"]', 170);
+        const skuY = readInt('[name="sku_position_y"]', 35);
+        const skuFontSize = readInt('[name="sku_font_size"]', 44);
+        const skuOrientation = normalizeOrientation(document.querySelector('[name="sku_orientation"]')?.value, 'N');
 
-            zpl.push(`^FO${skuX},${skuY}`);
-            zpl.push(`^A0${skuOrientation},${skuFontSize},${skuFontSize}`);
-            zpl.push(`^FD${getSelectedSkuCode()}^FS`);
+        for (let blockIndex = 0; blockIndex < serialBlockCount; blockIndex += 1) {
+            const yOffset = blockIndex * serialBlockOffsetY;
+            zpl.push(`^FO${qrX},${qrY + yOffset}`);
+            zpl.push(`^BQ${qrOrientation},2,${qrMagnification}`);
+            zpl.push(`^FDLA,${qrPayload}^FS`);
+
+            if (!hideSkuOnEmeaRating) {
+                zpl.push(`^FO${skuX},${skuY + yOffset}`);
+                zpl.push(`^A0${skuOrientation},${skuFontSize},${skuFontSize}`);
+                zpl.push(`^FD${getSelectedSkuCode()}^FS`);
+            }
+
+            zpl.push(`^FO${snX},${snY + yOffset}`);
+            zpl.push(`^A0${snOrientation},${snFontSize},${snFontSize}`);
+            zpl.push(`^FD${snLine}^FS`);
         }
 
-        zpl.push(`^FO${snX},${snY}`);
-        zpl.push(`^A0${snOrientation},${snFontSize},${snFontSize}`);
-        zpl.push(`^FD${snLine}^FS`);
         zpl.push('^XZ');
 
         return zpl.join('\n');
@@ -610,6 +799,20 @@ const initSkuTemplateConfigurationsForm = () => {
         });
     };
 
+    const showZplPreview = () => {
+        const zpl = buildTestZpl();
+
+        if (zplPreviewOutput) {
+            zplPreviewOutput.value = zpl;
+        }
+
+        if (zplPreviewWrapper) {
+            zplPreviewWrapper.classList.remove('hidden');
+        }
+
+        setStatus('Preview ZPL generado. Verifica que aparezcan dos bloques si configuraste count=2.');
+    };
+
     connectionSelect?.addEventListener('change', toggleConnectionFields);
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     labelTypeSelect?.addEventListener('change', updateLivePreview);
@@ -639,6 +842,16 @@ const initSkuTemplateConfigurationsForm = () => {
         document.querySelector(`[name="qr_custom_field_${index}"]`)?.addEventListener('change', updateLivePreview);
     });
     document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
+    [
+        'serial_position_x', 'serial_position_y', 'serial_font_size',
+        'qr_position_x', 'qr_position_y', 'sku_position_x', 'sku_position_y', 'sn_position_x', 'sn_position_y',
+        'sku_font_size', 'sn_font_size', 'qr_magnification',
+    ].forEach((fieldName) => {
+        const field = document.querySelector(`[name="${fieldName}"]`);
+
+        field?.addEventListener('input', updateLivePreview);
+        field?.addEventListener('change', updateLivePreview);
+    });
     usbPrinterSelect?.addEventListener('change', () => {
         const selectedName = String(usbPrinterSelect.value || '').trim();
 
@@ -651,6 +864,7 @@ const initSkuTemplateConfigurationsForm = () => {
     });
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
+    previewZplButton?.addEventListener('click', showZplPreview);
 
     setSkuStandardFilter(serialStandardInput?.value || getSelectedSkuStandard());
     toggleConnectionFields();

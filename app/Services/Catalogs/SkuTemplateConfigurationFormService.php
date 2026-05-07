@@ -11,6 +11,47 @@ use Illuminate\Support\Collection;
 class SkuTemplateConfigurationFormService
 {
     private const SUPPORTED_STANDARDS = ['UL', 'EMEA', 'ANZ'];
+    private const QR_CONTENT_OPTIONS = [
+        'auto' => 'Automático por tipo (recomendado)',
+        'serial_full' => 'Solo Serial completo',
+        'rating_qr' => 'Solo QR rating (EMEA)',
+        'anz_customer_tool_serial' => 'ANZ customer_tool_code + Serial (CCCC | Serial)',
+        'custom' => 'Personalizado (hasta 3 bloques)',
+    ];
+    private const ALLOWED_QR_CONTENT_BY_STANDARD = [
+        'UL' => ['auto', 'serial_full', 'custom'],
+        'EMEA' => ['auto', 'serial_full', 'rating_qr', 'custom'],
+        'ANZ' => ['auto', 'serial_full', 'anz_customer_tool_serial', 'custom'],
+    ];
+    private const QR_SERIAL_STYLES = [
+        'as_is' => 'Como viene del serial',
+        'segmented' => 'Separado (5055 36 01 000002 A2026)',
+        'compact' => 'Junto (50553601000002A2026)',
+    ];
+    private const ALLOWED_QR_SERIAL_STYLES_BY_STANDARD = [
+        'UL' => ['as_is', 'compact'],
+        'EMEA' => ['as_is', 'segmented', 'compact'],
+        'ANZ' => ['as_is', 'compact'],
+    ];
+    private const QR_CUSTOM_OPTIONS = [
+        '' => 'Vacío',
+        'fixed_103' => 'Ensamble (assembly part number)',
+        'serial_full' => 'Serial completo',
+        'rating_qr_code' => 'QR rating',
+        'sku' => 'SKU',
+        'label_part_number' => 'Label part number',
+        'console_sku' => 'Console SKU',
+        'assembly_part_number' => 'Assembly part number',
+        'packaging_part_number' => 'Packaging part number',
+        'emea_sku' => 'EMEA SKU',
+        'anz_sku' => 'ANZ SKU',
+        'anz_customer_tool_code' => 'ANZ customer_tool_code',
+    ];
+    private const ALLOWED_QR_CUSTOM_BY_STANDARD = [
+        'UL' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'console_sku', 'assembly_part_number', 'packaging_part_number'],
+        'EMEA' => ['', 'fixed_103', 'serial_full', 'rating_qr_code', 'sku', 'label_part_number', 'emea_sku'],
+        'ANZ' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'anz_sku', 'anz_customer_tool_code'],
+    ];
     private const STANDARD_BY_SCHEME = [
         'ul_standard' => SerialStandards::UL,
         'emea_rating' => SerialStandards::EMEA,
@@ -40,6 +81,12 @@ class SkuTemplateConfigurationFormService
             'skuAnzCustomerToolCodes' => $skuQrContext['anz_customer_tool_codes'],
             'skuAnzQrSeparators' => $skuQrContext['anz_qr_separators'],
             'availableStandards' => self::SUPPORTED_STANDARDS,
+            'qrContentOptions' => self::QR_CONTENT_OPTIONS,
+            'allowedQrContentByStandard' => self::ALLOWED_QR_CONTENT_BY_STANDARD,
+            'qrSerialStyles' => self::QR_SERIAL_STYLES,
+            'allowedQrSerialStylesByStandard' => self::ALLOWED_QR_SERIAL_STYLES_BY_STANDARD,
+            'qrCustomOptions' => self::QR_CUSTOM_OPTIONS,
+            'allowedQrCustomByStandard' => self::ALLOWED_QR_CUSTOM_BY_STANDARD,
             'formState' => $formState,
         ];
     }

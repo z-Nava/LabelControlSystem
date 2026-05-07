@@ -46,9 +46,12 @@ class SerialTemplateZplBuilder
             ? '{{serial_full}}'
             : $prefix.' {{serial_full}}';
 
+        $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
+
         $zpl = [
             '^XA',
             '^CI28',
+            sprintf('^LL%d', $this->estimateLabelLength($qr, $sku, $sn, $serialBlock['count'], $serialBlock['offset_y'])),
         ];
         $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
 
@@ -105,6 +108,21 @@ class SerialTemplateZplBuilder
             'count' => max(1, min(4, (int) ($layout['count'] ?? 1))),
             'offset_y' => max(0, (int) ($layout['offset_y'] ?? 180)),
         ];
+    }
+
+    private function estimateLabelLength(array $qr, array $sku, array $sn, int $count, int $offsetY): int
+    {
+        $blockMultiplier = max(0, $count - 1);
+        $blockOffset = $blockMultiplier * $offsetY;
+        $estimatedQrHeight = max(100, $qr['magnification'] * 34);
+
+        $maxY = max(
+            $qr['y'] + $blockOffset + $estimatedQrHeight,
+            $sku['y'] + $blockOffset + $sku['font_size'] + 20,
+            $sn['y'] + $blockOffset + $sn['font_size'] + 20
+        );
+
+        return max(200, $maxY + 30);
     }
 
     private function resolveQrPayload(array $qr, bool $isRatingLabel): string
