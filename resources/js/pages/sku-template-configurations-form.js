@@ -3,6 +3,18 @@ import { attachFabricToWindow, Canvas, Rect, Text } from '../lib/fabric-setup';
 attachFabricToWindow();
 
 const ORIENTATIONS = ['N', 'R', 'I', 'B'];
+const ORIENTATION_ANGLES = {
+    N: 0,
+    R: 90,
+    I: 180,
+    B: 270,
+};
+const ORIENTATION_LABELS = {
+    N: 'Normal',
+    R: 'Rotada 90°',
+    I: 'Invertida 180°',
+    B: 'Bottom-up 270°',
+};
 
 const normalizeOrientation = (value, fallback = 'N') => {
     const normalized = String(value || fallback).trim().toUpperCase();
@@ -10,7 +22,23 @@ const normalizeOrientation = (value, fallback = 'N') => {
     return ORIENTATIONS.includes(normalized) ? normalized : fallback;
 };
 
-const readInt = (selector, fallback) => Number.parseInt(document.querySelector(selector)?.value || String(fallback), 10) || fallback;
+const getOrientationAngle = (value) => ORIENTATION_ANGLES[normalizeOrientation(value)] ?? 0;
+const getOrientationLabel = (value) => ORIENTATION_LABELS[normalizeOrientation(value)] ?? ORIENTATION_LABELS.N;
+
+const readInt = (selector, fallback) => {
+    const rawValue = document.querySelector(selector)?.value;
+    const parsedValue = Number.parseInt(rawValue ?? '', 10);
+
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
+};
+
+const readFloat = (selector, fallback) => {
+    const rawValue = document.querySelector(selector)?.value;
+    const parsedValue = Number.parseFloat(rawValue ?? '');
+
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
+};
+
 const formatEmeaSerialForPrint = (serial) => {
     const compactSerial = String(serial || '').replace(/\s+/g, '').trim();
     const emeaPattern = /^(.{4})(.{2})(.{2})(.{6})(.{5})$/;
@@ -71,6 +99,13 @@ const initSkuTemplateConfigurationsForm = () => {
     const livePreviewQrPayload = document.getElementById('live-preview-qr-payload');
     const livePreviewWarning = document.getElementById('live-preview-warning');
     const layoutCanvasElement = document.getElementById('sku-layout-preview-canvas');
+    const layoutContextTitle = document.getElementById('layout-context-title');
+    const layoutContextDescription = document.getElementById('layout-context-description');
+    const layoutActiveElements = document.getElementById('layout-active-elements');
+    const layoutOrientationSummary = document.getElementById('layout-orientation-summary');
+    const layoutScaleSummary = document.getElementById('layout-scale-summary');
+    const layoutOutOfBoundsWarning = document.getElementById('layout-out-of-bounds-warning');
+    const templateDotsSummary = document.getElementById('template-dots-summary');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
     const defaultSerialEmea = form.dataset.defaultSerialEmea || '50555401123456A1234';
@@ -168,7 +203,6 @@ const initSkuTemplateConfigurationsForm = () => {
         }
     };
 
-
     const renderUsbPrinterOptions = (devices = []) => {
         if (!usbPrinterSelect) {
             return;
@@ -223,6 +257,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const toggleLayoutSections = () => {
         toggleRatingQrControl();
+
         const isSerial = labelTypeSelect?.value === 'serial';
         const isRatingWithQr = labelTypeSelect?.value === 'rating' && Boolean(ratingWithQrCheckbox?.checked);
         const hideSkuLayout = hideSkuOnRatingWithQr();
@@ -352,6 +387,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
     const resolveTokenValue = (token, serial, ratingSerial) => {
         const skuData = getSelectedSkuData();
+
         const values = {
             fixed_103: skuData.assemblyPartNumber || '103',
             serial_full: applySerialStyle(serial),
@@ -531,25 +567,254 @@ const initSkuTemplateConfigurationsForm = () => {
         renderFabricLayoutPreview({ shouldRenderQr, shouldRenderSku, snLine });
     };
 
+    const getOrientationFromField = (fieldName, fallback = 'N') => {
+        return normalizeOrientation(document.querySelector(`[name="${fieldName}"]`)?.value, fallback);
+    };
+
+    const getPhysicalOrientationSummary = (usesRatingTextLayout = false, shouldRenderQr = false, shouldRenderSku = false) => {
+        const textOrientation = usesRatingTextLayout
+            ? getOrientationFromField('serial_orientation')
+            : getOrientationFromField('sn_orientation');
+        const skuOrientation = getOrientationFromField('sku_orientation');
+        const qrOrientation = getOrientationFromField('qr_orientation');
+        const parts = [];
+
+        if (shouldRenderQr) {
+            parts.push(`QR: ${getOrientationLabel(qrOrientation)}`);
+        }
+
+        if (shouldRenderSku) {
+            parts.push(`SKU: ${getOrientationLabel(skuOrientation)}`);
+        }
+
+        parts.push(`${usesRatingTextLayout ? 'Rating' : 'SN'}: ${getOrientationLabel(textOrientation)}`);
+
+        return parts.join(' · ');
+    };
+
+    const setObjectOrientation = (object, orientation) => {
+        if (!object) {
+            return;
+        }
+
+        object.set({
+            angle: getOrientationAngle(orientation),
+            originX: 'left',
+            originY: 'top',
+            centeredRotation: false,
+        });
+
+        object.setCoords?.();
+    };
+
+    const getTemplateMetrics = () => {
+        const canvasWidth = layoutCanvasElement?.width || 900;
+        const canvasHeight = layoutCanvasElement?.height || 420;
+        const dpi = Math.max(readInt('#template_dpi', 203), 1);
+        const widthMm = Math.max(readFloat('#template_width_mm', 0), 0);
+        const heightMm = Math.max(readFloat('#template_height_mm', 0), 0);
+        const hasPhysicalSize = widthMm > 0 && heightMm > 0;
+        const widthDots = hasPhysicalSize ? Math.round((widthMm / 25.4) * dpi) : 900;
+        const heightDots = hasPhysicalSize ? Math.round((heightMm / 25.4) * dpi) : 420;
+        const reservedTop = 62;
+        const reservedBottom = 24;
+        const reservedX = 32;
+        const availableWidth = Math.max(canvasWidth - (reservedX * 2), 120);
+        const availableHeight = Math.max(canvasHeight - reservedTop - reservedBottom, 120);
+        const rawScale = Math.min(availableWidth / Math.max(widthDots, 1), availableHeight / Math.max(heightDots, 1));
+        const scale = Math.min(Math.max(rawScale, 0.05), 3);
+        const labelWidthPx = Math.max(widthDots * scale, 1);
+        const labelHeightPx = Math.max(heightDots * scale, 1);
+        const labelLeft = Math.round((canvasWidth - labelWidthPx) / 2);
+        const labelTop = Math.round(reservedTop + ((availableHeight - labelHeightPx) / 2));
+
+        return {
+            canvasWidth,
+            canvasHeight,
+            dpi,
+            widthMm,
+            heightMm,
+            hasPhysicalSize,
+            widthDots,
+            heightDots,
+            scale,
+            labelWidthPx,
+            labelHeightPx,
+            labelLeft,
+            labelTop,
+        };
+    };
+
+    const toCanvasPoint = (x, y, metrics = getTemplateMetrics()) => ({
+        x: metrics.labelLeft + (x * metrics.scale),
+        y: metrics.labelTop + (y * metrics.scale),
+    });
+
+    const updateTemplateDotsSummary = (metrics = getTemplateMetrics()) => {
+        const sizeText = metrics.hasPhysicalSize
+            ? `${metrics.widthMm} mm × ${metrics.heightMm} mm`
+            : 'sin medidas físicas capturadas';
+        const dotsText = `${metrics.widthDots} × ${metrics.heightDots} dots`;
+        const scaleText = `escala visual ${metrics.scale.toFixed(2)}x`;
+
+        if (templateDotsSummary) {
+            templateDotsSummary.textContent = `Tamaño real calculado: ${dotsText} · ${sizeText} · ${metrics.dpi} DPI · ${scaleText}.`;
+        }
+
+        if (layoutScaleSummary) {
+            layoutScaleSummary.textContent = `Etiqueta: ${dotsText} · ${scaleText}`;
+        }
+    };
+
+    const getObjectCenter = (object) => {
+        if (!object) {
+            return { x: 0, y: 0 };
+        }
+
+        if (typeof object.getCenterPoint === 'function') {
+            const point = object.getCenterPoint();
+
+            return { x: point.x, y: point.y };
+        }
+
+        const width = (object.width || 0) * (object.scaleX || 1);
+        const height = (object.height || 0) * (object.scaleY || 1);
+
+        return {
+            x: (object.left || 0) + (width / 2),
+            y: (object.top || 0) + (height / 2),
+        };
+    };
+
+    const updateQrLabelPosition = () => {
+        if (!previewObjects?.qr || !previewObjects?.qrLabel) {
+            return;
+        }
+
+        const center = getObjectCenter(previewObjects.qr);
+
+        previewObjects.qrLabel.set({
+            left: center.x,
+            top: center.y,
+            angle: previewObjects.qr.angle || 0,
+            visible: previewObjects.qr.visible,
+        });
+
+        previewObjects.qrLabel.setCoords?.();
+    };
+
+    const updateLayoutContext = ({ labelType, usesRatingTextLayout, shouldRenderQr, shouldRenderSku }) => {
+        if (layoutContextTitle) {
+            layoutContextTitle.textContent = labelType === 'rating'
+                ? 'Acomoda el layout físico de Rating'
+                : 'Acomoda el layout físico de Serial';
+        }
+
+        if (layoutContextDescription) {
+            layoutContextDescription.textContent = labelType === 'rating'
+                ? 'Para Rating usa A como texto principal. Si activas QR, también se muestra B. La sección C queda oculta para evitar confusión.'
+                : 'Para Serial usa B para QR y C para SKU + SN. Puedes arrastrar los elementos y después ajustar X/Y con precisión.';
+        }
+
+        if (layoutActiveElements) {
+            const activeElements = [];
+
+            if (usesRatingTextLayout) {
+                activeElements.push('A · Texto Rating');
+            } else {
+                activeElements.push('C · SN pequeño');
+            }
+
+            if (shouldRenderQr) {
+                activeElements.push('B · QR');
+            }
+
+            if (shouldRenderSku) {
+                activeElements.push('C · SKU visible');
+            }
+
+            layoutActiveElements.textContent = `Activo ahora: ${activeElements.join(' + ')}`;
+        }
+
+        if (layoutOrientationSummary) {
+            layoutOrientationSummary.textContent = getPhysicalOrientationSummary(usesRatingTextLayout, shouldRenderQr, shouldRenderSku);
+        }
+    };
+
     const createPreviewObjects = () => {
         if (!layoutCanvas) {
             return null;
         }
 
-        const background = new Rect({
+        const metrics = getTemplateMetrics();
+
+        const canvasBackground = new Rect({
             left: 0,
             top: 0,
-            width: 520,
-            height: 280,
-            fill: '#ffffff',
-            stroke: '#cbd5e1',
-            strokeDashArray: [6, 4],
+            width: metrics.canvasWidth,
+            height: metrics.canvasHeight,
+            fill: '#f8fafc',
             selectable: false,
             evented: false,
         });
+
+        const labelArea = new Rect({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            width: metrics.labelWidthPx,
+            height: metrics.labelHeightPx,
+            fill: '#ffffff',
+            stroke: '#cbd5e1',
+            strokeWidth: 1,
+            strokeDashArray: [6, 4],
+            selectable: false,
+            evented: false,
+            originX: 'left',
+            originY: 'top',
+        });
+
+        const originMarkerX = new Rect({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            width: 22,
+            height: 2,
+            fill: '#ef4444',
+            selectable: false,
+            evented: false,
+        });
+
+        const originMarkerY = new Rect({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            width: 2,
+            height: 22,
+            fill: '#ef4444',
+            selectable: false,
+            evented: false,
+        });
+
+        const guideTitle = new Text('Área física de etiqueta', {
+            left: 18,
+            top: 14,
+            fontSize: 13,
+            fontWeight: 'bold',
+            fill: '#64748b',
+            selectable: false,
+            evented: false,
+        });
+
+        const guideText = new Text('El rectángulo se escala con DPI, ancho y alto. X/Y siguen siendo dots reales.', {
+            left: 18,
+            top: 34,
+            fontSize: 11,
+            fill: '#94a3b8',
+            selectable: false,
+            evented: false,
+        });
+
         const qr = new Rect({
-            left: 30,
-            top: 30,
+            left: metrics.labelLeft + 30,
+            top: metrics.labelTop + 30,
             width: 120,
             height: 120,
             fill: '#f1f5f9',
@@ -557,41 +822,112 @@ const initSkuTemplateConfigurationsForm = () => {
             strokeWidth: 1,
             selectable: true,
             evented: true,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            originX: 'left',
+            originY: 'top',
         });
-        qr.set({ data: { fieldX: 'qr_position_x', fieldY: 'qr_position_y', previewType: 'qr' } });
+
+        qr.set({
+            data: {
+                fieldX: 'qr_position_x',
+                fieldY: 'qr_position_y',
+                previewType: 'qr',
+            },
+        });
 
         const qrLabel = new Text('QR', {
-            left: 82,
-            top: 84,
+            left: metrics.labelLeft + 90,
+            top: metrics.labelTop + 90,
             fontSize: 20,
+            fontWeight: 'bold',
             fill: '#0f172a',
             selectable: false,
             evented: false,
+            originX: 'center',
+            originY: 'center',
         });
+
         const sku = new Text('SKU: —', {
-            left: 170,
-            top: 48,
+            left: metrics.labelLeft + 170,
+            top: metrics.labelTop + 70,
             fontSize: 30,
             fontWeight: 'bold',
             fill: '#0f172a',
             selectable: true,
             evented: true,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            originX: 'left',
+            originY: 'top',
         });
-        sku.set({ data: { fieldX: 'sku_position_x', fieldY: 'sku_position_y', previewType: 'sku' } });
+
+        sku.set({
+            data: {
+                fieldX: 'sku_position_x',
+                fieldY: 'sku_position_y',
+                previewType: 'sku',
+            },
+        });
+
         const sn = new Text('SN: —', {
-            left: 170,
-            top: 100,
+            left: metrics.labelLeft + 170,
+            top: metrics.labelTop + 120,
             fontSize: 22,
             fontFamily: 'monospace',
             fill: '#0f172a',
             selectable: true,
             evented: true,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            originX: 'left',
+            originY: 'top',
         });
-        sn.set({ data: { fieldX: 'sn_position_x', fieldY: 'sn_position_y', previewType: 'sn' } });
 
-        layoutCanvas.add(background, qr, qrLabel, sku, sn);
-        layoutCanvas.sendObjectToBack(background);
-        return { qr, qrLabel, sku, sn };
+        sn.set({
+            data: {
+                fieldX: 'sn_position_x',
+                fieldY: 'sn_position_y',
+                previewType: 'sn',
+            },
+        });
+
+        layoutCanvas.add(
+            canvasBackground,
+            labelArea,
+            originMarkerX,
+            originMarkerY,
+            guideTitle,
+            guideText,
+            qr,
+            qrLabel,
+            sku,
+            sn,
+        );
+
+        layoutCanvas.sendObjectToBack(canvasBackground);
+        labelArea.moveTo?.(1);
+        originMarkerX.moveTo?.(2);
+        originMarkerY.moveTo?.(3);
+
+        return {
+            canvasBackground,
+            labelArea,
+            originMarkerX,
+            originMarkerY,
+            guideTitle,
+            guideText,
+            qr,
+            qrLabel,
+            sku,
+            sn,
+        };
     };
 
     const syncInputsFromObject = (object) => {
@@ -602,10 +938,11 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
+        const metrics = getTemplateMetrics();
         const xInput = document.querySelector(`[name="${fieldX}"]`);
         const yInput = document.querySelector(`[name="${fieldY}"]`);
-        const xValue = Math.max(0, Math.round(object.left || 0));
-        const yValue = Math.max(0, Math.round(object.top || 0));
+        const xValue = Math.max(0, Math.round(((object.left || 0) - metrics.labelLeft) / metrics.scale));
+        const yValue = Math.max(0, Math.round(((object.top || 0) - metrics.labelTop) / metrics.scale));
 
         if (xInput) {
             xInput.value = String(xValue);
@@ -613,6 +950,71 @@ const initSkuTemplateConfigurationsForm = () => {
 
         if (yInput) {
             yInput.value = String(yValue);
+        }
+    };
+
+    const getPreviewTypeLabel = (previewType) => {
+        const labels = {
+            qr: 'QR',
+            sku: 'SKU',
+            sn: labelTypeSelect?.value === 'rating' ? 'Rating' : 'SN',
+        };
+
+        return labels[previewType] || previewType;
+    };
+
+    const isObjectOutsideLabel = (object, metrics) => {
+        if (!object || object.visible === false || !object.data?.previewType) {
+            return false;
+        }
+
+        object.setCoords?.();
+
+        const bounds = typeof object.getBoundingRect === 'function'
+            ? object.getBoundingRect()
+            : {
+                left: object.left || 0,
+                top: object.top || 0,
+                width: (object.width || 0) * (object.scaleX || 1),
+                height: (object.height || 0) * (object.scaleY || 1),
+            };
+
+        const labelRight = metrics.labelLeft + metrics.labelWidthPx;
+        const labelBottom = metrics.labelTop + metrics.labelHeightPx;
+        const tolerance = 1;
+
+        return bounds.left < metrics.labelLeft - tolerance
+            || bounds.top < metrics.labelTop - tolerance
+            || (bounds.left + bounds.width) > labelRight + tolerance
+            || (bounds.top + bounds.height) > labelBottom + tolerance;
+    };
+
+    const updateOutOfBoundsWarning = (metrics = getTemplateMetrics()) => {
+        if (!previewObjects) {
+            return;
+        }
+
+        const objectsToValidate = [previewObjects.qr, previewObjects.sku, previewObjects.sn].filter(Boolean);
+        const outsideObjects = objectsToValidate.filter((object) => isObjectOutsideLabel(object, metrics));
+        const outsideLabels = outsideObjects.map((object) => getPreviewTypeLabel(object.data?.previewType));
+
+        objectsToValidate.forEach((object) => {
+            const isOutside = outsideObjects.includes(object);
+
+            object.set({
+                stroke: isOutside ? '#f59e0b' : '#0f172a',
+                strokeWidth: isOutside ? 2 : 1,
+            });
+        });
+
+        if (layoutOutOfBoundsWarning) {
+            if (outsideLabels.length > 0) {
+                layoutOutOfBoundsWarning.textContent = `Advertencia: este elemento está fuera del área física de la etiqueta. Revisa: ${outsideLabels.join(', ')}.`;
+                layoutOutOfBoundsWarning.classList.remove('hidden');
+            } else {
+                layoutOutOfBoundsWarning.textContent = 'Advertencia: este elemento está fuera del área física de la etiqueta.';
+                layoutOutOfBoundsWarning.classList.add('hidden');
+            }
         }
     };
 
@@ -629,6 +1031,9 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
+        const metrics = getTemplateMetrics();
+        updateTemplateDotsSummary(metrics);
+
         const labelType = labelTypeSelect?.value || 'serial';
         const usesRatingTextLayout = labelType === 'rating';
         const qrX = readInt('[name="qr_position_x"]', 30);
@@ -636,9 +1041,47 @@ const initSkuTemplateConfigurationsForm = () => {
         const snX = usesRatingTextLayout ? readInt('[name="serial_position_x"]', 40) : readInt('[name="sn_position_x"]', 170);
         const snY = usesRatingTextLayout ? readInt('[name="serial_position_y"]', 40) : readInt('[name="sn_position_y"]', 95);
         const skuX = readInt('[name="sku_position_x"]', 170);
-        const skuY = readInt('[name="sku_position_y"]', 40);
+        const skuY = readInt('[name="sku_position_y"]', 35);
         const skuFontSize = readInt('[name="sku_font_size"]', 42);
         const snFontSize = usesRatingTextLayout ? readInt('[name="serial_font_size"]', 40) : readInt('[name="sn_font_size"]', 22);
+        const qrMagnification = Math.min(Math.max(readInt('[name="qr_magnification"]', 4), 1), 10);
+        const qrSize = Math.max(72, qrMagnification * 34);
+        const qrOrientation = getOrientationFromField('qr_orientation');
+        const skuOrientation = getOrientationFromField('sku_orientation');
+        const textOrientation = usesRatingTextLayout
+            ? getOrientationFromField('serial_orientation')
+            : getOrientationFromField('sn_orientation');
+        const qrPoint = toCanvasPoint(qrX, qrY, metrics);
+        const skuPoint = toCanvasPoint(skuX, skuY, metrics);
+        const snPoint = toCanvasPoint(snX, snY, metrics);
+
+        previewObjects.canvasBackground?.set({
+            width: metrics.canvasWidth,
+            height: metrics.canvasHeight,
+        });
+
+        previewObjects.labelArea?.set({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            width: metrics.labelWidthPx,
+            height: metrics.labelHeightPx,
+        });
+
+        previewObjects.originMarkerX?.set({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            width: Math.min(22, metrics.labelWidthPx),
+        });
+
+        previewObjects.originMarkerY?.set({
+            left: metrics.labelLeft,
+            top: metrics.labelTop,
+            height: Math.min(22, metrics.labelHeightPx),
+        });
+
+        previewObjects.guideText?.set({
+            text: `Origen ^FO 0,0 · ${metrics.widthDots} x ${metrics.heightDots} dots · escala ${metrics.scale.toFixed(2)}x`,
+        });
 
         previewObjects.sn.set({
             data: {
@@ -648,27 +1091,50 @@ const initSkuTemplateConfigurationsForm = () => {
             },
         });
 
-        previewObjects.qr.set({ left: qrX, top: qrY, visible: shouldRenderQr });
-        previewObjects.qrLabel.set({ left: qrX + 52, top: qrY + 50, visible: shouldRenderQr });
+        previewObjects.qr.set({
+            left: qrPoint.x,
+            top: qrPoint.y,
+            width: qrSize * metrics.scale,
+            height: qrSize * metrics.scale,
+            visible: shouldRenderQr,
+        });
+
+        setObjectOrientation(previewObjects.qr, qrOrientation);
+        updateQrLabelPosition();
+
         previewObjects.sku.set({
-            left: skuX,
-            top: skuY,
-            fontSize: Math.max(10, Math.round(skuFontSize * 0.7)),
+            left: skuPoint.x,
+            top: skuPoint.y,
+            fontSize: Math.max(7, Math.round(skuFontSize * metrics.scale)),
             text: shouldRenderSku ? `SKU: ${getSelectedSkuCode()}` : 'SKU: (oculto)',
             visible: shouldRenderSku,
         });
+
+        setObjectOrientation(previewObjects.sku, skuOrientation);
+
         previewObjects.sn.set({
-            left: snX,
-            top: snY,
-            fontSize: Math.max(10, Math.round(snFontSize * 0.9)),
+            left: snPoint.x,
+            top: snPoint.y,
+            fontSize: Math.max(7, Math.round(snFontSize * metrics.scale)),
             text: usesRatingTextLayout ? `Rating: ${snLine}` : `SN: ${snLine}`,
+            visible: true,
         });
 
+        setObjectOrientation(previewObjects.sn, textOrientation);
+
+        updateLayoutContext({
+            labelType,
+            usesRatingTextLayout,
+            shouldRenderQr,
+            shouldRenderSku,
+        });
+
+        updateOutOfBoundsWarning(metrics);
         layoutCanvas.requestRenderAll();
     };
 
     if (layoutCanvas) {
-        layoutCanvas.on('object:moving', (event) => {
+        const handleLayoutObjectMove = (event) => {
             const movedObject = event.target;
 
             if (!movedObject?.data) {
@@ -680,16 +1146,19 @@ const initSkuTemplateConfigurationsForm = () => {
                 top: Math.max(0, movedObject.top || 0),
             });
 
-            if (movedObject?.data?.previewType === 'qr' && previewObjects?.qrLabel) {
-                previewObjects.qrLabel.set({
-                    left: (movedObject.left || 0) + 52,
-                    top: (movedObject.top || 0) + 50,
-                });
+            movedObject.setCoords?.();
+
+            if (movedObject?.data?.previewType === 'qr') {
+                updateQrLabelPosition();
             }
 
             syncInputsFromObject(movedObject);
+            updateOutOfBoundsWarning();
             layoutCanvas.requestRenderAll();
-        });
+        };
+
+        layoutCanvas.on('object:moving', handleLayoutObjectMove);
+        layoutCanvas.on('object:modified', handleLayoutObjectMove);
     }
 
     const buildTestZpl = () => {
@@ -697,11 +1166,13 @@ const initSkuTemplateConfigurationsForm = () => {
         const isRatingWithQr = isRatingWithQrEnabled();
         const serialStandard = getSelectedSerialStandard();
         const skuExampleSerial = getSelectedSkuExampleSerial();
+
         const defaultSerialByStandard = {
             UL: defaultSerialUl,
             EMEA: defaultSerialEmea,
             ANZ: defaultSerialAnz,
         };
+
         const serial = skuExampleSerial || defaultSerialByStandard[serialStandard] || defaultSerialUl;
         const serialPrint = serialStandard === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
         const hideSkuOnEmeaRating = hideSkuOnRatingWithQr();
@@ -740,6 +1211,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const qrPayload = resolveQrPayload(labelType, serial);
         const serialBlockCount = Math.min(Math.max(readInt('[name="serial_block_count"]', 1), 1), 4);
         const serialBlockOffsetY = Math.max(readInt('[name="serial_block_offset_y"]', 180), 0);
+
         const zpl = [
             '^XA',
             '^CI28',
@@ -752,6 +1224,7 @@ const initSkuTemplateConfigurationsForm = () => {
 
         for (let blockIndex = 0; blockIndex < serialBlockCount; blockIndex += 1) {
             const yOffset = blockIndex * serialBlockOffsetY;
+
             zpl.push(`^FO${qrX},${qrY + yOffset}`);
             zpl.push(`^BQ${qrOrientation},2,${qrMagnification}`);
             zpl.push(`^FDLA,${qrPayload}^FS`);
@@ -814,16 +1287,22 @@ const initSkuTemplateConfigurationsForm = () => {
     };
 
     connectionSelect?.addEventListener('change', toggleConnectionFields);
+
     labelTypeSelect?.addEventListener('change', toggleLayoutSections);
     labelTypeSelect?.addEventListener('change', updateLivePreview);
+
     ratingWithQrCheckbox?.addEventListener('change', toggleLayoutSections);
     ratingWithQrCheckbox?.addEventListener('change', updateLivePreview);
+
     ratingHideSkuCheckbox?.addEventListener('change', toggleLayoutSections);
     ratingHideSkuCheckbox?.addEventListener('change', updateLivePreview);
+
     qrContentModeSelect?.addEventListener('change', toggleLayoutSections);
     qrContentModeSelect?.addEventListener('change', updateLivePreview);
+
     qrSerialStyleSelect?.addEventListener('change', toggleLayoutSections);
     qrSerialStyleSelect?.addEventListener('change', updateLivePreview);
+
     skuStandardFilterButtons.forEach((button) => {
         button.addEventListener('click', () => {
             setSkuStandardFilter(button.dataset.skuStandardFilter || 'UL');
@@ -837,21 +1316,44 @@ const initSkuTemplateConfigurationsForm = () => {
         toggleLayoutSections();
         updateLivePreview();
     });
+
     qrSeparatorSelect?.addEventListener('change', updateLivePreview);
+
     [1, 2, 3].forEach((index) => {
         document.querySelector(`[name="qr_custom_field_${index}"]`)?.addEventListener('change', updateLivePreview);
     });
+
     document.querySelector('[name="sn_prefix"]')?.addEventListener('input', updateLivePreview);
+
     [
-        'serial_position_x', 'serial_position_y', 'serial_font_size',
-        'qr_position_x', 'qr_position_y', 'sku_position_x', 'sku_position_y', 'sn_position_x', 'sn_position_y',
-        'sku_font_size', 'sn_font_size', 'qr_magnification',
+        'serial_position_x',
+        'serial_position_y',
+        'serial_font_size',
+        'serial_orientation',
+        'qr_position_x',
+        'qr_position_y',
+        'qr_magnification',
+        'qr_orientation',
+        'sku_position_x',
+        'sku_position_y',
+        'sku_font_size',
+        'sku_orientation',
+        'sn_position_x',
+        'sn_position_y',
+        'sn_font_size',
+        'sn_orientation',
+        'serial_block_count',
+        'serial_block_offset_y',
+        'template_dpi',
+        'template_width_mm',
+        'template_height_mm',
     ].forEach((fieldName) => {
         const field = document.querySelector(`[name="${fieldName}"]`);
 
         field?.addEventListener('input', updateLivePreview);
         field?.addEventListener('change', updateLivePreview);
     });
+
     usbPrinterSelect?.addEventListener('change', () => {
         const selectedName = String(usbPrinterSelect.value || '').trim();
 
@@ -862,6 +1364,7 @@ const initSkuTemplateConfigurationsForm = () => {
         printerNameInput.value = selectedName;
         setStatus(`Impresora seleccionada: ${selectedName}`);
     });
+
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
     previewZplButton?.addEventListener('click', showZplPreview);

@@ -303,6 +303,13 @@
                 </label>
             </div>
         </div>
+
+        <div
+            id="template-dots-summary"
+            class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+        >
+            Tamaño real calculado: completa DPI, ancho y alto para ajustar el layout físico.
+        </div>
     </section>
 
     {{-- Paso 3 --}}
@@ -313,6 +320,68 @@
             <p class="mt-1 text-sm text-slate-500">
                 Define dónde se imprimirá cada elemento. Las posiciones se manejan en dots de Zebra, no en milímetros.
             </p>
+        </div>
+
+        <div class="mb-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm md:p-5" id="live-layout-preview-panel">
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-stretch">
+                <div class="xl:col-span-8">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Paso 3 · Layout físico interactivo</p>
+                            <h3 class="mt-1 text-lg font-bold text-slate-900" id="layout-context-title">Acomoda los elementos de impresión</h3>
+                            <p class="mt-1 text-sm text-slate-500" id="layout-context-description">
+                                Mueve los bloques en la etiqueta y después afina las coordenadas en las secciones A, B y C.
+                            </p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                            Arrastra para actualizar X/Y
+                        </span>
+                    </div>
+
+                    <div class="mt-4 overflow-x-auto rounded-2xl border border-dashed border-slate-300 bg-white p-3">
+                        <div class="flex min-w-[900px] justify-center">
+                            <canvas id="sku-layout-preview-canvas" width="900" height="420"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="xl:col-span-4">
+                    <div class="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Guía del layout</p>
+                            <h4 class="mt-1 text-base font-bold text-slate-900">Qué debes mover según el tipo</h4>
+                            <div class="mt-4 grid grid-cols-1 gap-2 text-sm">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <span class="font-bold text-slate-900">A · Rating</span>
+                                    <p class="mt-1 text-xs text-slate-500">Texto principal de Rating. Usa sus X/Y y orientación.</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <span class="font-bold text-slate-900">B · QR</span>
+                                    <p class="mt-1 text-xs text-slate-500">QR físico. Aplica para Serial y Rating con QR.</p>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <span class="font-bold text-slate-900">C · Serial</span>
+                                    <p class="mt-1 text-xs text-slate-500">SKU visible y SN pequeño para etiquetas Serial.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-800">
+                            <p class="font-semibold">Orientación física activa</p>
+                            <p class="mt-1" id="layout-orientation-summary">N = Normal · R = 90° · I = 180° · B = 270°</p>
+                            <p class="mt-2 text-red-700" id="layout-active-elements">El canvas se actualizará según Serial, Rating o Rating con QR.</p>
+                            <p class="mt-2 text-red-700" id="layout-scale-summary">Escala visual: —</p>
+                        </div>
+
+                        <div
+                            id="layout-out-of-bounds-warning"
+                            class="mt-3 hidden rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800"
+                        >
+                            Advertencia: este elemento está fuera del área física de la etiqueta.
+                        </div>
+                    </div>
+                </aside>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 gap-6 2xl:grid-cols-12">
@@ -538,7 +607,7 @@
                         <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Vista previa</p>
                         <h3 class="mt-1 text-lg font-bold text-slate-900">Contenido real de impresión</h3>
                         <p class="mt-1 text-xs text-slate-500">
-                            Esta vista valida el contenido final, pero no representa posiciones X/Y exactas.
+                            Esta vista resume el contenido final. El acomodo físico se controla en el canvas de arriba.
                         </p>
                     </div>
 
@@ -552,14 +621,6 @@
                         <div class="mt-4 space-y-2 text-sm text-slate-700">
                             <div id="live-preview-sku-line" class="rounded-xl bg-white px-3 py-2 font-bold shadow-sm">SKU: —</div>
                             <div id="live-preview-sn-line" class="rounded-xl bg-white px-3 py-2 font-mono shadow-sm">SN: —</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Layout visual (Fabric.js)</p>
-                        <p class="mt-1 text-xs text-slate-500">En Rating el texto se posiciona con A; en Serial el SN pequeño se posiciona con C.</p>
-                        <div class="mt-3 overflow-x-auto rounded-2xl border border-dashed border-slate-300 bg-white p-2">
-                            <canvas id="sku-layout-preview-canvas" width="520" height="280"></canvas>
                         </div>
                     </div>
 
@@ -593,6 +654,7 @@
                 </div>
             </aside>
         </div>
+
     </section>
 
     {{-- Paso 4 --}}
