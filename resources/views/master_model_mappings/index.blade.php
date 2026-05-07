@@ -74,7 +74,7 @@
 
                                 <form method="POST" action="{{ route('master_model_mappings.toggle', [$type, $mapping]) }}">
                                     @csrf
-                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">Toggle</button>
+                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">{{ $mapping->active ? 'Desactivar' : 'Activar' }}</button>
                                 </form>
                             </div>
                         </td>
