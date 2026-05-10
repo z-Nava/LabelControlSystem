@@ -37,17 +37,21 @@ class AuthService
             ]);
         }
 
-        if ($user->hasRole('admin')) {
+        if (!$user->hasRole('label_room')) {
             RateLimiter::hit($throttleKey, 60);
 
+            $message = $user->hasRole('admin')
+                ? 'Este usuario debe iniciar sesión en el acceso de administradores.'
+                : 'Este usuario no cuenta con acceso operativo de Label Room.';
+
             throw ValidationException::withMessages([
-                'employee_no' => 'Este usuario debe iniciar sesión en el acceso de administradores.',
+                'employee_no' => $message,
             ]);
         }
 
         Auth::login($user, $remember);
 
-        $this->finalizeLogin($throttleKey, $user);
+        $this->finalizeLogin($throttleKey, $user, 'label_room');
     }
 
     public function loginAdmin(string $employeeNo, string $password, bool $remember = false): void
@@ -93,7 +97,7 @@ class AuthService
             ]);
         }
 
-        $this->finalizeLogin($throttleKey, $user);
+        $this->finalizeLogin($throttleKey, $user, 'admin');
     }
 
     public function logout(): void
@@ -109,10 +113,11 @@ class AuthService
         return Str::lower(trim($employeeNo)) . '|' . request()->ip();
     }
 
-    private function finalizeLogin(string $throttleKey, User $user): void
+    private function finalizeLogin(string $throttleKey, User $user, string $accessMode): void
     {
         RateLimiter::clear($throttleKey);
         request()->session()->regenerate();
+        request()->session()->put('auth_access_mode', $accessMode);
         $user->forceFill(['last_login_at' => now()])->save();
     }
 }

@@ -11,7 +11,7 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('admin') && session('auth_access_mode') === 'admin') {
             return view('dashboards.admin');
         }
 

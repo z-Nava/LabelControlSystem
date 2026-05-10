@@ -92,7 +92,9 @@
 
                                 <form method="POST" action="{{ route('users.toggle', $user) }}">
                                     @csrf
-                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">Toggle</button>
+                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">
+                                        {{ $user->is_active ? 'Desactivar' : 'Activar' }}
+                                    </button>
                                 </form>
 
                                 <form method="POST" action="{{ route('users.destroy', $user) }}"

@@ -16,6 +16,10 @@ class RequireRole
             abort(403);
         }
 
+        if ($role === 'admin' && $request->session()->get('auth_access_mode') !== 'admin') {
+            abort(403);
+        }
+
         return $next($request);
     }
 }
