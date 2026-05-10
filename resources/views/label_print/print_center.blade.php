@@ -76,12 +76,30 @@
 
 
 <div id="alignment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
-    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+    <div class="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white shadow-xl">
         <div class="border-b px-5 py-4">
             <h3 class="text-lg font-semibold text-slate-900">Ajuste rápido de posiciones</h3>
-            <p class="mt-1 text-sm text-slate-600">Si la etiqueta salió desfazada, mueve los elementos por pixeles aproximados (X: izquierda/derecha, Y: arriba/abajo).</p>
+            <p class="mt-1 text-sm text-slate-600">Si la etiqueta salió desfazada, conserva el ajuste manual por pixeles o arrastra libremente los elementos de la etiqueta con el editor visual.</p>
         </div>
-        <div class="grid gap-4 p-5 md:grid-cols-2">
+        <div class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <div class="text-sm font-semibold text-slate-900">Editor visual con Fabric JS</div>
+                        <p class="text-xs text-slate-600">Presiona “Cargar elementos” si aún no preparaste la impresión. Arrastra el QR o el grupo de textos; SKU y SN se mueven juntos.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button data-alignment-type="serial" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">Serial</button>
+                        <button data-alignment-type="rating" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">Rating</button>
+                    </div>
+                </div>
+                <div class="mt-3 overflow-auto rounded-lg border border-slate-200 bg-white p-3">
+                    <canvas id="alignment-fabric-canvas" width="640" height="360" class="max-w-full"></canvas>
+                </div>
+                <div id="alignment-canvas-status" class="mt-2 text-xs text-slate-600">El preview visual se cargará desde los ZPL de esta requisición.</div>
+                <button id="load-alignment-preview" type="button" class="mt-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cargar elementos</button>
+            </div>
+            <div class="space-y-4">
             <div class="rounded-xl border border-slate-200 p-3">
                 <div class="text-sm font-semibold text-slate-900">Etiqueta SERIAL</div>
                 <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
@@ -99,6 +117,7 @@
                     <label>QR X <input data-align="rating_qr_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
                     <label>QR Y <input data-align="rating_qr_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
                 </div>
+            </div>
             </div>
         </div>
         <div class="flex justify-end gap-2 border-t px-5 py-4">
@@ -130,6 +149,10 @@
     const closeAlignmentModalButton = document.getElementById('close-alignment-modal');
     const saveAlignmentButton = document.getElementById('save-alignment');
     const resetAlignmentButton = document.getElementById('reset-alignment');
+    const alignmentCanvasElement = document.getElementById('alignment-fabric-canvas');
+    const alignmentCanvasStatus = document.getElementById('alignment-canvas-status');
+    const loadAlignmentPreviewButton = document.getElementById('load-alignment-preview');
+    const alignmentTypeButtons = document.querySelectorAll('[data-alignment-type]');
     const storageKeys = {
         serial: 'label_print_selected_printer_serial',
         rating: 'label_print_selected_printer_rating',
@@ -140,6 +163,9 @@
     let selectedPrinters = { serial: null, rating: null };
     let previewPayload = null;
     let printPrepared = false;
+    let alignmentFabricCanvas = null;
+    let currentAlignmentType = 'serial';
+    let syncingCanvasFromInputs = false;
 
     const defaultAlignment = {
         serial_text_x: 0, serial_text_y: 0, serial_qr_x: 0, serial_qr_y: 0,
@@ -166,6 +192,251 @@
             values[input.dataset.align] = Number(input.value || 0);
         });
         return values;
+    };
+
+    const setAlignmentCanvasStatus = (message, isError = false) => {
+        if (!alignmentCanvasStatus) return;
+
+        alignmentCanvasStatus.textContent = message;
+        alignmentCanvasStatus.classList.toggle('text-red-700', isError);
+        alignmentCanvasStatus.classList.toggle('text-slate-600', !isError);
+    };
+
+    const setActiveAlignmentType = (labelType) => {
+        currentAlignmentType = ['serial', 'rating'].includes(labelType) ? labelType : 'serial';
+        alignmentTypeButtons.forEach((button) => {
+            const isActive = button.dataset.alignmentType === currentAlignmentType;
+            button.classList.toggle('bg-slate-900', isActive);
+            button.classList.toggle('text-white', isActive);
+            button.classList.toggle('border-slate-900', isActive);
+            button.classList.toggle('bg-white', !isActive);
+            button.classList.toggle('text-slate-700', !isActive);
+        });
+    };
+
+    const ensureAlignmentCanvas = () => {
+        if (alignmentFabricCanvas || !alignmentCanvasElement) {
+            return alignmentFabricCanvas;
+        }
+
+        if (!window.fabric?.Canvas) {
+            setAlignmentCanvasStatus('Fabric JS aún no está disponible. Espera un momento y vuelve a abrir el modal.', true);
+            return null;
+        }
+
+        alignmentFabricCanvas = new window.fabric.Canvas(alignmentCanvasElement, {
+            backgroundColor: '#f8fafc',
+            preserveObjectStacking: true,
+            selection: true,
+        });
+
+        alignmentFabricCanvas.on('object:moving', (event) => syncAlignmentFromCanvasObject(event.target));
+        alignmentFabricCanvas.on('object:modified', (event) => syncAlignmentFromCanvasObject(event.target));
+
+        return alignmentFabricCanvas;
+    };
+
+    const parseZplElements = (zpl) => {
+        const elements = [];
+        const blocks = String(zpl || '').match(/\^FO-?\d+,-?\d+[\s\S]*?\^FS/g) || [];
+
+        blocks.forEach((block, index) => {
+            const position = block.match(/\^FO(-?\d+),(-?\d+)/);
+            if (!position) return;
+
+            const x = Number(position[1]);
+            const y = Number(position[2]);
+            const isQr = block.includes('^BQN');
+            const fieldData = block.match(/\^FD([\s\S]*?)\^FS/)?.[1] || (isQr ? 'QR' : 'Texto');
+            const font = block.match(/\^A0[A-Z]?,(\d+),(\d+)/i);
+            const qrMag = Number(block.match(/\^BQ[A-Z]?,\d+,(\d+)/i)?.[1] || 4);
+            const fontSize = Math.max(14, Math.min(72, Number(font?.[1] || 24)));
+
+            elements.push({
+                x,
+                y,
+                kind: isQr ? 'qr' : 'text',
+                label: isQr ? `QR ${index + 1}` : fieldData.replace(/^LA,/, '').slice(0, 34),
+                width: isQr ? Math.max(76, qrMag * 34) : Math.max(90, fieldData.length * (fontSize * 0.55)),
+                height: isQr ? Math.max(76, qrMag * 34) : fontSize + 16,
+                fontSize,
+            });
+        });
+
+        return elements;
+    };
+
+    const getDocumentForAlignmentType = (labelType) => (previewPayload?.documents || [])
+        .find((doc) => String(doc.label_type || '').toLowerCase() === labelType);
+
+    const getAlignmentFieldForObject = (object) => {
+        const objectType = object?.data?.kind === 'qr' ? 'qr' : 'text';
+        return {
+            x: `${object.data.labelType}_${objectType}_x`,
+            y: `${object.data.labelType}_${objectType}_y`,
+        };
+    };
+
+    const syncAlignmentFromCanvasObject = (object) => {
+        if (syncingCanvasFromInputs || !object?.data?.basePoint || !object?.data?.scale) return;
+
+        const fields = getAlignmentFieldForObject(object);
+        const nextX = Math.round((object.left - object.data.basePoint.left) / object.data.scale);
+        const nextY = Math.round((object.top - object.data.basePoint.top) / object.data.scale);
+        const current = readAlignmentInputs();
+
+        current[fields.x] = nextX;
+        current[fields.y] = nextY;
+        setAlignmentInputs(current);
+    };
+
+    const createAlignmentObject = (element, labelType, metrics, offsets) => {
+        const { Rect } = window.fabric || {};
+        if (!Rect) return null;
+
+        const offsetX = offsets[`${labelType}_qr_x`];
+        const offsetY = offsets[`${labelType}_qr_y`];
+        const left = metrics.padding + ((element.x + Number(offsetX || 0)) * metrics.scale);
+        const top = metrics.padding + ((element.y + Number(offsetY || 0)) * metrics.scale);
+        const basePoint = {
+            left: metrics.padding + (element.x * metrics.scale),
+            top: metrics.padding + (element.y * metrics.scale),
+        };
+
+        return new Rect({
+            left,
+            top,
+            width: element.width * metrics.scale,
+            height: element.height * metrics.scale,
+            fill: '#dbeafe',
+            stroke: '#2563eb',
+            strokeWidth: 2,
+            strokeDashArray: [6, 4],
+            data: { labelType, kind: element.kind, basePoint, scale: metrics.scale },
+        });
+    };
+
+    const createAlignmentTextGroup = (textElements, labelType, metrics, offsets) => {
+        const { Group, Text } = window.fabric || {};
+        if (!Group || !Text || !textElements.length) return null;
+
+        const minX = Math.min(...textElements.map((element) => element.x));
+        const minY = Math.min(...textElements.map((element) => element.y));
+        const offsetX = Number(offsets[`${labelType}_text_x`] || 0);
+        const offsetY = Number(offsets[`${labelType}_text_y`] || 0);
+        const basePoint = {
+            left: metrics.padding + (minX * metrics.scale),
+            top: metrics.padding + (minY * metrics.scale),
+        };
+
+        const textObjects = textElements.map((element) => new Text(element.label || 'Texto', {
+            left: (element.x - minX) * metrics.scale,
+            top: (element.y - minY) * metrics.scale,
+            fontSize: Math.max(12, element.fontSize * metrics.scale),
+            fontFamily: 'Arial',
+            fill: '#0f172a',
+            backgroundColor: 'rgba(254, 243, 199, 0.9)',
+            padding: 6,
+            selectable: false,
+            evented: false,
+        }));
+
+        return new Group(textObjects, {
+            left: basePoint.left + (offsetX * metrics.scale),
+            top: basePoint.top + (offsetY * metrics.scale),
+            subTargetCheck: false,
+            data: { labelType, kind: 'text', basePoint, scale: metrics.scale },
+        });
+    };
+
+    const renderAlignmentCanvas = (labelType = currentAlignmentType) => {
+        const canvas = ensureAlignmentCanvas();
+        if (!canvas) return;
+
+        setActiveAlignmentType(labelType);
+        canvas.clear();
+        canvas.backgroundColor = '#f8fafc';
+
+        const documentForType = getDocumentForAlignmentType(currentAlignmentType);
+        if (!documentForType?.test_zpl) {
+            setAlignmentCanvasStatus(`No hay elementos ${currentAlignmentType.toUpperCase()} cargados. Presiona “Preparar impresión” o “Cargar elementos”.`, true);
+            canvas.renderAll();
+            return;
+        }
+
+        const elements = parseZplElements(documentForType.test_zpl);
+        if (!elements.length) {
+            setAlignmentCanvasStatus(`El ZPL ${currentAlignmentType.toUpperCase()} no tiene bloques ^FO para editar visualmente.`, true);
+            canvas.renderAll();
+            return;
+        }
+
+        const padding = 28;
+        const maxX = Math.max(...elements.map((element) => element.x + element.width), 320);
+        const maxY = Math.max(...elements.map((element) => element.y + element.height), 180);
+        const scale = Math.min((canvas.getWidth() - padding * 2) / maxX, (canvas.getHeight() - padding * 2) / maxY, 1.6);
+        const metrics = { padding, scale };
+        const { Rect, Text } = window.fabric || {};
+
+        canvas.add(new Rect({
+            left: padding,
+            top: padding,
+            width: maxX * scale,
+            height: maxY * scale,
+            fill: '#ffffff',
+            stroke: '#cbd5e1',
+            strokeWidth: 1,
+            selectable: false,
+            evented: false,
+        }));
+
+        canvas.add(new Text(`Etiqueta ${currentAlignmentType.toUpperCase()} · escala ${scale.toFixed(2)}x`, {
+            left: padding,
+            top: 8,
+            fontSize: 12,
+            fill: '#64748b',
+            selectable: false,
+            evented: false,
+        }));
+
+        const offsets = readAlignmentInputs();
+        syncingCanvasFromInputs = true;
+        elements.filter((element) => element.kind === 'qr').forEach((element) => {
+            const object = createAlignmentObject(element, currentAlignmentType, metrics, offsets);
+            if (object) {
+                object.set({ cornerColor: '#dc2626', borderColor: '#dc2626' });
+                canvas.add(object);
+            }
+        });
+
+        const textGroup = createAlignmentTextGroup(
+            elements.filter((element) => element.kind === 'text'),
+            currentAlignmentType,
+            metrics,
+            offsets,
+        );
+        if (textGroup) {
+            textGroup.set({ cornerColor: '#dc2626', borderColor: '#dc2626' });
+            canvas.add(textGroup);
+        }
+        syncingCanvasFromInputs = false;
+
+        canvas.renderAll();
+        setAlignmentCanvasStatus(`Elementos ${currentAlignmentType.toUpperCase()} cargados desde el ZPL de esta requisición. Arrastra el QR o el grupo de textos para moverlos libremente.`);
+    };
+
+    const refreshAlignmentPreview = async () => {
+        try {
+            if (!previewPayload?.documents?.length) {
+                await loadPreview();
+            }
+
+            const availableTypes = (previewPayload?.documents || []).map((doc) => String(doc.label_type || '').toLowerCase());
+            const nextType = availableTypes.includes(currentAlignmentType) ? currentAlignmentType : (availableTypes[0] || 'serial');
+            renderAlignmentCanvas(nextType);
+        } catch (error) {
+            setAlignmentCanvasStatus(`No se pudieron cargar elementos para el editor visual: ${error.message}`, true);
+        }
     };
 
     const moveFO = (block, dx, dy) => block.replace(/\^FO(-?\d+),(-?\d+)/, (_m, x, y) => `^FO${Number(x)+dx},${Number(y)+dy}`);
@@ -549,6 +820,8 @@
         setAlignmentInputs(getAlignment());
         alignmentModal?.classList.remove('hidden');
         alignmentModal?.classList.add('flex');
+        setActiveAlignmentType(currentAlignmentType);
+        window.requestAnimationFrame(() => renderAlignmentCanvas(currentAlignmentType));
     });
     closeAlignmentModalButton?.addEventListener('click', () => {
         alignmentModal?.classList.add('hidden');
@@ -565,11 +838,20 @@
     resetAlignmentButton?.addEventListener('click', () => {
         localStorage.setItem(storageKeys.alignment, JSON.stringify(defaultAlignment));
         setAlignmentInputs(defaultAlignment);
+        renderAlignmentCanvas(currentAlignmentType);
+    });
+    loadAlignmentPreviewButton?.addEventListener('click', refreshAlignmentPreview);
+    alignmentTypeButtons.forEach((button) => {
+        button.addEventListener('click', () => renderAlignmentCanvas(button.dataset.alignmentType));
+    });
+    document.querySelectorAll('[data-align]').forEach((input) => {
+        input.addEventListener('input', () => renderAlignmentCanvas(currentAlignmentType));
     });
     printButton?.addEventListener('click', printBatch);
 
     setSelectedPrinter('serial', null);
     setSelectedPrinter('rating', null);
+    setActiveAlignmentType('serial');
 
     if (root.dataset.alreadyPrinted === '1') {
         setPrintBlocked('Este batch ya fue confirmado como impreso. El botón se bloqueó para evitar duplicidad.');
