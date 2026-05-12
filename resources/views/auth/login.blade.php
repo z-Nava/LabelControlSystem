@@ -25,7 +25,7 @@
             @csrf
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Employee No</label>
+                <label class="block text-sm font-medium text-slate-700">Numero de empleado</label>
                 <input
                     name="employee_no"
                     value="{{ old('employee_no') }}"
