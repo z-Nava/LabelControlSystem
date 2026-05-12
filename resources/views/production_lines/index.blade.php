@@ -33,11 +33,11 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-slate-500 border-b">
-                    <th class="py-3 pr-3">Code</th>
-                    <th class="py-3 pr-3">Name</th>
-                    <th class="py-3 pr-3">Type</th>
-                    <th class="py-3 pr-3">Active</th>
-                    <th class="py-3 text-right">Actions</th>
+                    <th class="py-3 pr-3">Codigo</th>
+                    <th class="py-3 pr-3">Nombre</th>
+                    <th class="py-3 pr-3">Tipo</th>
+                    <th class="py-3 pr-3">Activo</th>
+                    <th class="py-3 text-right">Acciones</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
@@ -52,9 +52,9 @@
                         </td>
                         <td class="py-3 pr-3">
                             @if($line->active)
-                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Yes</span>
+                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Activo</span>
                             @else
-                                <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-slate-700">No</span>
+                                <span class="inline-flex rounded-full bg-slate-200 px-3 py-1 text-slate-700">Inactivo</span>
                             @endif
                         </td>
                         <td class="py-3 text-right">
@@ -66,8 +66,8 @@
 
                                 <form method="POST" action="{{ route('production_lines.toggle', $line) }}">
                                     @csrf
-                                    <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">
-                                        Toggle
+                                    <button class="rounded-xl {{ $line->active ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500' }} text-white px-3 py-2 transition">
+                                        {{ $line->active ? 'Desactivar' : 'Activar' }}
                                     </button>
                                 </form>
                             </div>

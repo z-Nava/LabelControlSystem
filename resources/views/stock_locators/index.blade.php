@@ -61,7 +61,7 @@
                                 <form method="POST" action="{{ route('stock_locators.toggle', $stockLocator) }}">
                                     @csrf
                                     <button class="rounded-xl bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition">
-                                        Toggle
+                                        {{ $stockLocator->active ? 'Desactivar' : 'Activar' }}
                                     </button>
                                 </form>
                             </div>

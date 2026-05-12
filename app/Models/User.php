@@ -53,7 +53,7 @@ class User extends Authenticatable
 
     public function hasModuleAccess(string $module): bool
     {
-        if ($this->hasRole('admin')) {
+        if ($this->hasRole('admin') && session('auth_access_mode') === 'admin') {
             return true;
         }
 
