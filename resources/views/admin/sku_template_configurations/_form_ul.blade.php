@@ -26,12 +26,13 @@
     data-default-serial-emea="50555401123456A1234"
     data-default-serial-anz="AF02F2019 A 00001 A2026"
     data-default-sku="2978-OCUT"
+    data-template-market="UL"
 >
     {{-- Header / guía rápida --}}
     <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-red-700 bg-red-700 px-5 py-5 text-white md:px-6">
             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-red-100">Configuración de impresión</p>
-            <h1 class="mt-2 text-2xl font-bold">Template y perfil por SKU</h1>
+            <h1 class="mt-2 text-2xl font-bold">Template y perfil UL por SKU</h1>
             <p class="mt-2 max-w-3xl text-sm text-slate-200">
                 Completa esta configuración en orden. Primero selecciona el SKU, después define el tamaño del template,
                 ajusta el layout de impresión y finalmente prueba la conexión con la impresora.
@@ -82,21 +83,7 @@
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">1A · Mercado y SKU</p>
 
-                    <div class="mt-4">
-                        <label class="block text-sm font-semibold text-slate-700">Filtrar por mercado</label>
-                        <div class="mt-2 flex flex-wrap gap-2" role="group" aria-label="Filtro de estándar SKU">
-                            @foreach($marketStandards as $standard)
-                                <button
-                                    type="button"
-                                    data-sku-standard-filter="{{ $standard }}"
-                                    class="rounded-xl border px-4 py-2 text-xs font-semibold transition {{ (($formState['selected_serial_standard'] ?? 'UL') === $standard) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100' }}"
-                                >
-                                    {{ $standard }}
-                                    <span class="ml-1 opacity-75">{{ ($skuGroups[$standard] ?? collect())->count() }}</span>
-                                </button>
-                            @endforeach
-                        </div>
-                    </div>
+                    <input type="hidden" name="serial_standard" id="serial_standard" value="UL">
 
                     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
                         <div class="lg:col-span-2">
@@ -171,16 +158,10 @@
                                 value="{{ $formState['selected_serial_standard'] ?? 'UL' }}"
                                 readonly
                             />
-                            <input
-                                type="hidden"
-                                name="serial_standard"
-                                id="serial_standard"
-                                value="{{ $formState['selected_serial_standard'] ?? 'UL' }}"
-                            />
                         </div>
 
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                            Si el estándar cambia al seleccionar otro SKU, las opciones de QR deben actualizarse automáticamente por JavaScript.
+                            Este formulario está bloqueado a UL; el SKU seleccionado debe pertenecer a este mercado.
                         </div>
                     </div>
                 </div>
@@ -190,7 +171,7 @@
                     class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                     @if($selectedLabelType !== 'rating') style="display:none;" @endif
                 >
-                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Opciones Rating</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Opciones Rating UL</p>
 
                     <label class="mt-3 flex items-start gap-3 rounded-xl bg-white p-3 text-sm text-slate-700">
                         <input
@@ -216,7 +197,7 @@
                         >
                         <span>
                             <span class="font-semibold">Ocultar SKU en Rating con QR</span>
-                            <span class="mt-1 block text-xs text-slate-500">Útil para EMEA/ANZ cuando solo debe imprimirse SN + QR.</span>
+                            <span class="mt-1 block text-xs text-slate-500">Úsalo si la etiqueta Rating UL debe imprimir solo SN + QR.</span>
                         </span>
                     </label>
                 </div>

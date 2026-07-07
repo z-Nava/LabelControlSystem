@@ -78,15 +78,34 @@ class SkuTemplateConfigurationController extends Controller
 
     public function create(): View
     {
-        return $this->buildCreateView('UL');
+        return $this->createUlView();
     }
 
     public function createByStandard(string $standard): View
     {
-        return $this->buildCreateView(strtoupper($standard));
+        return match (strtoupper($standard)) {
+            'EMEA' => $this->createEmeaView(),
+            'ANZ' => $this->createAnzView(),
+            default => $this->createUlView(),
+        };
     }
 
-    private function buildCreateView(string $forcedStandard): View
+    private function createUlView(): View
+    {
+        return $this->buildMarketCreateView('UL', 'admin.sku_template_configurations.create_ul');
+    }
+
+    private function createEmeaView(): View
+    {
+        return $this->buildMarketCreateView('EMEA', 'admin.sku_template_configurations.create_emea');
+    }
+
+    private function createAnzView(): View
+    {
+        return $this->buildMarketCreateView('ANZ', 'admin.sku_template_configurations.create_anz');
+    }
+
+    private function buildMarketCreateView(string $forcedStandard, string $view): View
     {
         $configuration = new LabelPrintProfile();
         $formData = $this->formService->build($configuration);
@@ -97,14 +116,6 @@ class SkuTemplateConfigurationController extends Controller
         $formData['selectedLabelType'] = $formData['formState']['selected_label_type'] ?? 'serial';
         $formData['selectedConnectionType'] = $formData['formState']['connection_type'] ?? 'usb';
         $formData['customFields'] = old('qr_custom_fields', $formData['formState']['qr_layout']['custom_fields'] ?? []);
-
-        $viewByStandard = [
-            'UL' => 'admin.sku_template_configurations.create_ul',
-            'EMEA' => 'admin.sku_template_configurations.create_emea',
-            'ANZ' => 'admin.sku_template_configurations.create_anz',
-        ];
-
-        $view = $viewByStandard[$forcedStandard] ?? $viewByStandard['UL'];
 
         return view($view, compact('configuration') + $formData);
     }

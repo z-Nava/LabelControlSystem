@@ -15,6 +15,8 @@ const ORIENTATION_LABELS = {
     I: 'Invertida 180°',
     B: 'Bottom-up 270°',
 };
+const LAYOUT_GRID_STEP_DOTS = 50;
+const DRAG_SNAP_DOTS = 5;
 
 const normalizeOrientation = (value, fallback = 'N') => {
     const normalized = String(value || fallback).trim().toUpperCase();
@@ -105,6 +107,8 @@ const initSkuTemplateConfigurationsForm = () => {
     const layoutOrientationSummary = document.getElementById('layout-orientation-summary');
     const layoutScaleSummary = document.getElementById('layout-scale-summary');
     const layoutOutOfBoundsWarning = document.getElementById('layout-out-of-bounds-warning');
+    const layoutSelectedElement = document.getElementById('layout-selected-element');
+    const layoutCoordinateSummary = document.getElementById('layout-coordinate-summary');
     const templateDotsSummary = document.getElementById('template-dots-summary');
 
     const defaultSerialUl = form.dataset.defaultSerialUl || 'L36BH2606007A7';
@@ -119,6 +123,7 @@ const initSkuTemplateConfigurationsForm = () => {
         preserveObjectStacking: true,
     }) : null;
     let previewObjects = null;
+    let selectedPreviewObject = null;
 
     const setStatus = (message, isError = false) => {
         if (!statusBox) {
@@ -528,9 +533,9 @@ const initSkuTemplateConfigurationsForm = () => {
         const serialStyle = getQrSerialStyle();
 
         livePreviewSkuLine.textContent = shouldRenderSku
-            ? `SKU: ${getSelectedSkuCode()}`
-            : 'SKU: (oculto para esta configuración)';
-        livePreviewSnLine.textContent = `SN: ${snLine}`;
+            ? getSelectedSkuCode()
+            : '(SKU oculto para esta configuración)';
+        livePreviewSnLine.textContent = snLine;
         livePreviewQrPayload.textContent = qrPayload || '(sin QR)';
 
         if (livePreviewStandard) {
@@ -650,19 +655,135 @@ const initSkuTemplateConfigurationsForm = () => {
         y: metrics.labelTop + (y * metrics.scale),
     });
 
+    const getObjectDotPosition = (object, metrics = getTemplateMetrics()) => ({
+        x: Math.max(0, Math.round(((object?.left || 0) - metrics.labelLeft) / metrics.scale)),
+        y: Math.max(0, Math.round(((object?.top || 0) - metrics.labelTop) / metrics.scale)),
+    });
+
+    const snapDotValue = (value, maxValue) => {
+        const snapped = Math.round(value / DRAG_SNAP_DOTS) * DRAG_SNAP_DOTS;
+
+        return Math.min(Math.max(snapped, 0), Math.max(maxValue, 0));
+    };
+
+    const snapObjectToDotGrid = (object) => {
+        if (!object?.data?.previewType) {
+            return;
+        }
+
+        const metrics = getTemplateMetrics();
+        const dots = getObjectDotPosition(object, metrics);
+        const snappedX = snapDotValue(dots.x, metrics.widthDots);
+        const snappedY = snapDotValue(dots.y, metrics.heightDots);
+
+        object.set({
+            left: metrics.labelLeft + (snappedX * metrics.scale),
+            top: metrics.labelTop + (snappedY * metrics.scale),
+        });
+
+        object.setCoords?.();
+    };
+
+    const updateSelectedElementSummary = (object = selectedPreviewObject) => {
+        if (!layoutSelectedElement || !layoutCoordinateSummary) {
+            return;
+        }
+
+        if (!object?.data?.previewType || object.visible === false) {
+            layoutSelectedElement.textContent = 'Selecciona QR, SKU o SN en el canvas.';
+            layoutCoordinateSummary.textContent = 'X/Y: --';
+
+            return;
+        }
+
+        const dots = getObjectDotPosition(object);
+
+        layoutSelectedElement.textContent = `${getPreviewTypeLabel(object.data.previewType)} seleccionado`;
+        layoutCoordinateSummary.textContent = `X: ${dots.x} · Y: ${dots.y} dots`;
+    };
+
+    const createGridLines = (count) => Array.from({ length: count }, () => new Rect({
+        left: 0,
+        top: 0,
+        width: 1,
+        height: 1,
+        fill: '#e2e8f0',
+        selectable: false,
+        evented: false,
+        excludeFromExport: true,
+        objectCaching: false,
+        visible: false,
+    }));
+
+    const updateGridLines = (metrics = getTemplateMetrics()) => {
+        if (!previewObjects?.gridLines) {
+            return;
+        }
+
+        const step = metrics.widthDots > 1600 ? LAYOUT_GRID_STEP_DOTS * 2 : LAYOUT_GRID_STEP_DOTS;
+        let verticalIndex = 0;
+        let horizontalIndex = 0;
+
+        for (let x = step; x < metrics.widthDots; x += step) {
+            const line = previewObjects.gridLines.vertical[verticalIndex];
+
+            if (!line) {
+                break;
+            }
+
+            const isMajor = x % (step * 2) === 0;
+
+            line.set({
+                left: metrics.labelLeft + (x * metrics.scale),
+                top: metrics.labelTop,
+                width: 1,
+                height: metrics.labelHeightPx,
+                fill: isMajor ? '#cbd5e1' : '#e2e8f0',
+                visible: true,
+            });
+
+            verticalIndex += 1;
+        }
+
+        for (let y = step; y < metrics.heightDots; y += step) {
+            const line = previewObjects.gridLines.horizontal[horizontalIndex];
+
+            if (!line) {
+                break;
+            }
+
+            const isMajor = y % (step * 2) === 0;
+
+            line.set({
+                left: metrics.labelLeft,
+                top: metrics.labelTop + (y * metrics.scale),
+                width: metrics.labelWidthPx,
+                height: 1,
+                fill: isMajor ? '#cbd5e1' : '#e2e8f0',
+                visible: true,
+            });
+
+            horizontalIndex += 1;
+        }
+
+        previewObjects.gridLines.vertical.slice(verticalIndex).forEach((line) => line.set({ visible: false }));
+        previewObjects.gridLines.horizontal.slice(horizontalIndex).forEach((line) => line.set({ visible: false }));
+    };
+
     const updateTemplateDotsSummary = (metrics = getTemplateMetrics()) => {
         const sizeText = metrics.hasPhysicalSize
             ? `${metrics.widthMm} mm × ${metrics.heightMm} mm`
             : 'sin medidas físicas capturadas';
         const dotsText = `${metrics.widthDots} × ${metrics.heightDots} dots`;
         const scaleText = `escala visual ${metrics.scale.toFixed(2)}x`;
+        const gridStep = metrics.widthDots > 1600 ? LAYOUT_GRID_STEP_DOTS * 2 : LAYOUT_GRID_STEP_DOTS;
 
         if (templateDotsSummary) {
             templateDotsSummary.textContent = `Tamaño real calculado: ${dotsText} · ${sizeText} · ${metrics.dpi} DPI · ${scaleText}.`;
         }
 
         if (layoutScaleSummary) {
-            layoutScaleSummary.textContent = `Etiqueta: ${dotsText} · ${scaleText}`;
+            layoutScaleSummary.textContent = `Etiqueta: ${dotsText} · grilla ${gridStep} dots · ${scaleText}`;
         }
     };
 
@@ -773,6 +894,11 @@ const initSkuTemplateConfigurationsForm = () => {
             originY: 'top',
         });
 
+        const gridLines = {
+            vertical: createGridLines(60),
+            horizontal: createGridLines(40),
+        };
+
         const originMarkerX = new Rect({
             left: metrics.labelLeft,
             top: metrics.labelTop,
@@ -850,7 +976,7 @@ const initSkuTemplateConfigurationsForm = () => {
             originY: 'center',
         });
 
-        const sku = new Text('SKU: —', {
+        const sku = new Text('—', {
             left: metrics.labelLeft + 170,
             top: metrics.labelTop + 70,
             fontSize: 30,
@@ -874,7 +1000,7 @@ const initSkuTemplateConfigurationsForm = () => {
             },
         });
 
-        const sn = new Text('SN: —', {
+        const sn = new Text('—', {
             left: metrics.labelLeft + 170,
             top: metrics.labelTop + 120,
             fontSize: 22,
@@ -901,6 +1027,8 @@ const initSkuTemplateConfigurationsForm = () => {
         layoutCanvas.add(
             canvasBackground,
             labelArea,
+            ...gridLines.vertical,
+            ...gridLines.horizontal,
             originMarkerX,
             originMarkerY,
             guideTitle,
@@ -919,6 +1047,7 @@ const initSkuTemplateConfigurationsForm = () => {
         return {
             canvasBackground,
             labelArea,
+            gridLines,
             originMarkerX,
             originMarkerY,
             guideTitle,
@@ -938,19 +1067,19 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
-        const metrics = getTemplateMetrics();
         const xInput = document.querySelector(`[name="${fieldX}"]`);
         const yInput = document.querySelector(`[name="${fieldY}"]`);
-        const xValue = Math.max(0, Math.round(((object.left || 0) - metrics.labelLeft) / metrics.scale));
-        const yValue = Math.max(0, Math.round(((object.top || 0) - metrics.labelTop) / metrics.scale));
+        const dots = getObjectDotPosition(object);
 
         if (xInput) {
-            xInput.value = String(xValue);
+            xInput.value = String(dots.x);
         }
 
         if (yInput) {
-            yInput.value = String(yValue);
+            yInput.value = String(dots.y);
         }
+
+        updateSelectedElementSummary(object);
     };
 
     const getPreviewTypeLabel = (previewType) => {
@@ -1001,9 +1130,18 @@ const initSkuTemplateConfigurationsForm = () => {
         objectsToValidate.forEach((object) => {
             const isOutside = outsideObjects.includes(object);
 
+            if (object.data?.previewType === 'qr') {
+                object.set({
+                    stroke: isOutside ? '#f59e0b' : '#0f172a',
+                    strokeWidth: isOutside ? 2 : 1,
+                });
+
+                return;
+            }
+
             object.set({
-                stroke: isOutside ? '#f59e0b' : '#0f172a',
-                strokeWidth: isOutside ? 2 : 1,
+                fill: isOutside ? '#b45309' : '#0f172a',
+                backgroundColor: isOutside ? '#fef3c7' : '',
             });
         });
 
@@ -1067,6 +1205,8 @@ const initSkuTemplateConfigurationsForm = () => {
             height: metrics.labelHeightPx,
         });
 
+        updateGridLines(metrics);
+
         previewObjects.originMarkerX?.set({
             left: metrics.labelLeft,
             top: metrics.labelTop,
@@ -1106,7 +1246,7 @@ const initSkuTemplateConfigurationsForm = () => {
             left: skuPoint.x,
             top: skuPoint.y,
             fontSize: Math.max(7, Math.round(skuFontSize * metrics.scale)),
-            text: shouldRenderSku ? `SKU: ${getSelectedSkuCode()}` : 'SKU: (oculto)',
+            text: shouldRenderSku ? getSelectedSkuCode() : '(oculto)',
             visible: shouldRenderSku,
         });
 
@@ -1116,7 +1256,7 @@ const initSkuTemplateConfigurationsForm = () => {
             left: snPoint.x,
             top: snPoint.y,
             fontSize: Math.max(7, Math.round(snFontSize * metrics.scale)),
-            text: usesRatingTextLayout ? `Rating: ${snLine}` : `SN: ${snLine}`,
+            text: snLine,
             visible: true,
         });
 
@@ -1129,6 +1269,11 @@ const initSkuTemplateConfigurationsForm = () => {
             shouldRenderSku,
         });
 
+        if (selectedPreviewObject?.visible === false) {
+            selectedPreviewObject = null;
+        }
+
+        updateSelectedElementSummary(selectedPreviewObject);
         updateOutOfBoundsWarning(metrics);
         layoutCanvas.requestRenderAll();
     };
@@ -1141,12 +1286,8 @@ const initSkuTemplateConfigurationsForm = () => {
                 return;
             }
 
-            movedObject.set({
-                left: Math.max(0, movedObject.left || 0),
-                top: Math.max(0, movedObject.top || 0),
-            });
-
-            movedObject.setCoords?.();
+            snapObjectToDotGrid(movedObject);
+            selectedPreviewObject = movedObject;
 
             if (movedObject?.data?.previewType === 'qr') {
                 updateQrLabelPosition();
@@ -1156,6 +1297,11 @@ const initSkuTemplateConfigurationsForm = () => {
             updateOutOfBoundsWarning();
             layoutCanvas.requestRenderAll();
         };
+
+        layoutCanvas.on('mouse:down', (event) => {
+            selectedPreviewObject = event.target?.data?.previewType ? event.target : null;
+            updateSelectedElementSummary(selectedPreviewObject);
+        });
 
         layoutCanvas.on('object:moving', handleLayoutObjectMove);
         layoutCanvas.on('object:modified', handleLayoutObjectMove);

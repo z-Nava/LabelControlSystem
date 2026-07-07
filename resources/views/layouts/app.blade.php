@@ -41,7 +41,7 @@
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-6">
+    <main class="{{ $mainClass ?? 'max-w-6xl' }} mx-auto px-4 py-6">
         @yield('content')
     </main>
 </body>
