@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests\Dummies;
 
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
 class StoreDummyRequestRequest extends FormRequest
 {
-    private ?OracleJobLookupService $oracleJobLookup = null;
+    private ?OracleJobService $oracleJobService = null;
 
     public function authorize(): bool
     {
@@ -48,7 +48,7 @@ class StoreDummyRequestRequest extends FormRequest
                 return;
             }
 
-            $job = $this->oracleJobLookup()->findByJobNumber($jobNumber);
+            $job = $this->oracleJobService()->findByJobNumber($jobNumber);
 
             if (!$job) {
                 $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
@@ -67,14 +67,14 @@ class StoreDummyRequestRequest extends FormRequest
         });
     }
 
-    private function oracleJobLookup(): OracleJobLookupService
+    private function oracleJobService(): OracleJobService
     {
-        if ($this->oracleJobLookup instanceof OracleJobLookupService) {
-            return $this->oracleJobLookup;
+        if ($this->oracleJobService instanceof OracleJobService) {
+            return $this->oracleJobService;
         }
 
-        $this->oracleJobLookup = app(OracleJobLookupService::class);
+        $this->oracleJobService = app(OracleJobService::class);
 
-        return $this->oracleJobLookup;
+        return $this->oracleJobService;
     }
 }

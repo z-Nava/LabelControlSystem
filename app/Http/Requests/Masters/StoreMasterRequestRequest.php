@@ -3,13 +3,13 @@
 namespace App\Http\Requests\Masters;
 
 use App\Models\OracleJob;
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreMasterRequestRequest extends FormRequest
 {
-    private ?OracleJobLookupService $oracleJobLookup = null;
+    private ?OracleJobService $oracleJobService = null;
     private const NO_HTML_PATTERN = '/<[^>]*>/';
 
     public function authorize(): bool
@@ -125,25 +125,25 @@ class StoreMasterRequestRequest extends FormRequest
 
     private function findOracleJob(string $jobNumber): ?OracleJob
     {
-        return $this->oracleJobLookup()->findByJobNumber($jobNumber);
+        return $this->oracleJobService()->findByJobNumber($jobNumber);
     }
 
     private function isAssemblyJob(OracleJob $job): bool
     {
-        return $this->oracleJobLookup()->isAssemblyJob($job);
+        return $this->oracleJobService()->isAssemblyJob($job);
     }
 
     private function isPackagingJob(OracleJob $job): bool
     {
-        return $this->oracleJobLookup()->isPackagingJob($job);
+        return $this->oracleJobService()->isPackagingJob($job);
     }
 
-    private function oracleJobLookup(): OracleJobLookupService
+    private function oracleJobService(): OracleJobService
     {
-        if (!$this->oracleJobLookup) {
-            $this->oracleJobLookup = app(OracleJobLookupService::class);
+        if (!$this->oracleJobService) {
+            $this->oracleJobService = app(OracleJobService::class);
         }
 
-        return $this->oracleJobLookup;
+        return $this->oracleJobService;
     }
 }

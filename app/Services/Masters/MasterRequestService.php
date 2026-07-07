@@ -6,14 +6,14 @@ use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
 use App\Models\ProductionLine;
 use App\Services\Catalogs\StockLocatorService;
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class MasterRequestService
 {
     public function __construct(
-        private readonly OracleJobLookupService $oracleJobLookup,
+        private readonly OracleJobService $oracleJobService,
         private readonly StockLocatorService $stockLocatorService,
     ) {}
 

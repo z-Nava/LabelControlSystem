@@ -4,7 +4,7 @@ namespace App\Http\Requests\Labels;
 
 use App\Models\LabelSku;
 use App\Models\SkuSerialFormat;
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use App\Support\SerialStandards;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -12,7 +12,7 @@ use Illuminate\Validation\Validator;
 
 class StoreLabelRequestRequest extends FormRequest
 {
-    private ?OracleJobLookupService $oracleJobLookup = null;
+    private ?OracleJobService $oracleJobService = null;
 
     public function authorize(): bool
     {
@@ -114,15 +114,15 @@ class StoreLabelRequestRequest extends FormRequest
             return;
         }
 
-        $jobLookup = $this->oracleJobLookup();
-        $job = $jobLookup->findByJobNumber($jobNumber);
+        $jobService = $this->oracleJobService();
+        $job = $jobService->findByJobNumber($jobNumber);
 
         if (!$job) {
             $validator->errors()->add('job_number', 'El Job no existe en Oracle Jobs.');
             return;
         }
 
-        if (!$jobLookup->isPackagingJob($job)) {
+        if (!$jobService->isPackagingJob($job)) {
             $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001).');
         }
     }
@@ -147,7 +147,7 @@ class StoreLabelRequestRequest extends FormRequest
             return;
         }
 
-        $job = $this->oracleJobLookup()->findByJobNumber($jobNumber);
+        $job = $this->oracleJobService()->findByJobNumber($jobNumber);
 
         if (!$job) {
             return;
@@ -178,14 +178,14 @@ class StoreLabelRequestRequest extends FormRequest
         return array_values(array_filter($tokens, static fn ($token) => $token !== ''));
     }
 
-    private function oracleJobLookup(): OracleJobLookupService
+    private function oracleJobService(): OracleJobService
     {
-        if ($this->oracleJobLookup instanceof OracleJobLookupService) {
-            return $this->oracleJobLookup;
+        if ($this->oracleJobService instanceof OracleJobService) {
+            return $this->oracleJobService;
         }
 
-        $this->oracleJobLookup = app(OracleJobLookupService::class);
+        $this->oracleJobService = app(OracleJobService::class);
 
-        return $this->oracleJobLookup;
+        return $this->oracleJobService;
     }
 }

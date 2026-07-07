@@ -4,7 +4,7 @@ namespace App\Services\Dummies;
 
 use App\Models\DummyRequest;
 use App\Models\DummyRequestItem;
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,14 +15,14 @@ class DummyRequestService
     private const STATUS_CANCELLED = 'cancelled';
 
     public function __construct(
-        private readonly OracleJobLookupService $oracleJobLookup,
+        private readonly OracleJobService $oracleJobService,
     ) {}
 
     public function create(array $data): DummyRequest
     {
         return DB::transaction(function () use ($data): DummyRequest {
             $jobNumber = (string) $data['job_number'];
-            $job = $this->oracleJobLookup->findByJobNumber($jobNumber);
+            $job = $this->oracleJobService->findByJobNumber($jobNumber);
 
             if (!$job) {
                 throw ValidationException::withMessages([

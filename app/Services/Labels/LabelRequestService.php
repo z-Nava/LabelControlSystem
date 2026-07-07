@@ -6,7 +6,7 @@ use App\Models\LabelPrintBatch;
 use App\Models\LabelRequest;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
-use App\Services\Oracle\OracleJobLookupService;
+use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +17,7 @@ class LabelRequestService
     private const STATUS_CANCELLED = 'cancelled';
 
     public function __construct(
-        private readonly OracleJobLookupService $oracleJobLookup,
+        private readonly OracleJobService $oracleJobService,
     ) {}
 
     public function create(array $data): LabelRequest
@@ -31,7 +31,7 @@ class LabelRequestService
 
     public function lookupOracleJob(string $jobNumber): array
     {
-        return $this->oracleJobLookup->buildLookupPayload($jobNumber);
+        return $this->oracleJobService->buildLookupPayload($jobNumber);
     }
 
     public function complete(LabelRequest $labelRequest, bool $forceWithoutPrintedBatch = false): LabelRequest
