@@ -40,7 +40,7 @@ class MasterRequestService
             }
 
             $oracleJob = !empty($data['job_assembly'])
-                ? $this->oracleJobLookup->findByJobNumber($data['job_assembly'])
+                ? $this->oracleJobService->findByJobNumber($data['job_assembly'])
                 : null;
 
             $manualLocal = strtoupper(trim((string) ($data['local'] ?? '')));
@@ -92,6 +92,6 @@ class MasterRequestService
      */
     public function lookupOracleJob(string $jobNumber): array
     {
-        return $this->oracleJobLookup->buildLookupPayload($jobNumber);
+        return $this->oracleJobService->buildLookupPayload($jobNumber);
     }
 }
