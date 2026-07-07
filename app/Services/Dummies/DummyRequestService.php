@@ -124,7 +124,7 @@ class DummyRequestService
 
     public function lookupOracleJob(string $jobNumber): array
     {
-        $payload = $this->oracleJobLookup->buildLookupPayload($jobNumber);
+        $payload = $this->oracleJobService->buildLookupPayload($jobNumber);
 
         if ($payload['found'] ?? false) {
             $payload['fg_code'] = strtoupper(trim((string) ($payload['assembly'] ?? '')));
