@@ -8,15 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-    <div class="w-full max-w-lg bg-white rounded-2xl shadow p-6 sm:p-8">
-        <div class="mb-8 flex justify-center rounded-2xl bg-slate-950 px-6 py-8 shadow-inner">
-            <img
-                src="{{ Vite::asset('resources/img/logoIndex.png') }}"
-                alt="Label Control"
-                class="h-36 w-auto max-w-full object-contain sm:h-44"
-            />
-        </div>
-
+    <div class="w-full max-w-md bg-white rounded-2xl shadow p-6">
         <h1 class="text-2xl font-semibold text-slate-900">Acceso administrador</h1>
         <p class="text-slate-600 mt-1">Ingresa con número de empleado y contraseña.</p>
 
