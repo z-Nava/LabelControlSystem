@@ -36,7 +36,7 @@
 
         <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             <p class="font-semibold">Que estas configurando en EMEA?</p>
-            <p class="mt-1">Estas armando el formato: <strong>PPPPPP CC [PLANT] SSSSSS MYYYY</strong> (mes con letra y ano de 4 digitos).</p>
+            <p class="mt-1">Estas armando el formato: <strong>PPPPPP CC [PLANT] SSSSSS MYYYY</strong> (mes con letra y año de 4 digitos).</p>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">

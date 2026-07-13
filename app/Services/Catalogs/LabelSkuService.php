@@ -93,16 +93,18 @@ class LabelSkuService
 
     private function normalizeData(array $data, bool $defaultActive, ?int $updatedByUserId): array
     {
+        $serialStandard = SerialStandards::normalize((string) ($data['serial_standard'] ?? SerialStandards::UL));
+
         return [
             'sku' => strtoupper(trim($data['sku'])),
-            'serial_standard' => strtoupper(trim((string) ($data['serial_standard'] ?? 'UL'))),
+            'serial_standard' => $serialStandard,
             'label_part_number' => strtoupper(trim($data['label_part_number'])),
             'description' => isset($data['description']) ? trim($data['description']) : null,
             'console_sku' => $this->nullableString($data['console_sku'] ?? null),
             'assembly_part_number' => $this->nullableString($data['assembly_part_number'] ?? null),
             'packaging_part_number' => $this->nullableString($data['packaging_part_number'] ?? null),
-            'emea_sku' => $this->nullableString($data['emea_sku'] ?? null),
-            'anz_sku' => $this->nullableString($data['anz_sku'] ?? null),
+            'emea_sku' => $serialStandard === SerialStandards::EMEA ? $this->nullableString($data['emea_sku'] ?? null) : null,
+            'anz_sku' => $serialStandard === SerialStandards::ANZ ? $this->nullableString($data['anz_sku'] ?? null) : null,
             'is_active' => (bool) ($data['is_active'] ?? $defaultActive),
             'updated_by_user_id' => $updatedByUserId,
         ];

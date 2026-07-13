@@ -66,19 +66,23 @@
         @error('packaging_part_number') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
-    <div>
+    <div data-market-sku-field="EMEA" class="{{ $currentStandard === 'EMEA' ? '' : 'hidden' }}">
         <label class="block text-sm font-medium text-slate-700">EMEA SKU</label>
         <input name="emea_sku" value="{{ old('emea_sku', $labelSku->emea_sku ?? '') }}"
+               data-market-sku-input="EMEA"
                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                placeholder="M12FHI140" />
+        <p class="mt-1 text-xs text-slate-500">Aplica solo para Label SKU Tool EMEA.</p>
         @error('emea_sku') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
-    <div>
+    <div data-market-sku-field="ANZ" class="{{ $currentStandard === 'ANZ' ? '' : 'hidden' }}">
         <label class="block text-sm font-medium text-slate-700">ANZ SKU</label>
         <input name="anz_sku" value="{{ old('anz_sku', $labelSku->anz_sku ?? '') }}"
+               data-market-sku-input="ANZ"
                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
                placeholder="M12FHI140-ANZ" />
+        <p class="mt-1 text-xs text-slate-500">Aplica solo para Label SKU Tool ANZ.</p>
         @error('anz_sku') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 
@@ -105,19 +109,33 @@
     (() => {
         const serialStandardSelect = document.getElementById('serial_standard');
         const marketHelp = document.getElementById('market-help');
+        const marketSkuFields = Array.from(document.querySelectorAll('[data-market-sku-field]'));
+        const marketSkuInputs = Array.from(document.querySelectorAll('[data-market-sku-input]'));
 
         if (!serialStandardSelect || !marketHelp) {
             return;
         }
 
+        const updateMarketSkuFields = (value) => {
+            marketSkuFields.forEach((field) => {
+                field.classList.toggle('hidden', field.dataset.marketSkuField !== value);
+            });
+
+            marketSkuInputs.forEach((input) => {
+                input.disabled = input.dataset.marketSkuInput !== value;
+            });
+        };
+
         const updateHelp = () => {
             const value = serialStandardSelect.value;
+            updateMarketSkuFields(value);
+
             if (value === 'EMEA' || value === 'ANZ') {
                 marketHelp.textContent = `Para ${value}, Console SKU, Assembly Part Number y Packaging Code son obligatorios.`;
                 return;
             }
 
-            marketHelp.textContent = 'Para UL, los campos adicionales son opcionales y quedan listos para futura configuración.';
+            marketHelp.textContent = 'Para UL, EMEA SKU y ANZ SKU no aplican; se guardan vacios. Assembly PN y Packaging PN se usan para validar Job contra Oracle.';
         };
 
         serialStandardSelect.addEventListener('change', updateHelp);
