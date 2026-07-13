@@ -130,11 +130,23 @@ class SkuSerialFormatService
         if ($serialStandard === SerialStandards::UL) {
             $normalized['date_mode'] = 'year_week';
             $normalized['month_letter_enabled'] = false;
-            $normalized['ul_prefix'] = $this->nullableUpper($data['ul_prefix'] ?? null);
-            $normalized['ul_prefix_length'] = $this->nullableInt($data['ul_prefix_length'] ?? null);
+            $normalized['separator'] = '';
+            $normalized['year_digits'] = 2;
+            $normalized['week_digits'] = 2;
+            $normalized['include_year'] = true;
+            $normalized['include_week'] = true;
+            $normalized['pattern'] = null;
+            $normalized['qr_payload_format'] = 'serial_only';
+
+            $ulPrefix = $this->nullableUpper($data['ul_prefix'] ?? null);
+            $ulPlantCode = $this->nullableUpper($data['ul_plant_code'] ?? null);
+
+            $normalized['ul_prefix'] = $ulPrefix;
+            $normalized['ul_prefix_length'] = $this->stringLength($ulPrefix);
             $normalized['ul_serial_break'] = $this->nullableUpper($data['ul_serial_break'] ?? null);
-            $normalized['ul_plant_code'] = $this->nullableUpper($data['ul_plant_code'] ?? null);
-            $normalized['ul_use_plant_code'] = (bool) ($data['ul_use_plant_code'] ?? true);
+            $normalized['ul_plant_code'] = $ulPlantCode;
+            $normalized['ul_use_plant_code'] = true;
+            $normalized['serial_length'] = $this->resolveUlSerialLength($ulPrefix, $ulPlantCode, $unitDigits);
 
             $normalized['emea_prefix'] = null;
             $normalized['emea_prefix_source'] = null;
@@ -234,16 +246,17 @@ class SkuSerialFormatService
         $resetScope = trim((string) ($data['reset_scope'] ?? ($standard === SerialStandards::UL ? 'weekly' : 'monthly')));
 
         if ($standard === SerialStandards::UL) {
+            $ulPrefix = $this->nullableUpper($data['ul_prefix'] ?? null);
             $format->ulConfig()->updateOrCreate(
                 ['sku_serial_format_id' => $format->id],
                 [
-                    'prefix' => $this->nullableUpper($data['ul_prefix'] ?? null),
-                    'prefix_length' => $this->nullableInt($data['ul_prefix_length'] ?? null),
+                    'prefix' => $ulPrefix,
+                    'prefix_length' => $this->stringLength($ulPrefix),
                     'serial_break' => $this->nullableUpper($data['ul_serial_break'] ?? null),
                     'plant_code' => $this->nullableUpper($data['ul_plant_code'] ?? null),
-                    'use_plant_code' => (bool) ($data['ul_use_plant_code'] ?? true),
-                    'reset_scope' => $resetScope ?: 'weekly',
-                    'pattern' => $pattern,
+                    'use_plant_code' => true,
+                    'reset_scope' => 'weekly',
+                    'pattern' => null,
                 ]
             );
             $format->emeaConfig()->delete();
@@ -358,6 +371,24 @@ class SkuSerialFormatService
         }
 
         return (int) $value;
+    }
+
+    private function stringLength(?string $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return strlen($value);
+    }
+
+    private function resolveUlSerialLength(?string $prefix, ?string $plantCode, int $unitDigits): ?int
+    {
+        if ($prefix === null || $plantCode === null) {
+            return null;
+        }
+
+        return strlen($prefix) + 1 + strlen($plantCode) + 2 + 2 + $unitDigits;
     }
 
     private function normalizeSeparator(?string $value): string
