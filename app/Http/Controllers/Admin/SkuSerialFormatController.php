@@ -28,10 +28,36 @@ class SkuSerialFormatController extends Controller
         return view('sku_serial_formats.index', compact('formatsByStandard', 'search'));
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        $forcedStandard = SerialStandards::normalize((string) request('standard', SerialStandards::UL));
+        $standard = SerialStandards::normalize((string) request('standard', SerialStandards::UL));
 
+        $routeByStandard = [
+            SerialStandards::UL => 'sku_serial_formats.create_ul',
+            SerialStandards::EMEA => 'sku_serial_formats.create_emea',
+            SerialStandards::ANZ => 'sku_serial_formats.create_anz',
+        ];
+
+        return redirect()->route($routeByStandard[$standard]);
+    }
+
+    public function createUl(): View
+    {
+        return $this->buildCreateView(SerialStandards::UL, 'sku_serial_formats.create_ul');
+    }
+
+    public function createEmea(): View
+    {
+        return $this->buildCreateView(SerialStandards::EMEA, 'sku_serial_formats.create_emea');
+    }
+
+    public function createAnz(): View
+    {
+        return $this->buildCreateView(SerialStandards::ANZ, 'sku_serial_formats.create_anz');
+    }
+
+    private function buildCreateView(string $forcedStandard, string $view): View
+    {
         $activeSkus = LabelSku::query()
             ->active()
             ->where('serial_standard', $forcedStandard)
@@ -39,13 +65,11 @@ class SkuSerialFormatController extends Controller
             ->orderBy('serial_standard')
             ->get(['sku', 'serial_standard', 'label_part_number']);
 
-        $viewByStandard = [
-            SerialStandards::UL => 'sku_serial_formats.create_ul',
-            SerialStandards::EMEA => 'sku_serial_formats.create_emea',
-            SerialStandards::ANZ => 'sku_serial_formats.create_anz',
-        ];
-
-        return view($viewByStandard[$forcedStandard], compact('activeSkus', 'forcedStandard'));
+        return view($view, [
+            'activeSkus' => $activeSkus,
+            'forcedStandard' => $forcedStandard,
+            'isEdit' => false,
+        ]);
     }
 
     public function store(StoreSkuSerialFormatRequest $request): RedirectResponse

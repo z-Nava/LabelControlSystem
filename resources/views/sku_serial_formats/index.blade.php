@@ -9,8 +9,9 @@
         </div>
 
         <div class="flex flex-col sm:flex-row gap-2">
+            @php($createRoutes = ['UL' => 'sku_serial_formats.create_ul', 'EMEA' => 'sku_serial_formats.create_emea', 'ANZ' => 'sku_serial_formats.create_anz'])
             @foreach(['UL' => 'bg-slate-900 hover:bg-slate-800', 'EMEA' => 'bg-red-600 hover:bg-red-500', 'ANZ' => 'bg-indigo-600 hover:bg-indigo-500'] as $standard => $buttonClasses)
-                <a href="{{ route('sku_serial_formats.create', ['standard' => $standard]) }}"
+                <a href="{{ route($createRoutes[$standard]) }}"
                    class="rounded-xl {{ $buttonClasses }} text-white px-4 py-2 font-semibold transition text-center">
                     + Agregar formato {{ $standard }}
                 </a>

@@ -71,6 +71,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::get('/sku-serial-formats', [SkuSerialFormatController::class, 'index'])->name('sku_serial_formats.index');
         Route::get('/sku-serial-formats/create', [SkuSerialFormatController::class, 'create'])->name('sku_serial_formats.create');
+        Route::get('/sku-serial-formats/create/ul', [SkuSerialFormatController::class, 'createUl'])->name('sku_serial_formats.create_ul');
+        Route::get('/sku-serial-formats/create/emea', [SkuSerialFormatController::class, 'createEmea'])->name('sku_serial_formats.create_emea');
+        Route::get('/sku-serial-formats/create/anz', [SkuSerialFormatController::class, 'createAnz'])->name('sku_serial_formats.create_anz');
         Route::post('/sku-serial-formats', [SkuSerialFormatController::class, 'store'])->name('sku_serial_formats.store');
         Route::get('/sku-serial-formats/{sku_serial_format}/edit', [SkuSerialFormatController::class, 'edit'])->name('sku_serial_formats.edit');
         Route::put('/sku-serial-formats/{sku_serial_format}', [SkuSerialFormatController::class, 'update'])->name('sku_serial_formats.update');
