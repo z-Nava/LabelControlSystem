@@ -134,7 +134,7 @@ class LabelRequestService
             return $payload;
         }
 
-        $job = $this->oracleJobLookup->findByJobNumber($jobNumber);
+        $job = $this->oracleJobService->findByJobNumber($jobNumber);
 
         if (!$job) {
             return $payload;
