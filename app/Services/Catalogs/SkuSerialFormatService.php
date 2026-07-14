@@ -170,18 +170,19 @@ class SkuSerialFormatService
         }
 
         if ($serialStandard === SerialStandards::EMEA) {
-            $emeaUnitDigits = (int) ($data['emea_unit_digits'] ?? $unitDigits ?: 6);
+            $emeaUnitDigits = 6;
 
             $normalized['date_mode'] = 'month_year';
             $normalized['month_letter_enabled'] = true;
+            $normalized['serial_length'] = null;
             $normalized['emea_prefix'] = $this->nullableUpper($data['emea_prefix'] ?? null);
-            $normalized['emea_prefix_source'] = $this->nullableString($data['emea_prefix_source'] ?? 'fixed_value');
-            $normalized['emea_prefix_digits'] = $this->nullableInt($data['emea_prefix_digits'] ?? null);
+            $normalized['emea_prefix_source'] = null;
+            $normalized['emea_prefix_digits'] = null;
             $normalized['emea_conformity_code'] = $this->nullableUpper($data['emea_conformity_code'] ?? null);
-            $normalized['emea_plant_code'] = $this->nullableUpper($data['emea_plant_code'] ?? null);
+            $normalized['emea_plant_code'] = null;
             $normalized['emea_unit_digits'] = $emeaUnitDigits;
-            $normalized['emea_declaration_required'] = (bool) ($data['emea_declaration_required'] ?? false);
-            $normalized['emea_serial_print_format'] = $this->nullableString($data['emea_serial_print_format'] ?? 'spaces');
+            $normalized['emea_declaration_required'] = false;
+            $normalized['emea_serial_print_format'] = null;
 
             $normalized['unit_length'] = $emeaUnitDigits;
             $normalized['unit_digits'] = $emeaUnitDigits;
@@ -266,19 +267,12 @@ class SkuSerialFormatService
         }
 
         if ($standard === SerialStandards::EMEA) {
-            $unitDigits = (int) ($data['emea_unit_digits'] ?? $data['unit_digits'] ?? 6);
             $format->emeaConfig()->updateOrCreate(
                 ['sku_serial_format_id' => $format->id],
                 [
                     'prefix_value' => $this->nullableUpper($data['emea_prefix'] ?? null),
-                    'prefix_source' => $this->nullableString($data['emea_prefix_source'] ?? 'fixed_value'),
-                    'prefix_digits' => $this->nullableInt($data['emea_prefix_digits'] ?? null),
                     'conformity_code' => $this->nullableUpper($data['emea_conformity_code'] ?? null),
-                    'plant_code' => $this->nullableUpper($data['emea_plant_code'] ?? null),
-                    'unit_digits' => $unitDigits,
-                    'declaration_required' => (bool) ($data['emea_declaration_required'] ?? false),
-                    'print_format' => $this->nullableString($data['emea_serial_print_format'] ?? 'spaces'),
-                    'reset_scope' => $resetScope ?: 'monthly',
+                    'unit_digits' => 6,
                     'pattern' => $pattern,
                 ]
             );

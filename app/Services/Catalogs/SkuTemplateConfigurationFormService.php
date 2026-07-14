@@ -157,19 +157,15 @@ class SkuTemplateConfigurationFormService
         }
 
         if ($standard === SerialStandards::EMEA) {
-            $prefix = strtoupper(trim((string) ($format?->emea_prefix ?: '5055')));
-            $conformity = strtoupper(trim((string) ($format?->emea_conformity_code ?: '54')));
-            $plant = strtoupper(trim((string) ($format?->emea_plant_code ?: '')));
-            $serial = collect([$prefix, $conformity, $plant, $unit, "{$monthLetter}{$yearFour}"])
+            $prefix = strtoupper(trim((string) ($format?->emea_prefix ?: '505554')));
+            $prefixParts = strlen($prefix) === 6
+                ? [substr($prefix, 0, 4), substr($prefix, 4, 2)]
+                : [$prefix];
+            $conformity = strtoupper(trim((string) ($format?->emea_conformity_code ?: '01')));
+
+            return collect([...$prefixParts, $conformity, $unit, "{$monthLetter}{$yearFour}"])
                 ->filter(fn (string $component) => $component !== '')
                 ->implode(' ');
-            $printFormat = strtolower(trim((string) ($format?->emea_serial_print_format ?: 'spaces')));
-
-            if ($printFormat === 'no_spaces') {
-                return str_replace(' ', '', $serial);
-            }
-
-            return $serial;
         }
 
         $prefix = strtoupper(trim((string) ($format?->ul_prefix ?: 'L36')));

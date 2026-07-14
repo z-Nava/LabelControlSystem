@@ -157,7 +157,7 @@ class SkuSerialFormat extends Model
             return (bool) ($this->ul_use_plant_code ?? true) ? (string) $this->ul_plant_code : '';
         }
 
-        return $this->isAnz() ? '' : (string) $this->emea_plant_code;
+        return '';
     }
 
     public function anzQrCustomerToolCode(): string
@@ -219,12 +219,12 @@ class SkuSerialFormat extends Model
 
     public function getEmeaPrefixSourceAttribute($value): ?string
     {
-        return $this->emeaConfig?->prefix_source ?? $value;
+        return $value;
     }
 
     public function getEmeaPrefixDigitsAttribute($value): ?int
     {
-        return $this->emeaConfig?->prefix_digits ?? $value;
+        return $value;
     }
 
     public function getEmeaConformityCodeAttribute($value): ?string
@@ -234,7 +234,7 @@ class SkuSerialFormat extends Model
 
     public function getEmeaPlantCodeAttribute($value): ?string
     {
-        return $this->emeaConfig?->plant_code ?? $value;
+        return $value;
     }
 
     public function getEmeaUnitDigitsAttribute($value): ?int
@@ -244,16 +244,12 @@ class SkuSerialFormat extends Model
 
     public function getEmeaDeclarationRequiredAttribute($value): bool
     {
-        if ($this->emeaConfig) {
-            return (bool) $this->emeaConfig->declaration_required;
-        }
-
         return (bool) $value;
     }
 
     public function getEmeaSerialPrintFormatAttribute($value): ?string
     {
-        return $this->emeaConfig?->print_format ?? $value;
+        return $value ?: 'spaces';
     }
 
     public function getAnzProductPrefixAttribute($value): ?string
@@ -311,7 +307,7 @@ class SkuSerialFormat extends Model
         }
 
         if ($this->isEmea()) {
-            return (string) ($this->emeaConfig?->reset_scope ?: 'monthly');
+            return 'monthly';
         }
 
         return (string) ($this->ulConfig?->reset_scope ?: 'weekly');

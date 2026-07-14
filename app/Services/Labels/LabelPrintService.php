@@ -501,14 +501,13 @@ class LabelPrintService
                 $separator = ' ';
             }
         } elseif ($serialFormat->isEmea()) {
-            $serialFormatMode = (string) ($serialFormat->emea_serial_print_format ?? 'spaces');
-            if ($forRatingQr) {
-                $separator = ' ';
-            } elseif ($serialFormatMode === 'no_spaces') {
-                $separator = '';
-            } else {
-                $separator = ' ';
-            }
+            $components = [
+                ...$this->splitEmeaSapConsolePrefix($serialFormat->componentPrefix()),
+                $serialFormat->componentBreak(),
+                $serial,
+                $monthYear,
+            ];
+            $separator = ' ';
         } elseif (!$forRatingQr && $separator === '|') {
             $separator = ' ';
         }
@@ -516,6 +515,17 @@ class LabelPrintService
         return collect($components)
             ->filter(fn (string $component) => $component !== '')
             ->implode($separator);
+    }
+
+    private function splitEmeaSapConsolePrefix(string $prefix): array
+    {
+        $prefix = strtoupper(trim($prefix));
+
+        if (strlen($prefix) === 6) {
+            return [substr($prefix, 0, 4), substr($prefix, 4, 2)];
+        }
+
+        return [$prefix];
     }
 
     private function resolveYearValue(SerialWeek $week, int $digits): string

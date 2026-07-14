@@ -27,14 +27,10 @@
                     <th class="py-3 pr-3">Año/Sem</th>
                     <th class="py-3 pr-3">Unit digits</th>
                 @elseif($isEmea)
-                    <th class="py-3 pr-3">EMEA Prefix</th>
-                    <th class="py-3 pr-3">Prefix source</th>
+                    <th class="py-3 pr-3">SAP console</th>
                     <th class="py-3 pr-3">Conformity</th>
-                    <th class="py-3 pr-3">Plant</th>
                     <th class="py-3 pr-3">Unit digits</th>
-                    <th class="py-3 pr-3">Print format</th>
                     <th class="py-3 pr-3">Month map</th>
-                    <th class="py-3 pr-3">Req. declaración</th>
                 @else
                     <th class="py-3 pr-3">ANZ Product Prefix</th>
                     <th class="py-3 pr-3">Tool version</th>
@@ -44,7 +40,9 @@
                     <th class="py-3 pr-3">Print format</th>
                 @endif
                 <th class="py-3 pr-3">QR payload</th>
-                <th class="py-3 pr-3">Reset scope</th>
+                @unless($isEmea)
+                    <th class="py-3 pr-3">Reset scope</th>
+                @endunless
                 <th class="py-3 pr-3">Activo</th>
                 <th class="py-3 text-right">Acciones</th>
             </tr>
@@ -64,13 +62,9 @@
                         <td class="py-3 pr-3">{{ $format->unit_digits ?? $format->unit_length }}</td>
                     @elseif($isEmea)
                         <td class="py-3 pr-3">{{ $format->emea_prefix ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->emea_prefix_source ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_conformity_code ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->emea_plant_code ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->emea_unit_digits ?? $format->unit_digits ?? $format->unit_length }}</td>
-                        <td class="py-3 pr-3">{{ $format->emea_serial_print_format ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->month_letter_map ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->emea_declaration_required ? 'Sí' : 'No' }}</td>
                     @else
                         <td class="py-3 pr-3">{{ $format->anz_product_prefix ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->anz_tool_version ?: '-' }}</td>
@@ -81,7 +75,9 @@
                     @endif
 
                     <td class="py-3 pr-3">{{ $format->qr_payload_format ?: '-' }}</td>
-                    <td class="py-3 pr-3">{{ $format->reset_scope }}</td>
+                    @unless($isEmea)
+                        <td class="py-3 pr-3">{{ $format->reset_scope }}</td>
+                    @endunless
                     <td class="py-3 pr-3">
                         @if($format->is_active)
                             <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Sí</span>

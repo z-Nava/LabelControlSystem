@@ -58,14 +58,9 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'ul_serial_break' => [Rule::requiredIf($isUl), 'nullable', 'string', $isUl ? 'regex:/^[A-Z]$/' : 'max:10'],
             'ul_plant_code' => [Rule::requiredIf($isUl), 'nullable', 'string', $isUl ? 'regex:/^[A-Z0-9]$/' : 'max:10'],
 
-            'emea_prefix' => [Rule::requiredIf($isEmea), 'nullable', 'string', 'max:20'],
-            'emea_prefix_source' => ['nullable', Rule::in(['sap_console_last_6', 'fixed_value', 'packaging_code'])],
-            'emea_prefix_digits' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'emea_conformity_code' => [Rule::requiredIf($isEmea), 'nullable', 'string', 'max:10'],
-            'emea_plant_code' => ['nullable', 'string', 'max:10'],
-            'emea_unit_digits' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'emea_declaration_required' => ['nullable', 'boolean'],
-            'emea_serial_print_format' => ['nullable', Rule::in(['spaces', 'no_spaces', 'segmented'])],
+            'emea_prefix' => [Rule::requiredIf($isEmea), 'nullable', 'string', $isEmea ? 'regex:/^\d{6}$/' : 'max:20'],
+            'emea_conformity_code' => [Rule::requiredIf($isEmea), 'nullable', 'string', $isEmea ? 'regex:/^\d{2}$/' : 'max:10'],
+            'emea_unit_digits' => ['nullable', 'integer', $isEmea ? 'in:6' : 'min:1', 'max:10'],
 
             'anz_customer_tool_code' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:10'],
             'anz_product_prefix' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:20'],
@@ -82,13 +77,14 @@ class UpdateSkuSerialFormatRequest extends FormRequest
     {
         $standard = strtoupper(trim((string) $this->input('serial_standard', 'UL')));
         $isUl = $standard === SerialStandards::UL;
+        $isEmea = $standard === SerialStandards::EMEA;
 
         $this->merge([
             'sku' => strtoupper(trim((string) $this->input('sku'))),
             'serial_standard' => $standard,
             'serial_scheme' => $isUl ? 'ul_standard' : trim((string) $this->input('serial_scheme', $standard === SerialStandards::EMEA ? 'emea_rating' : 'anz_standard')),
             'description' => $this->input('description'),
-            'serial_length' => $isUl ? null : $this->input('serial_length'),
+            'serial_length' => ($isUl || $isEmea) ? null : $this->input('serial_length'),
             'qr_payload_format' => $isUl ? 'serial_only' : trim((string) $this->input('qr_payload_format', $standard === SerialStandards::ANZ ? 'customer_tool_code_serial' : 'emea_code_only')),
             'date_mode' => $isUl ? 'year_week' : trim((string) $this->input('date_mode', 'month_year')),
             'month_letter_enabled' => $isUl ? false : $this->boolean('month_letter_enabled', true),
@@ -97,14 +93,9 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'ul_prefix' => strtoupper(trim((string) $this->input('ul_prefix'))),
             'ul_serial_break' => strtoupper(trim((string) $this->input('ul_serial_break'))),
             'ul_plant_code' => strtoupper(trim((string) $this->input('ul_plant_code'))),
-            'emea_prefix' => $this->input('emea_prefix'),
-            'emea_prefix_source' => $this->input('emea_prefix_source', 'fixed_value'),
-            'emea_prefix_digits' => $this->input('emea_prefix_digits'),
-            'emea_conformity_code' => $this->input('emea_conformity_code'),
-            'emea_plant_code' => $this->input('emea_plant_code'),
-            'emea_unit_digits' => $this->input('emea_unit_digits'),
-            'emea_declaration_required' => $this->boolean('emea_declaration_required', false),
-            'emea_serial_print_format' => $this->input('emea_serial_print_format', 'spaces'),
+            'emea_prefix' => trim((string) $this->input('emea_prefix')),
+            'emea_conformity_code' => trim((string) $this->input('emea_conformity_code')),
+            'emea_unit_digits' => $isEmea ? 6 : $this->input('emea_unit_digits'),
             'anz_customer_tool_code' => $this->input('anz_customer_tool_code'),
             'anz_product_prefix' => $this->input('anz_product_prefix'),
             'anz_tool_version' => $this->input('anz_tool_version'),
@@ -118,8 +109,8 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'week_digits' => $isUl ? 2 : (int) $this->input('week_digits', 2),
             'include_year' => $isUl ? true : $this->boolean('include_year', true),
             'include_week' => $isUl ? true : $this->boolean('include_week', false),
-            'unit_digits' => (int) $this->input('unit_digits', $standard === SerialStandards::UL ? 5 : ($standard === SerialStandards::ANZ ? 5 : 6)),
-            'reset_scope' => $isUl ? 'weekly' : trim((string) $this->input('reset_scope', 'monthly')),
+            'unit_digits' => $isEmea ? 6 : (int) $this->input('unit_digits', $standard === SerialStandards::UL ? 5 : ($standard === SerialStandards::ANZ ? 5 : 6)),
+            'reset_scope' => $isUl ? 'weekly' : ($isEmea ? 'monthly' : trim((string) $this->input('reset_scope', 'monthly'))),
             'is_active' => $this->boolean('is_active', false),
         ]);
     }
