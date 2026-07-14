@@ -62,14 +62,14 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'emea_conformity_code' => [Rule::requiredIf($isEmea), 'nullable', 'string', $isEmea ? 'regex:/^\d{2}$/' : 'max:10'],
             'emea_unit_digits' => ['nullable', 'integer', $isEmea ? 'in:6' : 'min:1', 'max:10'],
 
-            'anz_customer_tool_code' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:10'],
-            'anz_product_prefix' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:20'],
-            'anz_tool_version' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:2'],
+            'anz_customer_tool_code' => [Rule::requiredIf($isAnz), 'nullable', 'string', 'max:40'],
+            'anz_product_prefix' => [Rule::requiredIf($isAnz), 'nullable', 'string', $isAnz ? 'regex:/^[A-Z0-9]{9}$/' : 'max:20'],
+            'anz_tool_version' => [Rule::requiredIf($isAnz), 'nullable', 'string', $isAnz ? 'regex:/^[A-Z]$/' : 'max:2'],
             'anz_tool_version_required' => ['nullable', 'boolean'],
-            'anz_unit_digits' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'anz_qr_separator' => ['nullable', 'string', 'max:5'],
+            'anz_unit_digits' => ['nullable', 'integer', $isAnz ? 'in:5' : 'min:1', 'max:10'],
+            'anz_qr_separator' => ['nullable', 'string', $isAnz ? Rule::in([' | ']) : 'max:5'],
             'anz_include_customer_tool_code_in_qr' => ['nullable', 'boolean'],
-            'anz_serial_print_format' => ['nullable', Rule::in(['spaces', 'no_spaces', 'segmented'])],
+            'anz_serial_print_format' => ['nullable', Rule::in($isAnz ? ['spaces'] : ['spaces', 'no_spaces', 'segmented'])],
         ];
     }
 
@@ -78,13 +78,14 @@ class UpdateSkuSerialFormatRequest extends FormRequest
         $standard = strtoupper(trim((string) $this->input('serial_standard', 'UL')));
         $isUl = $standard === SerialStandards::UL;
         $isEmea = $standard === SerialStandards::EMEA;
+        $isAnz = $standard === SerialStandards::ANZ;
 
         $this->merge([
             'sku' => strtoupper(trim((string) $this->input('sku'))),
             'serial_standard' => $standard,
             'serial_scheme' => $isUl ? 'ul_standard' : trim((string) $this->input('serial_scheme', $standard === SerialStandards::EMEA ? 'emea_rating' : 'anz_standard')),
             'description' => $this->input('description'),
-            'serial_length' => ($isUl || $isEmea) ? null : $this->input('serial_length'),
+            'serial_length' => $isAnz ? 23 : (($isUl || $isEmea) ? null : $this->input('serial_length')),
             'qr_payload_format' => $isUl ? 'serial_only' : trim((string) $this->input('qr_payload_format', $standard === SerialStandards::ANZ ? 'customer_tool_code_serial' : 'emea_code_only')),
             'date_mode' => $isUl ? 'year_week' : trim((string) $this->input('date_mode', 'month_year')),
             'month_letter_enabled' => $isUl ? false : $this->boolean('month_letter_enabled', true),
@@ -96,21 +97,21 @@ class UpdateSkuSerialFormatRequest extends FormRequest
             'emea_prefix' => trim((string) $this->input('emea_prefix')),
             'emea_conformity_code' => trim((string) $this->input('emea_conformity_code')),
             'emea_unit_digits' => $isEmea ? 6 : $this->input('emea_unit_digits'),
-            'anz_customer_tool_code' => $this->input('anz_customer_tool_code'),
-            'anz_product_prefix' => $this->input('anz_product_prefix'),
-            'anz_tool_version' => $this->input('anz_tool_version'),
-            'anz_tool_version_required' => $this->boolean('anz_tool_version_required', true),
-            'anz_unit_digits' => $this->input('anz_unit_digits'),
-            'anz_qr_separator' => $this->input('anz_qr_separator', ' | '),
-            'anz_include_customer_tool_code_in_qr' => $this->boolean('anz_include_customer_tool_code_in_qr', true),
-            'anz_serial_print_format' => $this->input('anz_serial_print_format', 'spaces'),
+            'anz_customer_tool_code' => strtoupper(trim((string) $this->input('anz_customer_tool_code'))),
+            'anz_product_prefix' => strtoupper(trim((string) $this->input('anz_product_prefix'))),
+            'anz_tool_version' => strtoupper(trim((string) $this->input('anz_tool_version', 'A'))),
+            'anz_tool_version_required' => $isAnz ? true : $this->boolean('anz_tool_version_required', true),
+            'anz_unit_digits' => $isAnz ? 5 : $this->input('anz_unit_digits'),
+            'anz_qr_separator' => $isAnz ? ' | ' : $this->input('anz_qr_separator', ' | '),
+            'anz_include_customer_tool_code_in_qr' => $isAnz ? true : $this->boolean('anz_include_customer_tool_code_in_qr', true),
+            'anz_serial_print_format' => $isAnz ? 'spaces' : $this->input('anz_serial_print_format', 'spaces'),
             'separator' => $isUl ? '' : $this->normalizeSeparatorInput(),
             'year_digits' => $isUl ? 2 : (int) $this->input('year_digits', 4),
             'week_digits' => $isUl ? 2 : (int) $this->input('week_digits', 2),
-            'include_year' => $isUl ? true : $this->boolean('include_year', true),
-            'include_week' => $isUl ? true : $this->boolean('include_week', false),
-            'unit_digits' => $isEmea ? 6 : (int) $this->input('unit_digits', $standard === SerialStandards::UL ? 5 : ($standard === SerialStandards::ANZ ? 5 : 6)),
-            'reset_scope' => $isUl ? 'weekly' : ($isEmea ? 'monthly' : trim((string) $this->input('reset_scope', 'monthly'))),
+            'include_year' => ($isUl || $isAnz) ? true : $this->boolean('include_year', true),
+            'include_week' => $isUl ? true : ($isAnz ? false : $this->boolean('include_week', false)),
+            'unit_digits' => $isEmea ? 6 : ($isAnz ? 5 : (int) $this->input('unit_digits', 5)),
+            'reset_scope' => $isUl ? 'weekly' : (($isEmea || $isAnz) ? 'monthly' : trim((string) $this->input('reset_scope', 'monthly'))),
             'is_active' => $this->boolean('is_active', false),
         ]);
     }

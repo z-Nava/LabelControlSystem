@@ -36,8 +36,7 @@
                     <th class="py-3 pr-3">Tool version</th>
                     <th class="py-3 pr-3">Unit digits</th>
                     <th class="py-3 pr-3">Customer tool</th>
-                    <th class="py-3 pr-3">QR sep</th>
-                    <th class="py-3 pr-3">Print format</th>
+                    <th class="py-3 pr-3">QR</th>
                 @endif
                 <th class="py-3 pr-3">QR payload</th>
                 @unless($isEmea)
@@ -70,8 +69,7 @@
                         <td class="py-3 pr-3">{{ $format->anz_tool_version ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $format->anz_unit_digits ?? $format->unit_digits ?? $format->unit_length }}</td>
                         <td class="py-3 pr-3">{{ $format->anz_customer_tool_code ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->anz_qr_separator ?: '-' }}</td>
-                        <td class="py-3 pr-3">{{ $format->anz_serial_print_format ?: '-' }}</td>
+                        <td class="py-3 pr-3">Customer tool | Serial</td>
                     @endif
 
                     <td class="py-3 pr-3">{{ $format->qr_payload_format ?: '-' }}</td>

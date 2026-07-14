@@ -205,18 +205,22 @@ class SkuSerialFormatService
             return $normalized;
         }
 
-        $anzUnitDigits = (int) ($data['anz_unit_digits'] ?? $unitDigits ?: 5);
         $normalized['date_mode'] = 'month_year';
         $normalized['month_letter_enabled'] = true;
+        $normalized['serial_length'] = 23;
+        $normalized['year_digits'] = 4;
+        $normalized['week_digits'] = 2;
+        $normalized['include_year'] = true;
+        $normalized['include_week'] = false;
 
         $normalized['anz_customer_tool_code'] = $this->nullableUpper($data['anz_customer_tool_code'] ?? null);
         $normalized['anz_product_prefix'] = $this->nullableUpper($data['anz_product_prefix'] ?? null);
         $normalized['anz_tool_version'] = $this->nullableUpper($data['anz_tool_version'] ?? null);
-        $normalized['anz_tool_version_required'] = (bool) ($data['anz_tool_version_required'] ?? true);
-        $normalized['anz_unit_digits'] = $anzUnitDigits;
-        $normalized['anz_qr_separator'] = $this->nullableString($data['anz_qr_separator'] ?? ' | ');
-        $normalized['anz_include_customer_tool_code_in_qr'] = (bool) ($data['anz_include_customer_tool_code_in_qr'] ?? true);
-        $normalized['anz_serial_print_format'] = $this->nullableString($data['anz_serial_print_format'] ?? 'spaces');
+        $normalized['anz_tool_version_required'] = true;
+        $normalized['anz_unit_digits'] = 5;
+        $normalized['anz_qr_separator'] = ' | ';
+        $normalized['anz_include_customer_tool_code_in_qr'] = true;
+        $normalized['anz_serial_print_format'] = 'spaces';
 
         // Compatibilidad con formateador actual basado en campos EMEA.
         $normalized['emea_prefix'] = $normalized['anz_product_prefix'];
@@ -224,12 +228,12 @@ class SkuSerialFormatService
         $normalized['emea_plant_code'] = null;
         $normalized['emea_prefix_source'] = 'fixed_value';
         $normalized['emea_prefix_digits'] = $this->nullableInt($data['emea_prefix_digits'] ?? null);
-        $normalized['emea_unit_digits'] = $anzUnitDigits;
+        $normalized['emea_unit_digits'] = 5;
         $normalized['emea_declaration_required'] = false;
         $normalized['emea_serial_print_format'] = null;
 
-        $normalized['unit_length'] = $anzUnitDigits;
-        $normalized['unit_digits'] = $anzUnitDigits;
+        $normalized['unit_length'] = 5;
+        $normalized['unit_digits'] = 5;
 
         $normalized['ul_prefix'] = null;
         $normalized['ul_prefix_length'] = null;
@@ -244,7 +248,6 @@ class SkuSerialFormatService
     {
         $standard = strtoupper((string) $format->serial_standard);
         $pattern = $this->nullablePattern($data['pattern'] ?? null);
-        $resetScope = trim((string) ($data['reset_scope'] ?? ($standard === SerialStandards::UL ? 'weekly' : 'monthly')));
 
         if ($standard === SerialStandards::UL) {
             $ulPrefix = $this->nullableUpper($data['ul_prefix'] ?? null);
@@ -282,21 +285,22 @@ class SkuSerialFormatService
             return;
         }
 
-        $anzUnitDigits = (int) ($data['anz_unit_digits'] ?? $data['unit_digits'] ?? 5);
+        $anzUnitDigits = 5;
+        $productPrefix = $this->nullableUpper($data['anz_product_prefix'] ?? null);
         $format->anzConfig()->updateOrCreate(
             ['sku_serial_format_id' => $format->id],
             [
-                'product_prefix' => $this->nullableUpper($data['anz_product_prefix'] ?? null),
-                'product_prefix_length' => $this->nullableInt($data['emea_prefix_digits'] ?? null),
+                'product_prefix' => $productPrefix,
+                'product_prefix_length' => $this->stringLength($productPrefix),
                 'tool_version_letter' => $this->nullableUpper($data['anz_tool_version'] ?? null),
-                'tool_version_required' => (bool) ($data['anz_tool_version_required'] ?? true),
+                'tool_version_required' => true,
                 'customer_tool_code' => $this->nullableUpper($data['anz_customer_tool_code'] ?? null),
-                'customer_tool_code_required' => false,
+                'customer_tool_code_required' => true,
                 'unit_digits' => $anzUnitDigits,
-                'qr_separator' => $this->nullableString($data['anz_qr_separator'] ?? ' | '),
-                'include_customer_tool_code_in_qr' => (bool) ($data['anz_include_customer_tool_code_in_qr'] ?? true),
-                'print_format' => $this->nullableString($data['anz_serial_print_format'] ?? 'spaces'),
-                'reset_scope' => $resetScope ?: 'monthly',
+                'qr_separator' => ' | ',
+                'include_customer_tool_code_in_qr' => true,
+                'print_format' => 'spaces',
+                'reset_scope' => 'monthly',
                 'pattern' => $pattern,
                 'qr_pattern' => null,
             ]

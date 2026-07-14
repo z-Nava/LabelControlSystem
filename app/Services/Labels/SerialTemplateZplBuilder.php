@@ -60,7 +60,7 @@ class SerialTemplateZplBuilder
 
             $zpl[] = sprintf('^FO%d,%d', $qr['x'], $qr['y'] + $yOffset);
             $zpl[] = sprintf('^BQ%s,2,%d', $qr['orientation'], $qr['magnification']);
-            $zpl[] = sprintf('^FDLA,%s^FS', $this->resolveQrPayload($qr, $isRatingLabel));
+            $zpl[] = sprintf('^FDLA,%s^FS', $this->resolveQrPayload($qr, $isRatingLabel, $serialStandard));
 
             if (!$hideSkuOnEmeaRating) {
                 $zpl[] = sprintf('^FO%d,%d', $sku['x'], $sku['y'] + $yOffset);
@@ -125,9 +125,10 @@ class SerialTemplateZplBuilder
         return max(200, $maxY + 30);
     }
 
-    private function resolveQrPayload(array $qr, bool $isRatingLabel): string
+    private function resolveQrPayload(array $qr, bool $isRatingLabel, string $serialStandard): string
     {
         $mode = strtolower(trim((string) ($qr['content_mode'] ?? 'auto')));
+        $isAnz = strtoupper(trim($serialStandard)) === 'ANZ';
 
         if ($mode === 'custom') {
             $tokens = collect($qr['custom_fields'] ?? [])
@@ -148,14 +149,10 @@ class SerialTemplateZplBuilder
             return $this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
         }
 
-        if ($mode === 'anz_customer_tool_serial') {
-            if ($isRatingLabel) {
-                return '{{anz_customer_tool_code}}'
-                    .$this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe'))
-                    .$this->serialPlaceholder('rating_qr_code', (string) ($qr['serial_style'] ?? 'as_is'));
-            }
-
-            return $this->serialPlaceholder('serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
+        if ($mode === 'anz_customer_tool_serial' || ($mode === 'auto' && $isAnz)) {
+            return '{{anz_customer_tool_code}}'
+                .$this->resolveQrSeparator((string) ($qr['separator'] ?? 'pipe'))
+                .$this->serialPlaceholder($isRatingLabel ? 'rating_qr_code' : 'serial_full', (string) ($qr['serial_style'] ?? 'as_is'));
         }
 
         return $isRatingLabel

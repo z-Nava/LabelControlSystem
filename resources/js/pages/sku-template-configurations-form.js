@@ -437,11 +437,7 @@ const initSkuTemplateConfigurationsForm = () => {
             return applySerialStyle(ratingSerial);
         }
 
-        if (mode === 'anz_customer_tool_serial') {
-            if (labelType !== 'rating') {
-                return applySerialStyle(serial);
-            }
-
+        if (mode === 'anz_customer_tool_serial' || (mode === 'auto' && getSelectedSerialStandard() === 'ANZ')) {
             const customerToolCode = getSelectedAnzCustomerToolCode();
             const serialValue = applySerialStyle(ratingSerial);
 
