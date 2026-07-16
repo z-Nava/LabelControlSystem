@@ -50,6 +50,11 @@ class LabelPrintBatch extends Model
         return $this->hasMany(LabelPrintBatchItem::class, 'label_print_batch_id');
     }
 
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(LabelPrintBlock::class, 'label_print_batch_id');
+    }
+
     // Helpers
     public function isRework(): bool
     {

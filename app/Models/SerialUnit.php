@@ -19,6 +19,8 @@ class SerialUnit extends Model
         'rating_qr_code',
         'status',
         'printed_at',
+        'serial_printed_at',
+        'rating_printed_at',
     ];
 
     protected $casts = [
@@ -26,6 +28,8 @@ class SerialUnit extends Model
         'label_sku_id' => 'integer',
         'serial_number' => 'integer',
         'printed_at' => 'datetime',
+        'serial_printed_at' => 'datetime',
+        'rating_printed_at' => 'datetime',
     ];
 
     public function week(): BelongsTo

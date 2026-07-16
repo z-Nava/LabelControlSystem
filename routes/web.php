@@ -161,6 +161,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
             Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
             Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
+            Route::post('/label-requests/{label_request}/print-batches/{batch}/fail', [LabelPrintController::class, 'fail'])->name('label_requests.print_batches.fail');
 
             Route::get('/label-reworks', [LabelReworkController::class, 'search'])->name('label_reworks.search');
             Route::get('/label-reworks/{label_request}', [LabelReworkController::class, 'show'])->name('label_reworks.show');

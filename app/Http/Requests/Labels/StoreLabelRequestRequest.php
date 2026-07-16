@@ -64,6 +64,7 @@ class StoreLabelRequestRequest extends FormRequest
             $this->validateActiveLabelPartNumber($validator);
             $this->validatePackagingJobNumber($validator);
             $this->validateOracleAssemblyMatchesLabelSku($validator);
+            $this->validateRequestedQuantityWithinOracleJob($validator);
         });
     }
 
@@ -166,6 +167,33 @@ class StoreLabelRequestRequest extends FormRequest
         }
 
         $validator->errors()->add('job_number', 'El assembly del Job en Oracle debe coincidir con Assembly PN o alguno de los Packaging PN del Label SKU.');
+    }
+
+    private function validateRequestedQuantityWithinOracleJob(Validator $validator): void
+    {
+        $jobNumber = (string) $this->input('job_number');
+
+        if ($jobNumber === '') {
+            return;
+        }
+
+        $job = $this->oracleJobService()->findByJobNumber($jobNumber);
+
+        if (!$job || $job->job_qty === null) {
+            return;
+        }
+
+        $jobQty = (int) $job->job_qty;
+        $requestedQty = (int) $this->input('quantity_requested');
+
+        if ($jobQty <= 0 || $requestedQty <= $jobQty) {
+            return;
+        }
+
+        $validator->errors()->add(
+            'quantity_requested',
+            "La cantidad solicitada no puede superar el Job Qty de Oracle ({$jobQty})."
+        );
     }
 
     /**

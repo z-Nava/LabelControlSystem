@@ -133,6 +133,10 @@ function createJobLookupHandler(elements, onStateChange) {
                 inputs.poNumber.value = data.ttl_cust_po || '';
             }
 
+            if (inputs.quantity && Number(data.job_qty) > 0) {
+                inputs.quantity.max = String(data.job_qty);
+            }
+
             const wasSkuAutoSelected = autoSelectSkuByAssembly(elements, data.assembly);
             setHint(hints.job, 'ok', `NP: ${data.assembly || '-'} | ${data.part_description || ''}`);
             if (wasSkuAutoSelected) {

@@ -87,14 +87,34 @@ class LabelPrintController extends Controller
 
         $data = $request->validate([
             'printed_ok' => ['required', 'boolean'],
+            'block_id' => ['nullable', 'integer'],
         ]);
 
         if (!$data['printed_ok']) {
             return response()->json(['message' => 'Impresión no confirmada por el cliente.'], 422);
         }
 
-        $result = $this->batchExecutionService->confirmPrinted($batch);
+        $result = $this->batchExecutionService->confirmPrinted($batch, $data['block_id'] ?? null);
 
         return response()->json($result);
+    }
+
+    public function fail(Request $request, LabelRequest $label_request, LabelPrintBatch $batch): JsonResponse
+    {
+        abort_unless((int) $batch->label_request_id === (int) $label_request->id, 404);
+        abort_if(
+            $label_request->status === 'completed' && $batch->batch_type === 'print',
+            403,
+            'Esta requisiciÃ³n estÃ¡ completada y no permite reportar fallas de impresiÃ³n.'
+        );
+
+        $data = $request->validate([
+            'block_id' => ['nullable', 'integer'],
+            'message' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json(
+            $this->batchExecutionService->failBlock($batch, $data['block_id'] ?? null, $data['message'] ?? null)
+        );
     }
 }

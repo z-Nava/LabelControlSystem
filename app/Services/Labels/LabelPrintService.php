@@ -3,6 +3,8 @@
 namespace App\Services\Labels;
 
 use App\Models\LabelPrintBatch;
+use App\Models\LabelPrintBlock;
+use App\Models\LabelPrintBlockItem;
 use App\Models\LabelPrintBatchItem;
 use App\Models\LabelRequest;
 use App\Models\LabelSku;
@@ -152,8 +154,82 @@ class LabelPrintService
                 $labelRequest->update(['status' => 'in_progress']);
             }
 
-            return $batch->load(['items', 'labelRequest']);
+            $this->createBlocksForBatch($batch);
+
+            return $batch->load(['items', 'blocks', 'labelRequest']);
         });
+    }
+
+    private function createBlocksForBatch(LabelPrintBatch $batch): void
+    {
+        $blockSize = $this->printBlockSize();
+
+        $items = $batch->items()
+            ->with('serialUnit:id,serial_number')
+            ->get()
+            ->sortBy(fn (LabelPrintBatchItem $item) => $item->serialUnit?->serial_number ?? 0)
+            ->values();
+
+        foreach (['serial', 'rating'] as $labelType) {
+            $typeItems = $items
+                ->filter(fn (LabelPrintBatchItem $item) => (bool) $item->{'print_'.$labelType})
+                ->values();
+
+            $sequence = 1;
+            foreach ($this->chunkItemsByLabelCount($typeItems, $blockSize) as $chunk) {
+                $block = LabelPrintBlock::query()->create([
+                    'label_print_batch_id' => $batch->id,
+                    'label_type' => $labelType,
+                    'sequence' => $sequence++,
+                    'unit_count' => $chunk->count(),
+                    'label_count' => (int) $chunk->sum('copies'),
+                    'status' => 'pending',
+                ]);
+
+                $payload = $chunk->map(fn (LabelPrintBatchItem $item) => [
+                    'label_print_block_id' => $block->id,
+                    'label_print_batch_item_id' => $item->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])->all();
+
+                LabelPrintBlockItem::query()->insert($payload);
+            }
+        }
+    }
+
+    /**
+     * @return array<int, Collection<int, LabelPrintBatchItem>>
+     */
+    private function chunkItemsByLabelCount(Collection $items, int $maxLabels): array
+    {
+        $chunks = [];
+        $current = collect();
+        $currentLabels = 0;
+
+        foreach ($items as $item) {
+            $itemLabels = max(1, (int) $item->copies);
+
+            if ($current->isNotEmpty() && ($currentLabels + $itemLabels) > $maxLabels) {
+                $chunks[] = $current;
+                $current = collect();
+                $currentLabels = 0;
+            }
+
+            $current->push($item);
+            $currentLabels += $itemLabels;
+        }
+
+        if ($current->isNotEmpty()) {
+            $chunks[] = $current;
+        }
+
+        return $chunks;
+    }
+
+    private function printBlockSize(): int
+    {
+        return max(1, (int) config('labels.print_block_size', 360));
     }
 
     private function appendBatchItemsFromRanges(

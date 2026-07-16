@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LabelPrintBatchItem extends Model
 {
@@ -34,6 +35,11 @@ class LabelPrintBatchItem extends Model
     public function serialUnit(): BelongsTo
     {
         return $this->belongsTo(SerialUnit::class, 'serial_unit_id');
+    }
+
+    public function blockItems(): HasMany
+    {
+        return $this->hasMany(LabelPrintBlockItem::class, 'label_print_batch_item_id');
     }
 
     // Helpers

@@ -11,6 +11,7 @@ import './pages/master-print-create';
 import './pages/oracle-jobs-import';
 import './pages/master-print-template';
 import './pages/label-requests-create';
+import './pages/label-print-center';
 import './pages/sku-template-configurations-form';
 import './pages/dummy-requests-create';
 import './pages/dummy-requests-show';
