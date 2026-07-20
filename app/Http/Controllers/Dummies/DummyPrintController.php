@@ -8,6 +8,7 @@ use App\Models\DummyPrintBatch;
 use App\Models\DummyQrTemplate;
 use App\Models\DummyRequest;
 use App\Services\Dummies\DummyPrintService;
+use App\Services\Dummies\DummyQRTemplateZplBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class DummyPrintController extends Controller
 {
     public function __construct(
         private readonly DummyPrintService $service,
+        private readonly DummyQRTemplateZplBuilder $zplBuilder,
     ) {}
 
     public function create(Request $request, DummyRequest $dummy_request): View|RedirectResponse
@@ -78,10 +80,19 @@ class DummyPrintController extends Controller
             'batch' => $batch,
             'alreadyPrinted' => $batch->printed_at !== null,
             'templatesByType' => [
-                'rmt' => optional($templates->get('rmt'))->zpl,
-                'rw' => optional($templates->get('rw'))->zpl,
+                'rmt' => $this->buildCurrentTemplateZpl($templates->get('rmt')),
+                'rw' => $this->buildCurrentTemplateZpl($templates->get('rw')),
             ],
         ]);
+    }
+
+    private function buildCurrentTemplateZpl(?DummyQrTemplate $template): ?string
+    {
+        if (! $template) {
+            return null;
+        }
+
+        return $this->zplBuilder->build($template->toArray());
     }
 
     public function confirm(Request $request, DummyRequest $dummy_request, DummyPrintBatch $batch): JsonResponse
@@ -92,7 +103,7 @@ class DummyPrintController extends Controller
             'printed_ok' => ['required', 'boolean'],
         ]);
 
-        if (!$data['printed_ok']) {
+        if (! $data['printed_ok']) {
             return response()->json(['message' => 'Impresión no confirmada por el cliente.'], 422);
         }
 

@@ -1,4 +1,9 @@
-import { buildZpl } from './dummy-qr-templates-create/zpl';
+import {
+    buildZpl,
+    LEGACY_LAYOUT_DEFAULTS,
+    millimetersToDots,
+    scaleLegacyLayout,
+} from './dummy-qr-templates-create/zpl';
 import { createLayoutPreview } from './dummy-qr-templates-create/layout-preview';
 import { createPrinterService, dotsToMillimeters } from './dummy-qr-templates-create/printers';
 import { createStatusSetter, getElement } from './dummy-qr-templates-create/dom';
@@ -135,6 +140,37 @@ if (!formRoot) {
         printerSizeSummaryEl?.classList.remove('hidden');
     };
 
+    const applyLegacyLayoutScale = () => {
+        const widthMm = Number(getElement('width_mm')?.value);
+        const heightMm = Number(getElement('height_mm')?.value);
+        const dpi = Number(getElement('dpi')?.value);
+
+        if (!Number.isFinite(widthMm) || widthMm <= 0
+            || !Number.isFinite(heightMm) || heightMm <= 0
+            || !Number.isFinite(dpi) || dpi <= 0) {
+            return false;
+        }
+
+        const currentLayout = Object.fromEntries(
+            Object.entries(LEGACY_LAYOUT_DEFAULTS)
+                .map(([field, fallback]) => [field, Number(getElement(field)?.value ?? fallback)]),
+        );
+        const scaledLayout = scaleLegacyLayout(
+            currentLayout,
+            millimetersToDots(widthMm, dpi, 820),
+            millimetersToDots(heightMm, dpi, 400),
+        );
+
+        if (scaledLayout === currentLayout) return false;
+
+        Object.entries(scaledLayout).forEach(([field, value]) => {
+            const input = getElement(field);
+            if (input) input.value = String(value);
+        });
+
+        return true;
+    };
+
     getElement('preview-zpl')?.addEventListener('click', () => {
         previewEl.textContent = buildZpl();
         previewEl.classList.remove('hidden');
@@ -183,6 +219,12 @@ if (!formRoot) {
         });
     });
 
+    ['dpi', 'width_mm', 'height_mm'].forEach((fieldId) => {
+        getElement(fieldId)?.addEventListener('change', () => {
+            if (applyLegacyLayoutScale()) layoutPreview.render();
+        });
+    });
+
     [
         'dummy_type', 'dpi', 'width_mm', 'height_mm', 'qr_orientation',
         'qr_x', 'qr_y', 'qr_magnification', 'fg_x', 'fg_y', 'fg_font_size',
@@ -194,6 +236,7 @@ if (!formRoot) {
         field?.addEventListener('change', layoutPreview.render);
     });
 
+    applyLegacyLayoutScale();
     layoutPreview.setPreviewStageSize(820, 400);
     layoutPreview.render();
     layoutPreview.bindDrag();
