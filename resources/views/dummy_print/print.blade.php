@@ -45,6 +45,26 @@
         </div>
     </div>
 
+    <div id="print-progress-panel" class="mt-4 rounded-xl border border-slate-200 bg-white p-4" aria-live="polite">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Progreso de impresión</div>
+            <div id="print-progress-summary" class="text-sm font-semibold text-slate-700">Pendiente</div>
+        </div>
+        <div
+            id="print-progress"
+            class="mt-3 h-3 overflow-hidden rounded-full bg-slate-200"
+            role="progressbar"
+            aria-label="Progreso informativo de impresión"
+            aria-valuemin="0"
+            aria-valuemax="{{ (int) $batch->quantity }}"
+            aria-valuenow="0"
+        >
+            <div id="print-progress-bar" class="h-full w-0 rounded-full bg-red-600 transition-all duration-200 ease-out"></div>
+        </div>
+        <div id="print-progress-detail" class="mt-2 text-sm text-slate-600">0 de {{ number_format((int) $batch->quantity) }} etiquetas enviadas (0%).</div>
+        <p class="mt-1 text-xs text-slate-500">Indicador informativo: muestra los datos aceptados por Zebra Browser Print; no confirma la salida física de cada etiqueta.</p>
+    </div>
+
     <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200">
         <table class="w-full text-sm">
             <thead class="bg-slate-50">
@@ -91,6 +111,10 @@
     const printerBox = document.getElementById('selected-printer');
     const printerSelect = document.getElementById('printer-select');
     const statusBox = document.getElementById('print-status');
+    const progress = document.getElementById('print-progress');
+    const progressBar = document.getElementById('print-progress-bar');
+    const progressSummary = document.getElementById('print-progress-summary');
+    const progressDetail = document.getElementById('print-progress-detail');
     const storageKey = 'dummy_print_selected_printer';
 
     const templatesByType = JSON.parse(root.dataset.templates || '{}');
@@ -100,10 +124,44 @@
     let selectedDevice = null;
     let availablePrinters = [];
     let printPrepared = false;
+    let printLocked = false;
+    let isPrinting = false;
 
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
         statusBox.classList.toggle('text-red-700', isError);
+    };
+
+    const updatePrintProgress = (sent, total, state = 'idle') => {
+        const safeTotal = Math.max(0, Number(total) || 0);
+        const safeSent = Math.min(Math.max(0, Number(sent) || 0), safeTotal);
+        const percentage = safeTotal > 0 ? Math.round((safeSent / safeTotal) * 100) : 0;
+        const summaries = {
+            idle: 'Pendiente',
+            printing: 'Imprimiendo',
+            sent: 'Envío completado',
+            error: 'Envío interrumpido',
+        };
+
+        if (progress) {
+            progress.setAttribute('aria-valuemax', String(safeTotal));
+            progress.setAttribute('aria-valuenow', String(safeSent));
+        }
+
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+            progressBar.classList.toggle('bg-red-600', !['sent', 'error'].includes(state));
+            progressBar.classList.toggle('bg-emerald-500', state === 'sent');
+            progressBar.classList.toggle('bg-amber-500', state === 'error');
+        }
+
+        if (progressSummary) {
+            progressSummary.textContent = summaries[state] || summaries.idle;
+        }
+
+        if (progressDetail) {
+            progressDetail.textContent = `${safeSent.toLocaleString()} de ${safeTotal.toLocaleString()} etiquetas enviadas (${percentage}%).`;
+        }
     };
 
     const restoreStoredPrinter = () => {
@@ -277,6 +335,8 @@
     };
 
     const setPrintBlocked = (message) => {
+        printLocked = true;
+
         if (printButton) {
             printButton.disabled = true;
             printButton.title = message;
@@ -307,8 +367,11 @@
     };
 
     const printBatch = async () => {
+        let sentCount = 0;
+        let totalCount = 0;
+
         try {
-            if (printButton?.disabled) {
+            if (printLocked || isPrinting || printButton?.disabled) {
                 return;
             }
 
@@ -337,16 +400,33 @@
                 }
             }
 
+            totalCount = queue.length;
+            isPrinting = true;
+            if (printButton) {
+                printButton.disabled = true;
+            }
+            updatePrintProgress(0, totalCount, 'printing');
             setStatus(`Enviando ${queue.length} etiqueta(s) a la impresora...`);
 
             for (const chunk of queue) {
                 await sendToPrinter(chunk);
+                sentCount += 1;
+                updatePrintProgress(sentCount, totalCount, 'printing');
             }
 
+            updatePrintProgress(sentCount, totalCount, 'sent');
             const result = await confirmPrinted();
             setPrintBlocked(result.message || 'Batch confirmado como impreso. Botón bloqueado para evitar duplicidad.');
         } catch (error) {
+            if (totalCount > 0) {
+                updatePrintProgress(sentCount, totalCount, sentCount === totalCount ? 'sent' : 'error');
+            }
             setStatus(`Error en impresión: ${error.message}`, true);
+        } finally {
+            isPrinting = false;
+            if (printButton && !printLocked) {
+                printButton.disabled = false;
+            }
         }
     };
 
@@ -405,6 +485,7 @@
     printButton?.addEventListener('click', printBatch);
 
     restoreStoredPrinter();
+    updatePrintProgress(0, items.reduce((total, item) => total + Math.max(1, Number(item.copies || 1)), 0));
 
     if (alreadyPrinted) {
         setPrintBlocked('Este batch ya fue confirmado como impreso. El botón se bloqueó para evitar duplicidad.');
