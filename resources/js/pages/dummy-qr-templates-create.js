@@ -1,6 +1,6 @@
 import { buildZpl } from './dummy-qr-templates-create/zpl';
 import { createLayoutPreview } from './dummy-qr-templates-create/layout-preview';
-import { createPrinterService } from './dummy-qr-templates-create/printers';
+import { createPrinterService, dotsToMillimeters } from './dummy-qr-templates-create/printers';
 import { createStatusSetter, getElement } from './dummy-qr-templates-create/dom';
 import { attachFabricToWindow } from '../lib/fabric-setup';
 
@@ -17,8 +17,17 @@ if (!formRoot) {
     const connectionTypeInput = getElement('connection_type');
     const printerSelectInput = getElement('usb_printer_select');
     const refreshPrintersButton = getElement('refresh-printers');
+    const readPrinterMediaButton = getElement('read-printer-media');
     const defaultPrinterNameInput = getElement('default_printer_name');
     const defaultPrinterIpInput = getElement('default_printer_ip');
+    const printerPrintWidthEl = getElement('printer-print-width');
+    const printerLabelLengthEl = getElement('printer-label-length');
+    const printerMediaTypeEl = getElement('printer-media-type');
+    const printerPrintToneEl = getElement('printer-print-tone');
+    const printerSizeSummaryEl = getElement('printer-size-summary');
+    const printerSizeMmEl = getElement('printer-size-mm');
+    const printerResolutionEl = getElement('printer-resolution');
+    const printerSizeComparisonEl = getElement('printer-size-comparison');
     const layoutPreviewStage = getElement('layout-preview-stage');
     const templateForm = formRoot.closest('form');
     const submitButton = templateForm?.querySelector('[data-dummy-template-submit]');
@@ -69,6 +78,63 @@ if (!formRoot) {
         printerSelectInput,
     });
 
+    const setPrinterMediaLoading = (loading) => {
+        if (!readPrinterMediaButton) return;
+
+        readPrinterMediaButton.disabled = loading;
+        readPrinterMediaButton.setAttribute('aria-busy', loading ? 'true' : 'false');
+        readPrinterMediaButton.classList.toggle('cursor-wait', loading);
+        readPrinterMediaButton.classList.toggle('opacity-60', loading);
+        readPrinterMediaButton.textContent = loading ? 'Consultando Zebra...' : 'Consultar tamaño/media';
+    };
+
+    const renderDotsSetting = (element, rawValue, dpi) => {
+        if (!element) return;
+
+        const millimeters = dotsToMillimeters(rawValue, dpi);
+        element.textContent = millimeters === null
+            ? (rawValue || 'No disponible')
+            : `${rawValue} dots · ${millimeters.toFixed(2)} mm`;
+    };
+
+    const renderPrinterMedia = (settings) => {
+        const reportedDpi = Number(settings.dpi);
+        const templateDpi = Number(getElement('dpi')?.value);
+        const dpi = Number.isFinite(reportedDpi) && reportedDpi > 0 ? reportedDpi : templateDpi;
+        const widthMm = dotsToMillimeters(settings.printWidth, dpi);
+        const heightMm = dotsToMillimeters(settings.labelLength, dpi);
+
+        renderDotsSetting(printerPrintWidthEl, settings.printWidth, dpi);
+        renderDotsSetting(printerLabelLengthEl, settings.labelLength, dpi);
+        if (printerMediaTypeEl) printerMediaTypeEl.textContent = settings.mediaType || 'No disponible';
+        if (printerPrintToneEl) printerPrintToneEl.textContent = settings.printTone || 'No disponible';
+
+        if (printerResolutionEl) {
+            printerResolutionEl.textContent = Number.isFinite(reportedDpi) && reportedDpi > 0
+                ? `Resolución reportada por el cabezal: ${reportedDpi} dpi.`
+                : `La impresora no reportó resolución; conversión calculada con ${templateDpi} dpi del template.`;
+        }
+
+        if (printerSizeMmEl) {
+            printerSizeMmEl.textContent = widthMm !== null && heightMm !== null
+                ? `${widthMm.toFixed(2)} × ${heightMm.toFixed(2)} mm`
+                : 'No fue posible convertir el tamaño a milímetros.';
+        }
+
+        if (printerSizeComparisonEl) {
+            const templateWidth = Number(getElement('width_mm')?.value);
+            const templateHeight = Number(getElement('height_mm')?.value);
+            const hasTemplateSize = Number.isFinite(templateWidth) && templateWidth > 0
+                && Number.isFinite(templateHeight) && templateHeight > 0;
+
+            printerSizeComparisonEl.textContent = hasTemplateSize
+                ? `Template configurado: ${templateWidth.toFixed(2)} × ${templateHeight.toFixed(2)} mm.`
+                : 'Captura ancho y alto del template para compararlos con Zebra.';
+        }
+
+        printerSizeSummaryEl?.classList.remove('hidden');
+    };
+
     getElement('preview-zpl')?.addEventListener('click', () => {
         previewEl.textContent = buildZpl();
         previewEl.classList.remove('hidden');
@@ -100,6 +166,21 @@ if (!formRoot) {
         if (!printerService.ensureBrowserPrint()) return;
         setStatus('Buscando impresoras USB disponibles...');
         printerService.listUsbPrinters();
+    });
+
+    readPrinterMediaButton?.addEventListener('click', () => {
+        if (!printerService.ensureBrowserPrint()) return;
+
+        setPrinterMediaLoading(true);
+        setStatus('Consultando tamaño y configuración de media en Zebra...');
+        printerService.readMediaSettings((settings, _, printerLabel) => {
+            renderPrinterMedia(settings);
+            setPrinterMediaLoading(false);
+            setStatus(`Tamaño/media consultados correctamente en ${printerLabel}.`);
+        }, (error) => {
+            setPrinterMediaLoading(false);
+            setStatus(error, true);
+        });
     });
 
     [

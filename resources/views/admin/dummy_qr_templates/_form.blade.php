@@ -285,17 +285,25 @@
                             <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Media detectada</p>
                             <h3 class="text-base font-bold text-slate-900">Datos de impresora</h3>
                         </div>
-                        <button id="read-printer-media" type="button" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                        <button id="read-printer-media" type="button" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-wait disabled:opacity-60">
                             Consultar tamaño/media
                         </button>
                     </div>
                     <div class="mt-4 grid grid-cols-1 gap-2 text-xs text-slate-700 sm:grid-cols-2">
                         <div class="rounded-xl border border-slate-200 bg-white p-3"><span class="font-semibold">ezpl.print_width:</span> <span id="printer-print-width">—</span></div>
                         <div class="rounded-xl border border-slate-200 bg-white p-3"><span class="font-semibold">zpl.label_length:</span> <span id="printer-label-length">—</span></div>
-                        <div class="rounded-xl border border-slate-200 bg-white p-3"><span class="font-semibold">media.type:</span> <span id="printer-media-type">—</span></div>
+                        <div class="rounded-xl border border-slate-200 bg-white p-3"><span class="font-semibold">ezpl.media_type:</span> <span id="printer-media-type">—</span></div>
                         <div class="rounded-xl border border-slate-200 bg-white p-3"><span class="font-semibold">print.tone:</span> <span id="printer-print-tone">—</span></div>
                     </div>
-                    <p class="mt-3 text-xs text-slate-500">Usa esta información para comparar el tamaño configurado con la media real de Zebra.</p>
+                    <div id="printer-size-summary" class="mt-3 hidden rounded-2xl border border-red-100 bg-red-50 p-3 text-sm text-red-900">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Tamaño reportado por Zebra</p>
+                        <p id="printer-size-mm" class="mt-1 text-lg font-bold">—</p>
+                        <p id="printer-resolution" class="mt-1 text-xs text-red-800"></p>
+                        <p id="printer-size-comparison" class="mt-2 border-t border-red-100 pt-2 text-xs text-red-800"></p>
+                    </div>
+                    <p class="mt-3 text-xs text-slate-500">
+                        Los dots se convierten a mm con el DPI que reporta el cabezal. El alto corresponde a la última calibración de media; el ancho es el área de impresión configurada en Zebra.
+                    </p>
                 </div>
             </aside>
         </div>
