@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Dummies;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dummies\StoreDummyPrintBatchRequest;
 use App\Models\DummyPrintBatch;
-use App\Models\DummyQrTemplate;
 use App\Models\DummyRequest;
+use App\Services\Dummies\DummyPrintReadService;
 use App\Services\Dummies\DummyPrintService;
-use App\Services\Dummies\DummyQRTemplateZplBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +17,7 @@ class DummyPrintController extends Controller
 {
     public function __construct(
         private readonly DummyPrintService $service,
-        private readonly DummyQRTemplateZplBuilder $zplBuilder,
+        private readonly DummyPrintReadService $readService,
     ) {}
 
     public function create(Request $request, DummyRequest $dummy_request): View|RedirectResponse
@@ -63,36 +62,7 @@ class DummyPrintController extends Controller
                 ->with('error', 'Este batch ya fue impreso y confirmado. El Centro de impresión está bloqueado para evitar duplicados.');
         }
 
-        $batch->load([
-            'dummyRequest.line:id,code,name',
-            'dummyRequest.shift:id,code,name',
-            'items.requestItem:id,dummy_request_id,consecutive,consecutive_10d,dummy_type,qr_payload',
-        ]);
-
-        $templates = DummyQrTemplate::query()
-            ->whereIn('dummy_type', ['rmt', 'rw'])
-            ->where('is_active', true)
-            ->get()
-            ->keyBy('dummy_type');
-
-        return view('dummy_print.print', [
-            'dummyRequest' => $dummy_request,
-            'batch' => $batch,
-            'alreadyPrinted' => $batch->printed_at !== null,
-            'templatesByType' => [
-                'rmt' => $this->buildCurrentTemplateZpl($templates->get('rmt')),
-                'rw' => $this->buildCurrentTemplateZpl($templates->get('rw')),
-            ],
-        ]);
-    }
-
-    private function buildCurrentTemplateZpl(?DummyQrTemplate $template): ?string
-    {
-        if (! $template) {
-            return null;
-        }
-
-        return $this->zplBuilder->build($template->toArray());
+        return view('dummy_print.print', $this->readService->buildPrintCenterViewData($dummy_request, $batch));
     }
 
     public function confirm(Request $request, DummyRequest $dummy_request, DummyPrintBatch $batch): JsonResponse

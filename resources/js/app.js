@@ -17,6 +17,10 @@ import './pages/dummy-requests-create';
 import './pages/dummy-requests-show';
 import './pages/dummy-qr-templates-create';
 
+if (document.getElementById('dummy-print-center')) {
+    void import('./pages/dummy-print-center');
+}
+
 // opcional: hacerlo global
 window.Swal = Swal
 attachFabricToWindow();
