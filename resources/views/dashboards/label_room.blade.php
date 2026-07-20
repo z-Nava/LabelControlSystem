@@ -53,10 +53,17 @@
                             <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial</div>
                         </a>
 
+                        <a href="{{ route('label_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
+                            <div class="text-lg font-semibold text-slate-800">Requisiciones de etiquetas pendientes</div>
+                            <div class="text-sm text-slate-600 mt-1">Retomar requsiciones de etiquetas guardadas</div>
+                        </a>
+
                         <a href="{{ route('label_reworks.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
                             <div class="text-lg font-semibold text-slate-800">Retrabajo etiquetas</div>
                             <div class="text-sm text-slate-600 mt-1">Reimprime seriales y ratings por job</div>
                         </a>
+
+                        
 
                     </div>
                 </section>
