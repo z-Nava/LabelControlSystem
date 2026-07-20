@@ -70,7 +70,7 @@
             </div>
             <div class="lg:col-span-2">
                 <label class="block text-sm font-semibold text-slate-700">DPI</label>
-                <select name="dpi" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required>
+                <select name="dpi" id="dpi" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required>
                     @foreach([203,300] as $dpi)
                         <option value="{{ $dpi }}" @selected((int) old('dpi', $template->dpi ?? 203) === $dpi)>{{ $dpi }}</option>
                     @endforeach
@@ -86,11 +86,11 @@
             </div>
             <div class="lg:col-span-3">
                 <label class="block text-sm font-semibold text-slate-700">Ancho (mm)</label>
-                <input type="number" step="0.01" name="width_mm" value="{{ old('width_mm', $template->width_mm ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" placeholder="Ej. 50.80" />
+                <input type="number" step="0.01" name="width_mm" id="width_mm" value="{{ old('width_mm', $template->width_mm ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" placeholder="Ej. 50.80" />
             </div>
             <div class="lg:col-span-3">
                 <label class="block text-sm font-semibold text-slate-700">Alto (mm)</label>
-                <input type="number" step="0.01" name="height_mm" value="{{ old('height_mm', $template->height_mm ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" placeholder="Ej. 25.40" />
+                <input type="number" step="0.01" name="height_mm" id="height_mm" value="{{ old('height_mm', $template->height_mm ?? '') }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" placeholder="Ej. 25.40" />
             </div>
             <div class="lg:col-span-6">
                 <label class="flex h-full items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
@@ -112,91 +112,115 @@
             <p class="mt-1 text-sm text-slate-500">Edita coordenadas y tamaños mientras revisas la vista previa en tiempo real.</p>
         </div>
 
-        <div class="grid grid-cols-1 gap-6 2xl:grid-cols-12">
-            <div class="space-y-4 2xl:col-span-7">
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    @foreach([
-                        ['title' => 'A. Posiciones QR', 'description' => 'Código QR físico del dummy.', 'badge' => 'QR', 'fields' => [['qr_x','QR X',30],['qr_y','QR Y',65],['qr_magnification','QR Magnificación',4]]],
-                        ['title' => 'B. Posiciones FG', 'description' => 'Texto FG que acompaña al QR.', 'badge' => 'FG', 'fields' => [['fg_x','FG X',360],['fg_y','FG Y',70],['fg_font_size','FG Font',40]]],
-                        ['title' => 'C. Posiciones JOB', 'description' => 'Número de trabajo en la etiqueta.', 'badge' => 'JOB', 'fields' => [['job_x','JOB X',360],['job_y','JOB Y',130],['job_font_size','JOB Font',34]]],
-                        ['title' => 'D. Posiciones Consecutivo', 'description' => 'Consecutivo grande del dummy.', 'badge' => '#', 'fields' => [['consecutive_x','Consecutivo X',380],['consecutive_y','Consecutivo Y',250],['consecutive_font_size','Consecutivo Font',58]]],
-                    ] as $group)
-                        <div class="rounded-2xl border border-slate-200 p-4">
-                            <div class="mb-4 flex items-start justify-between gap-3">
-                                <div>
-                                    <h3 class="text-base font-bold text-slate-900">{{ $group['title'] }}</h3>
-                                    <p class="mt-1 text-xs text-slate-500">{{ $group['description'] }}</p>
-                                </div>
-                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $group['badge'] }}</span>
-                            </div>
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                @foreach($group['fields'] as [$field,$label,$default])
-                                    <div>
-                                        <label class="block text-sm font-semibold text-slate-700">{{ $label }}</label>
-                                        <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ old($field, data_get($template, $field, $default)) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required />
+        <div class="mb-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm md:p-5 xl:p-6" id="live-layout-preview-panel">
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-stretch">
+                <div class="xl:col-span-9">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Vista previa · Layout físico interactivo</p>
+                            <h3 class="mt-1 text-lg font-bold text-slate-900">Acomoda los elementos del Dummy QR</h3>
+                            <p class="mt-1 text-sm text-slate-500">Arrastra cualquier bloque sobre la etiqueta; sus coordenadas X/Y se actualizan automáticamente.</p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">Arrastra · snap 5 dots</span>
+                    </div>
+
+                    <div id="layout-preview-frame" class="mt-4 overflow-x-auto rounded-2xl border border-dashed border-slate-300 bg-white p-3">
+                        <div class="flex min-w-[1120px] justify-center">
+                            <canvas
+                                id="layout-preview-stage"
+                                width="1120"
+                                height="520"
+                                role="img"
+                                aria-label="Vista previa interactiva del layout físico de la etiqueta Dummy QR"
+                            ></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="xl:col-span-3">
+                    <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Guía del layout</p>
+                            <h4 class="mt-1 text-base font-bold text-slate-900">Qué representa cada bloque</h4>
+                            <div class="mt-4 grid grid-cols-1 gap-2 text-sm">
+                                @foreach([
+                                    ['A', 'QR', 'Código principal del dummy.'],
+                                    ['B', 'FG', 'Número de producto o FG.'],
+                                    ['C', 'JOB', 'Número de trabajo asociado.'],
+                                    ['D', 'Consecutivo', 'Identificador grande del dummy.'],
+                                    ['E', 'Título', 'Encabezado RMT o RW.'],
+                                ] as [$letter, $name, $description])
+                                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                        <span class="font-bold text-slate-900">{{ $letter }} · {{ $name }}</span>
+                                        <p class="mt-1 text-xs text-slate-500">{{ $description }}</p>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
-                    @endforeach
 
-                    <div class="rounded-2xl border border-slate-200 p-4 lg:col-span-2">
-                        <div class="mb-4 flex items-start justify-between gap-3">
-                            <div>
-                                <h3 class="text-base font-bold text-slate-900">E. Posiciones Título</h3>
-                                <p class="mt-1 text-xs text-slate-500">Título principal impreso en la parte superior del dummy.</p>
-                            </div>
-                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Título</span>
+                        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                            <p class="font-semibold text-slate-900">Elemento seleccionado</p>
+                            <p class="mt-1" id="layout-selected-element">Selecciona un bloque en el canvas.</p>
+                            <p class="mt-2 font-mono text-slate-600" id="layout-coordinate-summary">X/Y: --</p>
                         </div>
-                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                            @foreach([['title_x','Título X',20],['title_y','Título Y',20],['title_font_size','Título Font',44]] as [$field,$label,$default])
-                                <div>
-                                    <label class="block text-sm font-semibold text-slate-700">{{ $label }}</label>
-                                    <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ old($field, data_get($template, $field, $default)) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required />
-                                </div>
-                            @endforeach
+
+                        <div class="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-800">
+                            <p class="font-semibold">Tamaño y orientación activos</p>
+                            <p class="mt-1" id="layout-orientation-summary">QR: Normal (N)</p>
+                            <p class="mt-2 text-red-700" id="layout-scale-summary">Etiqueta: 820 × 400 dots</p>
+                        </div>
+
+                        <div id="layout-out-of-bounds-warning" class="mt-3 hidden rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-800">
+                            Advertencia: el elemento seleccionado rebasa el área imprimible.
                         </div>
                     </div>
+                </aside>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            @foreach([
+                ['title' => 'A. Posiciones QR', 'description' => 'Código QR físico del dummy.', 'badge' => 'QR', 'fields' => [['qr_x','QR X',30],['qr_y','QR Y',65],['qr_magnification','QR Magnificación',4]]],
+                ['title' => 'B. Posiciones FG', 'description' => 'Texto FG que acompaña al QR.', 'badge' => 'FG', 'fields' => [['fg_x','FG X',360],['fg_y','FG Y',70],['fg_font_size','FG Font',40]]],
+                ['title' => 'C. Posiciones JOB', 'description' => 'Número de trabajo en la etiqueta.', 'badge' => 'JOB', 'fields' => [['job_x','JOB X',360],['job_y','JOB Y',130],['job_font_size','JOB Font',34]]],
+                ['title' => 'D. Posiciones Consecutivo', 'description' => 'Consecutivo grande del dummy.', 'badge' => '#', 'fields' => [['consecutive_x','Consecutivo X',380],['consecutive_y','Consecutivo Y',250],['consecutive_font_size','Consecutivo Font',58]]],
+            ] as $group)
+                <div class="rounded-2xl border border-slate-200 p-4">
+                    <div class="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">{{ $group['title'] }}</h3>
+                            <p class="mt-1 text-xs text-slate-500">{{ $group['description'] }}</p>
+                        </div>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $group['badge'] }}</span>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        @foreach($group['fields'] as [$field,$label,$default])
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700">{{ $label }}</label>
+                                <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ old($field, data_get($template, $field, $default)) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required />
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+
+            <div class="rounded-2xl border border-slate-200 p-4 lg:col-span-2">
+                <div class="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">E. Posiciones Título</h3>
+                        <p class="mt-1 text-xs text-slate-500">Título principal impreso en la parte superior del dummy.</p>
+                    </div>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Título</span>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    @foreach([['title_x','Título X',20],['title_y','Título Y',20],['title_font_size','Título Font',44]] as [$field,$label,$default])
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700">{{ $label }}</label>
+                            <input type="number" name="{{ $field }}" id="{{ $field }}" value="{{ old($field, data_get($template, $field, $default)) }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100" required />
+                        </div>
+                    @endforeach
                 </div>
             </div>
-
-            <aside class="2xl:col-span-5">
-                <div class="sticky top-6 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-inner">
-                    <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-600">Vista previa</p>
-                            <h3 class="text-base font-bold text-slate-900">Posiciones del dummy</h3>
-                            <p class="mt-1 text-xs text-slate-500">Mueve X/Y y tamaños para ver QR, FG, JOB, Consecutivo y Título.</p>
-                        </div>
-                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">Canvas</span>
-                    </div>
-
-                    <div class="overflow-auto rounded-2xl border border-slate-200 bg-white p-3">
-                        <canvas
-                            id="layout-preview-stage"
-                            class="rounded-lg border border-dashed border-slate-300 bg-white shadow-inner"
-                            width="451"
-                            height="220"
-                        ></canvas>
-                    </div>
-
-                    <div class="mt-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                        <div class="rounded-xl border border-slate-200 bg-white p-3">
-                            <span class="font-bold text-slate-900">A · QR</span>
-                            <p class="mt-1 text-slate-500">Código principal y magnificación.</p>
-                        </div>
-                        <div class="rounded-xl border border-slate-200 bg-white p-3">
-                            <span class="font-bold text-slate-900">B · Textos</span>
-                            <p class="mt-1 text-slate-500">FG, JOB, consecutivo y título.</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 rounded-xl border border-red-100 bg-red-50 p-3 text-xs text-red-800">
-                        <p class="font-semibold">Orientación QR activa</p>
-                        <p class="mt-1">N = Normal · R = 90° · I = 180° · B = 270°</p>
-                    </div>
-                </div>
-            </aside>
         </div>
     </section>
 

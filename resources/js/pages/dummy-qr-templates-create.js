@@ -20,6 +20,44 @@ if (!formRoot) {
     const defaultPrinterNameInput = getElement('default_printer_name');
     const defaultPrinterIpInput = getElement('default_printer_ip');
     const layoutPreviewStage = getElement('layout-preview-stage');
+    const templateForm = formRoot.closest('form');
+    const submitButton = templateForm?.querySelector('[data-dummy-template-submit]');
+    const submitButtonLabel = submitButton?.querySelector('[data-dummy-template-submit-label]');
+    const submitButtonSpinner = submitButton?.querySelector('[data-dummy-template-submit-spinner]');
+    const originalSubmitLabel = submitButtonLabel?.textContent?.trim() || 'Guardar template Dummy QR';
+    let isSubmitting = false;
+
+    const setSubmitting = (submitting) => {
+        isSubmitting = submitting;
+
+        if (templateForm) {
+            templateForm.setAttribute('aria-busy', submitting ? 'true' : 'false');
+        }
+
+        if (submitButton) {
+            submitButton.disabled = submitting;
+            submitButton.setAttribute('aria-disabled', submitting ? 'true' : 'false');
+        }
+
+        if (submitButtonLabel) {
+            submitButtonLabel.textContent = submitting
+                ? (submitButton.dataset.loadingLabel || 'Procesando template...')
+                : originalSubmitLabel;
+        }
+
+        submitButtonSpinner?.classList.toggle('hidden', !submitting);
+    };
+
+    templateForm?.addEventListener('submit', (event) => {
+        if (isSubmitting) {
+            event.preventDefault();
+            return;
+        }
+
+        setSubmitting(true);
+    });
+
+    window.addEventListener('pageshow', () => setSubmitting(false));
 
     const layoutPreview = createLayoutPreview({ canvas: layoutPreviewStage });
 
@@ -65,7 +103,8 @@ if (!formRoot) {
     });
 
     [
-        'dummy_type', 'qr_x', 'qr_y', 'qr_magnification', 'fg_x', 'fg_y', 'fg_font_size',
+        'dummy_type', 'dpi', 'width_mm', 'height_mm', 'qr_orientation',
+        'qr_x', 'qr_y', 'qr_magnification', 'fg_x', 'fg_y', 'fg_font_size',
         'job_x', 'job_y', 'job_font_size', 'consecutive_x', 'consecutive_y', 'consecutive_font_size',
         'title_x', 'title_y', 'title_font_size',
     ].forEach((fieldId) => {

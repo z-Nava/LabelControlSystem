@@ -17,7 +17,15 @@
         @method('PUT')
         @include('admin.dummy_qr_templates._form', ['template' => $template])
         <div class="sticky bottom-4 z-10 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
-            <button class="w-full rounded-xl bg-slate-900 py-3 font-semibold text-white hover:bg-slate-800">Actualizar template Dummy QR</button>
+            <button
+                type="submit"
+                data-dummy-template-submit
+                data-loading-label="Actualizando template..."
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+            >
+                <span data-dummy-template-submit-spinner class="hidden h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
+                <span data-dummy-template-submit-label>Actualizar template Dummy QR</span>
+            </button>
         </div>
     </form>
 </div>
