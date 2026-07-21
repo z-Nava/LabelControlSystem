@@ -7,6 +7,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
     const connectButton = document.getElementById('connect-printer');
     const previewButton = document.getElementById('preview-batch');
+    const prepareLabelTypeSelect = document.getElementById('prepare-label-type');
     const printButton = document.getElementById('print-batch');
     const serialPrinterBox = document.getElementById('selected-printer-serial');
     const ratingPrinterBox = document.getElementById('selected-printer-rating');
@@ -21,16 +22,35 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
     const alignmentModal = document.getElementById('alignment-modal');
     const openAlignmentModalButton = document.getElementById('open-alignment-modal');
     const closeAlignmentModalButton = document.getElementById('close-alignment-modal');
+    const cancelAlignmentModalButton = document.getElementById('cancel-alignment-modal');
     const saveAlignmentButton = document.getElementById('save-alignment');
+    const saveTestAlignmentButton = document.getElementById('save-test-alignment');
     const resetAlignmentButton = document.getElementById('reset-alignment');
+    const resetAlignmentElementButton = document.getElementById('reset-alignment-element');
+    const undoAlignmentButton = document.getElementById('undo-alignment');
     const alignmentCanvasElement = document.getElementById('alignment-fabric-canvas');
+    const alignmentCanvasViewport = document.getElementById('alignment-canvas-viewport');
     const alignmentCanvasStatus = document.getElementById('alignment-canvas-status');
-    const loadAlignmentPreviewButton = document.getElementById('load-alignment-preview');
+    const alignmentCurrentLabel = document.getElementById('alignment-current-label');
+    const alignmentSizeSummary = document.getElementById('alignment-size-summary');
+    const alignmentTypeSwitch = document.getElementById('alignment-type-switch');
+    const alignmentUnsavedBadge = document.getElementById('alignment-unsaved-badge');
+    const alignmentPrinterNote = document.getElementById('alignment-printer-note');
+    const alignmentHorizontalSummary = document.getElementById('alignment-horizontal-summary');
+    const alignmentVerticalSummary = document.getElementById('alignment-vertical-summary');
+    const alignmentStepCenter = document.getElementById('alignment-step-center');
+    const alignmentTextElementTitle = document.getElementById('alignment-text-element-title');
+    const alignmentTextElementHelp = document.getElementById('alignment-text-element-help');
     const alignmentTypeButtons = document.querySelectorAll('[data-alignment-type]');
+    const alignmentElementButtons = document.querySelectorAll('[data-alignment-element]');
+    const alignmentMoveButtons = document.querySelectorAll('[data-alignment-move]');
+    const alignmentStepButtons = document.querySelectorAll('[data-alignment-step]');
+    const alignmentPanels = document.querySelectorAll('[data-alignment-panel]');
     const storageKeys = {
         serial: 'label_print_selected_printer_serial',
         rating: 'label_print_selected_printer_rating',
-        alignment: 'label_print_alignment_offsets',
+        alignmentLegacy: 'label_print_alignment_offsets',
+        alignmentByPrinter: 'label_print_alignment_offsets_v2',
     };
 
     let availablePrinters = [];
@@ -38,8 +58,16 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
     let previewPayload = null;
     let activeBlockId = null;
     let printPrepared = false;
+    const preparedLabelTypes = new Set();
     let alignmentFabricCanvas = null;
     let currentAlignmentType = 'serial';
+    let currentAlignmentElement = 'text';
+    let alignmentStep = 5;
+    let availableAlignmentElements = ['text'];
+    let alignmentHistory = [];
+    let alignmentDirty = false;
+    const dirtyAlignmentTypes = new Set();
+    let alignmentDragSnapshot = null;
     let syncingCanvasFromInputs = false;
 
     const defaultAlignment = {
@@ -47,12 +75,65 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         rating_text_x: 0, rating_text_y: 0, rating_qr_x: 0, rating_qr_y: 0,
     };
 
-    const getAlignment = () => {
+    const parseStoredJson = (key, fallback = {}) => {
         try {
-            return { ...defaultAlignment, ...(JSON.parse(localStorage.getItem(storageKeys.alignment) || '{}')) };
+            return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
         } catch (_error) {
-            return { ...defaultAlignment };
+            return fallback;
         }
+    };
+
+    const parseStoredJsonFromValue = (value) => {
+        if (!value) return null;
+        try {
+            return JSON.parse(value);
+        } catch (_error) {
+            return null;
+        }
+    };
+
+    const alignmentPrinterKey = (labelType) => {
+        const device = selectedPrinters[labelType];
+        if (!device) return null;
+
+        return [device.name || '', device.uid || '', device.connection || ''].join('::');
+    };
+
+    const getAlignment = () => {
+        const values = { ...defaultAlignment };
+        const legacy = parseStoredJson(storageKeys.alignmentLegacy);
+        const store = parseStoredJson(storageKeys.alignmentByPrinter, { version: 2, printers: {} });
+
+        ['serial', 'rating'].forEach((labelType) => {
+            const printerKey = alignmentPrinterKey(labelType);
+            const saved = printerKey ? store?.printers?.[printerKey]?.[labelType] : null;
+
+            ['text_x', 'text_y', 'qr_x', 'qr_y'].forEach((field) => {
+                const fullField = `${labelType}_${field}`;
+                values[fullField] = Number(saved?.[field] ?? legacy?.[fullField] ?? 0);
+            });
+        });
+
+        return values;
+    };
+
+    const persistAlignmentForCurrentPrinter = (values, labelType = currentAlignmentType) => {
+        const printerKey = alignmentPrinterKey(labelType);
+        if (!printerKey) return false;
+
+        const store = parseStoredJson(storageKeys.alignmentByPrinter, { version: 2, printers: {} });
+        store.version = 2;
+        store.printers = store.printers || {};
+        store.printers[printerKey] = store.printers[printerKey] || {};
+        store.printers[printerKey][labelType] = {
+            text_x: Number(values[`${labelType}_text_x`] || 0),
+            text_y: Number(values[`${labelType}_text_y`] || 0),
+            qr_x: Number(values[`${labelType}_qr_x`] || 0),
+            qr_y: Number(values[`${labelType}_qr_y`] || 0),
+        };
+        localStorage.setItem(storageKeys.alignmentByPrinter, JSON.stringify(store));
+
+        return true;
     };
 
     const setAlignmentInputs = (values) => {
@@ -73,8 +154,54 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         if (!alignmentCanvasStatus) return;
 
         alignmentCanvasStatus.textContent = message;
-        alignmentCanvasStatus.classList.toggle('text-red-700', isError);
-        alignmentCanvasStatus.classList.toggle('text-slate-600', !isError);
+        alignmentCanvasStatus.className = isError
+            ? 'mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800'
+            : 'mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900';
+    };
+
+    const setAlignmentDirty = (isDirty = true, labelType = currentAlignmentType) => {
+        if (isDirty && labelType) {
+            dirtyAlignmentTypes.add(labelType);
+        } else if (labelType === null) {
+            dirtyAlignmentTypes.clear();
+        } else if (labelType) {
+            dirtyAlignmentTypes.delete(labelType);
+        }
+
+        alignmentDirty = dirtyAlignmentTypes.size > 0;
+        alignmentUnsavedBadge?.classList.toggle('hidden', !alignmentDirty);
+    };
+
+    const setActiveAlignmentElement = (elementType) => {
+        currentAlignmentElement = availableAlignmentElements.includes(elementType)
+            ? elementType
+            : (availableAlignmentElements[0] || 'text');
+
+        alignmentElementButtons.forEach((button) => {
+            const isAvailable = availableAlignmentElements.includes(button.dataset.alignmentElement);
+            const isActive = button.dataset.alignmentElement === currentAlignmentElement;
+            button.classList.toggle('hidden', !isAvailable);
+            button.classList.toggle('border-blue-600', isActive);
+            button.classList.toggle('bg-blue-50', isActive);
+            button.classList.toggle('ring-2', isActive);
+            button.classList.toggle('ring-blue-100', isActive);
+            button.classList.toggle('border-slate-200', !isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    };
+
+    const updateAlignmentPrinterNote = () => {
+        if (!alignmentPrinterNote) return;
+
+        const printer = selectedPrinters[currentAlignmentType];
+        if (!printer) {
+            alignmentPrinterNote.className = 'rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900';
+            alignmentPrinterNote.textContent = 'Conecta y selecciona la impresora para guardar un ajuste exclusivo para ese equipo.';
+            return;
+        }
+
+        alignmentPrinterNote.className = 'rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900';
+        alignmentPrinterNote.textContent = `Este ajuste se guardará solamente para ${printer.name || 'la impresora seleccionada'}.`;
     };
 
     const setActiveAlignmentType = (labelType) => {
@@ -87,6 +214,27 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
             button.classList.toggle('bg-white', !isActive);
             button.classList.toggle('text-slate-700', !isActive);
         });
+
+        alignmentPanels.forEach((panel) => {
+            const isActive = panel.dataset.alignmentPanel === currentAlignmentType;
+            panel.classList.toggle('hidden', !isActive);
+            panel.classList.toggle('grid', isActive);
+        });
+
+        if (alignmentCurrentLabel) {
+            alignmentCurrentLabel.textContent = `Etiqueta ${currentAlignmentType.toUpperCase()}`;
+        }
+        if (alignmentTextElementTitle) {
+            alignmentTextElementTitle.textContent = currentAlignmentType === 'rating'
+                ? 'Texto del Rating'
+                : 'Serial y SKU';
+        }
+        if (alignmentTextElementHelp) {
+            alignmentTextElementHelp.textContent = currentAlignmentType === 'rating'
+                ? 'Mueve el número serial del Rating'
+                : 'Mueve los textos juntos';
+        }
+        updateAlignmentPrinterNote();
     };
 
     const ensureAlignmentCanvas = () => {
@@ -95,13 +243,32 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         }
 
         alignmentFabricCanvas = new Canvas(alignmentCanvasElement, {
-            backgroundColor: '#f8fafc',
+            backgroundColor: '#e2e8f0',
             preserveObjectStacking: true,
-            selection: true,
+            selection: false,
         });
 
+        alignmentFabricCanvas.on('before:transform', () => {
+            alignmentDragSnapshot = readAlignmentInputs();
+        });
         alignmentFabricCanvas.on('object:moving', (event) => syncAlignmentFromCanvasObject(event.target));
-        alignmentFabricCanvas.on('object:modified', (event) => syncAlignmentFromCanvasObject(event.target));
+        alignmentFabricCanvas.on('object:modified', (event) => {
+            if (alignmentDragSnapshot) {
+                alignmentHistory.push(alignmentDragSnapshot);
+                alignmentHistory = alignmentHistory.slice(-30);
+            }
+            alignmentDragSnapshot = null;
+            syncAlignmentFromCanvasObject(event.target);
+            window.requestAnimationFrame(() => renderAlignmentCanvas(currentAlignmentType));
+        });
+        alignmentFabricCanvas.on('selection:created', (event) => {
+            setActiveAlignmentElement(event.selected?.[0]?.data?.kind || currentAlignmentElement);
+            updateAlignmentMovementSummary();
+        });
+        alignmentFabricCanvas.on('selection:updated', (event) => {
+            setActiveAlignmentElement(event.selected?.[0]?.data?.kind || currentAlignmentElement);
+            updateAlignmentMovementSummary();
+        });
 
         return alignmentFabricCanvas;
     };
@@ -116,7 +283,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
             const x = Number(position[1]);
             const y = Number(position[2]);
-            const isQr = block.includes('^BQN');
+            const isQr = /\^BQ[A-Z]?,/i.test(block);
             const fieldData = block.match(/\^FD([\s\S]*?)\^FS/)?.[1] || (isQr ? 'QR' : 'Texto');
             const font = block.match(/\^A0[A-Z]?,(\d+),(\d+)/i);
             const qrMag = Number(block.match(/\^BQ[A-Z]?,\d+,(\d+)/i)?.[1] || 4);
@@ -136,8 +303,97 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         return elements;
     };
 
-    const getDocumentForAlignmentType = (labelType) => (previewPayload?.documents || [])
+    const getAlignmentDocuments = () => previewPayload?.alignment_documents?.length
+        ? previewPayload.alignment_documents
+        : (previewPayload?.documents || []);
+
+    const getActiveLabelType = () => String(previewPayload?.current_block?.label_type || '').toLowerCase();
+
+    const syncPrintPrepared = () => {
+        const activeLabelType = getActiveLabelType();
+        printPrepared = Boolean(activeLabelType && preparedLabelTypes.has(activeLabelType));
+    };
+
+    const markLabelTypePrepared = (labelType) => {
+        if (['serial', 'rating'].includes(labelType)) {
+            preparedLabelTypes.add(labelType);
+        }
+        syncPrintPrepared();
+    };
+
+    const invalidatePreparedLabelType = (labelType) => {
+        preparedLabelTypes.delete(labelType);
+        syncPrintPrepared();
+    };
+
+    const updatePrepareLabelTypeOptions = () => {
+        if (!prepareLabelTypeSelect) return;
+
+        const previousValue = prepareLabelTypeSelect.value;
+        const availableTypes = [...new Set(getAlignmentDocuments()
+            .map((document) => String(document.label_type || '').toLowerCase())
+            .filter((labelType) => ['serial', 'rating'].includes(labelType)))];
+        const choices = [];
+        if (availableTypes.length > 1) {
+            choices.push({ value: 'all', label: 'Serial y Rating' });
+        }
+        if (availableTypes.includes('serial')) {
+            choices.push({ value: 'serial', label: 'Solo Serial' });
+        }
+        if (availableTypes.includes('rating')) {
+            choices.push({ value: 'rating', label: 'Solo Rating' });
+        }
+
+        prepareLabelTypeSelect.innerHTML = '';
+        choices.forEach((choice) => {
+            const option = document.createElement('option');
+            option.value = choice.value;
+            option.textContent = choice.label;
+            prepareLabelTypeSelect.appendChild(option);
+        });
+        prepareLabelTypeSelect.disabled = choices.length === 0;
+        prepareLabelTypeSelect.value = choices.some((choice) => choice.value === previousValue)
+            ? previousValue
+            : (choices[0]?.value || '');
+    };
+
+    const getDocumentForAlignmentType = (labelType) => getAlignmentDocuments()
         .find((doc) => String(doc.label_type || '').toLowerCase() === labelType);
+
+    const pushAlignmentHistory = (values = readAlignmentInputs()) => {
+        alignmentHistory.push({ ...values });
+        alignmentHistory = alignmentHistory.slice(-30);
+    };
+
+    const selectedAlignmentFields = () => ({
+        x: `${currentAlignmentType}_${currentAlignmentElement}_x`,
+        y: `${currentAlignmentType}_${currentAlignmentElement}_y`,
+    });
+
+    const describeHorizontalOffset = (value) => {
+        if (value === 0) return 'sin ajuste';
+        return value > 0 ? `${value} puntos a la derecha` : `${Math.abs(value)} puntos a la izquierda`;
+    };
+
+    const describeVerticalOffset = (value) => {
+        if (value === 0) return 'sin ajuste';
+        return value > 0 ? `${value} puntos hacia abajo` : `${Math.abs(value)} puntos hacia arriba`;
+    };
+
+    const updateAlignmentMovementSummary = () => {
+        const values = readAlignmentInputs();
+        const fields = selectedAlignmentFields();
+        if (alignmentHorizontalSummary) {
+            alignmentHorizontalSummary.textContent = `Horizontal: ${describeHorizontalOffset(Number(values[fields.x] || 0))}`;
+        }
+        if (alignmentVerticalSummary) {
+            alignmentVerticalSummary.textContent = `Vertical: ${describeVerticalOffset(Number(values[fields.y] || 0))}`;
+        }
+        if (undoAlignmentButton) {
+            undoAlignmentButton.disabled = alignmentHistory.length === 0;
+            undoAlignmentButton.classList.toggle('opacity-50', alignmentHistory.length === 0);
+        }
+    };
 
     const getAlignmentFieldForObject = (object) => {
         const objectType = object?.data?.kind === 'qr' ? 'qr' : 'text';
@@ -150,6 +406,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
     const syncAlignmentFromCanvasObject = (object) => {
         if (syncingCanvasFromInputs || !object?.data?.basePoint || !object?.data?.scale) return;
 
+        setActiveAlignmentElement(object.data.kind);
         const fields = getAlignmentFieldForObject(object);
         const nextX = Math.round((object.left - object.data.basePoint.left) / object.data.scale);
         const nextY = Math.round((object.top - object.data.basePoint.top) / object.data.scale);
@@ -158,70 +415,180 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         current[fields.x] = nextX;
         current[fields.y] = nextY;
         setAlignmentInputs(current);
+        setAlignmentDirty();
+        updateAlignmentMovementSummary();
     };
 
-    const createAlignmentObject = (element, labelType, metrics, offsets) => {
-        const offsetX = offsets[`${labelType}_qr_x`];
-        const offsetY = offsets[`${labelType}_qr_y`];
-        const left = metrics.padding + ((element.x + Number(offsetX || 0)) * metrics.scale);
-        const top = metrics.padding + ((element.y + Number(offsetY || 0)) * metrics.scale);
+    const createAlignmentGroup = (elements, kind, labelType, metrics, offsets, ghost = false) => {
+        if (!elements.length) return null;
+
+        const minX = Math.min(...elements.map((element) => element.x));
+        const minY = Math.min(...elements.map((element) => element.y));
+        const offsetX = ghost ? 0 : Number(offsets[`${labelType}_${kind}_x`] || 0);
+        const offsetY = ghost ? 0 : Number(offsets[`${labelType}_${kind}_y`] || 0);
         const basePoint = {
-            left: metrics.padding + (element.x * metrics.scale),
-            top: metrics.padding + (element.y * metrics.scale),
+            left: metrics.originX + (minX * metrics.scale),
+            top: metrics.originY + (minY * metrics.scale),
         };
 
-        return new Rect({
-            left,
-            top,
-            width: element.width * metrics.scale,
-            height: element.height * metrics.scale,
-            fill: '#dbeafe',
-            stroke: '#2563eb',
-            strokeWidth: 2,
-            strokeDashArray: [6, 4],
-            data: { labelType, kind: element.kind, basePoint, scale: metrics.scale },
+        const objects = elements.map((element) => {
+            if (kind === 'qr') {
+                const width = element.width * metrics.scale;
+                const height = element.height * metrics.scale;
+                return new Group([
+                    new Rect({
+                        left: 0,
+                        top: 0,
+                        width,
+                        height,
+                        fill: ghost ? 'rgba(255,255,255,0.6)' : '#dbeafe',
+                        stroke: ghost ? '#64748b' : '#2563eb',
+                        strokeWidth: ghost ? 1 : 2,
+                        strokeDashArray: ghost ? [5, 4] : null,
+                    }),
+                    new Text('QR', {
+                        left: width / 2,
+                        top: height / 2,
+                        originX: 'center',
+                        originY: 'center',
+                        fontSize: Math.max(12, 15 * metrics.scale),
+                        fontFamily: 'Arial',
+                        fontWeight: 'bold',
+                        fill: ghost ? '#64748b' : '#1d4ed8',
+                    }),
+                ], {
+                    left: (element.x - minX) * metrics.scale,
+                    top: (element.y - minY) * metrics.scale,
+                    selectable: false,
+                    evented: false,
+                });
+            }
+
+            return new Text(element.label || 'Texto', {
+                left: (element.x - minX) * metrics.scale,
+                top: (element.y - minY) * metrics.scale,
+                fontSize: Math.max(11, element.fontSize * metrics.scale),
+                fontFamily: 'Arial',
+                fill: ghost ? '#64748b' : '#0f172a',
+                backgroundColor: ghost ? 'rgba(255,255,255,0.65)' : 'rgba(254, 243, 199, 0.92)',
+                padding: 5,
+                selectable: false,
+                evented: false,
+            });
         });
-    };
 
-    const createAlignmentTextGroup = (textElements, labelType, metrics, offsets) => {
-        if (!textElements.length) return null;
-
-        const minX = Math.min(...textElements.map((element) => element.x));
-        const minY = Math.min(...textElements.map((element) => element.y));
-        const offsetX = Number(offsets[`${labelType}_text_x`] || 0);
-        const offsetY = Number(offsets[`${labelType}_text_y`] || 0);
-        const basePoint = {
-            left: metrics.padding + (minX * metrics.scale),
-            top: metrics.padding + (minY * metrics.scale),
-        };
-
-        const textObjects = textElements.map((element) => new Text(element.label || 'Texto', {
-            left: (element.x - minX) * metrics.scale,
-            top: (element.y - minY) * metrics.scale,
-            fontSize: Math.max(12, element.fontSize * metrics.scale),
-            fontFamily: 'Arial',
-            fill: '#0f172a',
-            backgroundColor: 'rgba(254, 243, 199, 0.9)',
-            padding: 6,
-            selectable: false,
-            evented: false,
-        }));
-
-        return new Group(textObjects, {
+        return new Group(objects, {
             left: basePoint.left + (offsetX * metrics.scale),
             top: basePoint.top + (offsetY * metrics.scale),
             subTargetCheck: false,
-            data: { labelType, kind: 'text', basePoint, scale: metrics.scale },
+            selectable: !ghost,
+            evented: !ghost,
+            hasControls: false,
+            lockScalingX: true,
+            lockScalingY: true,
+            lockRotation: true,
+            hoverCursor: ghost ? 'default' : 'move',
+            opacity: ghost ? 0.5 : 1,
+            borderColor: '#2563eb',
+            borderDashArray: [6, 4],
+            padding: 4,
+            data: {
+                labelType,
+                kind,
+                basePoint,
+                scale: metrics.scale,
+            },
         });
+    };
+
+    const resolveLabelMetrics = (documentForType, elements, canvas, labelType, offsets) => {
+        const canvasPadding = 18;
+        const zpl = String(documentForType?.test_zpl || '');
+        const size = documentForType?.label_size || {};
+        const zplWidth = Number(zpl.match(/\^PW(\d+)/i)?.[1] || 0);
+        const zplHeight = Number(zpl.match(/\^LL(\d+)/i)?.[1] || 0);
+        const contentWidth = Math.max(...elements.map((element) => element.x + element.width), 320) + 24;
+        const contentHeight = Math.max(...elements.map((element) => element.y + element.height), 180) + 24;
+        const configuredWidth = Number(size.width_dots || zplWidth || 0);
+        const configuredHeight = Number(size.height_dots || zplHeight || 0);
+        const labelWidth = configuredWidth || contentWidth;
+        const labelHeight = configuredHeight || contentHeight;
+        const horizontalPositions = [0, labelWidth];
+        const verticalPositions = [0, labelHeight];
+
+        elements.forEach((element) => {
+            const offsetX = Number(offsets[`${labelType}_${element.kind}_x`] || 0);
+            const offsetY = Number(offsets[`${labelType}_${element.kind}_y`] || 0);
+            horizontalPositions.push(element.x, element.x + element.width, element.x + offsetX, element.x + offsetX + element.width);
+            verticalPositions.push(element.y, element.y + element.height, element.y + offsetY, element.y + offsetY + element.height);
+        });
+
+        const movementMargin = Math.max(70, Math.round(Math.min(labelWidth, labelHeight) * 0.12));
+        const viewMinX = Math.min(...horizontalPositions) - movementMargin;
+        const viewMaxX = Math.max(...horizontalPositions) + movementMargin;
+        const viewMinY = Math.min(...verticalPositions) - movementMargin;
+        const viewMaxY = Math.max(...verticalPositions) + movementMargin;
+        const viewWidth = Math.max(1, viewMaxX - viewMinX);
+        const viewHeight = Math.max(1, viewMaxY - viewMinY);
+        const scale = Math.min(
+            (canvas.getWidth() - (canvasPadding * 2)) / viewWidth,
+            (canvas.getHeight() - (canvasPadding * 2)) / viewHeight,
+            2,
+        );
+        const renderedViewWidth = viewWidth * scale;
+        const renderedViewHeight = viewHeight * scale;
+        const viewOriginX = (canvas.getWidth() - renderedViewWidth) / 2;
+        const viewOriginY = (canvas.getHeight() - renderedViewHeight) / 2;
+        const originX = viewOriginX - (viewMinX * scale);
+        const originY = viewOriginY - (viewMinY * scale);
+
+        return {
+            labelWidth,
+            labelHeight,
+            configuredWidth,
+            configuredHeight,
+            scale,
+            originX,
+            originY,
+            size,
+            expandedToContent: Math.min(...horizontalPositions) < 0
+                || Math.min(...verticalPositions) < 0
+                || Math.max(...horizontalPositions) > labelWidth
+                || Math.max(...verticalPositions) > labelHeight,
+        };
+    };
+
+    const updateAlignmentSizeSummary = (metrics) => {
+        if (!alignmentSizeSummary) return;
+
+        const widthMm = Number(metrics.size?.width_mm || 0);
+        const heightMm = Number(metrics.size?.height_mm || 0);
+        const dpi = Number(metrics.size?.dpi || 0);
+        if (widthMm > 0 && heightMm > 0) {
+            const expandedSummary = metrics.expandedToContent
+                ? ' · Área de movimiento ampliada para mostrar los desplazamientos'
+                : '';
+            alignmentSizeSummary.textContent = `${widthMm.toFixed(2)} × ${heightMm.toFixed(2)} mm · ${metrics.configuredWidth} × ${metrics.configuredHeight} puntos${dpi ? ` · ${dpi} DPI` : ''}${expandedSummary}`;
+            return;
+        }
+
+        alignmentSizeSummary.textContent = `Área estimada: ${metrics.labelWidth} × ${metrics.labelHeight} puntos${dpi ? ` · ${dpi} DPI` : ''}`;
     };
 
     const renderAlignmentCanvas = (labelType = currentAlignmentType) => {
         const canvas = ensureAlignmentCanvas();
         if (!canvas) return;
 
+        const availableWidth = Math.floor((alignmentCanvasViewport?.clientWidth || 784) - 26);
+        const canvasWidth = Math.max(280, Math.min(920, availableWidth));
+        const canvasHeight = Math.max(440, Math.min(640, Math.round(canvasWidth * 0.82)));
+        if (canvas.getWidth() !== canvasWidth || canvas.getHeight() !== canvasHeight) {
+            canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+        }
+
         setActiveAlignmentType(labelType);
         canvas.clear();
-        canvas.backgroundColor = '#f8fafc';
+        canvas.backgroundColor = '#ffffff';
 
         const documentForType = getDocumentForAlignmentType(currentAlignmentType);
         if (!documentForType?.test_zpl) {
@@ -232,61 +599,55 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
         const elements = parseZplElements(documentForType.test_zpl);
         if (!elements.length) {
-            setAlignmentCanvasStatus(`El ZPL ${currentAlignmentType.toUpperCase()} no tiene bloques ^FO para editar visualmente.`, true);
+            setAlignmentCanvasStatus(`No encontramos elementos que puedan moverse en la etiqueta ${currentAlignmentType.toUpperCase()}.`, true);
             canvas.renderAll();
             return;
         }
 
-        const padding = 28;
-        const maxX = Math.max(...elements.map((element) => element.x + element.width), 320);
-        const maxY = Math.max(...elements.map((element) => element.y + element.height), 180);
-        const scale = Math.min((canvas.getWidth() - padding * 2) / maxX, (canvas.getHeight() - padding * 2) / maxY, 1.6);
-        const metrics = { padding, scale };
-        canvas.add(new Rect({
-            left: padding,
-            top: padding,
-            width: maxX * scale,
-            height: maxY * scale,
-            fill: '#ffffff',
-            stroke: '#cbd5e1',
-            strokeWidth: 1,
-            selectable: false,
-            evented: false,
-        }));
-
-        canvas.add(new Text(`Etiqueta ${currentAlignmentType.toUpperCase()}  escala ${scale.toFixed(2)}x`, {
-            left: padding,
-            top: 8,
-            fontSize: 12,
-            fill: '#64748b',
-            selectable: false,
-            evented: false,
-        }));
-
+        availableAlignmentElements = ['text', 'qr'].filter((kind) => elements.some((element) => element.kind === kind));
+        setActiveAlignmentElement(currentAlignmentElement);
         const offsets = readAlignmentInputs();
-        syncingCanvasFromInputs = true;
-        elements.filter((element) => element.kind === 'qr').forEach((element) => {
-            const object = createAlignmentObject(element, currentAlignmentType, metrics, offsets);
-            if (object) {
-                object.set({ cornerColor: '#dc2626', borderColor: '#dc2626' });
-                canvas.add(object);
-            }
-        });
+        const metrics = resolveLabelMetrics(documentForType, elements, canvas, currentAlignmentType, offsets);
+        updateAlignmentSizeSummary(metrics);
+        canvas.add(new Rect({
+            left: metrics.originX,
+            top: metrics.originY,
+            width: metrics.labelWidth * metrics.scale,
+            height: metrics.labelHeight * metrics.scale,
+            fill: '#f8fafc',
+            stroke: '#f59e0b',
+            strokeWidth: 2,
+            strokeDashArray: [8, 5],
+            shadow: '0 8px 18px rgba(15, 23, 42, 0.15)',
+            selectable: false,
+            evented: false,
+        }));
 
-        const textGroup = createAlignmentTextGroup(
-            elements.filter((element) => element.kind === 'text'),
-            currentAlignmentType,
-            metrics,
-            offsets,
-        );
-        if (textGroup) {
-            textGroup.set({ cornerColor: '#dc2626', borderColor: '#dc2626' });
-            canvas.add(textGroup);
-        }
+        canvas.add(new Text('ÁREA DE ETIQUETA CONFIGURADA', {
+            left: metrics.originX + 8,
+            top: metrics.originY + 8,
+            fontSize: 11,
+            fontWeight: 'bold',
+            fill: '#b45309',
+            backgroundColor: 'rgba(255, 251, 235, 0.9)',
+            selectable: false,
+            evented: false,
+        }));
+
+        syncingCanvasFromInputs = true;
+        availableAlignmentElements.forEach((kind) => {
+            const kindElements = elements.filter((element) => element.kind === kind);
+            const ghost = createAlignmentGroup(kindElements, kind, currentAlignmentType, metrics, offsets, true);
+            const object = createAlignmentGroup(kindElements, kind, currentAlignmentType, metrics, offsets);
+            if (ghost) canvas.add(ghost);
+            if (object) canvas.add(object);
+            if (object && kind === currentAlignmentElement) canvas.setActiveObject(object);
+        });
         syncingCanvasFromInputs = false;
 
-        canvas.renderAll();
-        setAlignmentCanvasStatus(`Elementos ${currentAlignmentType.toUpperCase()} cargados desde el ZPL de esta requisicion. Arrastra el QR o el grupo de textos para moverlos libremente.`);
+        canvas.requestRenderAll();
+        updateAlignmentMovementSummary();
+        setAlignmentCanvasStatus('Toda el área blanca es de movimiento libre. La línea naranja es solo una guía y no limita los elementos.');
     };
 
     const refreshAlignmentPreview = async () => {
@@ -295,12 +656,108 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
                 await loadPreview();
             }
 
-            const availableTypes = (previewPayload?.documents || []).map((doc) => String(doc.label_type || '').toLowerCase());
+            const availableTypes = getAlignmentDocuments().map((doc) => String(doc.label_type || '').toLowerCase());
             const nextType = availableTypes.includes(currentAlignmentType) ? currentAlignmentType : (availableTypes[0] || 'serial');
+            alignmentTypeButtons.forEach((button) => {
+                button.classList.toggle('hidden', !availableTypes.includes(button.dataset.alignmentType));
+            });
+            alignmentTypeSwitch?.classList.toggle('hidden', availableTypes.length <= 1);
+            setAlignmentInputs(getAlignment());
             renderAlignmentCanvas(nextType);
         } catch (error) {
-            setAlignmentCanvasStatus(`No se pudieron cargar elementos para el editor visual: ${error.message}`, true);
+            setAlignmentCanvasStatus(`No pudimos cargar la etiqueta. ${error.message}`, true);
         }
+    };
+
+    const moveSelectedAlignmentElement = (direction) => {
+        const deltaByDirection = {
+            up: [0, -alignmentStep],
+            down: [0, alignmentStep],
+            left: [-alignmentStep, 0],
+            right: [alignmentStep, 0],
+        };
+        const delta = deltaByDirection[direction];
+        if (!delta) return;
+
+        const values = readAlignmentInputs();
+        const fields = selectedAlignmentFields();
+        pushAlignmentHistory(values);
+        values[fields.x] = Number(values[fields.x] || 0) + delta[0];
+        values[fields.y] = Number(values[fields.y] || 0) + delta[1];
+        setAlignmentInputs(values);
+        setAlignmentDirty();
+        renderAlignmentCanvas(currentAlignmentType);
+    };
+
+    const setAlignmentStep = (step) => {
+        alignmentStep = [1, 5, 10].includes(Number(step)) ? Number(step) : 5;
+        alignmentStepButtons.forEach((button) => {
+            const isActive = Number(button.dataset.alignmentStep) === alignmentStep;
+            button.classList.toggle('border-blue-600', isActive);
+            button.classList.toggle('bg-blue-50', isActive);
+            button.classList.toggle('text-blue-800', isActive);
+            button.classList.toggle('border-slate-300', !isActive);
+            button.classList.toggle('text-slate-700', !isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        if (alignmentStepCenter) {
+            alignmentStepCenter.textContent = `${alignmentStep} ${alignmentStep === 1 ? 'punto' : 'puntos'}`;
+        }
+    };
+
+    const resetSelectedAlignmentElement = () => {
+        const values = readAlignmentInputs();
+        const fields = selectedAlignmentFields();
+        if (Number(values[fields.x] || 0) === 0 && Number(values[fields.y] || 0) === 0) return;
+
+        pushAlignmentHistory(values);
+        values[fields.x] = 0;
+        values[fields.y] = 0;
+        setAlignmentInputs(values);
+        setAlignmentDirty();
+        renderAlignmentCanvas(currentAlignmentType);
+    };
+
+    const resetCurrentAlignmentLabel = () => {
+        const values = readAlignmentInputs();
+        pushAlignmentHistory(values);
+        ['text_x', 'text_y', 'qr_x', 'qr_y'].forEach((field) => {
+            values[`${currentAlignmentType}_${field}`] = 0;
+        });
+        setAlignmentInputs(values);
+        setAlignmentDirty();
+        renderAlignmentCanvas(currentAlignmentType);
+    };
+
+    const undoAlignmentChange = () => {
+        const previous = alignmentHistory.pop();
+        if (!previous) return;
+
+        setAlignmentInputs(previous);
+        setAlignmentDirty();
+        renderAlignmentCanvas(currentAlignmentType);
+    };
+
+    const saveCurrentAlignment = () => {
+        if (!selectedPrinters[currentAlignmentType]) {
+            showAlert(
+                'Selecciona una impresora',
+                `Antes de guardar, conecta y selecciona la impresora para ${currentAlignmentType.toUpperCase()}.`,
+                'warning',
+            );
+            updateAlignmentPrinterNote();
+            return false;
+        }
+
+        const saved = persistAlignmentForCurrentPrinter(readAlignmentInputs(), currentAlignmentType);
+        if (!saved) return false;
+
+        setAlignmentDirty(false, currentAlignmentType);
+        alignmentHistory = [];
+        updateAlignmentMovementSummary();
+        invalidatePreparedLabelType(currentAlignmentType);
+
+        return true;
     };
 
     const moveFO = (block, dx, dy) => block.replace(/\^FO(-?\d+),(-?\d+)/, (_m, x, y) => `^FO${Number(x)+dx},${Number(y)+dy}`);
@@ -513,6 +970,14 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         if (device) {
             persistSelectedPrinter(labelType, device);
         }
+
+        if (labelType === currentAlignmentType) {
+            updateAlignmentPrinterNote();
+            if (!alignmentDirty && alignmentModal && !alignmentModal.classList.contains('hidden')) {
+                setAlignmentInputs(getAlignment());
+                renderAlignmentCanvas(currentAlignmentType);
+            }
+        }
     };
 
     const restorePreferredPrinter = (labelType) => {
@@ -603,6 +1068,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
         window.BrowserPrint.getLocalDevices((devices) => {
             availablePrinters = (devices || []).filter((candidate) => candidate.deviceType === 'printer');
+            preparedLabelTypes.clear();
             printPrepared = false;
             previewPayload = null;
             activeBlockId = null;
@@ -645,6 +1111,41 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         device.send(zplChunk, () => resolve(), (error) => reject(new Error(error)));
     });
 
+    const sendAlignmentTestForCurrentType = async () => {
+        try {
+            if (!availablePrinters.length) {
+                throw new Error('Primero conecta una impresora Zebra.');
+            }
+
+            if (!previewPayload?.documents?.length) {
+                await loadPreview();
+            }
+
+            const documentForType = getDocumentForAlignmentType(currentAlignmentType);
+            if (!documentForType?.test_zpl) {
+                throw new Error(`No hay una muestra disponible para la etiqueta ${currentAlignmentType.toUpperCase()}.`);
+            }
+
+            const printer = resolveSelectedPrinter(currentAlignmentType);
+            if (!printer) {
+                throw new Error(`Selecciona la impresora para ${currentAlignmentType.toUpperCase()}.`);
+            }
+
+            setStatus(`Enviando una etiqueta de prueba ${currentAlignmentType.toUpperCase()}...`);
+            const adjustedTestZpl = applyAlignmentToZpl(documentForType.test_zpl, currentAlignmentType);
+            await sendToPrinter(printer, adjustedTestZpl);
+
+            markLabelTypePrepared(currentAlignmentType);
+            setStatus(`Prueba ${currentAlignmentType.toUpperCase()} enviada a ${printer.name || 'la impresora seleccionada'}.`);
+
+            return true;
+        } catch (error) {
+            setStatus(`No se pudo imprimir la prueba: ${error.message}`, true);
+            showAlert('No se pudo imprimir la prueba', error.message, 'error');
+            return false;
+        }
+    };
+
     const loadPreview = async () => {
         setStatus('Preparando informacion de impresion...');
 
@@ -667,6 +1168,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
         previewPayload = await response.json();
         activeBlockId = previewPayload.current_block?.id || previewPayload.block_id || null;
+        updatePrepareLabelTypeOptions();
+        syncPrintPrepared();
         renderBlockProgress(previewPayload.blocks || [], previewPayload.current_block || null);
 
         if (previewPayload.batch_complete) {
@@ -685,27 +1188,29 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         setStatus('Preparacion completada. Revisa el bloque activo y presiona "Imprimir ahora".');
     };
 
-    const preparePrint = async () => {
+    const preparePrint = async (showCompletionAlert = true) => {
         try {
             if (!availablePrinters.length) {
                 setStatus('Primero conecta impresoras.', true);
                 showAlert('Impresora requerida', 'Conecta una impresora antes de preparar la impresion.', 'error');
-                return;
+                return false;
             }
 
             await loadPreview();
-            const documents = previewPayload?.documents || [];
-            validatePrintersForDocuments(documents);
-
-            const testDocs = documents.filter((doc) => doc?.test_zpl);
+            const requestedType = prepareLabelTypeSelect?.value || getActiveLabelType();
+            const availableTestDocs = getAlignmentDocuments().filter((document) => document?.test_zpl);
+            const testDocs = requestedType === 'all'
+                ? availableTestDocs
+                : availableTestDocs.filter((document) => String(document.label_type || '').toLowerCase() === requestedType);
             if (!testDocs.length) {
-                printPrepared = false;
                 setStatus('No hay contenido de prueba para imprimir.', true);
-                showAlert('Sin contenido', 'No se encontro contenido ZPL para la impresion de prueba.', 'warning');
-                return;
+                showAlert('Sin contenido', 'No se encontró una muestra para el tipo de etiqueta seleccionado.', 'warning');
+                return false;
             }
+            validatePrintersForDocuments(testDocs);
 
-            setStatus('Enviando etiqueta(s) de prueba para validar template...');
+            const requestedLabels = testDocs.map((document) => String(document.label_type || '').toUpperCase()).join(' y ');
+            setStatus(`Enviando prueba de ${requestedLabels}...`);
             for (const doc of testDocs) {
                 const labelType = String(doc.label_type || '').toLowerCase();
                 const printer = resolveSelectedPrinter(labelType);
@@ -715,15 +1220,27 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
                 const adjustedTestZpl = applyAlignmentToZpl(doc.test_zpl, labelType);
                 await sendToPrinter(printer, adjustedTestZpl);
+                markLabelTypePrepared(labelType);
             }
 
-            printPrepared = true;
-            setStatus('Impresion de prueba enviada para el bloque activo. Si todo esta correcto, ya puedes presionar "Imprimir ahora".');
-            showAlert('Preparacion completada', 'Se envio 1 etiqueta de prueba del bloque activo a la impresora seleccionada. Si esta correcta, ya puedes imprimir ese bloque.', 'success');
+            const activeLabelType = getActiveLabelType();
+            const activeWasPrepared = preparedLabelTypes.has(activeLabelType);
+            setStatus(activeWasPrepared
+                ? `Prueba de ${requestedLabels} enviada. El bloque ${activeLabelType.toUpperCase()} está listo para imprimir.`
+                : `Prueba de ${requestedLabels} enviada. Prepara también ${activeLabelType.toUpperCase()} para imprimir el bloque activo.`);
+            if (showCompletionAlert) {
+                showAlert(
+                    'Preparación completada',
+                    `Se envió una etiqueta de prueba de ${requestedLabels}. ${activeWasPrepared ? 'Ya puedes imprimir el bloque activo.' : `Aún debes preparar ${activeLabelType.toUpperCase()}.`}`,
+                    'success',
+                );
+            }
+            return true;
         } catch (error) {
-            printPrepared = false;
+            syncPrintPrepared();
             setStatus(`Error al preparar impresion: ${error.message}`, true);
             showAlert('Error de preparacion', error.message || 'No se pudo enviar la impresion de prueba.', 'error');
+            return false;
         }
     };
 
@@ -832,7 +1349,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
                 setPrintBlocked(result.message || 'Impresion confirmada. Boton bloqueado para evitar duplicidad.');
             } else {
                 await loadPreview();
-                printPrepared = !previewPayload?.batch_complete;
+                syncPrintPrepared();
             }
         } catch (error) {
             if (!sentAllDocuments) {
@@ -844,7 +1361,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
                 return;
             }
 
-            printPrepared = false;
+            invalidatePreparedLabelType(getActiveLabelType());
             const message = confirmedInBackend
                 ? `Bloque confirmado, pero no se pudo cargar el siguiente bloque: ${error.message}`
                 : `Impresion enviada, pero no se pudo confirmar en sistema: ${error.message}`;
@@ -852,12 +1369,116 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         }
     };
 
+    const hideAlignmentModal = () => {
+        alignmentModal?.classList.add('hidden');
+        alignmentModal?.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+        alignmentFabricCanvas?.discardActiveObject();
+        alignmentFabricCanvas?.requestRenderAll();
+        openAlignmentModalButton?.focus();
+    };
+
+    const focusNextDirtyAlignmentType = () => {
+        const nextType = [...dirtyAlignmentTypes][0];
+        if (!nextType) return false;
+
+        renderAlignmentCanvas(nextType);
+        showAlert(
+            'Falta guardar otra etiqueta',
+            `Aún tienes cambios sin guardar en ${nextType.toUpperCase()}. Revísalos antes de cerrar.`,
+            'info',
+        );
+
+        return true;
+    };
+
+    const requestCloseAlignmentModal = async () => {
+        if (alignmentDirty) {
+            const result = await Swal.fire({
+                title: '¿Descartar los cambios?',
+                text: 'Los movimientos que no guardaste se perderán.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, descartar',
+                cancelButtonText: 'Seguir ajustando',
+                confirmButtonColor: '#dc2626',
+                reverseButtons: true,
+            });
+            if (!result.isConfirmed) return;
+        }
+
+        setAlignmentDirty(false, null);
+        alignmentHistory = [];
+        setAlignmentInputs(getAlignment());
+        hideAlignmentModal();
+    };
+
+    const openAlignmentModal = async () => {
+        alignmentHistory = [];
+        setAlignmentDirty(false, null);
+        setAlignmentInputs(getAlignment());
+        setAlignmentStep(alignmentStep);
+        setActiveAlignmentElement(currentAlignmentElement);
+        alignmentModal?.classList.remove('hidden');
+        alignmentModal?.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+        setActiveAlignmentType(currentAlignmentType);
+        setAlignmentCanvasStatus('Cargando la etiqueta actual…');
+
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+        await refreshAlignmentPreview();
+        closeAlignmentModalButton?.focus();
+    };
+
+    const saveAndTestAlignment = async () => {
+        if (!saveCurrentAlignment()) return;
+
+        const originalText = saveTestAlignmentButton?.textContent || '';
+        if (saveTestAlignmentButton) {
+            saveTestAlignmentButton.disabled = true;
+            saveTestAlignmentButton.textContent = 'Enviando prueba…';
+        }
+
+        const sent = await sendAlignmentTestForCurrentType();
+
+        if (saveTestAlignmentButton) {
+            saveTestAlignmentButton.disabled = false;
+            saveTestAlignmentButton.textContent = originalText;
+        }
+        if (!sent) return;
+
+        const result = await Swal.fire({
+            title: 'Revisa la etiqueta de prueba',
+            text: '¿Los elementos quedaron en la posición correcta?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, quedó bien',
+            cancelButtonText: 'Seguir ajustando',
+            confirmButtonColor: '#2563eb',
+            reverseButtons: true,
+            allowOutsideClick: false,
+        });
+
+        if (result.isConfirmed) {
+            if (focusNextDirtyAlignmentType()) return;
+
+            hideAlignmentModal();
+            const activeLabelType = String(previewPayload?.current_block?.label_type || '').toLowerCase();
+            setStatus(activeLabelType === currentAlignmentType
+                ? 'Ajuste validado con una etiqueta de prueba. Ya puedes imprimir el bloque activo.'
+                : `Ajuste ${currentAlignmentType.toUpperCase()} validado y guardado. El bloque activo sigue siendo ${activeLabelType.toUpperCase()}.`);
+            return;
+        }
+
+        setStatus('Continúa ajustando la posición y vuelve a imprimir una prueba.');
+    };
+
     connectButton?.addEventListener('click', connectPrinter);
     serialPrinterSelect?.addEventListener('change', (event) => {
         const selectedId = event.target.value;
         const device = availablePrinters.find((printer) => getPrinterId(printer) === selectedId) || null;
         setSelectedPrinter('serial', device);
-        printPrepared = false;
+        invalidatePreparedLabelType('serial');
         if (device) {
             setStatus('Impresora SERIAL seleccionada. Prepara impresion nuevamente para validar.');
             return;
@@ -869,7 +1490,7 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         const selectedId = event.target.value;
         const device = availablePrinters.find((printer) => getPrinterId(printer) === selectedId) || null;
         setSelectedPrinter('rating', device);
-        printPrepared = false;
+        invalidatePreparedLabelType('rating');
         if (device) {
             setStatus('Impresora RATING seleccionada. Prepara impresion nuevamente para validar.');
             return;
@@ -877,43 +1498,92 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
 
         setStatus('Selecciona una impresora para RATING.', true);
     });
-    previewButton?.addEventListener('click', preparePrint);
-    openAlignmentModalButton?.addEventListener('click', () => {
-        setAlignmentInputs(getAlignment());
-        alignmentModal?.classList.remove('hidden');
-        alignmentModal?.classList.add('flex');
-        setActiveAlignmentType(currentAlignmentType);
-        window.requestAnimationFrame(() => renderAlignmentCanvas(currentAlignmentType));
-    });
-    closeAlignmentModalButton?.addEventListener('click', () => {
-        alignmentModal?.classList.add('hidden');
-        alignmentModal?.classList.remove('flex');
+    previewButton?.addEventListener('click', () => void preparePrint());
+    openAlignmentModalButton?.addEventListener('click', () => void openAlignmentModal());
+    closeAlignmentModalButton?.addEventListener('click', () => void requestCloseAlignmentModal());
+    cancelAlignmentModalButton?.addEventListener('click', () => void requestCloseAlignmentModal());
+    alignmentModal?.addEventListener('click', (event) => {
+        if (event.target === alignmentModal) {
+            void requestCloseAlignmentModal();
+        }
     });
     saveAlignmentButton?.addEventListener('click', () => {
-        const values = readAlignmentInputs();
-        localStorage.setItem(storageKeys.alignment, JSON.stringify(values));
-        alignmentModal?.classList.add('hidden');
-        alignmentModal?.classList.remove('flex');
-        printPrepared = false;
-        setStatus('Ajustes guardados. Vuelve a preparar impresion para validar posiciones.');
+        if (!saveCurrentAlignment()) return;
+        if (focusNextDirtyAlignmentType()) return;
+
+        hideAlignmentModal();
+        setStatus('Ajuste guardado para la impresora seleccionada. Prepara la impresión para validarlo.');
     });
-    resetAlignmentButton?.addEventListener('click', () => {
-        localStorage.setItem(storageKeys.alignment, JSON.stringify(defaultAlignment));
-        setAlignmentInputs(defaultAlignment);
-        renderAlignmentCanvas(currentAlignmentType);
+    saveTestAlignmentButton?.addEventListener('click', () => void saveAndTestAlignment());
+    resetAlignmentButton?.addEventListener('click', async () => {
+        const result = await Swal.fire({
+            title: `¿Restablecer etiqueta ${currentAlignmentType.toUpperCase()}?`,
+            text: 'El texto y el código QR volverán a su posición original.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, restablecer',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            reverseButtons: true,
+        });
+        if (result.isConfirmed) resetCurrentAlignmentLabel();
     });
-    loadAlignmentPreviewButton?.addEventListener('click', refreshAlignmentPreview);
+    resetAlignmentElementButton?.addEventListener('click', resetSelectedAlignmentElement);
+    undoAlignmentButton?.addEventListener('click', undoAlignmentChange);
     alignmentTypeButtons.forEach((button) => {
         button.addEventListener('click', () => renderAlignmentCanvas(button.dataset.alignmentType));
     });
+    alignmentElementButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setActiveAlignmentElement(button.dataset.alignmentElement);
+            renderAlignmentCanvas(currentAlignmentType);
+        });
+    });
+    alignmentMoveButtons.forEach((button) => {
+        button.addEventListener('click', () => moveSelectedAlignmentElement(button.dataset.alignmentMove));
+    });
+    alignmentStepButtons.forEach((button) => {
+        button.addEventListener('click', () => setAlignmentStep(button.dataset.alignmentStep));
+    });
     document.querySelectorAll('[data-align]').forEach((input) => {
-        input.addEventListener('input', () => renderAlignmentCanvas(currentAlignmentType));
+        input.addEventListener('focus', () => {
+            input.dataset.alignmentSnapshot = JSON.stringify(readAlignmentInputs());
+        });
+        input.addEventListener('input', () => {
+            setAlignmentDirty();
+            renderAlignmentCanvas(currentAlignmentType);
+        });
+        input.addEventListener('change', () => {
+            const snapshot = parseStoredJsonFromValue(input.dataset.alignmentSnapshot);
+            if (snapshot) pushAlignmentHistory(snapshot);
+            delete input.dataset.alignmentSnapshot;
+            updateAlignmentMovementSummary();
+        });
+    });
+    document.addEventListener('keydown', (event) => {
+        if (!alignmentModal || alignmentModal.classList.contains('hidden')) return;
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            void requestCloseAlignmentModal();
+            return;
+        }
+
+        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+        const directionByKey = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+        const direction = directionByKey[event.key];
+        if (!direction) return;
+
+        event.preventDefault();
+        moveSelectedAlignmentElement(direction);
     });
     printButton?.addEventListener('click', printBatch);
 
     setSelectedPrinter('serial', null);
     setSelectedPrinter('rating', null);
     setActiveAlignmentType('serial');
+    setAlignmentStep(5);
+    updateAlignmentMovementSummary();
 
     if (root.dataset.alreadyPrinted === '1') {
         setPrintBlocked('Este batch ya fue confirmado como impreso. El boton se bloqueo para evitar duplicidad.');

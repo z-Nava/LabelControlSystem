@@ -10,6 +10,7 @@ use App\Models\LabelSku;
 use App\Models\LabelTemplate;
 use App\Models\SerialUnit;
 use App\Models\SkuSerialFormat;
+use App\Support\LabelDimensions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -45,11 +46,15 @@ class LabelBatchPrintExecutionService
                 'blocks' => $blocks,
                 'current_block' => null,
                 'documents' => [],
+                'alignment_documents' => [],
                 'zpl' => '',
             ];
         }
 
-        return $this->buildBlockPreview($batch, $block, $blocks);
+        $preview = $this->buildBlockPreview($batch, $block, $blocks);
+        $preview['alignment_documents'] = $this->buildAlignmentDocuments($batch, $preview['documents']);
+
+        return $preview;
     }
 
     public function confirmPrinted(LabelPrintBatch $batch, ?int $blockId = null): array
@@ -204,6 +209,7 @@ class LabelBatchPrintExecutionService
                 'id' => $template->id,
                 'name' => $template->name,
             ],
+            'label_size' => LabelDimensions::fromTemplate($template, $profile),
             'units_count' => count($zplLabels),
             'test_zpl' => (string) ($testLabel ?? ''),
             'zpl' => implode("\n", $zplLabels),
@@ -219,6 +225,53 @@ class LabelBatchPrintExecutionService
             'documents' => $documents,
             'zpl' => collect($documents)->pluck('zpl')->filter()->implode("\n"),
         ];
+    }
+
+    /**
+     * Build one lightweight editable sample for every label type in the batch.
+     * The documents used by the print action remain limited to the active block.
+     *
+     * @param array<int, array<string, mixed>> $currentDocuments
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildAlignmentDocuments(LabelPrintBatch $batch, array $currentDocuments): array
+    {
+        $currentByType = collect($currentDocuments)->keyBy('label_type');
+
+        return collect(['serial', 'rating'])
+            ->map(function (string $labelType) use ($batch, $currentByType): ?array {
+                $document = $currentByType->get($labelType);
+
+                if (!$document) {
+                    $sampleBlock = $batch->blocks->first(
+                        fn (LabelPrintBlock $block) => $block->label_type === $labelType
+                    );
+                    if (!$sampleBlock) {
+                        return null;
+                    }
+
+                    try {
+                        $document = $this->buildBlockPreview($batch, $sampleBlock, [])['documents'][0] ?? null;
+                    } catch (ValidationException) {
+                        return null;
+                    }
+                }
+
+                if (!$document) {
+                    return null;
+                }
+
+                return collect($document)->only([
+                    'label_type',
+                    'profile',
+                    'template',
+                    'label_size',
+                    'test_zpl',
+                ])->all();
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function buildConfirmationResult(LabelPrintBatch $batch, LabelPrintBlock $block, int $updatedUnits, string $message): array

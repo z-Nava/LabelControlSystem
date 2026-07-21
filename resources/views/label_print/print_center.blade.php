@@ -25,14 +25,22 @@
         <h2 class="text-base font-semibold text-blue-900">Que acabas de hacer y que sigue?</h2>
         <ol class="mt-3 list-decimal list-inside space-y-2 text-sm text-blue-900">
             <li>Esta pantalla corresponde al <span class="font-semibold">batch #{{ $batch->id }}</span> de la requisicion <span class="font-semibold">#{{ $labelRequest->id }}</span>.</li>
-            <li>Conecta tu impresora y presiona <span class="font-semibold">Preparar impresion</span> una sola vez para validar el primer bloque.</li>
-            <li>Si el bloque sale correcto, presiona <span class="font-semibold">Imprimir ahora</span>; el sistema cargara el siguiente bloque automaticamente.</li>
+            <li>Conecta tu impresora, elige si deseas probar <span class="font-semibold">Serial, Rating o ambas</span> y presiona <span class="font-semibold">Preparar impresion</span>.</li>
+            <li>Si las pruebas salen correctas, presiona <span class="font-semibold">Imprimir ahora</span>; el sistema imprimira el bloque activo y cargara el siguiente automaticamente.</li>
             <li>Al finalizar todos los bloques, veras una confirmacion de impresion para saber que el sistema registro correctamente lo impreso.</li>
         </ol>
     </div>
 
     <div class="mt-6 flex flex-wrap gap-2">
         <button id="connect-printer" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Conectar impresora</button>
+        <label class="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-900">
+            Etiqueta de prueba
+            <select id="prepare-label-type" class="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800">
+                <option value="all">Serial y Rating</option>
+                <option value="serial">Solo Serial</option>
+                <option value="rating">Solo Rating</option>
+            </select>
+        </label>
         <button id="preview-batch" type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Preparar impresion</button>
         <button id="open-alignment-modal" type="button" class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">Ajustar posiciones</button>
         <button id="print-batch" type="button" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500">Imprimir ahora</button>
@@ -88,55 +96,137 @@
 
 
 
-<div id="alignment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 p-4">
-    <div class="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-        <div class="border-b px-5 py-4">
-            <h3 class="text-lg font-semibold text-slate-900">Ajuste rapido de posiciones</h3>
-            <p class="mt-1 text-sm text-slate-600">Si la etiqueta salio desfazada, conserva el ajuste manual por pixeles o arrastra libremente los elementos de la etiqueta con el editor visual.</p>
+<div id="alignment-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-labelledby="alignment-modal-title">
+    <div class="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+            <div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h3 id="alignment-modal-title" class="text-xl font-bold text-slate-900">Ajustar posición de la etiqueta</h3>
+                    <span id="alignment-unsaved-badge" class="hidden rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Cambios sin guardar</span>
+                </div>
+                <p class="mt-1 text-sm text-slate-600">Selecciona un elemento y muévelo hasta que coincida con la etiqueta física.</p>
+            </div>
+            <button id="close-alignment-modal" type="button" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 text-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Cerrar ajuste">&times;</button>
         </div>
-        <div class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
+
+        <div class="grid flex-1 gap-5 overflow-y-auto p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_390px]">
+            <section class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4" aria-labelledby="alignment-preview-title">
+                <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <div class="text-sm font-semibold text-slate-900">Editor visual con Fabric JS</div>
-                        <p class="text-xs text-slate-600">Presiona Cargar elementos si aun no preparaste la impresion. Arrastra el QR o el grupo de textos; SKU y SN se mueven juntos.</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h4 id="alignment-preview-title" class="text-base font-bold text-slate-900">Vista previa</h4>
+                            <span id="alignment-current-label" class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">Cargando etiqueta…</span>
+                        </div>
+                        <p id="alignment-size-summary" class="mt-1 text-xs text-slate-600">Estamos preparando las medidas de la etiqueta.</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button data-alignment-type="serial" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">Serial</button>
-                        <button data-alignment-type="rating" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100">Rating</button>
+                    <div id="alignment-type-switch" class="flex gap-2" aria-label="Tipo de etiqueta">
+                        <button data-alignment-type="serial" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Serial</button>
+                        <button data-alignment-type="rating" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Rating</button>
                     </div>
                 </div>
-                <div class="mt-3 overflow-auto rounded-lg border border-slate-200 bg-white p-3">
-                    <canvas id="alignment-fabric-canvas" width="640" height="360" class="max-w-full"></canvas>
+
+                <div id="alignment-canvas-viewport" class="mt-4 overflow-auto rounded-xl border border-slate-300 bg-slate-200/70 p-3 shadow-inner">
+                    <canvas id="alignment-fabric-canvas" width="760" height="440" class="block max-w-none"></canvas>
                 </div>
-                <div id="alignment-canvas-status" class="mt-2 text-xs text-slate-600">El preview visual se cargara desde los ZPL de esta requisicion.</div>
-                <button id="load-alignment-preview" type="button" class="mt-3 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cargar elementos</button>
-            </div>
-            <div class="space-y-4">
-            <div class="rounded-xl border border-slate-200 p-3">
-                <div class="text-sm font-semibold text-slate-900">Etiqueta SERIAL</div>
-                <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
-                    <label>Texto (SN/SKU) X <input data-align="serial_text_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>Texto (SN/SKU) Y <input data-align="serial_text_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>QR X <input data-align="serial_qr_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>QR Y <input data-align="serial_qr_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
+
+                <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
+                    <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-sm border-2 border-blue-600 bg-blue-100"></span>Elemento que puedes mover</span>
+                    <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-sm border border-dashed border-slate-500 bg-white"></span>Posición original</span>
+                    <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-sm border-2 border-dashed border-amber-500 bg-amber-50"></span>Tamaño configurado</span>
                 </div>
-            </div>
-            <div class="rounded-xl border border-slate-200 p-3">
-                <div class="text-sm font-semibold text-slate-900">Etiqueta RATING</div>
-                <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
-                    <label>Texto (SN) X <input data-align="rating_text_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>Texto (SN) Y <input data-align="rating_text_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>QR X <input data-align="rating_qr_x" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                    <label>QR Y <input data-align="rating_qr_y" type="number" class="mt-1 w-full rounded border px-2 py-1"></label>
-                </div>
-            </div>
-            </div>
+                <div id="alignment-canvas-status" class="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900" role="status">Cargando la etiqueta actual…</div>
+            </section>
+
+            <aside class="space-y-4">
+                <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">1</span>
+                        <div>
+                            <h4 class="font-bold text-slate-900">¿Qué quieres mover?</h4>
+                            <p class="text-xs text-slate-500">Elige una opción; quedará marcada en azul.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <button data-alignment-element="text" type="button" class="rounded-xl border-2 border-slate-200 bg-white px-3 py-3 text-left hover:border-blue-300 hover:bg-blue-50">
+                            <span id="alignment-text-element-title" class="block text-sm font-bold text-slate-900">Serial y SKU</span>
+                            <span id="alignment-text-element-help" class="mt-1 block text-xs text-slate-500">Mueve los textos juntos</span>
+                        </button>
+                        <button data-alignment-element="qr" type="button" class="rounded-xl border-2 border-slate-200 bg-white px-3 py-3 text-left hover:border-blue-300 hover:bg-blue-50">
+                            <span class="block text-sm font-bold text-slate-900">Código QR</span>
+                            <span class="mt-1 block text-xs text-slate-500">Mueve solamente el QR</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">2</span>
+                        <div>
+                            <h4 class="font-bold text-slate-900">Muévelo en la dirección necesaria</h4>
+                            <p class="text-xs text-slate-500">También puedes arrastrarlo directamente en la vista previa.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid gap-4 sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[170px_minmax(0,1fr)]">
+                        <div class="grid grid-cols-3 gap-2" aria-label="Controles de movimiento">
+                            <span></span>
+                            <button data-alignment-move="up" type="button" class="rounded-xl border border-slate-300 bg-slate-50 px-2 py-3 text-sm font-bold text-slate-800 hover:border-blue-400 hover:bg-blue-50">↑ Arriba</button>
+                            <span></span>
+                            <button data-alignment-move="left" type="button" class="rounded-xl border border-slate-300 bg-slate-50 px-2 py-3 text-sm font-bold text-slate-800 hover:border-blue-400 hover:bg-blue-50">← Izq.</button>
+                            <div class="flex items-center justify-center rounded-xl bg-slate-900 px-2 text-center text-xs font-bold text-white"><span id="alignment-step-center">5 puntos</span></div>
+                            <button data-alignment-move="right" type="button" class="rounded-xl border border-slate-300 bg-slate-50 px-2 py-3 text-sm font-bold text-slate-800 hover:border-blue-400 hover:bg-blue-50">Der. →</button>
+                            <span></span>
+                            <button data-alignment-move="down" type="button" class="rounded-xl border border-slate-300 bg-slate-50 px-2 py-3 text-sm font-bold text-slate-800 hover:border-blue-400 hover:bg-blue-50">↓ Abajo</button>
+                            <span></span>
+                        </div>
+
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wide text-slate-500">Cada toque mueve</div>
+                            <div class="mt-2 grid grid-cols-3 gap-2">
+                                <button data-alignment-step="1" type="button" class="rounded-lg border px-2 py-2 text-xs font-semibold">1 · Fino</button>
+                                <button data-alignment-step="5" type="button" class="rounded-lg border px-2 py-2 text-xs font-semibold">5 · Normal</button>
+                                <button data-alignment-step="10" type="button" class="rounded-lg border px-2 py-2 text-xs font-semibold">10 · Rápido</button>
+                            </div>
+                            <div class="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+                                <div id="alignment-horizontal-summary" class="font-semibold text-slate-800">Horizontal: sin ajuste</div>
+                                <div id="alignment-vertical-summary" class="mt-1 font-semibold text-slate-800">Vertical: sin ajuste</div>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button id="undo-alignment" type="button" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Deshacer</button>
+                                <button id="reset-alignment-element" type="button" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Posición original</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <div id="alignment-printer-note" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">Conecta y selecciona la impresora para guardar un ajuste exclusivo para ese equipo.</div>
+
+                <details class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <summary class="cursor-pointer text-sm font-semibold text-slate-700">Opciones avanzadas: valores exactos</summary>
+                    <p class="mt-2 text-xs text-slate-500">Los valores positivos mueven a la derecha o hacia abajo.</p>
+                    <div data-alignment-panel="serial" class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                        <label>Textos horizontal <input data-align="serial_text_x" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>Textos vertical <input data-align="serial_text_y" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>QR horizontal <input data-align="serial_qr_x" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>QR vertical <input data-align="serial_qr_y" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                    </div>
+                    <div data-alignment-panel="rating" class="mt-3 hidden grid-cols-2 gap-3 text-sm">
+                        <label>Textos horizontal <input data-align="rating_text_x" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>Textos vertical <input data-align="rating_text_y" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>QR horizontal <input data-align="rating_qr_x" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                        <label>QR vertical <input data-align="rating_qr_y" type="number" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                    </div>
+                </details>
+            </aside>
         </div>
-        <div class="flex justify-end gap-2 border-t px-5 py-4">
-            <button id="reset-alignment" type="button" class="rounded-xl border px-4 py-2 text-sm">Reset</button>
-            <button id="close-alignment-modal" type="button" class="rounded-xl border px-4 py-2 text-sm">Cerrar</button>
-            <button id="save-alignment" type="button" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Guardar ajustes</button>
+
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <button id="reset-alignment" type="button" class="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">Restablecer esta etiqueta</button>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                <button id="cancel-alignment-modal" type="button" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button id="save-alignment" type="button" class="rounded-xl border border-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100">Guardar</button>
+                <button id="save-test-alignment" type="button" class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60">Guardar e imprimir prueba</button>
+            </div>
         </div>
     </div>
 </div>
