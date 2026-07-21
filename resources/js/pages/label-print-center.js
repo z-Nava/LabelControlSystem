@@ -1,4 +1,7 @@
-﻿(() => {
+import Swal from '../lib/sweetalert';
+import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
+
+(() => {
     const root = document.getElementById('label-print-center');
     if (!root) return;
 
@@ -91,12 +94,7 @@
             return alignmentFabricCanvas;
         }
 
-        if (!window.fabric?.Canvas) {
-            setAlignmentCanvasStatus('Fabric JS aun no esta disponible. Espera un momento y vuelve a abrir el modal.', true);
-            return null;
-        }
-
-        alignmentFabricCanvas = new window.fabric.Canvas(alignmentCanvasElement, {
+        alignmentFabricCanvas = new Canvas(alignmentCanvasElement, {
             backgroundColor: '#f8fafc',
             preserveObjectStacking: true,
             selection: true,
@@ -163,9 +161,6 @@
     };
 
     const createAlignmentObject = (element, labelType, metrics, offsets) => {
-        const { Rect } = window.fabric || {};
-        if (!Rect) return null;
-
         const offsetX = offsets[`${labelType}_qr_x`];
         const offsetY = offsets[`${labelType}_qr_y`];
         const left = metrics.padding + ((element.x + Number(offsetX || 0)) * metrics.scale);
@@ -189,8 +184,7 @@
     };
 
     const createAlignmentTextGroup = (textElements, labelType, metrics, offsets) => {
-        const { Group, Text } = window.fabric || {};
-        if (!Group || !Text || !textElements.length) return null;
+        if (!textElements.length) return null;
 
         const minX = Math.min(...textElements.map((element) => element.x));
         const minY = Math.min(...textElements.map((element) => element.y));
@@ -248,8 +242,6 @@
         const maxY = Math.max(...elements.map((element) => element.y + element.height), 180);
         const scale = Math.min((canvas.getWidth() - padding * 2) / maxX, (canvas.getHeight() - padding * 2) / maxY, 1.6);
         const metrics = { padding, scale };
-        const { Rect, Text } = window.fabric || {};
-
         canvas.add(new Rect({
             left: padding,
             top: padding,
@@ -348,12 +340,7 @@
     };
 
     const showAlert = (title, text, icon = 'error') => {
-        if (window.Swal?.fire) {
-            window.Swal.fire(title, text, icon);
-            return;
-        }
-
-        window.alert(`${title}: ${text}`);
+        void Swal.fire(title, text, icon);
     };
 
     const ensureBrowserPrint = () => {

@@ -87,3 +87,7 @@
 
 <script id="dummy-print-center-config" type="application/json">{!! Illuminate\Support\Js::encode($printCenterConfig) !!}</script>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/dummy-print-center.js')
+@endpush

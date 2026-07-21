@@ -791,7 +791,3 @@
         </div>
     </section>
 </div>
-
-@once
-    <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
-@endonce

@@ -1,3 +1,5 @@
+import Swal from '../lib/sweetalert';
+
 document.addEventListener('DOMContentLoaded', () => {
     const createBatchPrintButton = document.getElementById('create-batch-print');
 
@@ -8,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     createBatchPrintButton.addEventListener('click', async (event) => {
         event.preventDefault();
 
-        const result = await window.Swal.fire({
+        const result = await Swal.fire({
             title: '¿Crear batch e ir a imprimir?',
             text: 'Se generará el lote de impresión para esta requisición master.',
             icon: 'question',

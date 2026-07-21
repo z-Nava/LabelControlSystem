@@ -150,3 +150,7 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/dummy-requests-create.js')
+@endpush

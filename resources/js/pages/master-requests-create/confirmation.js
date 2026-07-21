@@ -1,3 +1,4 @@
+import Swal from '../../lib/sweetalert';
 import { getFieldValue } from './dom';
 import { getSelectedText } from './preview';
 
@@ -48,11 +49,7 @@ function getConfirmationHtml(form, fields) {
 }
 
 export async function confirmSubmit(form, fields) {
-    if (!window.Swal) {
-        return window.confirm('¿Confirmas el envío de la requisición?');
-    }
-
-    const result = await window.Swal.fire({
+    const result = await Swal.fire({
         title: '¿Confirmas el envío de la requisición?',
         html: getConfirmationHtml(form, fields),
         icon: 'question',

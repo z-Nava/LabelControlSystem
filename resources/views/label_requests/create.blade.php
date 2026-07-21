@@ -388,5 +388,8 @@
         </aside>
     </div>
 </div>
-@vite('resources/js/app.js')
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/label-requests-create.js')
+@endpush

@@ -1,6 +1,4 @@
-import { attachFabricToWindow, Canvas, Rect, Text } from '../lib/fabric-setup';
-
-attachFabricToWindow();
+import { Canvas, Rect, Text } from '../lib/fabric-setup';
 
 const ORIENTATIONS = ['N', 'R', 'I', 'B'];
 const ORIENTATION_ANGLES = {

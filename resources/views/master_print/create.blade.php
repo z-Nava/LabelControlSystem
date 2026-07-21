@@ -133,5 +133,8 @@
         </div>
     </form>
 </div>
-@vite('resources/js/app.js')
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/master-print-create.js')
+@endpush

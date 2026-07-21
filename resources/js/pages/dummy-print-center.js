@@ -1,3 +1,4 @@
+import Swal from '../lib/sweetalert';
 import { loadBrowserPrint } from '../lib/browser-print-loader';
 import { buildDummyItemZpl } from './dummy-print-center/zpl';
 
@@ -211,12 +212,7 @@ const initializeDummyPrintCenter = () => {
     });
 
     const showAlert = (title, text, icon = 'error') => {
-        if (window.Swal?.fire) {
-            window.Swal.fire(title, text, icon);
-            return;
-        }
-
-        window.alert(`${title}: ${text}`);
+        void Swal.fire(title, text, icon);
     };
 
     const setPrintBlocked = (message) => {

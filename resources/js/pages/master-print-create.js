@@ -1,3 +1,5 @@
+import Swal from '../lib/sweetalert';
+
 (function () {
     const form = document.getElementById('master-print-create-form');
     const selectAllButton = document.getElementById('selectAll');
@@ -20,7 +22,7 @@
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const result = await window.Swal.fire({
+        const result = await Swal.fire({
             title: '¿Crear batch e ir a imprimir?',
             text: 'Se generará el lote de impresión con los folios seleccionados.',
             icon: 'question',

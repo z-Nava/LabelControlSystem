@@ -9,7 +9,10 @@
         <button class="w-full rounded-xl bg-slate-900 text-white py-3 font-semibold hover:bg-slate-800">Actualizar</button>
     </form>
 </div>
-@vite('resources/js/app.js')
-<script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    @vite('resources/js/pages/sku-template-configurations-form.js')
+@endpush

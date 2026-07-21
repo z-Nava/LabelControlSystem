@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Master - Ensamble y Empaque</title>
 
-    @vite('resources/css/app.css')
+    @vite(['resources/css/app.css', 'resources/js/pages/master-print-template.js'])
 
     <style>
         @page {
@@ -407,6 +407,5 @@
 @endforeach
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-@vite('resources/js/app.js')
 </body>
 </html>

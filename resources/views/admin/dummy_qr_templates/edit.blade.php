@@ -30,3 +30,8 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendor/zebra/BrowserPrint-3.1.250.min.js') }}"></script>
+    @vite('resources/js/pages/dummy-qr-templates-create.js')
+@endpush

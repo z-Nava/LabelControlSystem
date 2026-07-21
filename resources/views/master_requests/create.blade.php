@@ -287,5 +287,8 @@
         </div>
     </form>
 </div>
-@vite('resources/js/app.js')
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/master-requests-create.js')
+@endpush

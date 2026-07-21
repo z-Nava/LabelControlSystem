@@ -138,3 +138,7 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/master-requests-show.js')
+@endpush

@@ -209,3 +209,7 @@
 </div>
 
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/dummy-requests-show.js')
+@endpush

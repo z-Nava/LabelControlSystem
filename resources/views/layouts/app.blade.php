@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{{ $title ?? 'Label Printing Control System' }}</title>
     <link rel="icon" type="image/png" href="{{ Vite::asset('resources/img/favicon.png') }}" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite('resources/css/app.css')
 </head>
 <body class="min-h-screen bg-slate-100">
     <header class="bg-white border-b">
@@ -44,5 +44,6 @@
     <main class="{{ $mainClass ?? 'max-w-6xl' }} mx-auto px-4 py-6">
         @yield('content')
     </main>
+    @stack('scripts')
 </body>
 </html>

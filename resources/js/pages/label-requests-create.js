@@ -1,6 +1,6 @@
 import { collectElements } from './label-requests-create/dom';
 import { createJobLookupHandler } from './label-requests-create/lookup';
-import Swal from 'sweetalert2';
+import Swal from '../lib/sweetalert';
 import {
     syncLineTypeFromSelectedLine,
     updateLabelOptionsByStandard,

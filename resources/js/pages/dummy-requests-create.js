@@ -1,3 +1,4 @@
+import Swal from '../lib/sweetalert';
 import { debounce } from './utils/debounce';
 
 (function initializeDummyRequestCreateForm() {
@@ -166,10 +167,6 @@ import { debounce } from './utils/debounce';
     }
 
     form.addEventListener('submit', async (event) => {
-        if (!window.Swal) {
-            return;
-        }
-
         event.preventDefault();
 
         const selectedLine = lineIdSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Sin línea seleccionada';
@@ -177,7 +174,7 @@ import { debounce } from './utils/debounce';
         const selectedRequestType = requestTypeSelect?.selectedOptions?.[0]?.textContent?.trim() || 'Sin tipo seleccionado';
         const notesPreview = (notesInput?.value || '').trim();
 
-        const result = await window.Swal.fire({
+        const result = await Swal.fire({
             title: '¿Confirmas crear la requisición Dummy QR?',
             icon: 'question',
             html: `
