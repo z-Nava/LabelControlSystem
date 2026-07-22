@@ -1,11 +1,19 @@
 @extends('layouts.app', ['title' => 'Requisiciones de Etiquetas'])
 
 @section('content')
+@php
+    $statusLabels = [
+        'requested' => 'Solicitado',
+        'in_progress' => 'En Progreso',
+        'completed' => 'Completado',
+        'cancelled' => 'Cancelada',
+    ];
+@endphp
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Listado de requisiciones de etiquetas</h1>
-            <p class="text-slate-600 mt-1">Filtra por fecha, línea, turno, status o SKU/NP.</p>
+            <p class="text-slate-600 mt-1">Filtra por fecha, línea, turno, estatus o SKU/NP.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -42,11 +50,11 @@
             </select>
         </div>
         <div>
-            <label class="text-sm text-slate-600">Status</label>
+            <label class="text-sm text-slate-600">Estatus</label>
             <select name="status" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                 <option value="">Todos</option>
-                @foreach(['requested','in_progress','completed','cancelled'] as $status)
-                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $status }}</option>
+                @foreach($statusLabels as $status => $statusLabel)
+                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $statusLabel }}</option>
                 @endforeach
             </select>
         </div>
@@ -69,7 +77,7 @@
                     <th class="py-3 px-4">Línea / Turno</th>
                     <th class="py-3 px-4">SKU/NP</th>
                     <th class="py-3 px-4">Qty</th>
-                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4">Estatus</th>
                     <th class="py-3 px-4">Acciones</th>
                 </tr>
             </thead>
@@ -84,7 +92,7 @@
                         </td>
                         <td class="py-3 px-4">{{ number_format($request->quantity_requested) }}</td>
                         <td class="py-3 px-4">
-                            <span class="rounded-full px-2 py-1 text-xs {{ $request->status === 'completed' ? 'bg-green-100 text-green-800' : ($request->status === 'cancelled' ? 'bg-slate-200 text-slate-700' : ($request->status === 'in_progress' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800')) }}">{{ $request->status }}</span>
+                            <span class="rounded-full px-2 py-1 text-xs {{ $request->status === 'completed' ? 'bg-green-100 text-green-800' : ($request->status === 'cancelled' ? 'bg-slate-200 text-slate-700' : ($request->status === 'in_progress' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800')) }}">{{ $statusLabels[$request->status] ?? $request->status }}</span>
                         </td>
                         <td class="py-3 px-4 space-x-2">
                             <a href="{{ route('label_requests.show', $request) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">Ver detalle</a>

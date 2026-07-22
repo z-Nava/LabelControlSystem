@@ -18,5 +18,10 @@ class RoleSeeder extends Seeder
             ['name' => 'label_room'],
             ['description' => 'Personal de cuarto de etiquetas']
         );
+
+        Role::updateOrCreate(
+            ['name' => 'kiosk'],
+            ['description' => 'Personal de Producción con acceso al kiosko de requisiciones']
+        );
     }
 }

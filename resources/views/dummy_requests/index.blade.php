@@ -1,11 +1,19 @@
 @extends('layouts.app', ['title' => 'Requisiciones Dummy QR'])
 
 @section('content')
+@php
+    $statusLabels = [
+        'requested' => 'Solicitado',
+        'in_progress' => 'En Progreso',
+        'completed' => 'Completado',
+        'cancelled' => 'Cancelada',
+    ];
+@endphp
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Listado de requisiciones Dummy QR</h1>
-            <p class="text-slate-600 mt-1">Consulta por Job, tipo, fecha, status y rango de consecutivos.</p>
+            <p class="text-slate-600 mt-1">Consulta por Job, tipo, fecha, estatus y rango de consecutivos.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -50,11 +58,11 @@
             </select>
         </div>
         <div>
-            <label class="text-sm text-slate-600">Status</label>
+            <label class="text-sm text-slate-600">Estatus</label>
             <select name="status" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                 <option value="">Todos</option>
-                @foreach(['requested','in_progress','completed','cancelled'] as $status)
-                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $status }}</option>
+                @foreach($statusLabels as $status => $statusLabel)
+                    <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $statusLabel }}</option>
                 @endforeach
             </select>
         </div>
@@ -88,12 +96,7 @@
                     @php
                         $printedQty = (int) ($request->printed_qty ?? 0);
                         $typeLabel = $request->request_type === 'rework' ? 'RW Dummy QR' : 'RMT Dummy QR';
-                        $statusLabel = match ($request->status) {
-                            'in_progress' => 'In Progress',
-                            'completed' => 'Completed',
-                            'cancelled' => 'Cancelled',
-                            default => 'Requested',
-                        };
+                        $statusLabel = $statusLabels[$request->status] ?? $request->status;
                         $statusClasses = match ($request->status) {
                             'completed' => 'bg-green-100 text-green-800',
                             'in_progress' => 'bg-amber-100 text-amber-800',

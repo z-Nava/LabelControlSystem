@@ -1,33 +1,66 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Dashboard\DashboardController;
-use App\Http\Controllers\Admin\ProductionLineController;
+use App\Http\Controllers\Admin\DummyQrTemplateController;
 use App\Http\Controllers\Admin\LabelSkuController;
-use App\Http\Controllers\Labels\LabelPrintController;
-use App\Http\Controllers\Labels\LabelRequestController;
-use App\Http\Controllers\Labels\LabelReworkController;
-use App\Http\Controllers\Dummies\DummyPrintController;
-use App\Http\Controllers\Dummies\DummyRequestController;
-use App\Http\Controllers\Dummies\DummyReprintController;
-use App\Http\Controllers\Oracle\OracleJobController;
-use App\Http\Controllers\Masters\MasterRequestController;
-use App\Http\Controllers\Masters\MasterPrintController;
-use App\Http\Controllers\Masters\MasterReprintController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\MasterModelMappingController;
+use App\Http\Controllers\Admin\ProductionLineController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
 use App\Http\Controllers\Admin\SkuTemplateConfigurationController;
 use App\Http\Controllers\Admin\StockLocatorController;
-use App\Http\Controllers\Admin\DummyQrTemplateController;
-use App\Http\Controllers\Admin\MasterModelMappingController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dummies\DummyPrintController;
+use App\Http\Controllers\Dummies\DummyReprintController;
+use App\Http\Controllers\Dummies\DummyRequestController;
+use App\Http\Controllers\Kiosk\KioskDashboardController;
+use App\Http\Controllers\Kiosk\KioskDummyRequestController;
+use App\Http\Controllers\Kiosk\KioskLabelRequestController;
+use App\Http\Controllers\Kiosk\KioskMasterRequestController;
+use App\Http\Controllers\Kiosk\KioskOracleJobController;
+use App\Http\Controllers\Kiosk\KioskSessionController;
+use App\Http\Controllers\Labels\LabelPrintController;
+use App\Http\Controllers\Labels\LabelRequestController;
+use App\Http\Controllers\Labels\LabelReworkController;
+use App\Http\Controllers\Masters\MasterPrintController;
+use App\Http\Controllers\Masters\MasterReprintController;
+use App\Http\Controllers\Masters\MasterRequestController;
+use App\Http\Controllers\Oracle\OracleJobController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('/', function () { return redirect()->route('login'); });
+    Route::get('/', function () {
+        return redirect()->route('login');
+    });
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
     Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
     Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.attempt');
+});
+
+Route::get('/kiosk/login', [KioskSessionController::class, 'create'])->name('kiosk.login');
+Route::post('/kiosk/login', [KioskSessionController::class, 'store'])
+    ->middleware('throttle:20,1')
+    ->name('kiosk.login.attempt');
+Route::post('/kiosk/logout', [KioskSessionController::class, 'destroy'])->name('kiosk.logout');
+
+Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(function () {
+    Route::get('/', KioskDashboardController::class)->name('dashboard');
+
+    Route::get('/master-requests/lookup-job', [KioskMasterRequestController::class, 'lookup'])->name('master_requests.lookup_job');
+    Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
+    Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
+
+    Route::get('/label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+    Route::get('/label-requests/create', [KioskLabelRequestController::class, 'create'])->name('label_requests.create');
+    Route::post('/label-requests', [KioskLabelRequestController::class, 'store'])->name('label_requests.store');
+
+    Route::get('/dummy-requests/lookup-job', [KioskDummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
+    Route::get('/dummy-requests/create', [KioskDummyRequestController::class, 'create'])->name('dummy_requests.create');
+    Route::post('/dummy-requests', [KioskDummyRequestController::class, 'store'])->name('dummy_requests.store');
+
+    Route::get('/oracle-jobs', [KioskOracleJobController::class, 'index'])->name('oracle_jobs.index');
+    Route::get('/oracle-jobs/lookup', [KioskOracleJobController::class, 'lookup'])->name('oracle_jobs.lookup');
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
@@ -35,10 +68,11 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-
     // Admin-only
     Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/admin', function () { return 'Admin Area'; })->name('admin.home');
+        Route::get('/admin', function () {
+            return 'Admin Area';
+        })->name('admin.home');
 
         Route::get('/production-lines', [ProductionLineController::class, 'index'])->name('production_lines.index');
         Route::get('/production-lines/create', [ProductionLineController::class, 'create'])->name('production_lines.create');
@@ -79,7 +113,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/sku-serial-formats/{sku_serial_format}', [SkuSerialFormatController::class, 'update'])->name('sku_serial_formats.update');
         Route::post('/sku-serial-formats/{sku_serial_format}/toggle', [SkuSerialFormatController::class, 'toggle'])->name('sku_serial_formats.toggle');
 
-
         Route::get('/sku-template-configurations', [SkuTemplateConfigurationController::class, 'index'])->name('admin.sku_template_configurations.index');
         Route::get('/sku-template-configurations/create', [SkuTemplateConfigurationController::class, 'create'])->name('admin.sku_template_configurations.create');
         Route::get('/sku-template-configurations/create/{standard}', [SkuTemplateConfigurationController::class, 'createByStandard'])
@@ -89,7 +122,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/sku-template-configurations/{configuration}/edit', [SkuTemplateConfigurationController::class, 'edit'])->name('admin.sku_template_configurations.edit');
         Route::put('/sku-template-configurations/{configuration}', [SkuTemplateConfigurationController::class, 'update'])->name('admin.sku_template_configurations.update');
         Route::post('/sku-template-configurations/{configuration}/toggle', [SkuTemplateConfigurationController::class, 'toggle'])->name('admin.sku_template_configurations.toggle');
-
 
         Route::get('/dummy-qr-templates', [DummyQrTemplateController::class, 'index'])->name('admin.dummy_qr_templates.index');
         Route::get('/dummy-qr-templates/create', [DummyQrTemplateController::class, 'create'])->name('admin.dummy_qr_templates.create');
@@ -114,7 +146,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Label Room-only (operación)
     Route::middleware('role:label_room')->group(function () {
-        Route::get('/label-room', function () { return 'Label Room Area'; })->name('labelroom.home');
+        Route::get('/label-room', function () {
+            return 'Label Room Area';
+        })->name('labelroom.home');
 
         Route::middleware('module_access:master')->group(function () {
             Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
@@ -171,7 +205,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::middleware('module_access:master')->group(function () {
             Route::get('/oracle/lookup-job', [MasterRequestController::class, 'lookup'])->name('oracle.lookup_job');
         });
-
 
     });
 

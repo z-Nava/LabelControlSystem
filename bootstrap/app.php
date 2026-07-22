@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Middleware\EnsureKioskSession;
+use App\Http\Middleware\EnsureModuleAccess;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\RequireRole;
+use App\Http\Middleware\RoleAny;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -11,13 +16,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-            $middleware->trustProxies(at: '*');
-            
-            $middleware->alias([
-            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
-            'role'   => \App\Http\Middleware\RequireRole::class,
-            'role_any' => \App\Http\Middleware\RoleAny::class,
-            'module_access' => \App\Http\Middleware\EnsureModuleAccess::class,
+        $middleware->trustProxies(at: '*');
+
+        $middleware->alias([
+            'active' => EnsureUserIsActive::class,
+            'kiosk.session' => EnsureKioskSession::class,
+            'role' => RequireRole::class,
+            'role_any' => RoleAny::class,
+            'module_access' => EnsureModuleAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
