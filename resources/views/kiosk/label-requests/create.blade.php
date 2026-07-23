@@ -2,54 +2,24 @@
 
 @section('content')
 <div class="space-y-6">
-    <div class="bg-white rounded-2xl shadow p-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                    Flujo guiado para captura de etiquetas
-                </div>
-                <h1 class="mt-3 text-2xl font-semibold text-slate-900">Crear requisición de etiquetas</h1>
-                <p class="mt-2 max-w-3xl text-slate-600">
-                    Completa la solicitud paso a paso: primero define la operación, después valida el Job en Oracle,
-                    luego selecciona el SKU y la cantidad, y finalmente agrega datos complementarios antes de guardar.
-                </p>
-            </div>
+    @include('kiosk.partials.request-guide', [
+        'title' => 'Crear requisición de etiquetas',
+        'description' => 'Solicita las etiquetas que necesita producción. El sistema te ayudará a consultar el Job y a revisar la información antes de enviarla.',
+        'steps' => [
+            ['title' => 'Identifica la operación', 'description' => 'Selecciona línea, turno y escribe el nombre del líder.'],
+            ['title' => 'Consulta el Job', 'description' => 'Escribe el Job y espera la validación de Oracle.'],
+            ['title' => 'Define las etiquetas', 'description' => 'Selecciona el Label PN, la cantidad y el tipo de etiqueta.'],
+            ['title' => 'Revisa y envía', 'description' => 'Confirma el resumen y envía la requisición a Label Room.'],
+        ],
+        'preparationItems' => [
+            'Línea, turno y nombre del líder.',
+            'Número de Job, si aplica a la solicitud.',
+            'Label PN o SKU y cantidad necesaria.',
+            'Confirmación de si requiere Serial, Rating o ambos.',
+        ],
+    ])
 
-            <a href="{{ route('kiosk.dashboard') }}" class="shrink-0 rounded-xl border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                Volver al listado
-            </a>
-        </div>
-
-        <div class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Inicio</div>
-                <div class="mt-1 font-semibold text-slate-900">Datos generales</div>
-                <p class="mt-1 text-sm text-slate-600">Fecha, semana, línea, turno y líder.</p>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 2</div>
-                <div class="mt-1 font-semibold text-slate-900">Validación Oracle</div>
-                <p class="mt-1 text-sm text-slate-600">Job, PO y destino con autollenado.</p>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 3</div>
-                <div class="mt-1 font-semibold text-slate-900">Etiqueta solicitada</div>
-                <p class="mt-1 text-sm text-slate-600">SKU / Label PN, cantidad y tipo de etiqueta.</p>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Paso 4</div>
-                <div class="mt-1 font-semibold text-slate-900">Confirmación</div>
-                <p class="mt-1 text-sm text-slate-600">Modelo, notas y revisión final antes de guardar.</p>
-            </div>
-        </div>
-    </div>
-
-    @if($errors->any())
-        <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ $errors->first() }}
-        </div>
-    @endif
+    @include('kiosk.partials.form-errors')
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <form id="labelRequestCreate"
@@ -69,8 +39,8 @@
                 </summary>
 
                 <div class="border-t border-slate-200 p-5">
-                    <div class="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                        <span class="font-semibold">Sugerencia:</span> captura primero esta sección para que el resumen lateral refleje la operación correctamente.
+                        <div class="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                            <span class="font-semibold">Qué debes hacer:</span> selecciona dónde se usarán las etiquetas y escribe el nombre del líder que solicita el material.
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -83,6 +53,7 @@
                                    value="{{ old('request_date', $defaultDate) }}"
                                    required
                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Inicia con la fecha actual. Cámbiala solo si la solicitud corresponde a otra fecha.</p>
                         </div>
 
                         <div>
@@ -95,6 +66,7 @@
                                    value="{{ old('week', $defaultWeek) }}"
                                    required
                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Inicia con la semana actual.</p>
                         </div>
 
                         <div>
@@ -109,6 +81,7 @@
                                    placeholder="Ej: Juan Pérez"
                                    required
                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Escribe el nombre del líder de la línea, no tu número de empleado.</p>
                         </div>
 
                         <div>
@@ -166,6 +139,10 @@
                 </summary>
 
                 <div class="border-t border-slate-200 p-5">
+                    <div class="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                        <span class="font-semibold">Qué debes hacer:</span> escribe el Job completo y sal del campo. Espera a que aparezca el resultado de Oracle antes de continuar. Si no necesitas Job, puedes dejarlo vacío.
+                    </div>
+
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div>
                             <label class="text-sm font-medium text-slate-700">Job</label>
@@ -231,6 +208,7 @@
                                     </option>
                                 @endforeach
                             </select>
+                            <p class="mt-1 text-xs text-slate-500">Elige el estándar indicado para el producto.</p>
                         </div>
 
                         <div>
@@ -262,6 +240,7 @@
                                    placeholder="Ej: 250"
                                    required
                                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Escribe el total de etiquetas que necesitas recibir.</p>
                         </div>
                     </div>
 
@@ -332,12 +311,12 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <div class="text-base font-semibold text-slate-900">Listo para guardar la requisición</div>
-                        <p class="mt-1 text-sm text-slate-500">Cuando toda la información sea correcta, registra la solicitud para continuar con la impresión.</p>
+                        <div class="text-base font-semibold text-slate-900">Última revisión</div>
+                        <p class="mt-1 text-sm text-slate-600">Confirma el resumen. Al enviar, Label Room recibirá la solicitud; no se imprimirá automáticamente.</p>
                     </div>
 
                     <button class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500">
-                        Crear requisición
+                        Revisar y enviar requisición
                     </button>
                 </div>
             </div>
@@ -377,13 +356,13 @@
             </div>
 
             <div class="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-slate-100 shadow-sm">
-                <div class="text-base font-semibold">¿Cómo usar esta vista?</div>
-                <ol class="mt-3 space-y-3 text-sm text-slate-300">
-                    <li><span class="font-semibold text-white">1.</span> Completa primero la información general.</li>
-                    <li><span class="font-semibold text-white">2.</span> Captura el Job para validar datos en Oracle.</li>
-                    <li><span class="font-semibold text-white">3.</span> Elige el Label PN y el tipo de etiqueta requerido.</li>
-                    <li><span class="font-semibold text-white">4.</span> Revisa el resumen lateral y guarda la requisición.</li>
-                </ol>
+                <div class="text-base font-semibold">Si tienes duda</div>
+                <ul class="mt-3 space-y-3 text-sm text-slate-300">
+                    <li><span class="font-semibold text-white">Job:</span> espera el mensaje de Oracle antes de avanzar.</li>
+                    <li><span class="font-semibold text-white">PO y destino:</span> se llenan automáticamente cuando Oracle tiene esos datos.</li>
+                    <li><span class="font-semibold text-white">Serial / Rating:</span> puedes seleccionar una opción o las dos.</li>
+                    <li><span class="font-semibold text-white">Resumen:</span> úsalo para confirmar que la solicitud es correcta.</li>
+                </ul>
             </div>
         </aside>
     </div>

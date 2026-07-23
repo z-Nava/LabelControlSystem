@@ -82,16 +82,25 @@ test('the kiosk renders its own request views', function () {
     $this->get(route('kiosk.master_requests.create'))
         ->assertOk()
         ->assertViewIs('kiosk.master-requests.create')
+        ->assertSee('Sigue estos pasos')
+        ->assertSee('esta pantalla no imprime ni entrega material')
+        ->assertSee('Define folios y envía')
         ->assertSee(route('kiosk.master_requests.store'), false);
 
     $this->get(route('kiosk.label_requests.create'))
         ->assertOk()
         ->assertViewIs('kiosk.label-requests.create')
+        ->assertSee('Sigue estos pasos')
+        ->assertSee('esta pantalla no imprime ni entrega material')
+        ->assertSee('Define las etiquetas')
         ->assertSee(route('kiosk.label_requests.store'), false);
 
     $this->get(route('kiosk.dummy_requests.create'))
         ->assertOk()
         ->assertViewIs('kiosk.dummy-requests.create')
+        ->assertSee('Sigue estos pasos')
+        ->assertSee('esta pantalla no imprime ni entrega material')
+        ->assertSee('Indica la cantidad')
         ->assertSee(route('kiosk.dummy_requests.store'), false);
 });
 

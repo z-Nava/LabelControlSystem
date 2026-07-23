@@ -2,54 +2,53 @@
 
 @section('content')
 <div class="space-y-6">
-    <div class="bg-white rounded-2xl shadow p-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                    Flujo Dummy QR
-                </div>
-                <h1 class="mt-3 text-2xl font-semibold text-slate-900">Crear requisición Dummy QR</h1>
-                <p class="mt-2 max-w-3xl text-slate-600">
-                    Este flujo genera automáticamente el lote de dummys con consecutivo único por Job,
-                    construye el QR estándar <span class="font-mono">^DM^FG^JOB^CONSECUTIVO^</span>
-                    y deja historial para impresión/reimpresión.
-                </p>
-            </div>
+    @include('kiosk.partials.request-guide', [
+        'title' => 'Crear requisición Dummy QR',
+        'description' => 'Solicita los Dummy QR que necesita producción. El sistema consultará el Job en Oracle y Label Room recibirá la requisición para atenderla.',
+        'steps' => [
+            ['title' => 'Identifica la operación', 'description' => 'Selecciona línea, turno y escribe el nombre del líder.'],
+            ['title' => 'Consulta el Job', 'description' => 'Captura el Job y espera a que Oracle confirme la información.'],
+            ['title' => 'Indica la cantidad', 'description' => 'Define cuántos Dummy QR necesitas y el tipo de solicitud.'],
+            ['title' => 'Revisa y envía', 'description' => 'Confirma los datos y envía la requisición a Label Room.'],
+        ],
+        'preparationItems' => [
+            'Línea, turno y nombre del líder.',
+            'Número de Job de producción.',
+            'Cantidad de Dummy QR necesaria.',
+            'Confirmación de primera vez o reimpresión.',
+        ],
+    ])
 
-            <a href="{{ route('kiosk.dashboard') }}" class="shrink-0 rounded-xl border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                Volver al listado
-            </a>
-        </div>
-    </div>
-
-    @if($errors->any())
-        <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ul class="list-disc list-inside space-y-1">
-                @foreach($errors->all() as $message)
-                    <li>{{ $message }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    @include('kiosk.partials.form-errors')
 
     <form method="POST" action="{{ route('kiosk.dummy_requests.store') }}" data-lookup-url="{{ route('kiosk.dummy_requests.lookup_job') }}" id="dummyRequestCreate" class="space-y-4">
         @csrf
 
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-            <h2 class="text-base font-semibold text-slate-900">1) Datos generales</h2>
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+                <h2 class="text-base font-semibold text-slate-900">1) Identifica la operación</h2>
+                <p class="mt-1 text-sm text-slate-500">Indica dónde se usarán los Dummy QR y quién es el líder responsable.</p>
+            </div>
+
+            <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                <span class="font-semibold">Qué debes hacer:</span> selecciona el tipo de línea, después la línea y el turno. Escribe el nombre del líder de esa operación.
+            </div>
+
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div>
                     <label class="text-sm font-medium text-slate-700">Fecha</label>
-                    <input type="date" name="request_date" max="{{ now()->toDateString() }}" value="{{ old('request_date', $defaultDate) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <input type="date" name="request_date" max="{{ now()->toDateString() }}" value="{{ old('request_date', $defaultDate) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                    <p class="mt-1 text-xs text-slate-500">Inicia con la fecha actual. Cámbiala solo si la solicitud corresponde a otra fecha.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Semana</label>
-                    <input type="number" name="week" min="1" max="53" value="{{ old('week', $defaultWeek) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <input type="number" name="week" min="1" max="53" value="{{ old('week', $defaultWeek) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                    <p class="mt-1 text-xs text-slate-500">Inicia con la semana actual.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Líder</label>
-                    <input type="text" name="leader_name" value="{{ old('leader_name') }}" minlength="3" maxlength="120" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <input type="text" name="leader_name" value="{{ old('leader_name') }}" minlength="3" maxlength="120" placeholder="Ej: Juan Pérez" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                    <p class="mt-1 text-xs text-slate-500">Escribe el nombre del líder, no tu número de empleado.</p>
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Tipo de línea</label>
@@ -94,15 +93,23 @@
                     </select>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-            <h2 class="text-base font-semibold text-slate-900">2) Configuración Dummy QR</h2>
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+                <h2 class="text-base font-semibold text-slate-900">2) Consulta el Job y define la cantidad</h2>
+                <p class="mt-1 text-sm text-slate-500">Oracle validará el Job y mostrará los datos encontrados.</p>
+            </div>
+
+            <div class="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                <span class="font-semibold">Qué debes hacer:</span> escribe el Job completo y sal del campo. Espera el mensaje de Oracle antes de capturar la cantidad.
+            </div>
+
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div>
                     <label class="text-sm font-medium text-slate-700">Job producción</label>
-                    <input id="jobNumber" type="text" name="job_number" value="{{ old('job_number') }}" maxlength="40" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase" />
-                    <p class="mt-1 text-xs text-slate-500">El FG se toma automáticamente desde Oracle usando este Job.</p>
+                    <input id="jobNumber" type="text" name="job_number" value="{{ old('job_number') }}" maxlength="40" placeholder="Ej: 393383" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                    <p class="mt-1 text-xs text-slate-500">El FG se obtiene automáticamente desde Oracle usando este Job.</p>
                     <p id="jobInfoHint" class="mt-1 text-xs text-emerald-700"></p>
                 </div>
                 <div>
@@ -117,7 +124,7 @@
                 </div>
                 <div>
                     <label class="text-sm font-medium text-slate-700">Cantidad solicitada</label>
-                    <input id="quantityRequested" type="number" name="quantity_requested" min="1" max="100000" value="{{ old('quantity_requested') }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" />
+                    <input id="quantityRequested" type="number" name="quantity_requested" min="1" max="100000" value="{{ old('quantity_requested') }}" placeholder="Ej: 50" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                     <p id="quantityHint" class="mt-1 text-xs text-slate-500">La cantidad no puede exceder el Job Qty de Oracle.</p>
                 </div>
                 <div>
@@ -127,23 +134,24 @@
                             <option value="{{ $value }}" @selected(old('request_type', 'first_time') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
+                    <p class="mt-1 text-xs text-slate-500">Selecciona reimpresión solo si los Dummy QR ya se habían solicitado.</p>
                 </div>
                 <div class="md:col-span-2 xl:col-span-3">
                     <label class="text-sm font-medium text-slate-700">Notas (opcional)</label>
-                    <textarea name="notes" rows="3" maxlength="1000" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5">{{ old('notes') }}</textarea>
+                    <textarea name="notes" rows="3" maxlength="1000" placeholder="Ej: motivo de reimpresión o información útil para Label Room" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('notes') }}</textarea>
                 </div>
             </div>
-        </div>
+        </section>
 
         <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <div class="text-base font-semibold text-slate-900">Guardar requisición y generar lote Dummy QR</div>
-                    <p class="mt-1 text-sm text-slate-500">Se asignará automáticamente el siguiente rango de consecutivos disponible para la Job.</p>
+                    <div class="text-base font-semibold text-slate-900">Última revisión</div>
+                    <p class="mt-1 text-sm text-slate-600">Confirma el Job y la cantidad. Al enviar, Label Room recibirá la solicitud; no se imprimirá automáticamente.</p>
                 </div>
 
                 <button class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500">
-                    Crear requisición Dummy QR
+                    Revisar y enviar requisición
                 </button>
             </div>
         </div>
