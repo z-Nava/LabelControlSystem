@@ -519,7 +519,11 @@ class LabelBatchPrintExecutionService
         $layout = $template->resolved_serial_layout;
 
         if (in_array($labelType, ['serial', 'rating'], true) && is_array($layout) && $layout !== []) {
-            return $this->zplBuilder->build($labelType, $layout, $standard);
+            return $this->zplBuilder->build($labelType, $layout, $standard, [
+                'dpi' => $template->dpi,
+                'width_mm' => $template->width_mm,
+                'height_mm' => $template->height_mm,
+            ]);
         }
 
         return (string) $template->zpl;

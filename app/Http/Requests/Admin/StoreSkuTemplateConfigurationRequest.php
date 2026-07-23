@@ -71,8 +71,8 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
 
             'template_name' => ['required', 'string', 'max:120'],
             'template_dpi' => ['required', 'integer', 'in:203,300'],
-            'template_width_mm' => ['nullable', 'numeric', 'min:1'],
-            'template_height_mm' => ['nullable', 'numeric', 'min:1'],
+            'template_width_mm' => ['nullable', Rule::requiredIf(fn () => $this->boolean('template_is_active')), 'numeric', 'min:1'],
+            'template_height_mm' => ['nullable', Rule::requiredIf(fn () => $this->boolean('template_is_active')), 'numeric', 'min:1'],
             'qr_position_x' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'qr_position_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'qr_orientation' => ['nullable', 'in:N,R,I,B'],

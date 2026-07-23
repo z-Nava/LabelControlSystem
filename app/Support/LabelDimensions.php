@@ -25,7 +25,7 @@ final class LabelDimensions
         ];
     }
 
-    private static function millimetersToDots(?float $millimeters, int $dpi): ?int
+    public static function millimetersToDots(?float $millimeters, int $dpi): ?int
     {
         if ($millimeters === null || $millimeters <= 0) {
             return null;

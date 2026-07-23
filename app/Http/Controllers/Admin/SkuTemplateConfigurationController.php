@@ -191,7 +191,16 @@ class SkuTemplateConfigurationController extends Controller
             'dpi' => $data['template_dpi'],
             'width_mm' => $data['template_width_mm'] ?? null,
             'height_mm' => $data['template_height_mm'] ?? null,
-            'zpl' => $this->zplBuilder->build($data['label_type'], $layout, $data['serial_standard']),
+            'zpl' => $this->zplBuilder->build(
+                $data['label_type'],
+                $layout,
+                $data['serial_standard'],
+                [
+                    'dpi' => $data['template_dpi'],
+                    'width_mm' => $data['template_width_mm'] ?? null,
+                    'height_mm' => $data['template_height_mm'] ?? null,
+                ],
+            ),
             'serial_layout' => $layout,
             'meta' => [
                 'serial_layout' => $layout,

@@ -2,25 +2,31 @@
 
 namespace App\Services\Labels;
 
+use App\Support\LabelDimensions;
+
 class SerialTemplateZplBuilder
 {
-    public function build(string $labelType, array $layout, string $serialStandard = 'UL'): string
-    {
+    public function build(
+        string $labelType,
+        array $layout,
+        string $serialStandard = 'UL',
+        array $templateProperties = [],
+    ): string {
+        $physicalDimensions = $this->resolvePhysicalDimensions($templateProperties);
         $buildWithQr = $labelType === 'serial'
             || ($labelType === 'rating' && (bool) ($layout['rating_qr'] ?? false));
 
         return $buildWithQr
-            ? $this->buildSerialTemplate($layout, $labelType, $serialStandard)
-            : $this->buildTextOnlyTemplate($layout);
+            ? $this->buildSerialTemplate($layout, $labelType, $serialStandard, $physicalDimensions)
+            : $this->buildTextOnlyTemplate($layout, $physicalDimensions);
     }
 
-    private function buildTextOnlyTemplate(array $layout): string
+    private function buildTextOnlyTemplate(array $layout, ?array $physicalDimensions): string
     {
         $text = $this->normalizeTextLayout($layout['text'] ?? $layout);
 
         return implode("\n", [
-            '^XA',
-            '^CI28',
+            ...$this->startLabel($physicalDimensions),
             sprintf('^FO%d,%d', $text['x'], $text['y']),
             sprintf('^A0%s,%d,%d', $text['orientation'], $text['font_size'], $text['font_size']),
             '^FD{{serial_full}}^FS',
@@ -28,8 +34,12 @@ class SerialTemplateZplBuilder
         ]);
     }
 
-    private function buildSerialTemplate(array $layout, string $labelType, string $serialStandard): string
-    {
+    private function buildSerialTemplate(
+        array $layout,
+        string $labelType,
+        string $serialStandard,
+        ?array $physicalDimensions,
+    ): string {
         $qr = $this->normalizeQrLayout($layout['qr'] ?? []);
         $serialBlock = $this->normalizeSerialBlockLayout($layout['serial_block'] ?? []);
         $isRatingLabel = $labelType === 'rating';
@@ -48,11 +58,10 @@ class SerialTemplateZplBuilder
 
         $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
 
-        $zpl = [
-            '^XA',
-            '^CI28',
-            sprintf('^LL%d', $this->estimateLabelLength($qr, $sku, $sn, $serialBlock['count'], $serialBlock['offset_y'])),
-        ];
+        $zpl = $this->startLabel(
+            $physicalDimensions,
+            $this->estimateLabelLength($qr, $sku, $sn, $serialBlock['count'], $serialBlock['offset_y']),
+        );
         $sku = $this->normalizeTextLayout($layout['sku'] ?? []);
 
         for ($blockIndex = 0; $blockIndex < $serialBlock['count']; $blockIndex++) {
@@ -76,6 +85,68 @@ class SerialTemplateZplBuilder
         $zpl[] = '^XZ';
 
         return implode("\n", $zpl);
+    }
+
+    /**
+     * @param  array{width_dots: int, height_dots: int}|null  $physicalDimensions
+     * @return list<string>
+     */
+    private function startLabel(?array $physicalDimensions, ?int $legacyLabelLength = null): array
+    {
+        $zpl = [
+            '^XA',
+            '^CI28',
+        ];
+
+        if ($physicalDimensions !== null) {
+            $zpl[] = sprintf('^PW%d', $physicalDimensions['width_dots']);
+            $zpl[] = sprintf('^LL%d', $physicalDimensions['height_dots']);
+            $zpl[] = '^LH0,0';
+            $zpl[] = '^LS0';
+
+            return $zpl;
+        }
+
+        if ($legacyLabelLength !== null) {
+            $zpl[] = sprintf('^LL%d', $legacyLabelLength);
+        }
+
+        return $zpl;
+    }
+
+    /**
+     * @return array{width_dots: int, height_dots: int}|null
+     */
+    private function resolvePhysicalDimensions(array $templateProperties): ?array
+    {
+        $widthMm = $this->positiveFloatOrNull($templateProperties['width_mm'] ?? null);
+        $heightMm = $this->positiveFloatOrNull($templateProperties['height_mm'] ?? null);
+
+        if ($widthMm === null || $heightMm === null) {
+            return null;
+        }
+
+        $dpi = max(1, (int) ($templateProperties['dpi'] ?? 203));
+        $widthDots = LabelDimensions::millimetersToDots($widthMm, $dpi);
+        $heightDots = LabelDimensions::millimetersToDots($heightMm, $dpi);
+
+        if ($widthDots === null || $heightDots === null) {
+            return null;
+        }
+
+        return [
+            'width_dots' => $widthDots,
+            'height_dots' => $heightDots,
+        ];
+    }
+
+    private function positiveFloatOrNull(mixed $value): ?float
+    {
+        if (! is_numeric($value) || (float) $value <= 0) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     private function normalizeTextLayout(array $layout, int $defaultFontSize = 40): array
