@@ -1,5 +1,6 @@
 import Swal from '../lib/sweetalert';
 import { loadBrowserPrint } from '../lib/browser-print-loader';
+import { createDummyAlignmentController } from './dummy-print-center/alignment';
 import { buildDummyItemZpl } from './dummy-print-center/zpl';
 
 const STORAGE_KEY = 'dummy_print_selected_printer';
@@ -47,6 +48,7 @@ const initializeDummyPrintCenter = () => {
     let printPrepared = false;
     let printLocked = false;
     let isPrinting = false;
+    let alignmentController = null;
 
     const setStatus = (message, isError = false) => {
         statusBox.textContent = message;
@@ -86,15 +88,19 @@ const initializeDummyPrintCenter = () => {
     };
 
     const setSelectedPrinter = (device) => {
+        printPrepared = false;
+
         if (!device) {
             selectedDevice = null;
             printerBox.textContent = 'Sin conectar';
+            alignmentController?.setPrinter(null);
             return;
         }
 
         selectedDevice = device;
         persistSelectedPrinter(device);
         printerBox.textContent = `${device.name} (${device.connection || 'connection'})`;
+        alignmentController?.setPrinter(device);
     };
 
     const readStoredPrinter = () => {
@@ -205,15 +211,18 @@ const initializeDummyPrintCenter = () => {
         templatesByType,
         jobNumber: config.jobNumber,
         fgCode: config.fgCode,
+        alignment: alignmentController?.getAlignment(item.dummyType),
     });
 
     const sendToPrinter = (zplChunk) => new Promise((resolve, reject) => {
         selectedDevice.send(zplChunk, resolve, (error) => reject(new Error(error)));
     });
 
-    const showAlert = (title, text, icon = 'error') => {
-        void Swal.fire(title, text, icon);
-    };
+    const showAlert = (titleOrOptions, text, icon = 'error') => (
+        typeof titleOrOptions === 'object'
+            ? Swal.fire(titleOrOptions)
+            : Swal.fire(titleOrOptions, text, icon)
+    );
 
     const setPrintBlocked = (message) => {
         printLocked = true;
@@ -313,18 +322,41 @@ const initializeDummyPrintCenter = () => {
                 return;
             }
 
-            setStatus('Enviando dummy de prueba para validación...');
-            await sendToPrinter(buildItemZpl(items[0]));
+            const samplesByType = [...new Map(items.map((item) => [item.dummyType, item])).values()];
+            const typeLabels = samplesByType.map((item) => String(item.dummyType).toUpperCase());
+
+            setStatus(`Enviando prueba de ${typeLabels.join(' y ')} para validación...`);
+            for (const sample of samplesByType) {
+                await sendToPrinter(buildItemZpl(sample));
+            }
 
             printPrepared = true;
-            setStatus('Dummy de prueba enviado. Si el template está centrado, ya puedes presionar "Imprimir".');
-            showAlert('Preparación completada', 'Se imprimió el primer dummy de prueba. Verifica centrado y luego imprime el batch completo.', 'success');
+            setStatus('Prueba enviada por cada tipo de dummy. Si los templates están centrados, ya puedes presionar "Imprimir".');
+            showAlert(
+                'Preparación completada',
+                `Se imprimió una prueba de ${typeLabels.join(' y ')}. Verifica el centrado y luego imprime el batch completo.`,
+                'success',
+            );
         } catch (error) {
             printPrepared = false;
             setStatus(`Error al preparar impresión: ${error.message}`, true);
             showAlert('Error de preparación', error.message || 'No se pudo enviar el dummy de prueba.');
         }
     };
+
+    alignmentController = createDummyAlignmentController({
+        items,
+        templatesByType,
+        jobNumber: config.jobNumber,
+        fgCode: config.fgCode,
+        getSelectedPrinter: () => selectedDevice,
+        sendToPrinter,
+        setStatus,
+        showAlert,
+        onAlignmentChanged: () => {
+            printPrepared = false;
+        },
+    });
 
     connectButton.addEventListener('click', connectPrinter);
     printerSelect.addEventListener('change', (event) => {
