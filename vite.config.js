@@ -7,6 +7,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/js/pages/label-room-dashboard.js',
                 'resources/js/pages/master-requests-create.js',
                 'resources/js/pages/master-requests-show.js',
                 'resources/js/pages/master-print-create.js',

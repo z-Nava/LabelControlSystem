@@ -1,7 +1,11 @@
 @extends('layouts.app', ['title' => 'Dashboard Label Room'])
 
 @section('content')
-    <div class="bg-white rounded-2xl shadow p-6">
+    <div
+        class="bg-white rounded-2xl shadow p-6"
+        data-pending-request-counts-url="{{ route('dashboard.pending_request_counts') }}"
+        data-pending-request-counts-interval="15000"
+    >
         <div class="border-b border-slate-200 pb-4">
             <h1 class="text-2xl font-semibold text-slate-900">Label Room</h1>
             <p class="text-slate-600 mt-1">
@@ -26,7 +30,14 @@
 
                         <a href="{{ route('master_requests.index') }}"
                             class="rounded-2xl border p-6 hover:shadow transition">
-                            <div class="text-lg font-semibold">Requisiciones pendientes</div>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-lg font-semibold">Requisiciones pendientes</div>
+                                @include('dashboards.partials.pending-request-count', [
+                                    'module' => 'master',
+                                    'count' => $pendingRequestCounts['master'],
+                                    'label' => 'requisiciones Master pendientes',
+                                ])
+                            </div>
                             <div class="text-sm text-slate-600 mt-1">Retomar impresión de requisiciones guardadas</div>
                         </a>
 
@@ -54,7 +65,14 @@
                         </a>
 
                         <a href="{{ route('label_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
-                            <div class="text-lg font-semibold text-slate-800">Requisiciones de etiquetas pendientes</div>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-lg font-semibold text-slate-800">Requisiciones de etiquetas pendientes</div>
+                                @include('dashboards.partials.pending-request-count', [
+                                    'module' => 'labels',
+                                    'count' => $pendingRequestCounts['labels'],
+                                    'label' => 'requisiciones de etiquetas pendientes',
+                                ])
+                            </div>
                             <div class="text-sm text-slate-600 mt-1">Retomar requsiciones de etiquetas guardadas</div>
                         </a>
 
@@ -84,8 +102,15 @@
                         </a>
 
                         <a href="{{ route('dummy_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
-                            <div class="text-lg font-semibold text-slate-800">Historial Dummy QR</div>
-                            <div class="text-sm text-slate-600 mt-1">Consulta requisiciones, rangos y estatus por job</div>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="text-lg font-semibold text-slate-800">Requisiciones Dummy QR pendientes</div>
+                                @include('dashboards.partials.pending-request-count', [
+                                    'module' => 'dummy',
+                                    'count' => $pendingRequestCounts['dummy'],
+                                    'label' => 'requisiciones Dummy QR pendientes',
+                                ])
+                            </div>
+                            <div class="text-sm text-slate-600 mt-1">Atiende requisiciones y consulta rangos y estatus por job</div>
                         </a>
 
                         <a href="{{ route('dummy_reprints.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
@@ -125,3 +150,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/label-room-dashboard.js')
+@endpush

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MasterRequest extends Model
 {
+    public const STATUS_REQUESTED = 'requested';
+
     protected $fillable = [
         'request_date',
         'week',

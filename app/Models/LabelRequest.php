@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LabelRequest extends Model
 {
+    public const STATUS_REQUESTED = 'requested';
+
     protected $table = 'label_requests';
 
     protected $fillable = [
@@ -32,14 +34,14 @@ class LabelRequest extends Model
     ];
 
     protected $casts = [
-        'request_date'    => 'date:Y-m-d',
-        'week'            => 'integer',
-        'line_id'         => 'integer',
-        'shift_id'        => 'integer',
+        'request_date' => 'date:Y-m-d',
+        'week' => 'integer',
+        'line_id' => 'integer',
+        'shift_id' => 'integer',
         'requested_by_user_id' => 'integer',
-        'quantity_requested'   => 'integer',
-        'include_serial'  => 'boolean',
-        'include_rating'  => 'boolean',
+        'quantity_requested' => 'integer',
+        'include_serial' => 'boolean',
+        'include_rating' => 'boolean',
     ];
 
     // Relaciones
@@ -63,7 +65,7 @@ class LabelRequest extends Model
         return $this->hasMany(LabelPrintBatch::class, 'label_request_id');
     }
 
-     public function serialRanges(): HasMany
+    public function serialRanges(): HasMany
     {
         return $this->hasMany(SerialRange::class, 'label_request_id');
     }
