@@ -3,9 +3,12 @@
 use App\Models\LabelSku;
 use App\Models\OracleJob;
 use App\Models\ProductionLine;
+use App\Models\Role;
 use App\Models\Shift;
 use App\Models\SkuSerialFormat;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -22,9 +25,25 @@ beforeEach(function () {
         'line_type' => 'EMPAQUE',
         'active' => true,
     ]);
+
+    $this->kioskUser = User::query()->create([
+        'employee_no' => '31001',
+        'name' => 'María Operadora',
+        'password' => Hash::make('not-used-by-kiosk'),
+        'shift_id' => $this->shift->id,
+        'production_line_id' => $this->line->id,
+        'position' => 'operator',
+        'is_active' => true,
+    ]);
+    $this->kioskUser->roles()->attach(Role::query()->where('name', 'kiosk')->firstOrFail());
+
+    $this->kioskSession = [
+        'kiosk_user_id' => $this->kioskUser->id,
+        'kiosk_employee_no' => $this->kioskUser->employee_no,
+    ];
 });
 
-test('an employee number starts a temporary kiosk session without a user', function () {
+test('an unknown employee completes a profile on the first kiosk access', function () {
     $this->get(route('kiosk.dashboard'))
         ->assertRedirect(route('kiosk.login'));
 
@@ -35,22 +54,120 @@ test('an employee number starts a temporary kiosk session without a user', funct
         ->assertSee('pattern="[0-9]{3,5}"', false);
 
     $this->post(route('kiosk.login.attempt'), [
-        'employee_no' => '31001',
+        'employee_no' => '31002',
     ])
-        ->assertRedirect(route('kiosk.dashboard'))
-        ->assertSessionHas('kiosk_employee_no', '31001');
+        ->assertRedirect(route('kiosk.register'))
+        ->assertSessionHas('kiosk_pending_employee_no', '31002')
+        ->assertSessionMissing('kiosk_user_id');
 
     $this->assertGuest();
 
+    $this->get(route('kiosk.register'))
+        ->assertOk()
+        ->assertSee('Completa tu perfil')
+        ->assertSee('31002')
+        ->assertSee('Operadora')
+        ->assertSee('Utility')
+        ->assertSee('Líder');
+
+    $this->post(route('kiosk.register.store'), [
+        'name' => 'Ana Utility',
+        'production_line_id' => $this->line->id,
+        'shift_id' => $this->shift->id,
+        'position' => 'utility',
+    ])
+        ->assertRedirect(route('kiosk.dashboard'))
+        ->assertSessionMissing('kiosk_pending_employee_no')
+        ->assertSessionHas('kiosk_employee_no', '31002');
+
+    $registeredUser = User::query()->where('employee_no', '31002')->firstOrFail();
+
+    expect($registeredUser->hasRole('kiosk'))->toBeTrue();
+    $this->assertDatabaseHas('users', [
+        'id' => $registeredUser->id,
+        'employee_no' => '31002',
+        'name' => 'Ana Utility',
+        'production_line_id' => $this->line->id,
+        'shift_id' => $this->shift->id,
+        'position' => 'utility',
+        'is_active' => true,
+    ]);
+
     $this->get(route('kiosk.dashboard'))
         ->assertOk()
-        ->assertSee('Número de empleado: 31001')
+        ->assertSee('Ana Utility')
+        ->assertSee('31002')
+        ->assertSee('LINE-01')
+        ->assertSee('Turno A')
+        ->assertSee('Utility')
         ->assertSee('Requisición Master')
         ->assertSee('Consultar Job en Oracle');
 
     $this->post(route('kiosk.logout'))
         ->assertRedirect(route('kiosk.login'))
-        ->assertSessionMissing('kiosk_employee_no');
+        ->assertSessionMissing('kiosk_employee_no')
+        ->assertSessionMissing('kiosk_user_id');
+});
+
+test('a registered employee enters the kiosk without seeing registration again', function () {
+    $this->post(route('kiosk.login.attempt'), [
+        'employee_no' => $this->kioskUser->employee_no,
+    ])
+        ->assertRedirect(route('kiosk.dashboard'))
+        ->assertSessionHas('kiosk_user_id', $this->kioskUser->id)
+        ->assertSessionHas('kiosk_employee_no', $this->kioskUser->employee_no)
+        ->assertSessionMissing('kiosk_pending_employee_no');
+
+    $this->get(route('kiosk.dashboard'))
+        ->assertOk()
+        ->assertSee('María Operadora')
+        ->assertSee('Operadora');
+
+    expect($this->kioskUser->fresh()->last_login_at)->not->toBeNull();
+});
+
+test('kiosk registration completes an existing user without replacing other roles', function () {
+    $labelRoomRole = Role::query()->create([
+        'name' => 'label_room',
+        'description' => 'Label Room',
+    ]);
+    $existingUser = User::query()->create([
+        'employee_no' => '31003',
+        'name' => 'Usuario existente',
+        'password' => Hash::make('existing-password'),
+        'is_active' => true,
+    ]);
+    $existingUser->roles()->attach($labelRoomRole);
+    $originalPassword = $existingUser->password;
+
+    $this->post(route('kiosk.login.attempt'), ['employee_no' => '31003'])
+        ->assertRedirect(route('kiosk.register'));
+
+    $this->post(route('kiosk.register.store'), [
+        'name' => 'Usuario Actualizado',
+        'production_line_id' => $this->line->id,
+        'shift_id' => $this->shift->id,
+        'position' => 'leader',
+    ])->assertRedirect(route('kiosk.dashboard'));
+
+    $existingUser->refresh()->load('roles');
+
+    expect($existingUser->password)->toBe($originalPassword)
+        ->and($existingUser->hasRole('label_room'))->toBeTrue()
+        ->and($existingUser->hasRole('kiosk'))->toBeTrue()
+        ->and($existingUser->position)->toBe('leader');
+});
+
+test('an inactive employee cannot enter or register in the kiosk', function () {
+    $this->kioskUser->update(['is_active' => false]);
+
+    $this->from(route('kiosk.login'))
+        ->post(route('kiosk.login.attempt'), [
+            'employee_no' => $this->kioskUser->employee_no,
+        ])
+        ->assertRedirect(route('kiosk.login'))
+        ->assertSessionHasErrors('employee_no')
+        ->assertSessionMissing('kiosk_user_id');
 });
 
 test('the employee number must contain only three to five digits', function (string $employeeNo) {
@@ -68,7 +185,7 @@ test('the employee number must contain only three to five digits', function (str
 ]);
 
 test('a kiosk session cannot access label room operations', function () {
-    $this->withSession(['kiosk_employee_no' => '31001'])
+    $this->withSession($this->kioskSession)
         ->get(route('master_requests.index'))
         ->assertRedirect(route('login'));
 
@@ -77,7 +194,7 @@ test('a kiosk session cannot access label room operations', function () {
 });
 
 test('the kiosk renders its own request views', function () {
-    $this->withSession(['kiosk_employee_no' => '31001']);
+    $this->withSession($this->kioskSession);
 
     $this->get(route('kiosk.master_requests.create'))
         ->assertOk()
@@ -112,7 +229,7 @@ test('the kiosk stores the employee number on a master request', function () {
         'line' => 'LINE-01',
     ]);
 
-    $this->withSession(['kiosk_employee_no' => '31001'])
+    $this->withSession($this->kioskSession)
         ->post(route('kiosk.master_requests.store'), [
             'request_date' => now()->toDateString(),
             'week' => now()->isoWeek(),
@@ -131,8 +248,8 @@ test('the kiosk stores the employee number on a master request', function () {
 
     $this->assertDatabaseHas('master_requests', [
         'id' => 1,
-        'requested_by_user_id' => null,
-        'requested_by_name' => '31001',
+        'requested_by_user_id' => $this->kioskUser->id,
+        'requested_by_name' => $this->kioskUser->name,
         'leader_name' => 'Líder Prueba',
         'status' => 'requested',
     ]);
@@ -154,7 +271,7 @@ test('the kiosk stores the employee number on a label request', function () {
         'is_active' => true,
     ]);
 
-    $this->withSession(['kiosk_employee_no' => '31001'])
+    $this->withSession($this->kioskSession)
         ->post(route('kiosk.label_requests.store'), [
             'request_date' => now()->toDateString(),
             'week' => now()->isoWeek(),
@@ -171,8 +288,8 @@ test('the kiosk stores the employee number on a label request', function () {
 
     $this->assertDatabaseHas('label_requests', [
         'id' => 1,
-        'requested_by_user_id' => null,
-        'requested_by_name' => '31001',
+        'requested_by_user_id' => $this->kioskUser->id,
+        'requested_by_name' => $this->kioskUser->name,
         'leader_name' => 'Líder Prueba',
         'quantity_requested' => 25,
         'status' => 'requested',
@@ -186,7 +303,7 @@ test('the kiosk stores the employee number on a dummy request', function () {
         'job_qty' => 10,
     ]);
 
-    $this->withSession(['kiosk_employee_no' => '31001'])
+    $this->withSession($this->kioskSession)
         ->post(route('kiosk.dummy_requests.store'), [
             'request_date' => now()->toDateString(),
             'week' => now()->isoWeek(),
@@ -202,8 +319,8 @@ test('the kiosk stores the employee number on a dummy request', function () {
 
     $this->assertDatabaseHas('dummy_requests', [
         'id' => 1,
-        'requested_by_user_id' => null,
-        'requested_by_name' => '31001',
+        'requested_by_user_id' => $this->kioskUser->id,
+        'requested_by_name' => $this->kioskUser->name,
         'leader_name' => 'Líder Prueba',
         'range_from' => 1,
         'range_to' => 3,
@@ -222,7 +339,7 @@ test('the oracle kiosk card only displays imported job information', function ()
         'imported_at' => now(),
     ]);
 
-    $this->withSession(['kiosk_employee_no' => '31001'])
+    $this->withSession($this->kioskSession)
         ->get(route('kiosk.oracle_jobs.lookup', ['job_number' => 'oracle100']))
         ->assertOk()
         ->assertSee('ORACLE100')

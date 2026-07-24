@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,6 +22,8 @@ class UpdateUserRequest extends FormRequest
             'employee_no' => ['required', 'string', 'max:32', Rule::unique('users', 'employee_no')->ignore($userId)],
             'name' => ['required', 'string', 'max:120'],
             'shift_id' => ['nullable', 'exists:shifts,id'],
+            'production_line_id' => ['nullable', 'exists:production_lines,id'],
+            'position' => ['nullable', 'string', Rule::in(array_keys(User::PRODUCTION_POSITIONS))],
             'is_active' => ['nullable', 'boolean'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'exists:roles,id'],
@@ -40,7 +44,7 @@ class UpdateUserRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if ($this->requiresPassword() && empty($this->input('password')) && !$this->route('user')->hasRole('admin')) {
+            if ($this->requiresPassword() && empty($this->input('password')) && ! $this->route('user')->hasRole('admin')) {
                 $validator->errors()->add('password', 'La contraseña es obligatoria para usuarios con rol admin.');
             }
         });
@@ -48,11 +52,11 @@ class UpdateUserRequest extends FormRequest
 
     private function requiresPassword(): bool
     {
-        if (!$this->filled('roles')) {
+        if (! $this->filled('roles')) {
             return false;
         }
 
-        return \App\Models\Role::whereIn('id', $this->input('roles', []))
+        return Role::whereIn('id', $this->input('roles', []))
             ->where('name', 'admin')
             ->exists();
     }

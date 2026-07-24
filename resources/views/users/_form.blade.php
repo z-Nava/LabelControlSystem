@@ -32,6 +32,38 @@
     </div>
 
     <div>
+        <label class="block text-sm font-medium text-slate-700">Línea de producción</label>
+        <select name="production_line_id"
+                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+            <option value="">Sin línea asignada</option>
+            @foreach($productionLines->groupBy('line_type') as $lineType => $lines)
+                <optgroup label="{{ $lineType }}">
+                    @foreach($lines as $line)
+                        <option value="{{ $line->id }}" @selected(old('production_line_id', $user->production_line_id ?? '') == $line->id)>
+                            {{ $line->code }} — {{ $line->name }}
+                        </option>
+                    @endforeach
+                </optgroup>
+            @endforeach
+        </select>
+        @error('production_line_id') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-slate-700">Puesto de producción</label>
+        <select name="position"
+                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+            <option value="">Sin puesto asignado</option>
+            @foreach($positions as $value => $label)
+                <option value="{{ $value }}" @selected(old('position', $user->position ?? '') === $value)>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+        @error('position') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
+    </div>
+
+    <div>
         <label class="inline-flex items-center gap-2 text-sm text-slate-700 mt-7">
             <input type="checkbox" name="is_active" value="1"
                    class="rounded border-slate-300"

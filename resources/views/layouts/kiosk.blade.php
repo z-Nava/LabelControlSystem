@@ -10,20 +10,23 @@
 </head>
 <body class="min-h-screen bg-slate-100">
     <header class="border-b bg-white">
-        <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
             <a href="{{ route('kiosk.dashboard') }}" class="flex items-center gap-3">
-                <div class="h-10 w-10 rounded-xl bg-red-600"></div>
+                <div class="h-10 w-10 shrink-0 rounded-xl bg-red-600"></div>
                 <div>
                     <div class="font-semibold text-slate-900">Kiosko de Producción</div>
+                    <div class="text-sm font-medium text-slate-700">
+                        {{ $kioskUser->name }} · #{{ $kioskUser->employee_no }}
+                    </div>
                     <div class="text-xs text-slate-500">
-                        Número de empleado: {{ session('kiosk_employee_no') }}
+                        {{ $kioskUser->productionLine->code }} · {{ $kioskUser->shift->name }} · {{ $kioskUser->position_label }}
                     </div>
                 </div>
             </a>
 
             <form id="kioskLogoutForm" method="POST" action="{{ route('kiosk.logout') }}">
                 @csrf
-                <button class="rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800">
+                <button class="whitespace-nowrap rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800">
                     Terminar sesión
                 </button>
             </form>

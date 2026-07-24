@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kiosk;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Labels\LookupOracleLabelJobRequest;
 use App\Http\Requests\Labels\StoreLabelRequestRequest;
+use App\Models\User;
 use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\JsonResponse;
@@ -26,8 +27,10 @@ class KioskLabelRequestController extends Controller
     public function store(StoreLabelRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $data['requested_by_user_id'] = null;
-        $data['requested_by_name'] = $request->session()->get('kiosk_employee_no');
+        /** @var User $kioskUser */
+        $kioskUser = $request->attributes->get('kiosk_user');
+        $data['requested_by_user_id'] = $kioskUser->id;
+        $data['requested_by_name'] = $kioskUser->name;
 
         $labelRequest = $this->service->create($data);
 

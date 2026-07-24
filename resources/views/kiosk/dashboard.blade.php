@@ -22,6 +22,27 @@
         </div>
     @endif
 
+    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">Perfil activo</p>
+                <h2 class="mt-1 text-2xl font-semibold text-slate-900">{{ $kioskUser->name }}</h2>
+                <p class="mt-1 text-slate-600">Número de empleado {{ $kioskUser->employee_no }}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <span class="rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700">
+                    {{ $kioskUser->productionLine->code }}
+                </span>
+                <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                    {{ $kioskUser->shift->name }}
+                </span>
+                <span class="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+                    {{ $kioskUser->position_label }}
+                </span>
+            </div>
+        </div>
+    </section>
+
     <section class="rounded-3xl bg-slate-900 p-7 text-white shadow-lg">
         <p class="text-sm font-semibold uppercase tracking-wider text-red-300">Kiosko de Producción</p>
         <h1 class="mt-2 text-3xl font-semibold">¿Qué necesitas solicitar?</h1>

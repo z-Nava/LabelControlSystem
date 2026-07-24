@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -17,6 +20,8 @@ class StoreUserRequest extends FormRequest
             'employee_no' => ['required', 'string', 'max:32', 'unique:users,employee_no'],
             'name' => ['required', 'string', 'max:120'],
             'shift_id' => ['nullable', 'exists:shifts,id'],
+            'production_line_id' => ['nullable', 'exists:production_lines,id'],
+            'position' => ['nullable', 'string', Rule::in(array_keys(User::PRODUCTION_POSITIONS))],
             'is_active' => ['nullable', 'boolean'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'exists:roles,id'],
@@ -45,11 +50,11 @@ class StoreUserRequest extends FormRequest
 
     private function requiresPassword(): bool
     {
-        if (!$this->filled('roles')) {
+        if (! $this->filled('roles')) {
             return false;
         }
 
-        return \App\Models\Role::whereIn('id', $this->input('roles', []))
+        return Role::whereIn('id', $this->input('roles', []))
             ->where('name', 'admin')
             ->exists();
     }

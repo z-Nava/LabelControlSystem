@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Http\Requests\Admin\UpdateUserRequest;
+use App\Models\ProductionLine;
 use App\Models\Role;
 use App\Models\Shift;
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
-use App\Http\Controllers\Controller;
 
 class UserController extends Controller
 {
@@ -19,8 +21,22 @@ class UserController extends Controller
     {
         $search = request('q');
 
-        $users = User::query()
-            ->with(['roles', 'shift'])
+        return view('users.index', [
+            'adminUsers' => $this->paginateUsersByRole('admin', $search, 'admin_page'),
+            'labelRoomUsers' => $this->paginateUsersByRole('label_room', $search, 'label_room_page'),
+            'kioskUsers' => $this->paginateUsersByRole('kiosk', $search, 'kiosk_page'),
+            'search' => $search,
+        ]);
+    }
+
+    private function paginateUsersByRole(
+        string $role,
+        ?string $search,
+        string $pageName,
+    ): LengthAwarePaginator {
+        return User::query()
+            ->with(['productionLine', 'roles', 'shift'])
+            ->whereHas('roles', fn ($query) => $query->where('name', $role))
             ->when($search, function ($query, $search) {
                 $query->where(function ($inner) use ($search) {
                     $inner->where('employee_no', 'like', "%{$search}%")
@@ -28,10 +44,8 @@ class UserController extends Controller
                 });
             })
             ->latest()
-            ->paginate(15)
+            ->paginate(10, ['*'], $pageName)
             ->withQueryString();
-
-        return view('users.index', compact('users', 'search'));
     }
 
     public function create(): View
@@ -39,6 +53,8 @@ class UserController extends Controller
         return view('users.create', [
             'roles' => Role::orderBy('name')->get(),
             'shifts' => Shift::orderBy('code')->get(),
+            'productionLines' => ProductionLine::orderBy('line_type')->orderBy('code')->get(),
+            'positions' => User::PRODUCTION_POSITIONS,
             'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
         ]);
     }
@@ -54,6 +70,8 @@ class UserController extends Controller
             'name' => $data['name'],
             'password' => Hash::make($data['password'] ?? Str::random(32)),
             'shift_id' => $data['shift_id'] ?? null,
+            'production_line_id' => $data['production_line_id'] ?? null,
+            'position' => $data['position'] ?? null,
             'is_active' => $data['is_active'] ?? true,
             'module_permissions' => in_array('label_room', $roles, true)
                 ? ($data['module_permissions'] ?? null)
@@ -73,6 +91,8 @@ class UserController extends Controller
             'user' => $user,
             'roles' => Role::orderBy('name')->get(),
             'shifts' => Shift::orderBy('code')->get(),
+            'productionLines' => ProductionLine::orderBy('line_type')->orderBy('code')->get(),
+            'positions' => User::PRODUCTION_POSITIONS,
             'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
         ]);
     }
@@ -87,13 +107,15 @@ class UserController extends Controller
             'employee_no' => $data['employee_no'],
             'name' => $data['name'],
             'shift_id' => $data['shift_id'] ?? null,
+            'production_line_id' => $data['production_line_id'] ?? null,
+            'position' => $data['position'] ?? null,
             'is_active' => $data['is_active'] ?? false,
             'module_permissions' => in_array('label_room', $roles, true)
                 ? ($data['module_permissions'] ?? null)
                 : null,
         ];
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $payload['password'] = Hash::make($data['password']);
         }
 
@@ -109,7 +131,7 @@ class UserController extends Controller
             return redirect()->route('users.index')->with('error', 'No puedes desactivar tu propio usuario.');
         }
 
-        $user->update(['is_active' => !$user->is_active]);
+        $user->update(['is_active' => ! $user->is_active]);
 
         return redirect()->route('users.index')->with('success', 'Estado actualizado correctamente.');
     }

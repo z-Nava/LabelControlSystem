@@ -2,19 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\Shift;
 
 class User extends Authenticatable
 {
-
     public const AVAILABLE_MODULE_PERMISSIONS = [
         'master',
         'labels',
         'dummy',
         'oracle',
+    ];
+
+    public const PRODUCTION_POSITIONS = [
+        'operator' => 'Operadora',
+        'utility' => 'Utility',
+        'leader' => 'Líder',
     ];
 
     use Notifiable;
@@ -27,6 +32,8 @@ class User extends Authenticatable
         'module_permissions',
         'last_login_at',
         'shift_id',
+        'production_line_id',
+        'position',
     ];
 
     protected $hidden = [
@@ -47,9 +54,12 @@ class User extends Authenticatable
 
     public function hasRole(string $roleName): bool
     {
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains('name', $roleName);
+        }
+
         return $this->roles()->where('name', $roleName)->exists();
     }
-
 
     public function hasModuleAccess(string $module): bool
     {
@@ -57,7 +67,7 @@ class User extends Authenticatable
             return true;
         }
 
-        if (!$this->hasRole('label_room')) {
+        if (! $this->hasRole('label_room')) {
             return false;
         }
 
@@ -70,18 +80,40 @@ class User extends Authenticatable
         return in_array($module, $permissions, true);
     }
 
-    public function shift()
+    public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
     }
 
+    public function productionLine(): BelongsTo
+    {
+        return $this->belongsTo(ProductionLine::class);
+    }
+
+    public function hasCompleteKioskProfile(): bool
+    {
+        return filled($this->name)
+            && $this->shift_id !== null
+            && $this->production_line_id !== null
+            && array_key_exists((string) $this->position, self::PRODUCTION_POSITIONS);
+    }
+
+    public function isRegisteredForKiosk(): bool
+    {
+        return $this->hasRole('kiosk') && $this->hasCompleteKioskProfile();
+    }
+
     public function getShiftLabelAttribute(): ?string
     {
-        if (!$this->shift) {
+        if (! $this->shift) {
             return null;
         }
 
-        return 'Shift ' . $this->shift->code;
+        return 'Shift '.$this->shift->code;
     }
 
+    public function getPositionLabelAttribute(): ?string
+    {
+        return self::PRODUCTION_POSITIONS[$this->position] ?? null;
+    }
 }

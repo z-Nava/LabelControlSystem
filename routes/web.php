@@ -43,6 +43,10 @@ Route::get('/kiosk/login', [KioskSessionController::class, 'create'])->name('kio
 Route::post('/kiosk/login', [KioskSessionController::class, 'store'])
     ->middleware('throttle:20,1')
     ->name('kiosk.login.attempt');
+Route::get('/kiosk/register', [KioskSessionController::class, 'createRegistration'])->name('kiosk.register');
+Route::post('/kiosk/register', [KioskSessionController::class, 'storeRegistration'])
+    ->middleware('throttle:10,1')
+    ->name('kiosk.register.store');
 Route::post('/kiosk/logout', [KioskSessionController::class, 'destroy'])->name('kiosk.logout');
 
 Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(function () {

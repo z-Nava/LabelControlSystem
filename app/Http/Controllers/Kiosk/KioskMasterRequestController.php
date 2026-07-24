@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kiosk;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
+use App\Models\User;
 use App\Services\Masters\MasterRequestReadService;
 use App\Services\Masters\MasterRequestService;
 use Illuminate\Http\JsonResponse;
@@ -26,8 +27,10 @@ class KioskMasterRequestController extends Controller
     public function store(StoreMasterRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $data['requested_by_user_id'] = null;
-        $data['requested_by_name'] = $request->session()->get('kiosk_employee_no');
+        /** @var User $kioskUser */
+        $kioskUser = $request->attributes->get('kiosk_user');
+        $data['requested_by_user_id'] = $kioskUser->id;
+        $data['requested_by_name'] = $kioskUser->name;
 
         $masterRequest = $this->service->create($data);
 
