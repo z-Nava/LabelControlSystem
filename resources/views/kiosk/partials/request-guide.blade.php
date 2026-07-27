@@ -1,57 +1,66 @@
-<section class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-    <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                    <span class="h-2 w-2 rounded-full bg-red-500"></span>
-                    Requisición para Label Room
-                </div>
-
-                <h1 class="mt-3 text-2xl font-semibold text-slate-900">{{ $title }}</h1>
-                <p class="mt-2 max-w-3xl text-slate-600">{{ $description }}</p>
+<section class="overflow-hidden rounded-3xl bg-slate-900 text-white shadow-lg ring-1 ring-slate-800">
+    <div class="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-7">
+        <div class="flex min-w-0 items-start gap-4">
+            <div class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-600 sm:flex" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h8.5L19.25 7.5v12A1.75 1.75 0 0 1 17.5 21h-11a1.75 1.75 0 0 1-1.75-1.75V5.5A1.75 1.75 0 0 1 6.5 3.75H7Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 3.75V8h4.25M8.5 12h7M8.5 16h5" />
+                </svg>
             </div>
-
-            <a href="{{ route('kiosk.dashboard') }}"
-               class="inline-flex shrink-0 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                Volver al menú
-            </a>
+            <div>
+                <div class="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Requisición para Label Room</div>
+                <h1 class="mt-1 text-2xl font-semibold tracking-tight lg:text-3xl">{{ $title }}</h1>
+                <p class="mt-1 max-w-4xl text-sm leading-6 text-slate-300 lg:text-base">{{ $description }}</p>
+            </div>
         </div>
 
-        <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="note">
-            <span class="font-semibold">Importante:</span>
-            esta pantalla no imprime ni entrega material. Solo envía la requisición a Label Room para que sea atendida.
-        </div>
+        <a href="{{ route('kiosk.dashboard') }}"
+           class="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white">
+            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m14.5 6.5-5.5 5.5 5.5 5.5" />
+            </svg>
+            Volver al menú
+        </a>
     </div>
 
-    <div class="grid grid-cols-1 gap-5 px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)]">
-        <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Sigue estos pasos</h2>
+    <div class="border-t border-white/10 bg-white/5 px-5 py-4 lg:px-7">
+        <div class="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
+            <div class="min-w-0">
+                <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Sigue estos pasos</h2>
+                <ol class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                    @foreach($steps as $step)
+                        <li class="flex min-w-0 items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-slate-900">
+                                {{ $loop->iteration }}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="text-sm font-semibold leading-tight text-white">{{ $step['title'] }}</div>
+                                <p class="mt-0.5 hidden text-xs leading-4 text-slate-400 min-[1500px]:block">{{ $step['description'] }}</p>
+                            </div>
+                        </li>
+                    @endforeach
+                </ol>
+            </div>
 
-            <ol class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                @foreach($steps as $step)
-                    <li class="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
-                            {{ $loop->iteration }}
-                        </span>
-                        <div>
-                            <div class="font-semibold text-slate-900">{{ $step['title'] }}</div>
-                            <p class="mt-1 text-sm leading-5 text-slate-600">{{ $step['description'] }}</p>
-                        </div>
-                    </li>
-                @endforeach
-            </ol>
+            <details class="group shrink-0 2xl:w-80">
+                <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2.5 text-sm font-semibold text-amber-100">
+                    Antes de comenzar
+                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                </summary>
+                <ul class="mt-2 grid gap-1.5 rounded-xl bg-white p-3 text-sm text-slate-700 shadow-lg">
+                    @foreach($preparationItems as $item)
+                        <li class="flex gap-2">
+                            <span class="font-bold text-emerald-600" aria-hidden="true">✓</span>
+                            <span>{{ $item }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </details>
         </div>
 
-        <aside class="rounded-xl border border-blue-200 bg-blue-50 p-4">
-            <h2 class="font-semibold text-blue-950">Antes de comenzar, ten a la mano:</h2>
-            <ul class="mt-3 space-y-2 text-sm text-blue-900">
-                @foreach($preparationItems as $item)
-                    <li class="flex gap-2">
-                        <span class="font-bold text-blue-700" aria-hidden="true">✓</span>
-                        <span>{{ $item }}</span>
-                    </li>
-                @endforeach
-            </ul>
-        </aside>
+        <p class="mt-3 text-xs text-slate-400" role="note">
+            <span class="font-semibold text-amber-200">Importante:</span>
+            esta pantalla no imprime ni entrega material; envía la requisición a Label Room para que sea atendida.
+        </p>
     </div>
 </section>

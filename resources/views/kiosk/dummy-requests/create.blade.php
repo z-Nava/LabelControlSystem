@@ -21,8 +21,9 @@
 
     @include('kiosk.partials.form-errors')
 
-    <form method="POST" action="{{ route('kiosk.dummy_requests.store') }}" data-lookup-url="{{ route('kiosk.dummy_requests.lookup_job') }}" id="dummyRequestCreate" class="space-y-4">
-        @csrf
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <form method="POST" action="{{ route('kiosk.dummy_requests.store') }}" data-lookup-url="{{ route('kiosk.dummy_requests.lookup_job') }}" id="dummyRequestCreate" class="min-w-0 space-y-4">
+            @csrf
 
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div>
@@ -150,12 +151,62 @@
                     <p class="mt-1 text-sm text-slate-600">Confirma el Job y la cantidad. Al enviar, Label Room recibirá la solicitud; no se imprimirá automáticamente.</p>
                 </div>
 
-                <button class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500">
+                <button class="inline-flex min-h-12 items-center justify-center rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
                     Revisar y enviar requisición
                 </button>
             </div>
         </div>
-    </form>
+        </form>
+
+        <aside class="space-y-4 xl:sticky xl:top-28 xl:self-start">
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="border-b border-slate-200 px-5 py-4">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+                            </svg>
+                        </span>
+                        <div>
+                            <h2 class="font-semibold text-slate-900">Resumen en vivo</h2>
+                            <p class="text-sm text-slate-500">Confirma antes de enviar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <dl class="space-y-3 p-5">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Operación</dt>
+                        <dd id="previewDummyLineShift" class="mt-1 font-semibold text-slate-900">Selecciona línea y turno</dd>
+                        <dd id="previewDummyLeader" class="mt-1 text-sm text-slate-600">Sin líder capturado</dd>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Solicitud</dt>
+                        <dd id="previewDummyDateWeek" class="mt-1 font-semibold text-slate-900">Fecha y semana pendientes</dd>
+                        <dd id="previewDummyRequestType" class="mt-1 text-sm text-slate-600">Tipo pendiente</dd>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Job / Cantidad</dt>
+                        <dd id="previewDummyJob" class="mt-1 break-words font-semibold text-slate-900">Job no capturado</dd>
+                        <dd id="previewDummyQuantity" class="mt-1 text-sm text-slate-600">Cantidad no definida</dd>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Datos Oracle</dt>
+                        <dd id="previewDummyOracle" class="mt-1 break-words text-sm text-slate-700">Pendiente de validar el Job.</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="rounded-2xl bg-slate-900 p-5 text-slate-100 shadow-sm">
+                <h2 class="font-semibold">Antes de enviar</h2>
+                <ul class="mt-3 space-y-3 text-sm leading-5 text-slate-300">
+                    <li><span class="font-semibold text-white">Job:</span> debe aparecer validado por Oracle.</li>
+                    <li><span class="font-semibold text-white">Cantidad:</span> no puede superar el Job Qty.</li>
+                    <li><span class="font-semibold text-white">Reimpresión:</span> selecciónala solo si ya se habían solicitado.</li>
+                </ul>
+            </section>
+        </aside>
+    </div>
 </div>
 @endsection
 

@@ -8,17 +8,22 @@
     <link rel="icon" type="image/png" href="{{ Vite::asset('resources/img/favicon.png') }}" />
     @vite('resources/css/app.css')
 </head>
-<body class="min-h-screen bg-slate-100">
-    <header class="border-b bg-white">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-            <a href="{{ route('kiosk.dashboard') }}" class="flex items-center gap-3">
-                <div class="h-10 w-10 shrink-0 rounded-xl bg-red-600"></div>
+<body class="kiosk-shell min-h-screen bg-slate-100 text-slate-900">
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
+        <div class="mx-auto flex min-h-20 max-w-[1600px] items-center justify-between gap-4 px-5 py-3 lg:px-8">
+            <a href="{{ route('kiosk.dashboard') }}" class="flex min-w-0 items-center gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-sm" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 4.75h14a1.25 1.25 0 0 1 1.25 1.25v8A1.25 1.25 0 0 1 19 15.25H5A1.25 1.25 0 0 1 3.75 14V6A1.25 1.25 0 0 1 5 4.75Z" />
+                        <path stroke-linecap="round" d="M8.5 19.25h7M12 15.5v3.5" />
+                    </svg>
+                </div>
                 <div>
-                    <div class="font-semibold text-slate-900">Kiosko de Producción</div>
-                    <div class="text-sm font-medium text-slate-700">
+                    <div class="font-semibold leading-tight text-slate-900">Kiosko de Producción</div>
+                    <div class="truncate text-sm font-medium text-slate-700">
                         {{ $kioskUser->name }} · #{{ $kioskUser->employee_no }}
                     </div>
-                    <div class="text-xs text-slate-500">
+                    <div class="hidden text-xs text-slate-500 sm:block">
                         {{ $kioskUser->productionLine->code }} · {{ $kioskUser->shift->name }} · {{ $kioskUser->position_label }}
                     </div>
                 </div>
@@ -26,14 +31,18 @@
 
             <form id="kioskLogoutForm" method="POST" action="{{ route('kiosk.logout') }}">
                 @csrf
-                <button class="whitespace-nowrap rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800">
-                    Terminar sesión
+                <button class="inline-flex min-h-12 items-center gap-2 whitespace-nowrap rounded-xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-600 focus:ring-offset-2">
+                    <svg viewBox="0 0 24 24" class="hidden h-5 w-5 sm:block" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19H10M14.5 8.5 18 12l-3.5 3.5M18 12H9" />
+                    </svg>
+                    <span class="hidden sm:inline">Terminar sesión</span>
+                    <span class="sm:hidden">Salir</span>
                 </button>
             </form>
         </div>
     </header>
 
-    <main class="{{ $mainClass ?? 'max-w-6xl' }} mx-auto px-4 py-6">
+    <main class="{{ $mainClass ?? 'max-w-[1600px]' }} mx-auto w-full px-5 py-6 lg:px-8 lg:py-8">
         @yield('content')
     </main>
 
@@ -44,7 +53,7 @@
             const logoutForm = document.getElementById('kioskLogoutForm');
             if (!logoutForm) return;
 
-            const timeoutMilliseconds = 5 * 60 * 1000;
+            const timeoutMilliseconds = 2 * 60 * 1000;
             let timeoutId;
 
             const resetTimeout = () => {

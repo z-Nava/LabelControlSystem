@@ -21,10 +21,10 @@
 
     @include('kiosk.partials.form-errors')
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form id="labelRequestCreate"
               data-lookup-url="{{ route('kiosk.label_requests.lookup_job') }}"
-              class="space-y-4"
+              class="min-w-0 space-y-4"
               method="POST"
               action="{{ route('kiosk.label_requests.store') }}">
             @csrf
@@ -250,7 +250,7 @@
 
                         <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                             <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
-                                <input id="includeSerial" type="checkbox" name="include_serial" value="1" @checked(old('include_serial')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
+                                <input id="includeSerial" type="checkbox" name="include_serial" value="1" @checked(old('include_serial')) class="mt-0.5 h-6 w-6 rounded border-slate-300 text-red-600 focus:ring-red-600" />
                                 <div>
                                     <div class="font-medium text-slate-900">Serial</div>
                                     <p class="mt-1 text-sm text-slate-500">Incluye numeración serial para identificación y trazabilidad.</p>
@@ -258,7 +258,7 @@
                             </label>
 
                             <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
-                                <input id="includeRating" type="checkbox" name="include_rating" value="1" @checked(old('include_rating')) class="mt-1 h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-600" />
+                                <input id="includeRating" type="checkbox" name="include_rating" value="1" @checked(old('include_rating')) class="mt-0.5 h-6 w-6 rounded border-slate-300 text-red-600 focus:ring-red-600" />
                                 <div>
                                     <div class="font-medium text-slate-900">Rating</div>
                                     <p class="mt-1 text-sm text-slate-500">Agrega la etiqueta con información técnica y especificaciones del producto.</p>
@@ -315,14 +315,14 @@
                         <p class="mt-1 text-sm text-slate-600">Confirma el resumen. Al enviar, Label Room recibirá la solicitud; no se imprimirá automáticamente.</p>
                     </div>
 
-                    <button class="inline-flex items-center justify-center rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500">
+                    <button class="inline-flex min-h-12 items-center justify-center rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
                         Revisar y enviar requisición
                     </button>
                 </div>
             </div>
         </form>
 
-        <aside class="space-y-4 xl:sticky xl:top-6 xl:self-start">
+        <aside class="space-y-4 xl:sticky xl:top-28 xl:self-start">
             <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="text-base font-semibold text-slate-900">Resumen en vivo</div>
                 <p class="mt-1 text-sm text-slate-500">Se actualiza conforme completas el formulario.</p>

@@ -43,6 +43,6 @@ export function refreshPreview(fields, preview, jobLookupState = {}) {
 
     if (preview.type) {
         const requestTypeValue = (fields.requestType?.value || '').trim();
-        preview.type.textContent = requestTypeValue ? requestTypeValue.replaceAll('_', ' ') : '—';
+        preview.type.textContent = requestTypeValue ? getSelectedText(fields.requestType) : '—';
     }
 }

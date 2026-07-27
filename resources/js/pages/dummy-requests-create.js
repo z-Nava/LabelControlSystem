@@ -23,6 +23,13 @@ import { debounce } from './utils/debounce';
     const shiftSelect = form.querySelector('select[name="shift_id"]');
     const requestTypeSelect = form.querySelector('select[name="request_type"]');
     const notesInput = form.querySelector('textarea[name="notes"]');
+    const previewLineShift = document.querySelector('#previewDummyLineShift');
+    const previewLeader = document.querySelector('#previewDummyLeader');
+    const previewDateWeek = document.querySelector('#previewDummyDateWeek');
+    const previewRequestType = document.querySelector('#previewDummyRequestType');
+    const previewJob = document.querySelector('#previewDummyJob');
+    const previewQuantity = document.querySelector('#previewDummyQuantity');
+    const previewOracle = document.querySelector('#previewDummyOracle');
 
     if (!lookupUrl || !jobInput || !assemblyInput || !lineInput || !quantityInput || !jobInfoHint || !quantityHint) {
         return;
@@ -37,6 +44,51 @@ import { debounce } from './utils/debounce';
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
 
+    const selectedText = (select) => select?.selectedOptions?.[0]?.textContent?.trim() || '';
+
+    const refreshPreview = () => {
+        const line = lineIdSelect?.value ? selectedText(lineIdSelect) : '';
+        const shift = shiftSelect?.value ? selectedText(shiftSelect) : '';
+        const leader = leaderInput?.value?.trim() || '';
+        const job = jobInput.value.trim().toUpperCase();
+        const quantity = quantityInput.value;
+        const requestType = requestTypeSelect?.value ? selectedText(requestTypeSelect) : '';
+        const assembly = assemblyInput.value.trim();
+        const oracleLine = lineInput.value.trim();
+
+        if (previewLineShift) {
+            previewLineShift.textContent = line || shift
+                ? `${line || 'Línea pendiente'} / ${shift || 'Turno pendiente'}`
+                : 'Selecciona línea y turno';
+        }
+
+        if (previewLeader) {
+            previewLeader.textContent = leader ? `Responsable: ${leader}` : 'Sin líder capturado';
+        }
+
+        if (previewDateWeek) {
+            previewDateWeek.textContent = `${requestDateInput?.value || 'Fecha pendiente'} · Semana ${weekInput?.value || '—'}`;
+        }
+
+        if (previewRequestType) {
+            previewRequestType.textContent = requestType || 'Tipo pendiente';
+        }
+
+        if (previewJob) {
+            previewJob.textContent = job ? `Job ${job}` : 'Job no capturado';
+        }
+
+        if (previewQuantity) {
+            previewQuantity.textContent = quantity ? `${quantity} Dummy QR solicitado(s)` : 'Cantidad no definida';
+        }
+
+        if (previewOracle) {
+            previewOracle.textContent = assembly || oracleLine
+                ? `NP ${assembly || '—'} · Línea ${oracleLine || '—'}`
+                : (job ? 'Validando información del Job…' : 'Pendiente de validar el Job.');
+        }
+    };
+
     const clearOracleInfo = () => {
         assemblyInput.value = '';
         lineInput.value = '';
@@ -45,6 +97,7 @@ import { debounce } from './utils/debounce';
         jobQtyLimit = null;
         quantityInput.max = '100000';
         quantityInput.setCustomValidity('');
+        refreshPreview();
     };
 
     const enforceQtyLimit = () => {
@@ -119,6 +172,7 @@ import { debounce } from './utils/debounce';
             }
 
             enforceQtyLimit();
+            refreshPreview();
         } catch (error) {
             if (currentToken !== latestLookupToken) {
                 return;
@@ -133,6 +187,20 @@ import { debounce } from './utils/debounce';
     jobInput.addEventListener('change', lookupJob);
     quantityInput.addEventListener('input', enforceQtyLimit);
     quantityInput.addEventListener('change', enforceQtyLimit);
+
+    [
+        requestDateInput,
+        weekInput,
+        leaderInput,
+        lineIdSelect,
+        shiftSelect,
+        requestTypeSelect,
+        jobInput,
+        quantityInput,
+    ].filter(Boolean).forEach((element) => {
+        element.addEventListener('input', refreshPreview);
+        element.addEventListener('change', refreshPreview);
+    });
 
     if (jobInput.value.trim() !== '') {
         lookupJob();
@@ -165,6 +233,8 @@ import { debounce } from './utils/debounce';
         lineTypeSelect.addEventListener('change', filterLinesByType);
         filterLinesByType();
     }
+
+    refreshPreview();
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
