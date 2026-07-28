@@ -17,7 +17,7 @@ class User extends Authenticatable
     ];
 
     public const PRODUCTION_POSITIONS = [
-        'operator' => 'Operadora',
+        'operator' => 'Operador',
         'utility' => 'Utility',
         'leader' => 'Líder',
     ];
