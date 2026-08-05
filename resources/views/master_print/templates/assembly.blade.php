@@ -143,7 +143,7 @@
                     <div class="text-[20px] font-bold uppercase tracking-wide text-slate-500">
                         Modelo
                     </div>
-                    <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                    <div class="mt-1.5 text-[20px] font-extrabold leading-none text-black">
                         {{ $s['model'] ?? '' }}
                     </div>
                 </div>
@@ -166,7 +166,7 @@
                         <div class="text-[20px] font-bold uppercase tracking-wide text-slate-500">
                             Job
                         </div>
-                        <div class="mt-1.5 text-[22px] font-extrabold leading-none text-black">
+                        <div class="mt-1.5 text-[20px] font-extrabold leading-none text-black">
                             {{ $s['job'] ?? '' }}
                         </div>
 
@@ -312,21 +312,21 @@
                 <div class="border-b border-black px-3 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación IPQC
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
 
             <div class="border-r border-black">
                 <div class="border-b border-black px-3 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación OQC
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
 
             <div>
                 <div class="border-b border-black px-3 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Production Support
                 </div>
-                <div class="h-[40mm]"></div>
+                <div class="h-[30mm]"></div>
             </div>
         </div>
     </section>

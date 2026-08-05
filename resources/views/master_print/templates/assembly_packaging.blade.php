@@ -369,7 +369,6 @@
 
             <div class="col-span-3 p-2">
                 <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
-                <div class="mt-1 h-[6mm] rounded-[2mm] border border-black px-2 py-1 text-[9px] text-black"></div>
             </div>
         </div>
 

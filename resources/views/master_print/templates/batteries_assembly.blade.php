@@ -140,7 +140,7 @@
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black p-3">
                 <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job</div>
-                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1.5 text-[20px] font-extrabold leading-none text-black">
                     {{ $s['job'] ?? '' }}
                 </div>
             </div>
@@ -149,7 +149,7 @@
                 <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                     NP Ensamble
                 </div>
-                <div class="mt-1.5 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1.5 text-[20px] font-extrabold leading-none text-black">
                     {{ $s['np'] ?? '' }}
                 </div>
                 <div class="mt-2 min-h-[9mm] border-t border-dashed border-slate-400 pt-1.5 text-[10px] leading-snug text-slate-700">
@@ -297,21 +297,21 @@
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación IPQC
                 </div>
-                <div class="h-[20mm]"></div>
+                <div class="h-[23mm]"></div>
             </div>
 
             <div class="col-span-4 border-r border-black">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Liberación OQC
                 </div>
-                <div class="h-[20mm]"></div>
+                <div class="h-[23mm]"></div>
             </div>
 
             <div class="col-span-4">
                 <div class="border-b border-black px-2 py-1 text-center text-[9px] font-extrabold uppercase tracking-wide">
                     Production Support
                 </div>
-                <div class="h-[20mm]"></div>
+                <div class="h-[23mm]"></div>
             </div>
         </div>
     </section>

@@ -140,7 +140,7 @@
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black px-3 py-2.5">
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">Job</div>
-                <div class="mt-1 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1 text-[20px] font-extrabold leading-none text-black">
                     {{ $s['job'] ?? '' }}
                 </div>
             </div>
@@ -166,7 +166,7 @@
                 <div class="text-[8px] font-bold uppercase tracking-wide text-slate-500">
                     NP Ensamble
                 </div>
-                <div class="mt-1 text-[24px] font-extrabold leading-none text-black">
+                <div class="mt-1 text-[20px] font-extrabold leading-none text-black">
                     {{ $s['np'] ?? '' }}
                 </div>
                 <div class="mt-1.5 min-h-[8mm] border-t border-dashed border-slate-400 pt-1 text-[10px] leading-snug text-slate-700">
