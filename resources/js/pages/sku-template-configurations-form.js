@@ -1,12 +1,11 @@
 import { Canvas, Rect, Text } from '../lib/fabric-setup';
+import {
+    buildPhysicalLabelCommands,
+    getZplOrientationAngle as getOrientationAngle,
+    millimetersToDots,
+    normalizeZplOrientation as normalizeOrientation,
+} from './label-layout/zpl';
 
-const ORIENTATIONS = ['N', 'R', 'I', 'B'];
-const ORIENTATION_ANGLES = {
-    N: 0,
-    R: 90,
-    I: 180,
-    B: 270,
-};
 const ORIENTATION_LABELS = {
     N: 'Normal',
     R: 'Rotada 90°',
@@ -16,13 +15,6 @@ const ORIENTATION_LABELS = {
 const LAYOUT_GRID_STEP_DOTS = 50;
 const DRAG_SNAP_DOTS = 5;
 
-const normalizeOrientation = (value, fallback = 'N') => {
-    const normalized = String(value || fallback).trim().toUpperCase();
-
-    return ORIENTATIONS.includes(normalized) ? normalized : fallback;
-};
-
-const getOrientationAngle = (value) => ORIENTATION_ANGLES[normalizeOrientation(value)] ?? 0;
 const getOrientationLabel = (value) => ORIENTATION_LABELS[normalizeOrientation(value)] ?? ORIENTATION_LABELS.N;
 
 const readInt = (selector, fallback) => {
@@ -99,6 +91,7 @@ const initSkuTemplateConfigurationsForm = () => {
     const livePreviewQrPayload = document.getElementById('live-preview-qr-payload');
     const livePreviewWarning = document.getElementById('live-preview-warning');
     const layoutCanvasElement = document.getElementById('sku-layout-preview-canvas');
+    const layoutCanvasFrame = document.getElementById('sku-layout-preview-canvas-frame');
     const layoutContextTitle = document.getElementById('layout-context-title');
     const layoutContextDescription = document.getElementById('layout-context-description');
     const layoutActiveElements = document.getElementById('layout-active-elements');
@@ -606,15 +599,37 @@ const initSkuTemplateConfigurationsForm = () => {
         object.setCoords?.();
     };
 
+    const syncLayoutCanvasSize = () => {
+        if (!layoutCanvas || !layoutCanvasFrame) {
+            return false;
+        }
+
+        const availableWidth = Math.floor(layoutCanvasFrame.clientWidth - 26);
+        if (availableWidth <= 0) {
+            return false;
+        }
+
+        const canvasWidth = Math.max(320, Math.min(1120, availableWidth));
+        const canvasHeight = Math.max(360, Math.min(520, Math.round(canvasWidth * 0.68)));
+        const hasChanged = layoutCanvas.getWidth() !== canvasWidth
+            || layoutCanvas.getHeight() !== canvasHeight;
+
+        if (hasChanged) {
+            layoutCanvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+        }
+
+        return hasChanged;
+    };
+
     const getTemplateMetrics = () => {
-        const canvasWidth = layoutCanvasElement?.width || 900;
-        const canvasHeight = layoutCanvasElement?.height || 420;
+        const canvasWidth = layoutCanvas?.getWidth() || layoutCanvasElement?.width || 900;
+        const canvasHeight = layoutCanvas?.getHeight() || layoutCanvasElement?.height || 420;
         const dpi = Math.max(readInt('#template_dpi', 203), 1);
         const widthMm = Math.max(readFloat('#template_width_mm', 0), 0);
         const heightMm = Math.max(readFloat('#template_height_mm', 0), 0);
         const hasPhysicalSize = widthMm > 0 && heightMm > 0;
-        const widthDots = hasPhysicalSize ? Math.round((widthMm / 25.4) * dpi) : 900;
-        const heightDots = hasPhysicalSize ? Math.round((heightMm / 25.4) * dpi) : 420;
+        const widthDots = hasPhysicalSize ? millimetersToDots(widthMm, dpi) : 900;
+        const heightDots = hasPhysicalSize ? millimetersToDots(heightMm, dpi) : 420;
         const reservedTop = 62;
         const reservedBottom = 24;
         const reservedX = 32;
@@ -1050,7 +1065,119 @@ const initSkuTemplateConfigurationsForm = () => {
             qrLabel,
             sku,
             sn,
+            replicas: [],
         };
+    };
+
+    const clearRepeatedPreviewObjects = () => {
+        if (!previewObjects?.replicas?.length) {
+            return;
+        }
+
+        previewObjects.replicas.forEach((object) => layoutCanvas.remove(object));
+        previewObjects.replicas = [];
+    };
+
+    const renderRepeatedPreviewObjects = ({
+        blockCount,
+        blockOffsetY,
+        metrics,
+        shouldRenderQr,
+        shouldRenderSku,
+        qrX,
+        qrY,
+        qrSize,
+        qrOrientation,
+        skuX,
+        skuY,
+        skuFontSize,
+        skuOrientation,
+        snX,
+        snY,
+        snFontSize,
+        snOrientation,
+        snLine,
+    }) => {
+        clearRepeatedPreviewObjects();
+
+        if (!shouldRenderQr || blockCount <= 1) {
+            return;
+        }
+
+        for (let blockIndex = 1; blockIndex < blockCount; blockIndex += 1) {
+            const blockNumber = blockIndex + 1;
+            const yOffset = blockIndex * blockOffsetY;
+            const qrPoint = toCanvasPoint(qrX, qrY + yOffset, metrics);
+            const skuPoint = toCanvasPoint(skuX, skuY + yOffset, metrics);
+            const snPoint = toCanvasPoint(snX, snY + yOffset, metrics);
+            const qr = new Rect({
+                left: qrPoint.x,
+                top: qrPoint.y,
+                width: qrSize * metrics.scale,
+                height: qrSize * metrics.scale,
+                fill: '#f1f5f9',
+                stroke: '#64748b',
+                strokeWidth: 1,
+                strokeDashArray: [5, 4],
+                selectable: false,
+                evented: false,
+                originX: 'left',
+                originY: 'top',
+                data: { previewType: 'qr', blockNumber, repeated: true },
+            });
+            setObjectOrientation(qr, qrOrientation);
+
+            const qrCenter = getObjectCenter(qr);
+            const qrLabel = new Text(`QR ${blockNumber}`, {
+                left: qrCenter.x,
+                top: qrCenter.y,
+                angle: qr.angle || 0,
+                fontSize: Math.max(9, Math.round(14 * metrics.scale)),
+                fontWeight: 'bold',
+                fill: '#475569',
+                selectable: false,
+                evented: false,
+                originX: 'center',
+                originY: 'center',
+            });
+
+            const blockObjects = [qr, qrLabel];
+
+            if (shouldRenderSku) {
+                const sku = new Text(getSelectedSkuCode(), {
+                    left: skuPoint.x,
+                    top: skuPoint.y,
+                    fontSize: Math.max(7, Math.round(skuFontSize * metrics.scale)),
+                    fontWeight: 'bold',
+                    fill: '#475569',
+                    selectable: false,
+                    evented: false,
+                    originX: 'left',
+                    originY: 'top',
+                    data: { previewType: 'sku', blockNumber, repeated: true },
+                });
+                setObjectOrientation(sku, skuOrientation);
+                blockObjects.push(sku);
+            }
+
+            const sn = new Text(snLine, {
+                left: snPoint.x,
+                top: snPoint.y,
+                fontSize: Math.max(7, Math.round(snFontSize * metrics.scale)),
+                fontFamily: 'monospace',
+                fill: '#475569',
+                selectable: false,
+                evented: false,
+                originX: 'left',
+                originY: 'top',
+                data: { previewType: 'sn', blockNumber, repeated: true },
+            });
+            setObjectOrientation(sn, snOrientation);
+            blockObjects.push(sn);
+
+            layoutCanvas.add(...blockObjects);
+            previewObjects.replicas.push(...blockObjects);
+        }
     };
 
     const syncInputsFromObject = (object) => {
@@ -1076,14 +1203,16 @@ const initSkuTemplateConfigurationsForm = () => {
         updateSelectedElementSummary(object);
     };
 
-    const getPreviewTypeLabel = (previewType) => {
+    const getPreviewTypeLabel = (previewType, blockNumber = null) => {
         const labels = {
             qr: 'QR',
             sku: 'SKU',
             sn: labelTypeSelect?.value === 'rating' ? 'Rating' : 'SN',
         };
 
-        return labels[previewType] || previewType;
+        const label = labels[previewType] || previewType;
+
+        return blockNumber ? `${label} del bloque ${blockNumber}` : label;
     };
 
     const isObjectOutsideLabel = (object, metrics) => {
@@ -1117,9 +1246,16 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
-        const objectsToValidate = [previewObjects.qr, previewObjects.sku, previewObjects.sn].filter(Boolean);
+        const objectsToValidate = [
+            previewObjects.qr,
+            previewObjects.sku,
+            previewObjects.sn,
+            ...(previewObjects.replicas || []),
+        ].filter((object) => object?.data?.previewType);
         const outsideObjects = objectsToValidate.filter((object) => isObjectOutsideLabel(object, metrics));
-        const outsideLabels = outsideObjects.map((object) => getPreviewTypeLabel(object.data?.previewType));
+        const outsideLabels = outsideObjects.map((object) => (
+            getPreviewTypeLabel(object.data?.previewType, object.data?.blockNumber)
+        ));
 
         objectsToValidate.forEach((object) => {
             const isOutside = outsideObjects.includes(object);
@@ -1155,6 +1291,8 @@ const initSkuTemplateConfigurationsForm = () => {
             return;
         }
 
+        syncLayoutCanvasSize();
+
         if (!previewObjects) {
             previewObjects = createPreviewObjects();
         }
@@ -1178,6 +1316,8 @@ const initSkuTemplateConfigurationsForm = () => {
         const snFontSize = usesRatingTextLayout ? readInt('[name="serial_font_size"]', 40) : readInt('[name="sn_font_size"]', 22);
         const qrMagnification = Math.min(Math.max(readInt('[name="qr_magnification"]', 4), 1), 10);
         const qrSize = Math.max(72, qrMagnification * 34);
+        const serialBlockCount = Math.min(Math.max(readInt('[name="serial_block_count"]', 1), 1), 4);
+        const serialBlockOffsetY = Math.max(readInt('[name="serial_block_offset_y"]', 180), 0);
         const qrOrientation = getOrientationFromField('qr_orientation');
         const skuOrientation = getOrientationFromField('sku_orientation');
         const textOrientation = usesRatingTextLayout
@@ -1256,6 +1396,27 @@ const initSkuTemplateConfigurationsForm = () => {
 
         setObjectOrientation(previewObjects.sn, textOrientation);
 
+        renderRepeatedPreviewObjects({
+            blockCount: serialBlockCount,
+            blockOffsetY: serialBlockOffsetY,
+            metrics,
+            shouldRenderQr,
+            shouldRenderSku,
+            qrX,
+            qrY,
+            qrSize,
+            qrOrientation,
+            skuX,
+            skuY,
+            skuFontSize,
+            skuOrientation,
+            snX,
+            snY,
+            snFontSize,
+            snOrientation: textOrientation,
+            snLine,
+        });
+
         updateLayoutContext({
             labelType,
             usesRatingTextLayout,
@@ -1298,7 +1459,10 @@ const initSkuTemplateConfigurationsForm = () => {
         });
 
         layoutCanvas.on('object:moving', handleLayoutObjectMove);
-        layoutCanvas.on('object:modified', handleLayoutObjectMove);
+        layoutCanvas.on('object:modified', (event) => {
+            handleLayoutObjectMove(event);
+            updateLivePreview();
+        });
     }
 
     const buildTestZpl = () => {
@@ -1316,6 +1480,12 @@ const initSkuTemplateConfigurationsForm = () => {
         const serial = skuExampleSerial || defaultSerialByStandard[serialStandard] || defaultSerialUl;
         const serialPrint = serialStandard === 'EMEA' ? formatEmeaSerialForPrint(serial) : serial;
         const hideSkuOnEmeaRating = hideSkuOnRatingWithQr();
+        const physicalLabelCommands = buildPhysicalLabelCommands({
+            dpi: readInt('#template_dpi', 203),
+            widthMm: readFloat('#template_width_mm', 0),
+            heightMm: readFloat('#template_height_mm', 0),
+        });
+        const labelStart = ['^XA', '^CI28', ...physicalLabelCommands];
 
         if (labelType !== 'serial' && !isRatingWithQr) {
             const x = readInt('[name="serial_position_x"]', 40);
@@ -1324,8 +1494,7 @@ const initSkuTemplateConfigurationsForm = () => {
             const orientation = normalizeOrientation(document.querySelector('[name="serial_orientation"]')?.value, 'N');
 
             return [
-                '^XA',
-                '^CI28',
+                ...labelStart,
                 `^FO${x},${y}`,
                 `^A0${orientation},${fontSize},${fontSize}`,
                 `^FD${serialPrint}^FS`,
@@ -1352,10 +1521,7 @@ const initSkuTemplateConfigurationsForm = () => {
         const serialBlockCount = Math.min(Math.max(readInt('[name="serial_block_count"]', 1), 1), 4);
         const serialBlockOffsetY = Math.max(readInt('[name="serial_block_offset_y"]', 180), 0);
 
-        const zpl = [
-            '^XA',
-            '^CI28',
-        ];
+        const zpl = [...labelStart];
 
         const skuX = readInt('[name="sku_position_x"]', 170);
         const skuY = readInt('[name="sku_position_y"]', 35);
@@ -1508,6 +1674,25 @@ const initSkuTemplateConfigurationsForm = () => {
     testUsbButton?.addEventListener('click', connectUsb);
     testPrintButton?.addEventListener('click', runTestPrint);
     previewZplButton?.addEventListener('click', showZplPreview);
+
+    let layoutResizeFrame = null;
+    const scheduleLayoutCanvasResize = () => {
+        if (layoutResizeFrame !== null) {
+            window.cancelAnimationFrame(layoutResizeFrame);
+        }
+
+        layoutResizeFrame = window.requestAnimationFrame(() => {
+            layoutResizeFrame = null;
+            updateLivePreview();
+        });
+    };
+
+    if (layoutCanvasFrame && typeof window.ResizeObserver === 'function') {
+        const layoutResizeObserver = new window.ResizeObserver(scheduleLayoutCanvasResize);
+        layoutResizeObserver.observe(layoutCanvasFrame);
+    } else {
+        window.addEventListener('resize', scheduleLayoutCanvasResize);
+    }
 
     setSkuStandardFilter(serialStandardInput?.value || getSelectedSkuStandard());
     toggleConnectionFields();

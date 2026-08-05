@@ -1,5 +1,11 @@
 import Swal from '../lib/sweetalert';
 import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
+import {
+    applyZplKindOffsets,
+    parseZplElements,
+    parseZplLabelSize,
+    resolveCenteredLabelViewport,
+} from './label-layout/zpl';
 
 (() => {
     const root = document.getElementById('label-print-center');
@@ -273,36 +279,6 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         return alignmentFabricCanvas;
     };
 
-    const parseZplElements = (zpl) => {
-        const elements = [];
-        const blocks = String(zpl || '').match(/\^FO-?\d+,-?\d+[\s\S]*?\^FS/g) || [];
-
-        blocks.forEach((block, index) => {
-            const position = block.match(/\^FO(-?\d+),(-?\d+)/);
-            if (!position) return;
-
-            const x = Number(position[1]);
-            const y = Number(position[2]);
-            const isQr = /\^BQ[A-Z]?,/i.test(block);
-            const fieldData = block.match(/\^FD([\s\S]*?)\^FS/)?.[1] || (isQr ? 'QR' : 'Texto');
-            const font = block.match(/\^A0[A-Z]?,(\d+),(\d+)/i);
-            const qrMag = Number(block.match(/\^BQ[A-Z]?,\d+,(\d+)/i)?.[1] || 4);
-            const fontSize = Math.max(14, Math.min(72, Number(font?.[1] || 24)));
-
-            elements.push({
-                x,
-                y,
-                kind: isQr ? 'qr' : 'text',
-                label: isQr ? `QR ${index + 1}` : fieldData.replace(/^LA,/, '').slice(0, 34),
-                width: isQr ? Math.max(76, qrMag * 34) : Math.max(90, fieldData.length * (fontSize * 0.55)),
-                height: isQr ? Math.max(76, qrMag * 34) : fontSize + 16,
-                fontSize,
-            });
-        });
-
-        return elements;
-    };
-
     const getAlignmentDocuments = () => previewPayload?.alignment_documents?.length
         ? previewPayload.alignment_documents
         : (previewPayload?.documents || []);
@@ -439,6 +415,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
                     new Rect({
                         left: 0,
                         top: 0,
+                        originX: 'left',
+                        originY: 'top',
                         width,
                         height,
                         fill: ghost ? 'rgba(255,255,255,0.6)' : '#dbeafe',
@@ -459,6 +437,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
                 ], {
                     left: (element.x - minX) * metrics.scale,
                     top: (element.y - minY) * metrics.scale,
+                    originX: 'left',
+                    originY: 'top',
                     selectable: false,
                     evented: false,
                 });
@@ -467,6 +447,9 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
             return new Text(element.label || 'Texto', {
                 left: (element.x - minX) * metrics.scale,
                 top: (element.y - minY) * metrics.scale,
+                originX: 'left',
+                originY: 'top',
+                angle: element.angle || 0,
                 fontSize: Math.max(11, element.fontSize * metrics.scale),
                 fontFamily: 'Arial',
                 fill: ghost ? '#64748b' : '#0f172a',
@@ -480,6 +463,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         return new Group(objects, {
             left: basePoint.left + (offsetX * metrics.scale),
             top: basePoint.top + (offsetY * metrics.scale),
+            originX: 'left',
+            originY: 'top',
             subTargetCheck: false,
             selectable: !ghost,
             evented: !ghost,
@@ -505,8 +490,9 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         const canvasPadding = 18;
         const zpl = String(documentForType?.test_zpl || '');
         const size = documentForType?.label_size || {};
-        const zplWidth = Number(zpl.match(/\^PW(\d+)/i)?.[1] || 0);
-        const zplHeight = Number(zpl.match(/\^LL(\d+)/i)?.[1] || 0);
+        const zplSize = parseZplLabelSize(zpl);
+        const zplWidth = Number(zplSize.widthDots || 0);
+        const zplHeight = Number(zplSize.heightDots || 0);
         const contentWidth = Math.max(...elements.map((element) => element.x + element.width), 320) + 24;
         const contentHeight = Math.max(...elements.map((element) => element.y + element.height), 180) + 24;
         const configuredWidth = Number(size.width_dots || zplWidth || 0);
@@ -524,23 +510,24 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         });
 
         const movementMargin = Math.max(70, Math.round(Math.min(labelWidth, labelHeight) * 0.12));
-        const viewMinX = Math.min(...horizontalPositions) - movementMargin;
-        const viewMaxX = Math.max(...horizontalPositions) + movementMargin;
-        const viewMinY = Math.min(...verticalPositions) - movementMargin;
-        const viewMaxY = Math.max(...verticalPositions) + movementMargin;
-        const viewWidth = Math.max(1, viewMaxX - viewMinX);
-        const viewHeight = Math.max(1, viewMaxY - viewMinY);
+        const viewport = resolveCenteredLabelViewport({
+            labelWidth,
+            labelHeight,
+            horizontalPositions,
+            verticalPositions,
+            movementMargin,
+        });
         const scale = Math.min(
-            (canvas.getWidth() - (canvasPadding * 2)) / viewWidth,
-            (canvas.getHeight() - (canvasPadding * 2)) / viewHeight,
+            (canvas.getWidth() - (canvasPadding * 2)) / viewport.width,
+            (canvas.getHeight() - (canvasPadding * 2)) / viewport.height,
             2,
         );
-        const renderedViewWidth = viewWidth * scale;
-        const renderedViewHeight = viewHeight * scale;
+        const renderedViewWidth = viewport.width * scale;
+        const renderedViewHeight = viewport.height * scale;
         const viewOriginX = (canvas.getWidth() - renderedViewWidth) / 2;
         const viewOriginY = (canvas.getHeight() - renderedViewHeight) / 2;
-        const originX = viewOriginX - (viewMinX * scale);
-        const originY = viewOriginY - (viewMinY * scale);
+        const originX = viewOriginX - (viewport.minX * scale);
+        const originY = viewOriginY - (viewport.minY * scale);
 
         return {
             labelWidth,
@@ -612,6 +599,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         canvas.add(new Rect({
             left: metrics.originX,
             top: metrics.originY,
+            originX: 'left',
+            originY: 'top',
             width: metrics.labelWidth * metrics.scale,
             height: metrics.labelHeight * metrics.scale,
             fill: '#f8fafc',
@@ -626,6 +615,8 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         canvas.add(new Text('ÁREA DE ETIQUETA CONFIGURADA', {
             left: metrics.originX + 8,
             top: metrics.originY + 8,
+            originX: 'left',
+            originY: 'top',
             fontSize: 11,
             fontWeight: 'bold',
             fill: '#b45309',
@@ -760,8 +751,6 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         return true;
     };
 
-    const moveFO = (block, dx, dy) => block.replace(/\^FO(-?\d+),(-?\d+)/, (_m, x, y) => `^FO${Number(x)+dx},${Number(y)+dy}`);
-
     const applyAlignmentToZpl = (zpl, labelType) => {
         const a = getAlignment();
         const textDx = labelType === 'rating' ? a.rating_text_x : a.serial_text_x;
@@ -769,9 +758,9 @@ import { Canvas, Group, Rect, Text } from '../lib/fabric-setup';
         const qrDx = labelType === 'rating' ? a.rating_qr_x : a.serial_qr_x;
         const qrDy = labelType === 'rating' ? a.rating_qr_y : a.serial_qr_y;
 
-        return zpl.replace(/(\^FO-?\d+,-?\d+[\s\S]*?\^FS)/g, (block) => {
-            if (block.includes('^BQN')) return moveFO(block, qrDx, qrDy);
-            return moveFO(block, textDx, textDy);
+        return applyZplKindOffsets(zpl, {
+            text: { x: textDx, y: textDy },
+            qr: { x: qrDx, y: qrDy },
         });
     };
 

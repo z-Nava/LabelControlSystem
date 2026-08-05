@@ -319,9 +319,9 @@
                         </span>
                     </div>
 
-                    <div id="sku-layout-preview-canvas-frame" class="mt-4 overflow-x-auto rounded-2xl border border-dashed border-slate-300 bg-white p-3">
-                        <div class="flex min-w-[1120px] justify-center">
-                            <canvas id="sku-layout-preview-canvas" width="1120" height="520"></canvas>
+                    <div id="sku-layout-preview-canvas-frame" class="mt-4 overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-white p-3">
+                        <div class="flex w-full justify-center">
+                            <canvas id="sku-layout-preview-canvas" width="1120" height="520" role="img" aria-label="Vista previa interactiva del layout físico de la etiqueta Rating o Serial"></canvas>
                         </div>
                     </div>
                 </div>
