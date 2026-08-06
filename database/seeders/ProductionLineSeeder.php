@@ -28,7 +28,7 @@ class ProductionLineSeeder extends Seeder
                 'MXHP001', 'MXP002',
             ],
             'BATERIAS' => [
-                'MXB001', 'MXB002', 'MXB003', 'MXB004', 'MXB005', 'MXB006', 'MXB007',
+                'MXB001', 'MXB002', 'MXB003', 'MXB004', 'MXB004-Pre Coating', 'MXB004-Coating', 'MXB004-Post Coating', 'MXB005', 'MXB005-Pre Coating', 'MXB005-Coating', 'MXB005-Post Coating', 'MXB006', 'MXB007',
             ],
             'MOTORES' => [
                 'MXMS001', 'MXMS002', 'MXMS003', 'MXMS004',
