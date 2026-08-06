@@ -47,6 +47,60 @@ function initializeLineTypeFilter(fields) {
     applyFilter();
 }
 
+function initializeRequestTypeFilter(fields) {
+    const lineTypeSelect = fields.lineTypeSelect;
+    const requestType = fields.requestType;
+
+    if (!lineTypeSelect || !requestType) {
+        return;
+    }
+
+    const placeholderOption = Array.from(requestType.options).find((option) => option.value === '');
+    const requestTypeOptions = Array.from(requestType.options).filter((option) => option.value !== '');
+
+    const applyFilter = () => {
+        const selectedLineType = (lineTypeSelect.value || '').trim().toUpperCase();
+        const previousValue = requestType.value;
+        const allowedOptions = requestTypeOptions.filter((option) => {
+            const lineTypes = (option.dataset.lineTypes || '')
+                .split('|')
+                .map((lineType) => lineType.trim().toUpperCase())
+                .filter(Boolean);
+            const shouldShow = selectedLineType !== '' && lineTypes.includes(selectedLineType);
+
+            option.hidden = !shouldShow;
+            option.disabled = !shouldShow;
+
+            return shouldShow;
+        });
+
+        requestType.disabled = selectedLineType === '';
+
+        if (placeholderOption) {
+            placeholderOption.textContent = selectedLineType
+                ? 'Selecciona tipo de hoja master...'
+                : 'Selecciona primero el tipo de línea...';
+        }
+
+        const selectedOption = requestTypeOptions.find((option) => option.value === requestType.value);
+
+        if (!selectedOption || selectedOption.disabled) {
+            requestType.value = '';
+        }
+
+        if (allowedOptions.length === 1 && requestType.value === '') {
+            requestType.value = allowedOptions[0].value;
+        }
+
+        if (requestType.value !== previousValue) {
+            requestType.dispatchEvent(new Event('change'));
+        }
+    };
+
+    lineTypeSelect.addEventListener('change', applyFilter);
+    applyFilter();
+}
+
 function initializeLocalFromLine(fields) {
     const lineSelect = fields.lineSelect;
     const localInput = fields.localInput;
@@ -107,6 +161,7 @@ function initializeLocalFromLine(fields) {
     let isSubmitting = false;
 
     initializeLineTypeFilter(fields);
+    initializeRequestTypeFilter(fields);
     initializeLocalFromLine(fields);
 
     const debouncedAssemblyLookup = debounce(

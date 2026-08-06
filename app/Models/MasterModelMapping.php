@@ -18,6 +18,32 @@ class MasterModelMapping extends Model
         self::TYPE_MOTORS_MOLDING,
     ];
 
+    public const TYPES_BY_LINE_TYPE = [
+        'BATERIAS' => [
+            self::TYPE_BATTERIES_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
+        ],
+        'CONSOLAS' => [
+            self::TYPE_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
+        ],
+        'EMPAQUE' => [
+            self::TYPE_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
+        ],
+        'HIDRAULICOS' => [
+            self::TYPE_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
+        ],
+        'MX FUEL' => [
+            self::TYPE_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
+        ],
+        'MOTORES' => [
+            self::TYPE_MOTORS_MOLDING,
+        ],
+    ];
+
     protected $fillable = [
         'np',
         'sku',
@@ -38,5 +64,48 @@ class MasterModelMapping extends Model
             self::TYPE_MOTORS_MOLDING => 'MOTORES - MOLDEO',
             default => strtoupper($type),
         };
+    }
+
+    public static function requestLabelForType(string $type): string
+    {
+        return match ($type) {
+            self::TYPE_ASSEMBLY => 'HOJA MASTER - ENSAMBLE',
+            self::TYPE_ASSEMBLY_PACKAGING => 'HOJA MASTER ENSAMBLE - EMPAQUE',
+            self::TYPE_BATTERIES_ASSEMBLY => 'HOJA MASTER - ENSAMBLE BATERÍAS',
+            self::TYPE_MOTORS_MOLDING => 'HOJA MASTER - MOTORES - MOLDEO',
+            default => strtoupper($type),
+        };
+    }
+
+    public static function allowedTypesForLineType(string $lineType): array
+    {
+        return self::TYPES_BY_LINE_TYPE[strtoupper(trim($lineType))] ?? [];
+    }
+
+    public static function isAllowedForLineType(string $requestType, string $lineType): bool
+    {
+        return in_array($requestType, self::allowedTypesForLineType($lineType), true);
+    }
+
+    public static function requestOptions(): array
+    {
+        $options = [];
+
+        foreach (self::TYPES as $requestType) {
+            $lineTypes = [];
+
+            foreach (self::TYPES_BY_LINE_TYPE as $lineType => $allowedTypes) {
+                if (in_array($requestType, $allowedTypes, true)) {
+                    $lineTypes[] = $lineType;
+                }
+            }
+
+            $options[$requestType] = [
+                'label' => self::requestLabelForType($requestType),
+                'line_types' => $lineTypes,
+            ];
+        }
+
+        return $options;
     }
 }

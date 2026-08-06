@@ -75,7 +75,7 @@
                 <div>
                     <label class="text-sm text-slate-600">Tipo de línea</label>
                     <select id="lineTypeSelect"
-                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                         <option value="">Selecciona tipo de línea...</option>
                         @foreach($lines->pluck('line_type')->filter()->unique()->sort()->values() as $lineType)
                             <option value="{{ $lineType }}">
@@ -133,14 +133,17 @@
                 <label class="text-sm text-slate-600">Tipo de Master</label>
                 <select id="requestType" name="request_type"
                         class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                    <option value="">Selecciona...</option>
-                    <option value="assembly" @selected(old('request_type')=='assembly')>HOJA MASTER - ENSAMBLE</option>
-                    <option value="batteries_assembly" @selected(old('request_type')=='batteries_assembly')>HOJA MASTER - ENSAMBLE BATERÍAS</option>
-                    <option value="assembly_packaging" @selected(old('request_type')=='assembly_packaging')>HOJA MASTER - ENSAMBLE Y EMPAQUE</option>
-                    <option value="motors_molding" @selected(old('request_type')=='motors_molding')>HOJA MASTER - MOTORES Y MOLDEO</option>
+                    <option value="">Selecciona primero el tipo de línea...</option>
+                    @foreach($masterRequestTypes as $requestType => $requestTypeData)
+                        <option value="{{ $requestType }}"
+                                data-line-types="{{ implode('|', $requestTypeData['line_types']) }}"
+                                @selected(old('request_type') === $requestType)>
+                            {{ $requestTypeData['label'] }}
+                        </option>
+                    @endforeach
                 </select>
                 <p class="text-xs text-slate-500 mt-2">
-                    Tip: para “Ensamble y Empaque”, el Job de Empaque es obligatorio y el de Ensamble es opcional.
+                    Las opciones se muestran automáticamente según el tipo de línea seleccionado.
                 </p>
             </div>
         </details>

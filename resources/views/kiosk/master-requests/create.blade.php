@@ -63,7 +63,7 @@
                 <div>
                     <label class="text-sm font-medium text-slate-700">Tipo de línea</label>
                     <select id="lineTypeSelect"
-                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                         <option value="">Selecciona tipo de línea...</option>
                         @foreach($lines->pluck('line_type')->filter()->unique()->sort()->values() as $lineType)
                             <option value="{{ $lineType }}">
@@ -120,20 +120,23 @@
 
             <div class="border-t border-slate-200 p-5">
                 <div class="mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                    <span class="font-semibold">Qué debes hacer:</span> elige una opción según el área y el proceso que aparecerán en la hoja Master.
+                    <span class="font-semibold">Qué debes hacer:</span> selecciona el tipo de línea; aquí aparecerán únicamente los tipos de hoja Master permitidos.
                 </div>
 
                 <label class="text-sm font-medium text-slate-700">Tipo de Master</label>
                 <select id="requestType" name="request_type"
                         class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                    <option value="">Selecciona...</option>
-                    <option value="assembly" @selected(old('request_type')=='assembly')>HOJA MASTER - ENSAMBLE</option>
-                    <option value="batteries_assembly" @selected(old('request_type')=='batteries_assembly')>HOJA MASTER - ENSAMBLE BATERÍAS</option>
-                    <option value="assembly_packaging" @selected(old('request_type')=='assembly_packaging')>HOJA MASTER - ENSAMBLE Y EMPAQUE</option>
-                    <option value="motors_molding" @selected(old('request_type')=='motors_molding')>HOJA MASTER - MOTORES Y MOLDEO</option>
+                    <option value="">Selecciona primero el tipo de línea...</option>
+                    @foreach($masterRequestTypes as $requestType => $requestTypeData)
+                        <option value="{{ $requestType }}"
+                                data-line-types="{{ implode('|', $requestTypeData['line_types']) }}"
+                                @selected(old('request_type') === $requestType)>
+                            {{ $requestTypeData['label'] }}
+                        </option>
+                    @endforeach
                 </select>
                 <p class="text-xs text-slate-500 mt-2">
-                    Para “Ensamble y Empaque”, debes capturar el Job de Empaque. El Job de Ensamble es opcional.
+                    Si sólo existe una opción válida, el sistema la seleccionará automáticamente.
                 </p>
             </div>
         </details>

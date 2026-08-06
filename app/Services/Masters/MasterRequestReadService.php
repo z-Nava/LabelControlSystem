@@ -2,6 +2,7 @@
 
 namespace App\Services\Masters;
 
+use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\ProductionLine;
 use App\Models\Shift;
@@ -50,6 +51,7 @@ class MasterRequestReadService
         return [
             'lines' => ProductionLine::where('active', true)->orderBy('code')->get(),
             'shifts' => Shift::where('active', true)->orderBy('code')->get(),
+            'masterRequestTypes' => MasterModelMapping::requestOptions(),
         ];
     }
 

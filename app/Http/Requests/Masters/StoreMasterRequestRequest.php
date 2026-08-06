@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Masters;
 
+use App\Models\MasterModelMapping;
 use App\Models\OracleJob;
+use App\Models\ProductionLine;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -90,7 +92,23 @@ class StoreMasterRequestRequest extends FormRequest
             'partial_folio' => ['nullable', 'integer', 'min:1', 'required_with:partial_qty'],
             'partial_qty' => ['nullable', 'integer', 'min:1', 'required_with:partial_folio'],
 
-            'request_type' => ['required', Rule::in(['assembly', 'batteries_assembly', 'assembly_packaging', 'motors_molding'])],
+            'request_type' => [
+                'required',
+                Rule::in(MasterModelMapping::TYPES),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (!is_string($value) || !in_array($value, MasterModelMapping::TYPES, true)) {
+                        return;
+                    }
+
+                    $lineType = ProductionLine::query()
+                        ->whereKey($this->input('line_id'))
+                        ->value('line_type');
+
+                    if ($lineType && !MasterModelMapping::isAllowedForLineType($value, (string) $lineType)) {
+                        $fail('El tipo de hoja master no corresponde al tipo de línea seleccionado.');
+                    }
+                },
+            ],
             'kind' => ['required', 'in:new,reposition'],
 
             'notes' => ['nullable', 'string', 'max:1000', 'not_regex:' . self::NO_HTML_PATTERN],
