@@ -1,6 +1,11 @@
 import { debounce } from './utils/debounce';
 import { confirmSubmit } from './master-requests-create/confirmation';
 import { getMasterRequestElements } from './master-requests-create/dom';
+import {
+    getMasterRequestLineResult,
+    renderMasterRequestLineResult,
+    showMasterRequestLineAlert,
+} from './master-requests-create/line-match';
 import { createJobLookupHandler } from './master-requests-create/lookup';
 import { refreshPreview } from './master-requests-create/preview';
 import { attachValidationClearListeners, validateBeforeSubmit } from './master-requests-create/validation';
@@ -151,12 +156,17 @@ function initializeLocalFromLine(fields) {
         return;
     }
 
-    const { form, fields, preview, lookupUrl } = page;
+    const { form, fields, preview, lineMatchStatus, lookupUrl } = page;
     const jobLookupState = {
         assembly: null,
         packaging: null,
     };
-    const updatePreview = () => refreshPreview(fields, preview, jobLookupState);
+    let currentLineMatchResult = { status: 'idle', message: '' };
+    const updatePageState = () => {
+        refreshPreview(fields, preview, jobLookupState);
+        currentLineMatchResult = getMasterRequestLineResult(fields, jobLookupState);
+        renderMasterRequestLineResult(lineMatchStatus, currentLineMatchResult);
+    };
 
     let isSubmitting = false;
 
@@ -164,40 +174,43 @@ function initializeLocalFromLine(fields) {
     initializeRequestTypeFilter(fields);
     initializeLocalFromLine(fields);
 
-    const debouncedAssemblyLookup = debounce(
-        createJobLookupHandler({
-            inputElement: fields.jobAssembly,
-            hintElement: fields.hintAssembly,
-            qtyElement: fields.qtyAssembly,
-            lookupUrl,
-            fields,
-            refreshPreview: updatePreview,
-            role: 'assembly',
-            onResolved: (jobData) => {
-                jobLookupState.assembly = jobData;
-            },
-        }),
-        350,
-    );
+    const assemblyLookup = createJobLookupHandler({
+        inputElement: fields.jobAssembly,
+        hintElement: fields.hintAssembly,
+        qtyElement: fields.qtyAssembly,
+        lookupUrl,
+        fields,
+        refreshPreview: updatePageState,
+        role: 'assembly',
+        onResolved: (jobData) => {
+            jobLookupState.assembly = jobData;
+        },
+    });
+    const packagingLookup = createJobLookupHandler({
+        inputElement: fields.jobPackaging,
+        hintElement: fields.hintPackaging,
+        qtyElement: fields.qtyPackaging,
+        lookupUrl,
+        fields,
+        refreshPreview: updatePageState,
+        role: 'packaging',
+        onResolved: (jobData) => {
+            jobLookupState.packaging = jobData;
+        },
+    });
+    const debouncedAssemblyLookup = debounce(assemblyLookup, 350);
+    const debouncedPackagingLookup = debounce(packagingLookup, 350);
 
-    const debouncedPackagingLookup = debounce(
-        createJobLookupHandler({
-            inputElement: fields.jobPackaging,
-            hintElement: fields.hintPackaging,
-            qtyElement: fields.qtyPackaging,
-            lookupUrl,
-            fields,
-            refreshPreview: updatePreview,
-            role: 'packaging',
-            onResolved: (jobData) => {
-                jobLookupState.packaging = jobData;
-            },
-        }),
-        350,
-    );
-
-    fields.jobAssembly?.addEventListener('input', debouncedAssemblyLookup);
-    fields.jobPackaging?.addEventListener('input', debouncedPackagingLookup);
+    fields.jobAssembly?.addEventListener('input', () => {
+        jobLookupState.assembly = null;
+        updatePageState();
+        debouncedAssemblyLookup();
+    });
+    fields.jobPackaging?.addEventListener('input', () => {
+        jobLookupState.packaging = null;
+        updatePageState();
+        debouncedPackagingLookup();
+    });
 
     [
         fields.requestDate,
@@ -206,11 +219,9 @@ function initializeLocalFromLine(fields) {
         fields.localInput,
         fields.shiftSelect,
         fields.requestType,
-        fields.jobAssembly,
-        fields.jobPackaging,
     ].forEach((element) => {
-        element?.addEventListener('change', updatePreview);
-        element?.addEventListener('input', updatePreview);
+        element?.addEventListener('change', updatePageState);
+        element?.addEventListener('input', updatePageState);
     });
 
     attachValidationClearListeners(form);
@@ -227,6 +238,13 @@ function initializeLocalFromLine(fields) {
             return;
         }
 
+        updatePageState();
+
+        if (['pending', 'mismatch', 'unverifiable'].includes(currentLineMatchResult.status)) {
+            await showMasterRequestLineAlert(currentLineMatchResult);
+            return;
+        }
+
         const confirmed = await confirmSubmit(form, fields);
 
         if (!confirmed) {
@@ -237,5 +255,13 @@ function initializeLocalFromLine(fields) {
         form.submit();
     });
 
-    updatePreview();
+    updatePageState();
+
+    if ((fields.jobAssembly?.value || '').trim()) {
+        assemblyLookup();
+    }
+
+    if ((fields.jobPackaging?.value || '').trim()) {
+        packagingLookup();
+    }
 })();

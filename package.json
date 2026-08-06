@@ -4,8 +4,7 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite",
-        "test:js": "node --test resources/js/pages/dummy-print-center/zpl.test.js resources/js/pages/label-layout/zpl.test.js"
+        "dev": "vite"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.1.18",

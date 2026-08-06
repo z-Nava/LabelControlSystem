@@ -23,6 +23,10 @@ async function lookupJob(lookupUrl, jobNumber) {
         },
     });
 
+    if (!response.ok) {
+        throw new Error(`Oracle lookup failed with status ${response.status}`);
+    }
+
     return response.json();
 }
 
@@ -105,8 +109,27 @@ export function createJobLookupHandler({
             return;
         }
 
+        onResolved?.(null);
         setHint(hintElement, 'muted', 'Buscando en Oracle…');
-        const data = await lookupJob(lookupUrl, jobNumber);
+        let data;
+
+        try {
+            data = await lookupJob(lookupUrl, jobNumber);
+        } catch {
+            if ((inputElement?.value || '').trim() !== jobNumber) {
+                return;
+            }
+
+            inputElement?.setCustomValidity('No se pudo consultar el Job en Oracle. Intenta nuevamente.');
+            setHint(hintElement, 'warn', 'No se pudo consultar Oracle. Intenta nuevamente.');
+            setJobQtyText(qtyElement);
+            refreshPreview();
+            return;
+        }
+
+        if ((inputElement?.value || '').trim() !== jobNumber) {
+            return;
+        }
 
         if (!data.found) {
             inputElement?.setCustomValidity('No encontrado en Oracle Jobs.');

@@ -83,6 +83,9 @@
                             </option>
                         @endforeach
                     </select>
+                    @error('line_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div>
@@ -175,6 +178,14 @@
                            placeholder="Opcional">
                     <p id="jobPackagingQty" class="text-md text-slate-600 mt-2">Cantidad del job: —</p>
                     <p id="jobPackagingHint" class="text-xs text-slate-500 mt-2"></p>
+                </div>
+
+                <div id="lineMatchStatus"
+                     class="hidden rounded-xl border px-4 py-3 text-sm md:col-span-2"
+                     role="status"
+                     aria-live="polite">
+                    <p id="lineMatchStatusTitle" class="font-semibold"></p>
+                    <p id="lineMatchStatusMessage" class="mt-1"></p>
                 </div>
 
                 <div class="md:col-span-2">

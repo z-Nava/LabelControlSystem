@@ -5,13 +5,18 @@ namespace App\Http\Requests\Masters;
 use App\Models\MasterModelMapping;
 use App\Models\OracleJob;
 use App\Models\ProductionLine;
+use App\Services\Masters\MasterRequestLineValidationService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreMasterRequestRequest extends FormRequest
 {
     private ?OracleJobService $oracleJobService = null;
+
+    private ?MasterRequestLineValidationService $lineValidationService = null;
+
     private const NO_HTML_PATTERN = '/<[^>]*>/';
 
     public function authorize(): bool
@@ -28,7 +33,7 @@ class StoreMasterRequestRequest extends FormRequest
             'shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'leader_name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
 
-            'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:' . self::NO_HTML_PATTERN],
+            'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'job_assembly' => [
                 Rule::requiredIf(function (): bool {
                     return $this->string('request_type')->toString() !== 'assembly_packaging';
@@ -37,20 +42,21 @@ class StoreMasterRequestRequest extends FormRequest
                 'string',
                 'max:40',
                 'regex:/^[0-9A-Za-z\-]+$/',
-                'not_regex:' . self::NO_HTML_PATTERN,
+                'not_regex:'.self::NO_HTML_PATTERN,
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (!is_string($value) || trim($value) === '') {
+                    if (! is_string($value) || trim($value) === '') {
                         return;
                     }
 
                     $job = $this->findOracleJob($value);
 
-                    if (!$job) {
+                    if (! $job) {
                         $fail('El Job Ensamble no existe en Oracle Jobs.');
+
                         return;
                     }
 
-                    if (!$this->isAssemblyJob($job)) {
+                    if (! $this->isAssemblyJob($job)) {
                         $fail('El Job Ensamble debe pertenecer a Ensamble/Subensamble (103/130) o a Motores-Moldeo (MEXMI/MXM).');
                     }
                 },
@@ -63,27 +69,28 @@ class StoreMasterRequestRequest extends FormRequest
                 'string',
                 'max:40',
                 'regex:/^[0-9A-Za-z\-]+$/',
-                'not_regex:' . self::NO_HTML_PATTERN,
+                'not_regex:'.self::NO_HTML_PATTERN,
                 'different:job_assembly',
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (!is_string($value) || trim($value) === '') {
+                    if (! is_string($value) || trim($value) === '') {
                         return;
                     }
 
                     $job = $this->findOracleJob($value);
 
-                    if (!$job) {
+                    if (! $job) {
                         $fail('El Job Empaque no existe en Oracle Jobs.');
+
                         return;
                     }
 
-                    if (!$this->isPackagingJob($job)) {
+                    if (! $this->isPackagingJob($job)) {
                         $fail('El Job Empaque debe pertenecer a Empaque (assembly 018/055/001).');
                     }
                 },
             ],
-            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:' . self::NO_HTML_PATTERN],
-            'local' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9\-._]+$/', 'not_regex:' . self::NO_HTML_PATTERN],
+            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
+            'local' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9\-._]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
 
             'folios_from' => ['required', 'integer', 'min:1'],
             'folios_to' => ['required', 'integer', 'min:1', 'gte:folios_from'],
@@ -96,7 +103,7 @@ class StoreMasterRequestRequest extends FormRequest
                 'required',
                 Rule::in(MasterModelMapping::TYPES),
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (!is_string($value) || !in_array($value, MasterModelMapping::TYPES, true)) {
+                    if (! is_string($value) || ! in_array($value, MasterModelMapping::TYPES, true)) {
                         return;
                     }
 
@@ -104,14 +111,14 @@ class StoreMasterRequestRequest extends FormRequest
                         ->whereKey($this->input('line_id'))
                         ->value('line_type');
 
-                    if ($lineType && !MasterModelMapping::isAllowedForLineType($value, (string) $lineType)) {
+                    if ($lineType && ! MasterModelMapping::isAllowedForLineType($value, (string) $lineType)) {
                         $fail('El tipo de hoja master no corresponde al tipo de línea seleccionado.');
                     }
                 },
             ],
             'kind' => ['required', 'in:new,reposition'],
 
-            'notes' => ['nullable', 'string', 'max:1000', 'not_regex:' . self::NO_HTML_PATTERN],
+            'notes' => ['nullable', 'string', 'max:1000', 'not_regex:'.self::NO_HTML_PATTERN],
         ];
     }
 
@@ -130,9 +137,49 @@ class StoreMasterRequestRequest extends FormRequest
         ]);
     }
 
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                foreach (['line_id', 'request_type', 'job_assembly', 'job_packaging'] as $field) {
+                    if ($validator->errors()->has($field)) {
+                        return;
+                    }
+                }
+
+                $selectedLine = ProductionLine::query()->find($this->integer('line_id'));
+
+                if (! $selectedLine) {
+                    return;
+                }
+
+                $assemblyJob = $this->filled('job_assembly')
+                    ? $this->findOracleJob($this->string('job_assembly')->toString())
+                    : null;
+                $packagingJob = $this->filled('job_packaging')
+                    ? $this->findOracleJob($this->string('job_packaging')->toString())
+                    : null;
+
+                $message = $this->lineValidationService()->validationError(
+                    $selectedLine,
+                    $this->string('request_type')->toString(),
+                    $assemblyJob,
+                    $packagingJob,
+                );
+
+                if ($message) {
+                    $validator->errors()->add('line_id', $message);
+                }
+            },
+        ];
+    }
+
     private function cleanInput(mixed $value): ?string
     {
-        if (!is_scalar($value)) {
+        if (! is_scalar($value)) {
             return null;
         }
 
@@ -158,10 +205,19 @@ class StoreMasterRequestRequest extends FormRequest
 
     private function oracleJobService(): OracleJobService
     {
-        if (!$this->oracleJobService) {
+        if (! $this->oracleJobService) {
             $this->oracleJobService = app(OracleJobService::class);
         }
 
         return $this->oracleJobService;
+    }
+
+    private function lineValidationService(): MasterRequestLineValidationService
+    {
+        if (! $this->lineValidationService) {
+            $this->lineValidationService = app(MasterRequestLineValidationService::class);
+        }
+
+        return $this->lineValidationService;
     }
 }

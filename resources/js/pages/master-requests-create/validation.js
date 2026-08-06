@@ -1,16 +1,17 @@
 import { clearCustomValidity, getFieldValue } from './dom';
 
-const VALIDATED_FIELDS = ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty', 'po_number', 'destination', 'local', 'notes'];
+const CLEAR_ON_INPUT_FIELDS = ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty', 'po_number', 'destination', 'local', 'notes'];
+const RESET_BEFORE_VALIDATION_FIELDS = ['folios_to', 'partial_folio', 'partial_qty', 'po_number', 'destination', 'local', 'notes'];
 const NO_HTML_PATTERN = /<[^>]*>/;
 const SAFE_TEXT_PATTERN = /^[A-Za-z0-9\-/_\s.]+$/;
 const SAFE_JOB_PATTERN = /^[0-9A-Za-z-]+$/;
 
 export function clearValidationErrors(form) {
-    VALIDATED_FIELDS.forEach((fieldName) => clearCustomValidity(form, fieldName));
+    RESET_BEFORE_VALIDATION_FIELDS.forEach((fieldName) => clearCustomValidity(form, fieldName));
 }
 
 export function attachValidationClearListeners(form) {
-    VALIDATED_FIELDS.forEach((fieldName) => {
+    CLEAR_ON_INPUT_FIELDS.forEach((fieldName) => {
         form.elements.namedItem(fieldName)?.addEventListener('input', () => clearCustomValidity(form, fieldName));
     });
 }

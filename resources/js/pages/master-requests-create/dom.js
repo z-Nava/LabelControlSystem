@@ -30,6 +30,11 @@ export function getMasterRequestElements() {
             jobs: document.getElementById('previewJobs'),
             type: document.getElementById('previewType'),
         },
+        lineMatchStatus: {
+            container: document.getElementById('lineMatchStatus'),
+            title: document.getElementById('lineMatchStatusTitle'),
+            message: document.getElementById('lineMatchStatusMessage'),
+        },
     };
 }
 
