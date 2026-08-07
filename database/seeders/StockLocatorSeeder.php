@@ -133,11 +133,40 @@ class StockLocatorSeeder extends Seeder
             ['subinventory' => 'WIP', 'stock_locator' => 'WIP-MOTORS'],
         ];
 
+        $batteryLineLocators = [
+            'MXB001' => 'SMARKET-1',
+            'MXB002' => 'MXB002',
+            'MXB003' => 'MXB003',
+            'MXB004' => 'SMARKET-1',
+            'MXB005' => 'SMARKET-1',
+            'MXB006' => 'SMARKET-1',
+            'MXB007' => 'SMARKET-1',
+            'MXB006-PRE COATING' => 'MXB006',
+            'MXB004-COATING' => 'MXB004',
+            'MXB004-POST COATING' => 'SMARKET-1',
+            'MXB004-PRE COATING' => 'MXB004',
+            'MXB005-COATING' => 'MXB004',
+            'MXB005-POST COATING' => 'SMARKET-1',
+            'MXB005-PRE COATING' => 'MXB004',
+        ];
+
+        foreach ($batteryLineLocators as $oracleLine => $stockLocator) {
+            $rows[] = [
+                'subinventory' => 'WIP',
+                'stock_locator' => $oracleLine,
+            ];
+        }
+
         foreach ($rows as $row) {
+            $oracleLine = strtoupper(trim($row['stock_locator']));
+
             StockLocator::updateOrCreate(
-                ['stock_locator' => $row['stock_locator']],
+                ['oracle_line' => $oracleLine],
                 [
-                    'subinventory' => $row['subinventory'],
+                    'subinventory' => isset($batteryLineLocators[$oracleLine])
+                        ? 'WIP'
+                        : $row['subinventory'],
+                    'stock_locator' => $batteryLineLocators[$oracleLine] ?? $oracleLine,
                     'active' => true,
                 ]
             );

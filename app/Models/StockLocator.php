@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class StockLocator extends Model
 {
     protected $fillable = [
-        'stock_locator',
+        'oracle_line',
         'subinventory',
+        'stock_locator',
         'active',
     ];
 

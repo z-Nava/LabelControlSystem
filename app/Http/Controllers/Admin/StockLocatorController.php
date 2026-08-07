@@ -12,9 +12,7 @@ use Illuminate\View\View;
 
 class StockLocatorController extends Controller
 {
-    public function __construct(private readonly StockLocatorService $service)
-    {
-    }
+    public function __construct(private readonly StockLocatorService $service) {}
 
     public function index(): View
     {
@@ -34,7 +32,7 @@ class StockLocatorController extends Controller
         $this->service->create($request->validated());
 
         return redirect()->route('stock_locators.index')
-            ->with('success', 'Local/Línea creada correctamente.');
+            ->with('success', 'Destino de inventario creado correctamente.');
     }
 
     public function edit(StockLocator $stock_locator): View
@@ -47,7 +45,7 @@ class StockLocatorController extends Controller
         $this->service->update($stock_locator, $request->validated());
 
         return redirect()->route('stock_locators.index')
-            ->with('success', 'Local/Línea actualizada correctamente.');
+            ->with('success', 'Destino de inventario actualizado correctamente.');
     }
 
     public function toggle(StockLocator $stock_locator): RedirectResponse

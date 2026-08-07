@@ -15,7 +15,8 @@ function getConfirmationHtml(form, fields) {
     const leader = getFieldValue(form, 'leader_name') || '—';
     const date = getFieldValue(form, 'request_date') || '—';
     const line = getSelectedText(fields.lineSelect) || '—';
-    const local = getFieldValue(form, 'local') || '—';
+    const local = (fields.localInput?.value || '').trim() || '—';
+    const subinventory = (fields.subinventoryInput?.value || '').trim() || '—';
     const assemblyJob = getFieldValue(form, 'job_assembly') || '—';
     const packagingJob = getFieldValue(form, 'job_packaging') || '—';
     const type = getFieldValue(form, 'request_type')
@@ -40,6 +41,7 @@ function getConfirmationHtml(form, fields) {
             <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
             <p><strong>Línea:</strong> ${escapeHtml(line)}</p>
             <p><strong>Local:</strong> ${escapeHtml(local)}</p>
+            <p><strong>Subinventory:</strong> ${escapeHtml(subinventory)}</p>
             <p><strong>Jobs:</strong> ${escapeHtml(assemblyJob)} / ${escapeHtml(packagingJob)}</p>
             <p><strong>Tipo de Master:</strong> ${escapeHtml(type)}</p>
             <p><strong>Folios:</strong> ${escapeHtml(folios)}</p>

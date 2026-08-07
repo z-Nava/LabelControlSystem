@@ -94,7 +94,13 @@
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                         <option value="">Selecciona linea...</option>
                         @foreach($lines as $line)
-                            <option value="{{ $line->id }}" data-line-type="{{ $line->line_type }}" data-line-code="{{ $line->code }}" @selected(old('line_id') == $line->id)>
+                            @php($inventoryMapping = $inventoryMappings->get(strtoupper(trim($line->code))))
+                            <option value="{{ $line->id }}"
+                                    data-line-type="{{ $line->line_type }}"
+                                    data-line-code="{{ $line->code }}"
+                                    data-stock-locator="{{ $inventoryMapping?->stock_locator ?? '' }}"
+                                    data-subinventory="{{ $inventoryMapping?->subinventory ?? '' }}"
+                                    @selected(old('line_id') == $line->id)>
                                 {{ $line->code }}
                             </option>
                         @endforeach
@@ -188,11 +194,19 @@
                     <p id="lineMatchStatusMessage" class="mt-1"></p>
                 </div>
 
-                <div class="md:col-span-2">
-                    <label class="text-sm text-slate-600">Local</label>
-                    <input id="localInput" name="local" value="{{ old('local') }}" maxlength="20"
-                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-600"
-                           placeholder="Se autollenará según el tipo de hoja master y la línea">
+                <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-slate-600">Stock Locator (Local)</label>
+                        <input id="localInput" value="{{ old('local') }}" maxlength="40" readonly
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700"
+                               placeholder="Se resolverá desde Locals by Oracle Line">
+                    </div>
+                    <div>
+                        <label class="text-sm text-slate-600">Subinventory</label>
+                        <input id="subinventoryInput" maxlength="20" readonly
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700"
+                               placeholder="Se resolverá desde Locals by Oracle Line">
+                    </div>
                 </div>
 
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">

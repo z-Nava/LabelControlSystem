@@ -11,11 +11,12 @@ class StockLocatorService
     {
         return StockLocator::query()
             ->when($search, function ($q) use ($search) {
-                $q->where('stock_locator', 'like', "%{$search}%")
+                $q->where('oracle_line', 'like', "%{$search}%")
+                    ->orWhere('stock_locator', 'like', "%{$search}%")
                     ->orWhere('subinventory', 'like', "%{$search}%");
             })
             ->orderBy('active', 'desc')
-            ->orderBy('stock_locator')
+            ->orderBy('oracle_line')
             ->paginate($perPage)
             ->withQueryString();
     }
@@ -34,32 +35,33 @@ class StockLocatorService
 
     public function toggleActive(StockLocator $stockLocator): StockLocator
     {
-        $stockLocator->update(['active' => !$stockLocator->active]);
+        $stockLocator->update(['active' => ! $stockLocator->active]);
 
         return $stockLocator;
     }
 
-    public function resolveSubinventoryByStockLocator(?string $stockLocator): ?string
+    public function resolveSubinventoryByOracleLine(?string $oracleLine): ?string
     {
-        return $this->resolveActiveMappingByStockLocator($stockLocator)?->subinventory;
+        return $this->resolveActiveMappingByOracleLine($oracleLine)?->subinventory;
     }
 
-    public function resolveActiveMappingByStockLocator(?string $stockLocator): ?StockLocator
+    public function resolveActiveMappingByOracleLine(?string $oracleLine): ?StockLocator
     {
-        if (!$stockLocator) {
+        if (! $oracleLine) {
             return null;
         }
 
         return StockLocator::query()
-            ->where('stock_locator', strtoupper(trim($stockLocator)))
+            ->where('oracle_line', strtoupper(trim($oracleLine)))
             ->where('active', true)
             ->first();
     }
 
     private function normalize(array $data, bool $defaultActive): array
     {
-        $data['stock_locator'] = strtoupper(trim($data['stock_locator']));
+        $data['oracle_line'] = strtoupper(trim($data['oracle_line']));
         $data['subinventory'] = strtoupper(trim($data['subinventory']));
+        $data['stock_locator'] = strtoupper(trim($data['stock_locator']));
         $data['active'] = (bool) ($data['active'] ?? $defaultActive);
 
         return $data;

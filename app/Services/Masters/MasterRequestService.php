@@ -22,8 +22,8 @@ class MasterRequestService
         return DB::transaction(function () use ($data) {
 
             $foliosFrom = (int) ($data['folios_from'] ?? 0);
-            $foliosTo   = (int) ($data['folios_to'] ?? 0);
-            $hasPartialData = !empty($data['partial_folio']) && !empty($data['partial_qty']);
+            $foliosTo = (int) ($data['folios_to'] ?? 0);
+            $hasPartialData = ! empty($data['partial_folio']) && ! empty($data['partial_qty']);
 
             if ($foliosFrom < 1 || $foliosTo < $foliosFrom) {
                 throw ValidationException::withMessages([
@@ -39,25 +39,31 @@ class MasterRequestService
                 $data['partial_qty'] = null;
             }
 
-            $oracleJob = !empty($data['job_assembly'])
+            $oracleJob = ! empty($data['job_assembly'])
                 ? $this->oracleJobService->findByJobNumber($data['job_assembly'])
                 : null;
 
-            $manualLocal = strtoupper(trim((string) ($data['local'] ?? '')));
-            $lineDefaultLocal = strtoupper(trim((string) ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')));
-            $oracleStockLocator = strtoupper(trim((string) ($oracleJob?->line ?? '')));
-            $requestType = (string) ($data['request_type'] ?? '');
+            $selectedOracleLine = $this->normalize(
+                ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')
+            );
+            $jobOracleLine = $this->normalize($oracleJob?->line);
+            $oracleLine = $selectedOracleLine !== '' ? $selectedOracleLine : $jobOracleLine;
+            $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
+            $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
+            $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
 
-            $data['local'] = match ($requestType) {
-                'assembly' => 'SMARKET-1',
-                'motors_molding' => 'WIP-MOTORS',
-                'batteries_assembly', 'assembly_packaging' => $lineDefaultLocal !== ''
-                    ? $lineDefaultLocal
-                    : ($manualLocal !== '' ? $manualLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null)),
-                default => $manualLocal !== ''
-                    ? $manualLocal
-                    : ($lineDefaultLocal !== '' ? $lineDefaultLocal : ($oracleStockLocator !== '' ? $oracleStockLocator : null)),
-            };
+            if ($oracleLine === '' || $resolvedLocal === '' || $resolvedSubinventory === '') {
+                throw ValidationException::withMessages([
+                    'line_id' => sprintf(
+                        'La Oracle Line %s no tiene un destino completo configurado en Locals by Oracle Line.',
+                        $oracleLine !== '' ? $oracleLine : 'seleccionada',
+                    ),
+                ]);
+            }
+
+            $data['oracle_line'] = $oracleLine;
+            $data['subinventory'] = $resolvedSubinventory;
+            $data['local'] = $resolvedLocal;
 
             $mr = MasterRequest::create($data);
 
@@ -93,5 +99,10 @@ class MasterRequestService
     public function lookupOracleJob(string $jobNumber): array
     {
         return $this->oracleJobService->buildLookupPayload($jobNumber);
+    }
+
+    private function normalize(mixed $value): string
+    {
+        return strtoupper(trim((string) $value));
     }
 }

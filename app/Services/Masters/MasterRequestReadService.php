@@ -6,6 +6,7 @@ use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\ProductionLine;
 use App\Models\Shift;
+use App\Models\StockLocator;
 
 class MasterRequestReadService
 {
@@ -48,10 +49,16 @@ class MasterRequestReadService
 
     public function buildCreateFormData(): array
     {
+        $inventoryMappings = StockLocator::query()
+            ->where('active', true)
+            ->get()
+            ->keyBy(fn (StockLocator $mapping): string => strtoupper(trim($mapping->oracle_line)));
+
         return [
             'lines' => ProductionLine::where('active', true)->orderBy('code')->get(),
             'shifts' => Shift::where('active', true)->orderBy('code')->get(),
             'masterRequestTypes' => MasterModelMapping::requestOptions(),
+            'inventoryMappings' => $inventoryMappings,
         ];
     }
 

@@ -77,6 +77,14 @@ class MasterPrintService
             $sheetSnapshotsByFolioId = $this->buildSheetsForRequest($masterRequest, $folios)
                 ->keyBy('folio_id');
 
+            if ($sheetSnapshotsByFolioId->contains(
+                fn (array $sheet): bool => $sheet['subinventory'] === '' || $sheet['local'] === ''
+            )) {
+                throw ValidationException::withMessages([
+                    'folio_ids' => 'No se puede imprimir: falta configurar Subinventory o Stock Locator en Locals by Oracle Line.',
+                ]);
+            }
+
             foreach ($folios as $folio) {
                 MasterRequestBatchItem::create([
                     'master_print_batch_id' => $batch->id,
@@ -165,9 +173,26 @@ class MasterPrintService
 
             $isMotors = ($masterRequest->request_type ?? '') === 'motors_molding';
             $isAssemblyPackaging = ($masterRequest->request_type ?? '') === 'assembly_packaging';
-            $oracleLine = strtoupper(trim((string) ($oracle?->line ?? $oraclePackaging?->line ?? $masterRequest->line?->code ?? '')));
-            $resolvedLocal = $masterRequest->local ? strtoupper(trim((string) $masterRequest->local)) : $oracleLine;
-            $mapping = $this->stockLocatorService->resolveActiveMappingByStockLocator($resolvedLocal);
+            $oracleLine = strtoupper(trim((string) (
+                $masterRequest->oracle_line
+                ?? $oracle?->line
+                ?? $oraclePackaging?->line
+                ?? $masterRequest->line?->code
+                ?? ''
+            )));
+            $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
+            $resolvedLocal = strtoupper(trim((string) (
+                $masterRequest->local
+                ?? $lineMapping?->stock_locator
+                ?? $oracleLine
+            )));
+            $localMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($resolvedLocal);
+            $resolvedSubinventory = strtoupper(trim((string) (
+                $masterRequest->subinventory
+                ?? $lineMapping?->subinventory
+                ?? $localMapping?->subinventory
+                ?? ''
+            )));
             $requestType = (string) ($masterRequest->request_type ?? '');
             $mappedModel = $requestType === 'assembly_packaging'
                 ? $this->masterModelMappingService->resolveModelFromJobs($requestType, $npPackaging, $np)
@@ -176,8 +201,8 @@ class MasterPrintService
                 ? (string) ($mappedModel ?? '')
                 : (string) ($mappedModel ?? $masterRequest->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
 
-            $lote = $job !== '' ? ($job . '-' . $folioNo) : '';
-            $lotePackaging = $jobPackaging !== '' ? ($jobPackaging . '-' . $folioNo) : '';
+            $lote = $job !== '' ? ($job.'-'.$folioNo) : '';
+            $lotePackaging = $jobPackaging !== '' ? ($jobPackaging.'-'.$folioNo) : '';
 
             return [
                 'leader' => (string) $masterRequest->leader_name,
@@ -200,8 +225,8 @@ class MasterPrintService
                 'destination' => (string) ($masterRequest->destination ?? ''),
 
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
-                'subinventory' => (string) ($mapping?->subinventory ?? ''),
-                'local' => (string) ($resolvedLocal ?? ''),
+                'subinventory' => $resolvedSubinventory,
+                'local' => $resolvedLocal,
                 'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($masterRequest->line?->code ?? '') : 'SMARKET-1'),
                 'qty_pallet' => (string) ($folio->qty_for_folio ?? $masterRequest->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];

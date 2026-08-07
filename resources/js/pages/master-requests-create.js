@@ -106,47 +106,40 @@ function initializeRequestTypeFilter(fields) {
     applyFilter();
 }
 
-function initializeLocalFromLine(fields) {
+function initializeInventoryDestination(fields) {
     const lineSelect = fields.lineSelect;
     const localInput = fields.localInput;
-    const requestType = fields.requestType;
+    const subinventoryInput = fields.subinventoryInput;
 
-    if (!lineSelect || !localInput || !requestType) {
+    if (!lineSelect || !localInput || !subinventoryInput) {
         return;
     }
 
-    const getSelectedLineCode = () => {
+    const getSelectedLineMapping = () => {
         const selectedLineOption = lineSelect.selectedOptions?.[0];
-        return (selectedLineOption?.dataset.lineCode || selectedLineOption?.textContent || '').trim();
+
+        return {
+            oracleLine: (selectedLineOption?.dataset.lineCode || selectedLineOption?.textContent || '').trim(),
+            stockLocator: (selectedLineOption?.dataset.stockLocator || '').trim(),
+            subinventory: (selectedLineOption?.dataset.subinventory || '').trim(),
+        };
     };
 
-    const applyDefaultLocal = () => {
-        const requestTypeValue = (requestType.value || '').trim();
-        let defaultLocal = '';
+    const applyInventoryDestination = () => {
+        const mapping = getSelectedLineMapping();
 
-        if (requestTypeValue === 'assembly') {
-            defaultLocal = 'SMARKET-1';
-        } else if (requestTypeValue === 'motors_molding') {
-            defaultLocal = 'WIP-MOTORS';
-        } else if (requestTypeValue === 'batteries_assembly' || requestTypeValue === 'assembly_packaging') {
-            defaultLocal = getSelectedLineCode();
-        }
-
-        const localValue = (localInput.value || '').trim();
-        const lastAutoValue = localInput.dataset.lastAutoValue || '';
-        const canOverride = localValue === '' || localValue === lastAutoValue;
-
-        if (!canOverride && requestTypeValue !== 'assembly' && requestTypeValue !== 'motors_molding') {
-            return;
-        }
-
-        localInput.value = defaultLocal;
-        localInput.dataset.lastAutoValue = defaultLocal;
+        localInput.value = mapping.stockLocator;
+        subinventoryInput.value = mapping.subinventory;
+        localInput.placeholder = mapping.oracleLine && !mapping.stockLocator
+            ? 'Sin mapeo en Locals by Oracle Line'
+            : 'Se resolverá desde Locals by Oracle Line';
+        subinventoryInput.placeholder = mapping.oracleLine && !mapping.subinventory
+            ? 'Sin mapeo en Locals by Oracle Line'
+            : 'Se resolverá desde Locals by Oracle Line';
     };
 
-    lineSelect.addEventListener('change', applyDefaultLocal);
-    requestType.addEventListener('change', applyDefaultLocal);
-    applyDefaultLocal();
+    lineSelect.addEventListener('change', applyInventoryDestination);
+    applyInventoryDestination();
 }
 
 (function () {
@@ -172,7 +165,7 @@ function initializeLocalFromLine(fields) {
 
     initializeLineTypeFilter(fields);
     initializeRequestTypeFilter(fields);
-    initializeLocalFromLine(fields);
+    initializeInventoryDestination(fields);
 
     const assemblyLookup = createJobLookupHandler({
         inputElement: fields.jobAssembly,

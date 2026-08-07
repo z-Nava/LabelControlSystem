@@ -22,6 +22,8 @@ class MasterRequest extends Model
         'job_assembly',
         'job_packaging',
         'destination',
+        'oracle_line',
+        'subinventory',
         'local',
         'folios_from',
         'folios_to',

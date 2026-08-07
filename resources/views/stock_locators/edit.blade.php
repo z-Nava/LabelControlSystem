@@ -1,9 +1,9 @@
-@extends('layouts.app', ['title' => 'Editar mapeo Local/Línea'])
+@extends('layouts.app', ['title' => 'Editar destino por Oracle Line'])
 
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-semibold">Editar mapeo Local/Línea</h1>
+        <h1 class="text-2xl font-semibold">Editar destino por Oracle Line</h1>
         <a href="{{ route('stock_locators.index') }}" class="text-slate-600 hover:text-slate-900">Volver</a>
     </div>
 

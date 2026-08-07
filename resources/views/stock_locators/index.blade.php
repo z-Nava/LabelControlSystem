@@ -5,7 +5,7 @@
     <div class="flex items-start justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Locals by Oracle Line</h1>
-            <p class="text-slate-600 mt-1">Catálogo único para mapear STOCK_LOCATOR (línea Oracle/local) contra SUBINVENTORY en todas las hojas master.</p>
+            <p class="text-slate-600 mt-1">Define el Subinventory y Stock Locator (Local) que corresponde a cada Oracle Line en las hojas master.</p>
         </div>
 
         <a href="{{ route('stock_locators.create') }}"
@@ -23,7 +23,7 @@
     <form class="mt-5 flex gap-2" method="GET" action="{{ route('stock_locators.index') }}">
         <input name="q" value="{{ $search }}"
                class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="Buscar por stock locator o local..." />
+               placeholder="Buscar por Oracle Line, Subinventory o Stock Locator..." />
         <button class="rounded-xl bg-slate-900 text-white px-4 py-2 hover:bg-slate-800 transition">
             Buscar
         </button>
@@ -33,8 +33,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-slate-500 border-b">
-                    <th class="py-3 pr-3">STOCK_LOCATOR (Local)</th>
-                    <th class="py-3 pr-3">SUBINVENTORY</th>
+                    <th class="py-3 pr-3">Oracle Line</th>
+                    <th class="py-3 pr-3">Subinventory</th>
+                    <th class="py-3 pr-3">Stock Locator (Local)</th>
                     <th class="py-3 pr-3">Activo</th>
                     <th class="py-3 text-right">Acciones</th>
                 </tr>
@@ -42,8 +43,9 @@
             <tbody class="divide-y">
                 @forelse($stockLocators as $stockLocator)
                     <tr>
-                        <td class="py-3 pr-3 font-semibold text-slate-900">{{ $stockLocator->stock_locator }}</td>
+                        <td class="py-3 pr-3 font-semibold text-slate-900">{{ $stockLocator->oracle_line }}</td>
                         <td class="py-3 pr-3">{{ $stockLocator->subinventory }}</td>
+                        <td class="py-3 pr-3">{{ $stockLocator->stock_locator }}</td>
                         <td class="py-3 pr-3">
                             @if($stockLocator->active)
                                 <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-green-800">Sí</span>
@@ -69,7 +71,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="py-6 text-center text-slate-500">
+                        <td colspan="5" class="py-6 text-center text-slate-500">
                             No hay mapeos registrados.
                         </td>
                     </tr>

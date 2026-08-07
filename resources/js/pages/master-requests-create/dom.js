@@ -13,6 +13,7 @@ export function getMasterRequestElements() {
             lineTypeSelect: document.getElementById('lineTypeSelect'),
             lineSelect: document.getElementById('lineSelect'),
             localInput: document.getElementById('localInput'),
+            subinventoryInput: document.getElementById('subinventoryInput'),
             shiftSelect: document.getElementById('shiftSelect'),
             requestType: document.getElementById('requestType'),
             jobAssembly: document.getElementById('jobAssembly'),

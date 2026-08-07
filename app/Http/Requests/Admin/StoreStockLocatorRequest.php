@@ -14,8 +14,9 @@ class StoreStockLocatorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'stock_locator' => ['required', 'string', 'max:40', 'unique:stock_locators,stock_locator'],
+            'oracle_line' => ['required', 'string', 'max:40', 'unique:stock_locators,oracle_line'],
             'subinventory' => ['required', 'string', 'max:20'],
+            'stock_locator' => ['required', 'string', 'max:40'],
             'active' => ['nullable', 'boolean'],
         ];
     }
