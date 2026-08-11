@@ -134,6 +134,7 @@
 
                 <label class="text-sm font-medium text-slate-700">Tipo de Master</label>
                 <select id="requestType" name="request_type"
+                        data-ort-assembly-type="{{ \App\Models\MasterModelMapping::TYPE_ORT_ASSEMBLY }}"
                         class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                     <option value="">Selecciona primero el tipo de línea...</option>
                     @foreach($masterRequestTypes as $requestType => $requestTypeData)
@@ -194,14 +195,16 @@
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="text-sm font-medium text-slate-700">Stock Locator (Local)</label>
-                        <input id="localInput" value="{{ old('local') }}" maxlength="40" readonly
-                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700"
+                        <input id="localInput" name="local" value="{{ old('local') }}" maxlength="20" pattern="^[A-Za-z0-9\-._]+$"
+                               data-ort-default-value="{{ \App\Models\MasterModelMapping::ORT_DEFAULT_LOCAL }}" readonly
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600"
                                placeholder="Se resolverá desde Locals by Oracle Line">
                     </div>
                     <div>
                         <label class="text-sm font-medium text-slate-700">Subinventory</label>
-                        <input id="subinventoryInput" maxlength="20" readonly
-                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700"
+                        <input id="subinventoryInput" name="subinventory" value="{{ old('subinventory') }}" maxlength="20" pattern="^[A-Za-z0-9\-._]+$"
+                               data-ort-default-value="{{ \App\Models\MasterModelMapping::ORT_DEFAULT_SUBINVENTORY }}" readonly
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600"
                                placeholder="Se resolverá desde Locals by Oracle Line">
                     </div>
                 </div>

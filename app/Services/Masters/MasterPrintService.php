@@ -2,6 +2,7 @@
 
 namespace App\Services\Masters;
 
+use App\Models\MasterModelMapping;
 use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestBatchItem;
@@ -116,9 +117,10 @@ class MasterPrintService
     protected function resolveTemplateView(?string $requestType): string
     {
         return match ($requestType) {
-            'batteries_assembly' => 'master_print.templates.batteries_assembly',
-            'motors_molding' => 'master_print.templates.motors_molding',
-            'assembly_packaging' => 'master_print.templates.assembly_packaging',
+            MasterModelMapping::TYPE_ORT_ASSEMBLY => 'master_print.templates.ort_assembly',
+            MasterModelMapping::TYPE_BATTERIES_ASSEMBLY => 'master_print.templates.batteries_assembly',
+            MasterModelMapping::TYPE_MOTORS_MOLDING => 'master_print.templates.motors_molding',
+            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING => 'master_print.templates.assembly_packaging',
             default => 'master_print.templates.assembly',
         };
     }
@@ -171,8 +173,8 @@ class MasterPrintService
             $desc = (string) ($oracle?->part_description ?? '');
             $descPackaging = (string) ($oraclePackaging?->part_description ?? '');
 
-            $isMotors = ($masterRequest->request_type ?? '') === 'motors_molding';
-            $isAssemblyPackaging = ($masterRequest->request_type ?? '') === 'assembly_packaging';
+            $isMotors = ($masterRequest->request_type ?? '') === MasterModelMapping::TYPE_MOTORS_MOLDING;
+            $isAssemblyPackaging = ($masterRequest->request_type ?? '') === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING;
             $oracleLine = strtoupper(trim((string) (
                 $masterRequest->oracle_line
                 ?? $oracle?->line
@@ -194,7 +196,7 @@ class MasterPrintService
                 ?? ''
             )));
             $requestType = (string) ($masterRequest->request_type ?? '');
-            $mappedModel = $requestType === 'assembly_packaging'
+            $mappedModel = $requestType === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING
                 ? $this->masterModelMappingService->resolveModelFromJobs($requestType, $npPackaging, $np)
                 : $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
             $resolvedModel = $isAssemblyPackaging

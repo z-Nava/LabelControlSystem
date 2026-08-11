@@ -45,7 +45,7 @@ class MasterModelMappingService
 
     public function toggleActive(MasterModelMapping $mapping): MasterModelMapping
     {
-        $mapping->update(['active' => !$mapping->active]);
+        $mapping->update(['active' => ! $mapping->active]);
 
         return $mapping;
     }
@@ -55,30 +55,31 @@ class MasterModelMappingService
         $targetType = $requestType;
         $lookupNp = null;
 
-        if (in_array($requestType, [MasterModelMapping::TYPE_ASSEMBLY, MasterModelMapping::TYPE_ASSEMBLY_PACKAGING], true)) {
+        if (in_array($requestType, [
+            MasterModelMapping::TYPE_ASSEMBLY,
+            MasterModelMapping::TYPE_ORT_ASSEMBLY,
+            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING,
+        ], true)) {
             $lookupNp = $this->normalizeValue($packagingNp) ?? $this->normalizeValue($assemblyNp);
-            $targetType = $requestType;
+            $targetType = $requestType === MasterModelMapping::TYPE_ORT_ASSEMBLY
+                ? MasterModelMapping::TYPE_ASSEMBLY
+                : $requestType;
         } elseif (in_array($requestType, [MasterModelMapping::TYPE_BATTERIES_ASSEMBLY, MasterModelMapping::TYPE_MOTORS_MOLDING], true)) {
             $lookupNp = $this->normalizeValue($assemblyNp);
         }
 
-        if (!$lookupNp || !in_array($targetType, MasterModelMapping::TYPES, true)) {
+        if (! $lookupNp || ! in_array($targetType, MasterModelMapping::TYPES, true)) {
             return null;
         }
 
-        $mapping = MasterModelMapping::query()
-            ->where('master_sheet_type', $targetType)
-            ->where('np', $lookupNp)
-            ->where('active', true)
-            ->orderByDesc('id')
-            ->first();
+        $mapping = $this->findActiveMapping($targetType, $lookupNp);
 
         return $mapping?->sku;
     }
 
     public function importFromExcel(UploadedFile $file, ?string $forcedType = null): array
     {
-        $rows = Excel::toArray(new MasterModelMappingsImport(), $file)[0] ?? [];
+        $rows = Excel::toArray(new MasterModelMappingsImport, $file)[0] ?? [];
 
         $inserted = 0;
         $updated = 0;
@@ -89,13 +90,15 @@ class MasterModelMappingService
                 $normalized = MasterModelMappingsImport::normalizeRow($row);
                 $resolvedType = $forcedType ?? $normalized['master_sheet_type'];
 
-                if (!$normalized['np'] || !$normalized['sku'] || !$resolvedType || !in_array($resolvedType, MasterModelMapping::TYPES, true)) {
+                if (! $normalized['np'] || ! $normalized['sku'] || ! $resolvedType || ! in_array($resolvedType, MasterModelMapping::TYPES, true)) {
                     $skipped++;
+
                     continue;
                 }
 
                 if ($forcedType && $normalized['master_sheet_type'] && $normalized['master_sheet_type'] !== $forcedType) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -133,6 +136,16 @@ class MasterModelMappingService
             'master_sheet_type' => $type,
             'active' => (bool) ($data['active'] ?? $defaultActive),
         ];
+    }
+
+    protected function findActiveMapping(string $type, string $np): ?MasterModelMapping
+    {
+        return MasterModelMapping::query()
+            ->where('master_sheet_type', $type)
+            ->where('np', $np)
+            ->where('active', true)
+            ->orderByDesc('id')
+            ->first();
     }
 
     private function normalizeValue(mixed $value): ?string

@@ -90,7 +90,22 @@ class StoreMasterRequestRequest extends FormRequest
                 },
             ],
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
-            'local' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9\-._]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
+            'local' => [
+                Rule::requiredIf(fn (): bool => $this->isOrtAssemblyRequest()),
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^[A-Za-z0-9\-._]+$/',
+                'not_regex:'.self::NO_HTML_PATTERN,
+            ],
+            'subinventory' => [
+                Rule::requiredIf(fn (): bool => $this->isOrtAssemblyRequest()),
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^[A-Za-z0-9\-._]+$/',
+                'not_regex:'.self::NO_HTML_PATTERN,
+            ],
 
             'folios_from' => ['required', 'integer', 'min:1'],
             'folios_to' => ['required', 'integer', 'min:1', 'gte:folios_from'],
@@ -101,9 +116,9 @@ class StoreMasterRequestRequest extends FormRequest
 
             'request_type' => [
                 'required',
-                Rule::in(MasterModelMapping::TYPES),
+                Rule::in(MasterModelMapping::REQUEST_TYPES),
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! is_string($value) || ! in_array($value, MasterModelMapping::TYPES, true)) {
+                    if (! is_string($value) || ! in_array($value, MasterModelMapping::REQUEST_TYPES, true)) {
                         return;
                     }
 
@@ -125,6 +140,7 @@ class StoreMasterRequestRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $local = $this->cleanInput($this->input('local', ''));
+        $subinventory = $this->cleanInput($this->input('subinventory', ''));
 
         $this->merge([
             'leader_name' => $this->cleanInput($this->input('leader_name', '')),
@@ -132,7 +148,8 @@ class StoreMasterRequestRequest extends FormRequest
             'job_assembly' => $this->cleanInput($this->input('job_assembly', '')),
             'job_packaging' => $this->cleanInput($this->input('job_packaging', '')),
             'destination' => $this->cleanInput($this->input('destination', '')),
-            'local' => $local !== '' ? strtoupper($local) : null,
+            'local' => $local !== null ? strtoupper($local) : null,
+            'subinventory' => $subinventory !== null ? strtoupper($subinventory) : null,
             'notes' => $this->cleanInput($this->input('notes', '')),
         ]);
     }
@@ -186,6 +203,11 @@ class StoreMasterRequestRequest extends FormRequest
         $cleaned = trim(strip_tags((string) $value));
 
         return $cleaned === '' ? null : $cleaned;
+    }
+
+    private function isOrtAssemblyRequest(): bool
+    {
+        return $this->string('request_type')->toString() === MasterModelMapping::TYPE_ORT_ASSEMBLY;
     }
 
     private function findOracleJob(string $jobNumber): ?OracleJob

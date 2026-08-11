@@ -2,6 +2,7 @@
 
 namespace App\Services\Masters;
 
+use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
 use App\Models\ProductionLine;
@@ -48,9 +49,16 @@ class MasterRequestService
             );
             $jobOracleLine = $this->normalize($oracleJob?->line);
             $oracleLine = $selectedOracleLine !== '' ? $selectedOracleLine : $jobOracleLine;
-            $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
-            $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
-            $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
+            $isOrtAssembly = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ORT_ASSEMBLY;
+
+            if ($isOrtAssembly) {
+                $resolvedLocal = $this->normalize($data['local'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_LOCAL;
+                $resolvedSubinventory = $this->normalize($data['subinventory'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_SUBINVENTORY;
+            } else {
+                $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
+                $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
+                $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
+            }
 
             if ($oracleLine === '' || $resolvedLocal === '' || $resolvedSubinventory === '') {
                 throw ValidationException::withMessages([

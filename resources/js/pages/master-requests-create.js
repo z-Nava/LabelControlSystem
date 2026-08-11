@@ -110,10 +110,14 @@ function initializeInventoryDestination(fields) {
     const lineSelect = fields.lineSelect;
     const localInput = fields.localInput;
     const subinventoryInput = fields.subinventoryInput;
+    const requestType = fields.requestType;
 
-    if (!lineSelect || !localInput || !subinventoryInput) {
+    if (!lineSelect || !localInput || !subinventoryInput || !requestType) {
         return;
     }
+
+    const ortAssemblyType = requestType.dataset.ortAssemblyType;
+    let previousRequestType = requestType.value;
 
     const getSelectedLineMapping = () => {
         const selectedLineOption = lineSelect.selectedOptions?.[0];
@@ -125,7 +129,7 @@ function initializeInventoryDestination(fields) {
         };
     };
 
-    const applyInventoryDestination = () => {
+    const applyMappedInventoryDestination = () => {
         const mapping = getSelectedLineMapping();
 
         localInput.value = mapping.stockLocator;
@@ -138,8 +142,47 @@ function initializeInventoryDestination(fields) {
             : 'Se resolverá desde Locals by Oracle Line';
     };
 
-    lineSelect.addEventListener('change', applyInventoryDestination);
-    applyInventoryDestination();
+    const setOrtFieldState = (isOrtAssembly) => {
+        [localInput, subinventoryInput].forEach((input) => {
+            input.readOnly = !isOrtAssembly;
+            input.required = isOrtAssembly;
+            input.classList.toggle('bg-slate-100', !isOrtAssembly);
+            input.classList.toggle('bg-white', isOrtAssembly);
+        });
+    };
+
+    const applyRequestTypeInventoryDestination = () => {
+        const currentRequestType = requestType.value;
+        const isOrtAssembly = currentRequestType === ortAssemblyType;
+        const switchedToOrtAssembly = isOrtAssembly && previousRequestType !== ortAssemblyType;
+
+        setOrtFieldState(isOrtAssembly);
+
+        if (isOrtAssembly) {
+            if (switchedToOrtAssembly || !localInput.value.trim()) {
+                localInput.value = localInput.dataset.ortDefaultValue || '';
+            }
+
+            if (switchedToOrtAssembly || !subinventoryInput.value.trim()) {
+                subinventoryInput.value = subinventoryInput.dataset.ortDefaultValue || '';
+            }
+
+            localInput.placeholder = 'Editable para Ensamble ORT';
+            subinventoryInput.placeholder = 'Editable para Ensamble ORT';
+        } else {
+            applyMappedInventoryDestination();
+        }
+
+        previousRequestType = currentRequestType;
+    };
+
+    lineSelect.addEventListener('change', () => {
+        if (requestType.value !== ortAssemblyType) {
+            applyMappedInventoryDestination();
+        }
+    });
+    requestType.addEventListener('change', applyRequestTypeInventoryDestination);
+    applyRequestTypeInventoryDestination();
 }
 
 (function () {

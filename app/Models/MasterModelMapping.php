@@ -7,12 +7,29 @@ use Illuminate\Database\Eloquent\Model;
 class MasterModelMapping extends Model
 {
     public const TYPE_ASSEMBLY = 'assembly';
+
+    public const TYPE_ORT_ASSEMBLY = 'ort_assembly';
+
     public const TYPE_ASSEMBLY_PACKAGING = 'assembly_packaging';
+
     public const TYPE_BATTERIES_ASSEMBLY = 'batteries_assembly';
+
     public const TYPE_MOTORS_MOLDING = 'motors_molding';
+
+    public const ORT_DEFAULT_SUBINVENTORY = 'QUARANTINE';
+
+    public const ORT_DEFAULT_LOCAL = 'RELIABILITY';
 
     public const TYPES = [
         self::TYPE_ASSEMBLY,
+        self::TYPE_ASSEMBLY_PACKAGING,
+        self::TYPE_BATTERIES_ASSEMBLY,
+        self::TYPE_MOTORS_MOLDING,
+    ];
+
+    public const REQUEST_TYPES = [
+        self::TYPE_ASSEMBLY,
+        self::TYPE_ORT_ASSEMBLY,
         self::TYPE_ASSEMBLY_PACKAGING,
         self::TYPE_BATTERIES_ASSEMBLY,
         self::TYPE_MOTORS_MOLDING,
@@ -25,18 +42,22 @@ class MasterModelMapping extends Model
         ],
         'CONSOLAS' => [
             self::TYPE_ASSEMBLY,
+            self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
         'EMPAQUE' => [
             self::TYPE_ASSEMBLY,
+            self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
         'HIDRAULICOS' => [
             self::TYPE_ASSEMBLY,
+            self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
         'MX FUEL' => [
             self::TYPE_ASSEMBLY,
+            self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
         'MOTORES' => [
@@ -59,6 +80,7 @@ class MasterModelMapping extends Model
     {
         return match ($type) {
             self::TYPE_ASSEMBLY => 'ENSAMBLE',
+            self::TYPE_ORT_ASSEMBLY => 'ENSAMBLE ORT',
             self::TYPE_ASSEMBLY_PACKAGING => 'ENSAMBLE - EMPAQUE',
             self::TYPE_BATTERIES_ASSEMBLY => 'BATERÍAS',
             self::TYPE_MOTORS_MOLDING => 'MOTORES - MOLDEO',
@@ -70,6 +92,7 @@ class MasterModelMapping extends Model
     {
         return match ($type) {
             self::TYPE_ASSEMBLY => 'HOJA MASTER - ENSAMBLE',
+            self::TYPE_ORT_ASSEMBLY => 'HOJA MASTER - ENSAMBLE ORT',
             self::TYPE_ASSEMBLY_PACKAGING => 'HOJA MASTER ENSAMBLE - EMPAQUE',
             self::TYPE_BATTERIES_ASSEMBLY => 'HOJA MASTER - ENSAMBLE BATERÍAS',
             self::TYPE_MOTORS_MOLDING => 'HOJA MASTER - MOTORES - MOLDEO',
@@ -91,7 +114,7 @@ class MasterModelMapping extends Model
     {
         $options = [];
 
-        foreach (self::TYPES as $requestType) {
+        foreach (self::REQUEST_TYPES as $requestType) {
             $lineTypes = [];
 
             foreach (self::TYPES_BY_LINE_TYPE as $lineType => $allowedTypes) {
