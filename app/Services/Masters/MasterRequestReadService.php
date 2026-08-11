@@ -58,6 +58,7 @@ class MasterRequestReadService
             'lines' => ProductionLine::where('active', true)->orderBy('code')->get(),
             'shifts' => Shift::where('active', true)->orderBy('code')->get(),
             'masterRequestTypes' => MasterModelMapping::requestOptions(),
+            'ortAssemblyConfig' => MasterModelMapping::ortAssemblyRequestConfiguration(),
             'inventoryMappings' => $inventoryMappings,
         ];
     }

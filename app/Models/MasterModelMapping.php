@@ -131,4 +131,13 @@ class MasterModelMapping extends Model
 
         return $options;
     }
+
+    public static function ortAssemblyRequestConfiguration(): array
+    {
+        return [
+            'type' => self::TYPE_ORT_ASSEMBLY,
+            'default_local' => self::ORT_DEFAULT_LOCAL,
+            'default_subinventory' => self::ORT_DEFAULT_SUBINVENTORY,
+        ];
+    }
 }
