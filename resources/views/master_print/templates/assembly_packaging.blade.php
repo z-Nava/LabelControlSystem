@@ -144,154 +144,167 @@
 
             <div class="col-span-3 p-2">
                 <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Custom PO</div>
-                <div class="mt-1 text-[11px] font-semibold text-black break-all">
+                <div class="mt-1 text-[14px] font-semibold text-black break-all">
                     {{ $s['po_number'] ?? '' }}
                 </div>
             </div>
         </div>
 
-        {{-- ENSAMBLE / EMPAQUE CON QR --}}
-        <div class="border-b border-black">
-            {{-- FILA 1 --}}
-            <div class="grid grid-cols-12 border-b border-black">
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Ensamble</div>
-                    <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
-                        {{ $s['job'] ?? '' }}
+        {{-- JOBS CON QR --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-6 border-r border-black">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-8 border-r border-black p-2.5">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Ensamble</div>
+                        <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
+                            {{ $s['job'] ?? '' }}
+                        </div>
                     </div>
-                </div>
-                <div class="col-span-2 border-r border-black p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Ensamble</div>
-                    <div class="qr-box mt-1 flex min-h-[17mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['job'] ?? '' }}"></div>
-                    </div>
-                </div>
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">NP Empaque</div>
-                    <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
-                        {{ $s['np_packaging'] ?? '' }}
-                    </div>
-                    <div class="mt-1.5 text-[9px] leading-snug text-slate-700">
-                        {{ $s['desc_packaging'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Empaque</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['np_packaging'] ?? '' }}"></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- FILA 2 --}}
-            <div class="grid grid-cols-12 border-b border-black">
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">NP Ensamble</div>
-                    <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
-                        {{ $s['np'] ?? '' }}
-                    </div>
-                    <div class="mt-1.5 text-[9px] leading-snug text-slate-700">
-                        {{ $s['desc'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 border-r border-black p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Ensamble</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['np'] ?? '' }}"></div>
-                    </div>
-                </div>
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Lote Empaque</div>
-                    <div class="mt-1 text-[19px] font-extrabold text-black break-all">
-                        {{ $s['lote_packaging'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Empaque</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['lote_packaging'] ?? '' }}"></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- FILA 3 --}}
-            <div class="grid grid-cols-12 border-b border-black">
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Lote Ensamble</div>
-                    <div class="mt-1 text-[19px] font-extrabold text-black break-all">
-                        {{ $s['lote'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 border-r border-black p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Ensamble</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['lote'] ?? '' }}"></div>
-                    </div>
-                </div>
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Custom PO</div>
-                    <div class="mt-1 text-[10px] font-semibold text-black break-all">
-                        {{ $s['po_number'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Custom PO</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        @if(!empty($s['po_number']))
+                    <div class="col-span-4 p-1.5 text-center">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Ensamble</div>
+                        <div class="qr-box mt-1 flex min-h-[17mm] items-center justify-center">
                             <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
                                  data-size="60"
-                                 data-value="{{ $s['po_number'] }}"></div>
-                        @endif
+                                 data-value="{{ $s['job'] ?? '' }}"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {{-- FILA 4 --}}
-            <div class="grid grid-cols-12">
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Empaque</div>
-                    <div class="mt-1 text-[19px] font-extrabold leading-none text-black break-all">
-                        {{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}
+            <div class="col-span-6">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-8 border-r border-black p-2.5">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Job Empaque</div>
+                        <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
+                            {{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}
+                        </div>
                     </div>
-                </div>
-                <div class="col-span-2 border-r border-black p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Empaque</div>
-                    <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
-                        <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
-                             data-size="60"
-                             data-value="{{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}"></div>
-                    </div>
-                </div>
-                <div class="col-span-4 border-r border-black p-2.5">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
-                    <div class="mt-1 text-[12px] font-bold text-black">
-                        {{ $s['qty_pallet'] ?? '' }}
-                    </div>
-                </div>
-                <div class="col-span-2 p-1.5 text-center">
-                    <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
-                    <div class="qr-box mt-1 flex min-h-[15mm] items-center justify-center">
-                        @if(!empty($s['qty_pallet']))
-                            <div class="js-qr h-[13mm] w-[13mm] overflow-hidden"
-                                 data-size="56"
-                                 data-value="{{ $s['qty_pallet'] }}"></div>
-                        @endif
+                    <div class="col-span-4 p-1.5 text-center">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Job Empaque</div>
+                        <div class="qr-box mt-1 flex min-h-[17mm] items-center justify-center">
+                            <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                 data-size="60"
+                                 data-value="{{ $s['job_packaging'] ?? ($s['job_pack'] ?? '') }}"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- UBICACION / OBSERVACIONES --}}
+        {{-- ENSAMBLE / EMPAQUE CON QR --}}
+        <div class="grid grid-cols-12 border-b border-black">
+            <div class="col-span-6 border-r border-black">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-8 border-r border-black p-2.5">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                            NP Ensamble
+                        </div>
+                        <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
+                            {{ $s['np'] ?? '' }}
+                        </div>
+                        <div class="mt-1.5 text-[9px] leading-snug text-slate-700">
+                            {{ $s['desc'] ?? '' }}
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                                Lote Ensamble
+                            </div>
+                            <div class="mt-1 text-[11px] font-extrabold text-black break-all">
+                                {{ $s['lote'] ?? '' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-4 p-1.5">
+                        <div class="text-center">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Ensamble</div>
+                            <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
+                                <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                     data-size="60"
+                                     data-value="{{ $s['np'] ?? '' }}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Ensamble</div>
+                            <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
+                                <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                     data-size="60"
+                                     data-value="{{ $s['lote'] ?? '' }}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-6">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-8 border-r border-black p-2.5">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                            NP Empaque
+                        </div>
+                        <div class="mt-1 text-[19px] font-extrabold leading-none text-black">
+                            {{ $s['np_packaging'] ?? '' }}
+                        </div>
+                        <div class="mt-1.5 text-[9px] leading-snug text-slate-700">
+                            {{ $s['desc_packaging'] ?? '' }}
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                                Lote Empaque
+                            </div>
+                            <div class="mt-1 text-[11px] font-extrabold text-black break-all">
+                                {{ $s['lote_packaging'] ?? '' }}
+                            </div>
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">
+                                Custom PO
+                            </div>
+                            <div class="mt-1 text-[15px] font-semibold text-black break-all">
+                                {{ $s['po_number'] ?? '' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-span-4 p-1.5">
+                        <div class="text-center">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR NP Empaque</div>
+                            <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
+                                <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                     data-size="60"
+                                     data-value="{{ $s['np_packaging'] ?? '' }}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Lote Empaque</div>
+                            <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
+                                <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                     data-size="60"
+                                     data-value="{{ $s['lote_packaging'] ?? '' }}"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-2 border-t border-dashed border-slate-400 pt-1.5 text-center">
+                            <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Custom PO</div>
+                            <div class="qr-box mt-1 flex min-h-[16mm] items-center justify-center">
+                                @if(!empty($s['po_number']))
+                                    <div class="js-qr h-[14mm] w-[14mm] overflow-hidden"
+                                         data-size="60"
+                                         data-value="{{ $s['po_number'] }}"></div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- UBICACION / CONTROL --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black">
                 <div class="grid grid-cols-12">
@@ -333,7 +346,28 @@
                 </div>
             </div>
 
-            <div class="col-span-6 p-2">
+            <div class="col-span-3 border-r border-black">
+                <div class="grid grid-cols-12">
+                    <div class="col-span-7 border-r border-black p-2">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
+                        <div class="mt-1 text-[12px] font-bold text-black">
+                            {{ $s['qty_pallet'] ?? '' }}
+                        </div>
+                    </div>
+                    <div class="col-span-5 p-1.5 text-center">
+                        <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
+                        <div class="qr-box mt-1 flex min-h-[15mm] items-center justify-center">
+                            @if(!empty($s['qty_pallet']))
+                                <div class="js-qr h-[13mm] w-[13mm] overflow-hidden"
+                                     data-size="56"
+                                     data-value="{{ $s['qty_pallet'] }}"></div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-3 p-2">
                 <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Observaciones</div>
             </div>
         </div>
