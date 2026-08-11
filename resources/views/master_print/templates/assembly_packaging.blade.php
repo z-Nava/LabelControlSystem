@@ -36,6 +36,15 @@
             margin: 0 auto !important;
         }
 
+        .qr-direction-arrow {
+            position: absolute;
+            right: 2mm;
+            bottom: 2.5mm;
+            width: 12mm;
+            height: 4mm;
+            pointer-events: none;
+        }
+
         @media screen {
             body {
                 background: #e5e7eb;
@@ -307,12 +316,17 @@
         {{-- UBICACION / CONTROL --}}
         <div class="grid grid-cols-12 border-b border-black">
             <div class="col-span-3 border-r border-black">
-                <div class="grid grid-cols-12">
-                    <div class="col-span-7 border-r border-black p-2">
+                <div class="grid h-full grid-cols-12">
+                    <div class="relative col-span-7 border-r border-black p-2">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Subinventory</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['subinventory'] ?? '' }}
                         </div>
+                        <svg class="qr-direction-arrow" viewBox="0 0 48 16" aria-hidden="true" focusable="false">
+                            <path d="M2 8H42M35 2L42 8L35 14"
+                                  fill="none" stroke="#000000" stroke-width="4"
+                                  stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
                     </div>
                     <div class="col-span-5 p-1.5 text-center">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Subinventory</div>
@@ -326,12 +340,17 @@
             </div>
 
             <div class="col-span-3 border-r border-black">
-                <div class="grid grid-cols-12">
-                    <div class="col-span-7 border-r border-black p-2">
+                <div class="grid h-full grid-cols-12">
+                    <div class="relative col-span-7 border-r border-black p-2">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Local</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['local'] ?? '' }}
                         </div>
+                        <svg class="qr-direction-arrow" viewBox="0 0 48 16" aria-hidden="true" focusable="false">
+                            <path d="M2 8H42M35 2L42 8L35 14"
+                                  fill="none" stroke="#000000" stroke-width="4"
+                                  stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
                     </div>
                     <div class="col-span-5 p-1.5 text-center">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Local</div>
@@ -347,12 +366,17 @@
             </div>
 
             <div class="col-span-3 border-r border-black">
-                <div class="grid grid-cols-12">
-                    <div class="col-span-7 border-r border-black p-2">
+                <div class="grid h-full grid-cols-12">
+                    <div class="relative col-span-7 border-r border-black p-2">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">Qty pallet</div>
                         <div class="mt-1 text-[12px] font-bold text-black">
                             {{ $s['qty_pallet'] ?? '' }}
                         </div>
+                        <svg class="qr-direction-arrow" viewBox="0 0 48 16" aria-hidden="true" focusable="false">
+                            <path d="M2 8H42M35 2L42 8L35 14"
+                                  fill="none" stroke="#000000" stroke-width="4"
+                                  stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
                     </div>
                     <div class="col-span-5 p-1.5 text-center">
                         <div class="text-[12px] font-bold uppercase tracking-wide text-slate-500">QR Qty pallet</div>
