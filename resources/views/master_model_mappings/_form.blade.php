@@ -19,6 +19,7 @@
 
     <div class="md:col-span-2">
         <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="hidden" name="active" value="0">
             <input type="checkbox" name="active" value="1"
                    class="rounded border-slate-300"
                    {{ old('active', ($mapping->active ?? true)) ? 'checked' : '' }}>
