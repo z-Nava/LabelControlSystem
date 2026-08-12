@@ -197,9 +197,13 @@ class MasterPrintService
             )));
             $requestType = (string) ($masterRequest->request_type ?? '');
             $mappedModel = $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
-            $resolvedModel = $isAssemblyPackaging
-                ? (string) ($mappedModel ?? '')
-                : (string) ($mappedModel ?? $masterRequest->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');
+            $resolvedModel = $this->resolveModelForSheet(
+                $requestType,
+                $mappedModel,
+                $masterRequest->job_description,
+                $oracle?->job_description,
+                $oraclePackaging?->job_description,
+            );
 
             $lote = $job !== '' ? ($job.'-'.$folioNo) : '';
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging.'-'.$folioNo) : '';
@@ -231,5 +235,26 @@ class MasterPrintService
                 'qty_pallet' => (string) ($folio->qty_for_folio ?? $masterRequest->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();
+    }
+
+    protected function resolveModelForSheet(
+        string $requestType,
+        ?string $mappedModel,
+        ?string $requestJobDescription,
+        ?string $assemblyJobDescription,
+        ?string $packagingJobDescription,
+    ): string {
+        if (in_array($requestType, [
+            MasterModelMapping::TYPE_MOTORS_MOLDING,
+            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING,
+        ], true)) {
+            return (string) ($mappedModel ?? '');
+        }
+
+        return (string) ($mappedModel
+            ?? $requestJobDescription
+            ?? $assemblyJobDescription
+            ?? $packagingJobDescription
+            ?? '');
     }
 }
