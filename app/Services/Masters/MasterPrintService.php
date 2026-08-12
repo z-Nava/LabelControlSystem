@@ -196,9 +196,7 @@ class MasterPrintService
                 ?? ''
             )));
             $requestType = (string) ($masterRequest->request_type ?? '');
-            $mappedModel = $requestType === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING
-                ? $this->masterModelMappingService->resolveModelFromJobs($requestType, $npPackaging, $np)
-                : $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
+            $mappedModel = $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
             $resolvedModel = $isAssemblyPackaging
                 ? (string) ($mappedModel ?? '')
                 : (string) ($mappedModel ?? $masterRequest->job_description ?? $oracle?->job_description ?? $oraclePackaging?->job_description ?? '');

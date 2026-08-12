@@ -53,28 +53,44 @@ class MasterModelMappingService
     public function resolveModelFromJobs(string $requestType, ?string $assemblyNp, ?string $packagingNp): ?string
     {
         $targetType = $requestType;
-        $lookupNp = null;
+        $lookupNps = [];
 
-        if (in_array($requestType, [
+        if ($requestType === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING) {
+            $lookupNps = [
+                $this->normalizeValue($packagingNp),
+                $this->normalizeValue($assemblyNp),
+            ];
+        } elseif (in_array($requestType, [
             MasterModelMapping::TYPE_ASSEMBLY,
             MasterModelMapping::TYPE_ORT_ASSEMBLY,
-            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING,
         ], true)) {
-            $lookupNp = $this->normalizeValue($packagingNp) ?? $this->normalizeValue($assemblyNp);
+            $lookupNps = [
+                $this->normalizeValue($packagingNp) ?? $this->normalizeValue($assemblyNp),
+            ];
             $targetType = $requestType === MasterModelMapping::TYPE_ORT_ASSEMBLY
                 ? MasterModelMapping::TYPE_ASSEMBLY
                 : $requestType;
         } elseif (in_array($requestType, [MasterModelMapping::TYPE_BATTERIES_ASSEMBLY, MasterModelMapping::TYPE_MOTORS_MOLDING], true)) {
-            $lookupNp = $this->normalizeValue($assemblyNp);
+            $lookupNps = [$this->normalizeValue($assemblyNp)];
         }
 
-        if (! $lookupNp || ! in_array($targetType, MasterModelMapping::TYPES, true)) {
+        if (! in_array($targetType, MasterModelMapping::TYPES, true)) {
             return null;
         }
 
-        $mapping = $this->findActiveMapping($targetType, $lookupNp);
+        foreach ($lookupNps as $lookupNp) {
+            if (! $lookupNp) {
+                continue;
+            }
 
-        return $mapping?->sku;
+            $mapping = $this->findActiveMapping($targetType, $lookupNp);
+
+            if ($mapping) {
+                return $mapping->sku;
+            }
+        }
+
+        return null;
     }
 
     public function importFromExcel(UploadedFile $file, ?string $forcedType = null): array
