@@ -127,12 +127,14 @@ class MasterModelMappingService
 
                 $existing = MasterModelMapping::query()
                     ->where('np', $payload['np'])
-                    ->where('sku', $payload['sku'])
                     ->where('master_sheet_type', $payload['master_sheet_type'])
                     ->first();
 
                 if ($existing) {
-                    $existing->update(['active' => true]);
+                    $existing->update([
+                        'sku' => $payload['sku'],
+                        'active' => true,
+                    ]);
                     $updated++;
                 } else {
                     MasterModelMapping::create($payload);

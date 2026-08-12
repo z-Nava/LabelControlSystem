@@ -12,23 +12,28 @@ class UpdateMasterModelMappingRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'np' => strtoupper(trim((string) $this->input('np'))),
+            'sku' => strtoupper(trim((string) $this->input('sku'))),
+        ]);
+    }
+
     public function rules(): array
     {
         $mapping = $this->route('master_model_mapping');
 
         return [
-            'np' => ['required', 'string', 'max:40'],
-            'sku' => [
+            'np' => [
                 'required',
                 'string',
-                'max:80',
-                Rule::unique('master_model_mappings', 'sku')
+                'max:40',
+                Rule::unique('master_model_mappings', 'np')
                     ->ignore($mapping?->id)
-                    ->where(fn ($query) => $query
-                        ->where('np', strtoupper(trim((string) $this->input('np'))))
-                        ->where('master_sheet_type', (string) $this->route('type'))
-                    ),
+                    ->where(fn ($query) => $query->where('master_sheet_type', (string) $this->route('type'))),
             ],
+            'sku' => ['required', 'string', 'max:80'],
             'active' => ['nullable', 'boolean'],
         ];
     }
