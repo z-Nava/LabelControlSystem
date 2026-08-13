@@ -212,19 +212,19 @@
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                             <label class="text-sm text-slate-600">Custom PO</label>
-                        <input id="poNumber" name="po_number" value="{{ old('po_number') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+"
-                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                               placeholder="Se autollenará si Oracle lo trae">
+                        <input id="poNumber" name="po_number" value="{{ old('po_number') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" readonly aria-readonly="true"
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+                               placeholder="Se tomará del Job Empaque">
                     </div>
 
                     <div>
                             <label class="text-sm text-slate-600">Destino (Ship Code)</label>
-                        <input id="destination" name="destination" value="{{ old('destination') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+"
-                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-                               placeholder="Se autollenará si Oracle lo trae">
+                        <input id="destination" name="destination" value="{{ old('destination') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" readonly aria-readonly="true"
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+                               placeholder="Se tomará del Job Empaque">
                     </div>
                 </div>
-                <p class="text-xs text-slate-500 md:col-span-2">Revisa los datos autollenados. Si Oracle no proporciona alguno, captura únicamente la información que conozcas.</p>
+                <p class="text-xs text-slate-500 md:col-span-2">PO y Destino se toman exclusivamente del Job Empaque registrado en Oracle.</p>
             </div>
         </details>
 

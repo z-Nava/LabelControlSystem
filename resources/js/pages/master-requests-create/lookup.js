@@ -30,13 +30,13 @@ async function lookupJob(lookupUrl, jobNumber) {
     return response.json();
 }
 
-function updateAutoCompletedFields(fields, data) {
-    if (!fields.destination?.value) {
-        fields.destination.value = data.ship_code || '';
+function updatePackagingFields(fields, data = null) {
+    if (fields.destination) {
+        fields.destination.value = data?.ship_code || '';
     }
 
-    if (!fields.poNumber?.value) {
-        fields.poNumber.value = data.ttl_cust_po || '';
+    if (fields.poNumber) {
+        fields.poNumber.value = data?.ttl_cust_po || '';
     }
 }
 
@@ -106,6 +106,9 @@ export function createJobLookupHandler({
             setHint(hintElement, 'muted');
             setJobQtyText(qtyElement);
             onResolved?.(null);
+            if (role === 'packaging') {
+                updatePackagingFields(fields);
+            }
             return;
         }
 
@@ -123,6 +126,9 @@ export function createJobLookupHandler({
             inputElement?.setCustomValidity('No se pudo consultar el Job en Oracle. Intenta nuevamente.');
             setHint(hintElement, 'warn', 'No se pudo consultar Oracle. Intenta nuevamente.');
             setJobQtyText(qtyElement);
+            if (role === 'packaging') {
+                updatePackagingFields(fields);
+            }
             refreshPreview();
             return;
         }
@@ -136,6 +142,9 @@ export function createJobLookupHandler({
             setHint(hintElement, 'warn', 'No encontrado en Oracle Jobs.');
             setJobQtyText(qtyElement);
             onResolved?.(null);
+            if (role === 'packaging') {
+                updatePackagingFields(fields);
+            }
             return;
         }
 
@@ -144,7 +153,9 @@ export function createJobLookupHandler({
         setJobQtyText(qtyElement, data.job_qty);
         onResolved?.(data);
 
-        updateAutoCompletedFields(fields, data);
+        if (role === 'packaging') {
+            updatePackagingFields(fields, validation.type === 'ok' ? data : null);
+        }
         refreshPreview();
     };
 }

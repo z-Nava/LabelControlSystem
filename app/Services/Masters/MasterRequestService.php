@@ -55,6 +55,14 @@ class MasterRequestService
             $oracleJob = ! empty($data['job_assembly'])
                 ? $this->oracleJobService->findByJobNumber($data['job_assembly'])
                 : null;
+            $packagingOracleJob = ! empty($data['job_packaging'])
+                ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
+                : null;
+
+            // PO and destination belong to the packaging Job. Never trust values
+            // submitted by the browser or fall back to the assembly Job.
+            $data['po_number'] = $this->normalizeNullable($packagingOracleJob?->ttl_cust_po);
+            $data['destination'] = $this->normalizeNullable($packagingOracleJob?->ship_code);
 
             $selectedOracleLine = $this->normalize(
                 ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')
@@ -124,5 +132,12 @@ class MasterRequestService
     private function normalize(mixed $value): string
     {
         return strtoupper(trim((string) $value));
+    }
+
+    private function normalizeNullable(mixed $value): ?string
+    {
+        $normalized = $this->normalize($value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 }
