@@ -53,7 +53,7 @@
                     <th class="py-3 pr-3">Fecha</th>
                     <th class="py-3 pr-3">Línea / Turno</th>
                     <th class="py-3 pr-3">Líder</th>
-                    <th class="py-3 pr-3">Job</th>
+                    <th class="py-3 pr-3">Jobs</th>
                     <th class="py-3 pr-3">Avance</th>
                     <th class="py-3 pr-3">Estado</th>
                     <th class="py-3 pr-3">Acciones</th>
@@ -70,7 +70,10 @@
                         <td class="py-3 pr-3">{{ $mr->request_date?->format('Y-m-d') }}</td>
                         <td class="py-3 pr-3">{{ $mr->line?->code }} · {{ $mr->shift?->code }}</td>
                         <td class="py-3 pr-3">{{ $mr->leader_name }}</td>
-                        <td class="py-3 pr-3">{{ $mr->job_assembly ?: '-' }}</td>
+                        <td class="py-3 pr-3">
+                            <div><span class="font-medium text-slate-600">Ensamble:</span> {{ $mr->job_assembly ?: '-' }}</div>
+                            <div><span class="font-medium text-slate-600">Empaque:</span> {{ $mr->job_packaging ?: '-' }}</div>
+                        </td>
                         <td class="py-3 pr-3">{{ $printed }}/{{ $total }}</td>
                         <td class="py-3 pr-3">
                             <span class="rounded-full px-2 py-1 text-xs
