@@ -24,6 +24,7 @@ class ProductionLineService
     public function create(array $data): ProductionLine
     {
         $data['code'] = strtoupper(trim($data['code']));
+        $data['line_type'] = strtoupper(trim($data['line_type']));
         $data['active'] = (bool) ($data['active'] ?? true);
 
         return ProductionLine::create($data);
@@ -32,6 +33,7 @@ class ProductionLineService
     public function update(ProductionLine $line, array $data): ProductionLine
     {
         $data['code'] = strtoupper(trim($data['code']));
+        $data['line_type'] = strtoupper(trim($data['line_type']));
         $data['active'] = (bool) ($data['active'] ?? false);
 
         $line->update($data);

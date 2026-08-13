@@ -11,6 +11,12 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class OracleJobService
 {
+    private const ASSEMBLY_PREFIXES = ['103', '130', '270'];
+
+    private const PACKAGING_PREFIXES = ['018', '055', '001', '270'];
+
+    private const MOTOR_LINE_PREFIXES = ['MEXMI', 'MXM'];
+
     /**
      * @var array<string,OracleJob|null>
      */
@@ -99,19 +105,15 @@ class OracleJobService
         $assembly = strtoupper(trim((string) $job->assembly));
         $line = strtoupper(trim((string) $job->line));
 
-        return str_starts_with($assembly, '103')
-            || str_starts_with($assembly, '130')
-            || str_starts_with($line, 'MEXMI')
-            || str_starts_with($line, 'MXM');
+        return $this->startsWithAny($assembly, self::ASSEMBLY_PREFIXES)
+            || $this->startsWithAny($line, self::MOTOR_LINE_PREFIXES);
     }
 
     public function isPackagingJob(OracleJob $job): bool
     {
         $assembly = strtoupper(trim((string) $job->assembly));
 
-        return str_starts_with($assembly, '018')
-            || str_starts_with($assembly, '055')
-            || str_starts_with($assembly, '001');
+        return $this->startsWithAny($assembly, self::PACKAGING_PREFIXES);
     }
 
     public function buildLookupPayload(string $jobNumber): array
@@ -139,5 +141,19 @@ class OracleJobService
             'valid_for_assembly' => $this->isAssemblyJob($job),
             'valid_for_packaging' => $this->isPackagingJob($job),
         ];
+    }
+
+    /**
+     * @param  array<int, string>  $prefixes
+     */
+    private function startsWithAny(string $value, array $prefixes): bool
+    {
+        foreach ($prefixes as $prefix) {
+            if (str_starts_with($value, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

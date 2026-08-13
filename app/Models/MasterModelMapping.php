@@ -36,32 +36,36 @@ class MasterModelMapping extends Model
     ];
 
     public const TYPES_BY_LINE_TYPE = [
-        'BATERIAS' => [
+        ProductionLine::TYPE_BATTERIES => [
             self::TYPE_BATTERIES_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
-        'CONSOLAS' => [
+        ProductionLine::TYPE_CONSOLES => [
             self::TYPE_ASSEMBLY,
             self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
-        'EMPAQUE' => [
+        ProductionLine::TYPE_PACKAGING => [
             self::TYPE_ASSEMBLY,
             self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
-        'HIDRAULICOS' => [
+        ProductionLine::TYPE_HYDRAULICS => [
             self::TYPE_ASSEMBLY,
             self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
-        'MX FUEL' => [
+        ProductionLine::TYPE_MX_FUEL => [
             self::TYPE_ASSEMBLY,
             self::TYPE_ORT_ASSEMBLY,
             self::TYPE_ASSEMBLY_PACKAGING,
         ],
-        'MOTORES' => [
+        ProductionLine::TYPE_MOTORS => [
             self::TYPE_MOTORS_MOLDING,
+        ],
+        ProductionLine::TYPE_SWITCH_LINE => [
+            self::TYPE_ASSEMBLY,
+            self::TYPE_ASSEMBLY_PACKAGING,
         ],
     ];
 
