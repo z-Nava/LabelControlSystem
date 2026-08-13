@@ -22,12 +22,13 @@
 
     {{-- Resumen rápido --}}
     <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div class="rounded-xl border bg-slate-50 p-3">
-            <div class="text-xs text-slate-500">Fecha</div>
-            <div id="previewDate" class="font-semibold text-slate-900">—</div>
+        <div class="rounded-xl border border-blue-100 bg-blue-50 p-3">
+            <div class="text-xs text-blue-700">Semana actual</div>
+            <div class="font-semibold text-blue-950">{{ now()->weekOfYear }}</div>
+            <div class="mt-1 text-xs text-blue-700">Dato informativo asignado automáticamente.</div>
         </div>
         <div class="rounded-xl border bg-slate-50 p-3">
-            <div class="text-xs text-slate-500">Línea / Turno</div>
+            <div class="text-xs text-slate-500">Línea</div>
             <div id="previewLineShift" class="font-semibold text-slate-900">—</div>
         </div>
         <div class="rounded-xl border bg-slate-50 p-3">
@@ -52,26 +53,12 @@
             <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between">
                 <div>
                     <div class="font-semibold text-slate-900">1) Datos generales</div>
-                    <div class="text-xs text-slate-500">Fecha, semana, línea, turno y líder.</div>
+                    <div class="text-xs text-slate-500">Selecciona el tipo de línea y la línea de producción.</div>
                 </div>
                 <span class="text-slate-400 group-open:rotate-180 transition">⌄</span>
             </summary>
 
             <div class="border-t p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-sm text-slate-600">Fecha</label>
-                    <input id="requestDate" name="request_date" type="date"
-                           value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}"
-                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                </div>
-
-                <div>
-                    <label class="text-sm text-slate-600">Semana</label>
-                    <input name="week" type="number" min="1" max="53"
-                           value="{{ old('week', now()->weekOfYear) }}"
-                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                </div>
-
                 <div>
                     <label class="text-sm text-slate-600">Tipo de línea</label>
                     <select id="lineTypeSelect"
@@ -89,7 +76,7 @@
                 </div>
 
                 <div>
-                    <label class="text-sm text-slate-600">Línea</label>
+                    <label class="text-sm text-slate-600">Línea de producción</label>
                     <select id="lineSelect" name="line_id"
                             class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
                         <option value="">Selecciona linea...</option>
@@ -107,24 +94,6 @@
                     </select>
                 </div>
 
-                <div>
-                    <label class="text-sm text-slate-600">Turno</label>
-                    <select id="shiftSelect" name="shift_id"
-                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                        <option value="">Selecciona turno...</option>
-                        @foreach($shifts as $shift)
-                            <option value="{{ $shift->id }}" @selected(old('shift_id') == $shift->id)>
-                                {{ $shift->code }} - {{ $shift->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="md:col-span-2">
-                    <label class="text-sm text-slate-600">Líder</label>
-                     <input name="leader_name" value="{{ old('leader_name') }}" maxlength="120" minlength="3" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñ\s\-\.']+"
-                           class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" required>
-                </div>
             </div>
         </details>
 

@@ -50,6 +50,7 @@
             <thead>
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">Req</th>
+                    <th class="py-3 pr-3">Origen</th>
                     <th class="py-3 pr-3">Fecha</th>
                     <th class="py-3 pr-3">Línea / Turno</th>
                     <th class="py-3 pr-3">Líder</th>
@@ -67,9 +68,16 @@
                     @endphp
                     <tr>
                         <td class="py-3 pr-3 font-semibold">#{{ $mr->id }}</td>
-                        <td class="py-3 pr-3">{{ $mr->request_date?->format('Y-m-d') }}</td>
-                        <td class="py-3 pr-3">{{ $mr->line?->code }} · {{ $mr->shift?->code }}</td>
-                        <td class="py-3 pr-3">{{ $mr->leader_name }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="rounded-full px-2 py-1 text-xs {{ $mr->isFromKiosk() ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700' }}">
+                                {{ $mr->request_source_label }}
+                            </span>
+                        </td>
+                        <td class="py-3 pr-3">{{ $mr->request_date?->format('Y-m-d') ?? '-' }}</td>
+                        <td class="py-3 pr-3">
+                            {{ $mr->line?->code ?? '-' }}{{ $mr->shift ? ' · '.$mr->shift->code : '' }}
+                        </td>
+                        <td class="py-3 pr-3">{{ $mr->leader_name ?: '-' }}</td>
                         <td class="py-3 pr-3">
                             <div><span class="font-medium text-slate-600">Ensamble:</span> {{ $mr->job_assembly ?: '-' }}</div>
                             <div><span class="font-medium text-slate-600">Empaque:</span> {{ $mr->job_packaging ?: '-' }}</div>
@@ -88,7 +96,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="py-6 text-center text-slate-500">No hay requisiciones con ese filtro.</td>
+                        <td colspan="9" class="py-6 text-center text-slate-500">No hay requisiciones con ese filtro.</td>
                     </tr>
                 @endforelse
             </tbody>

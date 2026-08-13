@@ -12,8 +12,13 @@
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Requisición Master #{{ $mr->id }}</h1>
             <p class="text-slate-600 mt-1">
-                {{ $mr->line?->code }} · Turno {{ $mr->shift?->code }} · {{ $mr->request_date?->format('Y-m-d') }}
+                {{ $mr->line?->code }}
+                @if($mr->shift) · Turno {{ $mr->shift->code }} @endif
+                @if($mr->request_date) · {{ $mr->request_date->format('Y-m-d') }} @endif
             </p>
+            <span class="mt-2 inline-flex rounded-full px-2 py-1 text-xs {{ $mr->isFromKiosk() ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700' }}">
+                Origen: {{ $mr->request_source_label }}
+            </span>
         </div>
 
         <a href="{{ route('master_requests.index')}}"
@@ -75,7 +80,7 @@
     <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Líder</div>
-            <div class="font-semibold">{{ $mr->leader_name }}</div>
+            <div class="font-semibold">{{ $mr->leader_name ?: '-' }}</div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">

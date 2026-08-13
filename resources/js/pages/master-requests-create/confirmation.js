@@ -12,8 +12,10 @@ function escapeHtml(value) {
 }
 
 function getConfirmationHtml(form, fields) {
-    const leader = getFieldValue(form, 'leader_name') || '—';
-    const date = getFieldValue(form, 'request_date') || '—';
+    const leaderInput = form.elements.namedItem('leader_name');
+    const requestDateInput = form.elements.namedItem('request_date');
+    const leader = leaderInput ? (getFieldValue(form, 'leader_name') || '—') : null;
+    const date = requestDateInput ? (getFieldValue(form, 'request_date') || '—') : null;
     const line = getSelectedText(fields.lineSelect) || '—';
     const local = (fields.localInput?.value || '').trim() || '—';
     const subinventory = (fields.subinventoryInput?.value || '').trim() || '—';
@@ -34,11 +36,14 @@ function getConfirmationHtml(form, fields) {
     const partialInfo = (partialFolio || partialQty)
         ? `${partialFolio || '—'} (${partialQty || '—'} pzas)`
         : 'No';
+    const productionContext = [
+        leader === null ? '' : `<p><strong>Líder:</strong> ${escapeHtml(leader)}</p>`,
+        date === null ? '' : `<p><strong>Fecha:</strong> ${escapeHtml(date)}</p>`,
+    ].join('');
 
     return `
         <div class="text-left text-sm space-y-1">
-            <p><strong>Líder:</strong> ${escapeHtml(leader)}</p>
-            <p><strong>Fecha:</strong> ${escapeHtml(date)}</p>
+            ${productionContext}
             <p><strong>Línea:</strong> ${escapeHtml(line)}</p>
             <p><strong>Local:</strong> ${escapeHtml(local)}</p>
             <p><strong>Subinventory:</strong> ${escapeHtml(subinventory)}</p>

@@ -10,12 +10,22 @@ class MasterRequest extends Model
 {
     public const STATUS_REQUESTED = 'requested';
 
+    public const SOURCE_LABEL_ROOM = 'label_room';
+
+    public const SOURCE_KIOSK = 'kiosk';
+
+    public const SOURCES = [
+        self::SOURCE_LABEL_ROOM,
+        self::SOURCE_KIOSK,
+    ];
+
     protected $fillable = [
         'request_date',
         'week',
         'line_id',
         'shift_id',
         'leader_name',
+        'request_source',
         'requested_by_name',
         'requested_by_user_id',
         'po_number',
@@ -63,5 +73,20 @@ class MasterRequest extends Model
     public function printBatches(): HasMany
     {
         return $this->hasMany(MasterPrintBatch::class, 'master_request_id');
+    }
+
+    public function isFromLabelRoom(): bool
+    {
+        return $this->request_source === self::SOURCE_LABEL_ROOM;
+    }
+
+    public function isFromKiosk(): bool
+    {
+        return $this->request_source === self::SOURCE_KIOSK;
+    }
+
+    public function getRequestSourceLabelAttribute(): string
+    {
+        return $this->isFromKiosk() ? 'Kiosco' : 'Label Room';
     }
 }

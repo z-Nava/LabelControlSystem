@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Masters\IndexMasterRequestRequest;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
-use App\Services\Masters\MasterRequestService;
 use App\Models\MasterRequest;
 use App\Services\Masters\MasterRequestReadService;
+use App\Services\Masters\MasterRequestService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -44,7 +44,7 @@ class MasterRequestController extends Controller
         $data['requested_by_user_id'] = auth()->id();
         $data['requested_by_name'] = (string) auth()->user()?->name;
 
-        $mr = $this->service->create($data);
+        $mr = $this->service->create($data, MasterRequest::SOURCE_LABEL_ROOM);
 
         return redirect()
             ->route('master_requests.show', $mr)

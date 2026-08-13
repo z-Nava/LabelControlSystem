@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kiosk;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
+use App\Models\MasterRequest;
 use App\Models\User;
 use App\Services\Masters\MasterRequestReadService;
 use App\Services\Masters\MasterRequestService;
@@ -32,7 +33,7 @@ class KioskMasterRequestController extends Controller
         $data['requested_by_user_id'] = $kioskUser->id;
         $data['requested_by_name'] = $kioskUser->name;
 
-        $masterRequest = $this->service->create($data);
+        $masterRequest = $this->service->create($data, MasterRequest::SOURCE_KIOSK);
 
         return redirect()
             ->route('kiosk.dashboard')

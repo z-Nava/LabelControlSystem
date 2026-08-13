@@ -25,9 +25,9 @@ export function refreshPreview(fields, preview, jobLookupState = {}) {
         const lineText = getSelectedText(fields.lineSelect);
         const shiftText = getSelectedText(fields.shiftSelect);
 
-        preview.lineShift.textContent = (lineText || shiftText)
-            ? `${lineText || '—'} · ${shiftText || '—'}`
-            : '—';
+        preview.lineShift.textContent = fields.shiftSelect
+            ? ((lineText || shiftText) ? `${lineText || '—'} · ${shiftText || '—'}` : '—')
+            : (lineText || '—');
     }
 
     if (preview.jobs) {

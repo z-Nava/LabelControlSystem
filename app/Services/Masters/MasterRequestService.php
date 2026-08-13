@@ -18,8 +18,20 @@ class MasterRequestService
         private readonly StockLocatorService $stockLocatorService,
     ) {}
 
-    public function create(array $data): MasterRequest
+    public function create(array $data, string $requestSource): MasterRequest
     {
+        if (! in_array($requestSource, MasterRequest::SOURCES, true)) {
+            throw new \InvalidArgumentException('Invalid master request source.');
+        }
+
+        if ($requestSource === MasterRequest::SOURCE_LABEL_ROOM) {
+            $data['request_date'] = null;
+            $data['shift_id'] = null;
+            $data['leader_name'] = null;
+        }
+
+        $data['request_source'] = $requestSource;
+
         return DB::transaction(function () use ($data) {
 
             $foliosFrom = (int) ($data['folios_from'] ?? 0);

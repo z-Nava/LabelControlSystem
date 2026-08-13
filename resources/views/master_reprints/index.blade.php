@@ -6,7 +6,7 @@
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Historial de impresión Master</h1>
             <p class="text-slate-600 mt-1">
-                Requisición #{{ $mr->id }} · {{ $mr->line?->code }} · Turno {{ $mr->shift?->code }}
+                Requisición #{{ $mr->id }} · {{ $mr->line?->code }}@if($mr->shift) · Turno {{ $mr->shift->code }}@endif
             </p>
         </div>
 

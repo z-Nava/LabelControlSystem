@@ -26,12 +26,14 @@ class StoreMasterRequestRequest extends FormRequest
 
     public function rules(): array
     {
+        $productionContextPresence = $this->isKioskRequest() ? 'required' : 'nullable';
+
         return [
-            'request_date' => ['required', 'date', 'before_or_equal:today'],
+            'request_date' => [$productionContextPresence, 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
-            'shift_id' => ['required', 'integer', 'exists:shifts,id'],
-            'leader_name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
+            'shift_id' => [$productionContextPresence, 'integer', 'exists:shifts,id'],
+            'leader_name' => [$productionContextPresence, 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
 
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'job_assembly' => [
@@ -143,6 +145,7 @@ class StoreMasterRequestRequest extends FormRequest
         $subinventory = $this->cleanInput($this->input('subinventory', ''));
 
         $this->merge([
+            'week' => $this->isKioskRequest() ? $this->input('week') : now()->weekOfYear,
             'leader_name' => $this->cleanInput($this->input('leader_name', '')),
             'po_number' => $this->cleanInput($this->input('po_number', '')),
             'job_assembly' => $this->cleanInput($this->input('job_assembly', '')),
@@ -208,6 +211,11 @@ class StoreMasterRequestRequest extends FormRequest
     private function isOrtAssemblyRequest(): bool
     {
         return $this->string('request_type')->toString() === MasterModelMapping::TYPE_ORT_ASSEMBLY;
+    }
+
+    private function isKioskRequest(): bool
+    {
+        return $this->routeIs('kiosk.master_requests.store');
     }
 
     private function findOracleJob(string $jobNumber): ?OracleJob
