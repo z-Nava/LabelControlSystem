@@ -51,7 +51,7 @@
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">Req</th>
                     <th class="py-3 pr-3">Origen</th>
-                    <th class="py-3 pr-3">Fecha</th>
+                    <th class="py-3 pr-3">Fecha de requisición</th>
                     <th class="py-3 pr-3">Línea / Turno</th>
                     <th class="py-3 pr-3">Líder</th>
                     <th class="py-3 pr-3">Jobs</th>
@@ -73,7 +73,7 @@
                                 {{ $mr->request_source_label }}
                             </span>
                         </td>
-                        <td class="py-3 pr-3">{{ $mr->request_date?->format('Y-m-d') ?? '-' }}</td>
+                        <td class="py-3 pr-3">{{ $mr->created_at?->format('Y-m-d') ?? '-' }}</td>
                         <td class="py-3 pr-3">
                             {{ $mr->line?->code ?? '-' }}{{ $mr->shift ? ' · '.$mr->shift->code : '' }}
                         </td>

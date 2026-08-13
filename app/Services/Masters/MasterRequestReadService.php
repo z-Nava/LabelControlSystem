@@ -33,7 +33,7 @@ class MasterRequestReadService
                         ->orWhere('po_number', 'like', "%{$q}%");
                 });
             })
-            ->latest('request_date')
+            ->latest('created_at')
             ->latest('id')
             ->paginate(15)
             ->withQueryString();
