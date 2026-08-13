@@ -197,13 +197,8 @@ class MasterPrintService
                 ?? ''
             )));
             $requestType = (string) ($masterRequest->request_type ?? '');
-            $mappedModel = $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging);
             $resolvedModel = $this->resolveModelForSheet(
-                $requestType,
-                $mappedModel,
-                $masterRequest->job_description,
-                $oracle?->job_description,
-                $oraclePackaging?->job_description,
+                $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging),
             );
 
             $lote = $job !== '' ? ($job.'-'.$folioNo) : '';
@@ -242,24 +237,8 @@ class MasterPrintService
         })->values();
     }
 
-    protected function resolveModelForSheet(
-        string $requestType,
-        ?string $mappedModel,
-        ?string $requestJobDescription,
-        ?string $assemblyJobDescription,
-        ?string $packagingJobDescription,
-    ): string {
-        if (in_array($requestType, [
-            MasterModelMapping::TYPE_MOTORS_MOLDING,
-            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING,
-        ], true)) {
-            return (string) ($mappedModel ?? '');
-        }
-
-        return (string) ($mappedModel
-            ?? $requestJobDescription
-            ?? $assemblyJobDescription
-            ?? $packagingJobDescription
-            ?? '');
+    protected function resolveModelForSheet(?string $mappedModel): string
+    {
+        return (string) ($mappedModel ?? '');
     }
 }
