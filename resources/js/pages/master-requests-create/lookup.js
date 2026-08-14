@@ -66,7 +66,7 @@ function validateLookupByRole(inputElement, data, role) {
     inputElement?.setCustomValidity('');
 
     if (role === 'assembly' && !data.valid_for_assembly) {
-        inputElement?.setCustomValidity('El Job Ensamble debe pertenecer a Ensamble/Subensamble (103/130/270/291/770) o a Motores-Moldeo (MEXMI/MXM).');
+        inputElement?.setCustomValidity('El Job Ensamble debe pertenecer a Ensamble/Subensamble (103/130/270/290/291/399/770) o a Motores-Moldeo (MEXMI/MXM).');
         return {
             type: 'warn',
             message: 'Tipo inválido para Ensamble.',

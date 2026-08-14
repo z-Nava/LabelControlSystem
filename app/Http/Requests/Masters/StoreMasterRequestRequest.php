@@ -59,7 +59,7 @@ class StoreMasterRequestRequest extends FormRequest
                     }
 
                     if (! $this->isAssemblyJob($job)) {
-                        $fail('El Job Ensamble debe pertenecer a Ensamble/Subensamble (103/130/270/291/770) o a Motores-Moldeo (MEXMI/MXM).');
+                        $fail('El Job Ensamble debe pertenecer a Ensamble/Subensamble (103/130/270/290/291/399/770) o a Motores-Moldeo (MEXMI/MXM).');
                     }
                 },
             ],

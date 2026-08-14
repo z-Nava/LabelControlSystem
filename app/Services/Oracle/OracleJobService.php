@@ -11,7 +11,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class OracleJobService
 {
-    private const ASSEMBLY_PREFIXES = ['103', '130', '270', '291', '770'];
+    private const ASSEMBLY_PREFIXES = ['103', '130', '270', '290', '291', '399', '770'];
 
     private const PACKAGING_PREFIXES = ['018', '055', '001', '270'];
 
