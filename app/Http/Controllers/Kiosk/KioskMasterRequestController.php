@@ -22,7 +22,7 @@ class KioskMasterRequestController extends Controller
 
     public function create(): View
     {
-        return view('kiosk.master-requests.create', $this->readService->buildCreateFormData());
+        return view('kiosk.master-requests.create', $this->readService->buildKioskCreateFormData());
     }
 
     public function store(StoreMasterRequestRequest $request): RedirectResponse

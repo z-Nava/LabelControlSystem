@@ -109,6 +109,7 @@ export function createJobLookupHandler({
             if (role === 'packaging') {
                 updatePackagingFields(fields);
             }
+            refreshPreview();
             return;
         }
 
@@ -126,6 +127,7 @@ export function createJobLookupHandler({
             inputElement?.setCustomValidity('No se pudo consultar el Job en Oracle. Intenta nuevamente.');
             setHint(hintElement, 'warn', 'No se pudo consultar Oracle. Intenta nuevamente.');
             setJobQtyText(qtyElement);
+            onResolved?.(null);
             if (role === 'packaging') {
                 updatePackagingFields(fields);
             }
@@ -141,10 +143,11 @@ export function createJobLookupHandler({
             inputElement?.setCustomValidity('No encontrado en Oracle Jobs.');
             setHint(hintElement, 'warn', 'No encontrado en Oracle Jobs.');
             setJobQtyText(qtyElement);
-            onResolved?.(null);
+            onResolved?.(data);
             if (role === 'packaging') {
                 updatePackagingFields(fields);
             }
+            refreshPreview();
             return;
         }
 

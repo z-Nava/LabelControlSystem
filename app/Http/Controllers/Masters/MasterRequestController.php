@@ -32,7 +32,7 @@ class MasterRequestController extends Controller
 
     public function create(): View
     {
-        $formData = $this->readService->buildCreateFormData();
+        $formData = $this->readService->buildLabelRoomCreateFormData();
 
         return view('master_requests.create', $formData);
     }

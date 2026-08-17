@@ -1,5 +1,6 @@
 import Swal from '../../lib/sweetalert';
 import { getFieldValue } from './dom';
+import { getOfficialContext } from './job-driven-context';
 import { getSelectedText } from './preview';
 
 function escapeHtml(value) {
@@ -11,12 +12,13 @@ function escapeHtml(value) {
         .replaceAll("'", '&#39;');
 }
 
-function getConfirmationHtml(form, fields) {
+function getConfirmationHtml(form, fields, jobLookupState) {
     const leaderInput = form.elements.namedItem('leader_name');
     const requestDateInput = form.elements.namedItem('request_date');
     const leader = leaderInput ? (getFieldValue(form, 'leader_name') || '—') : null;
     const date = requestDateInput ? (getFieldValue(form, 'request_date') || '—') : null;
-    const line = getSelectedText(fields.lineSelect) || '—';
+    const official = getOfficialContext(fields, jobLookupState);
+    const line = getSelectedText(fields.lineSelect) || official.context?.line_code || '—';
     const local = (fields.localInput?.value || '').trim() || '—';
     const subinventory = (fields.subinventoryInput?.value || '').trim() || '—';
     const assemblyJob = getFieldValue(form, 'job_assembly') || '—';
@@ -40,9 +42,13 @@ function getConfirmationHtml(form, fields) {
         leader === null ? '' : `<p><strong>Líder:</strong> ${escapeHtml(leader)}</p>`,
         date === null ? '' : `<p><strong>Fecha:</strong> ${escapeHtml(date)}</p>`,
     ].join('');
+    const lineDifference = official.lineDifference
+        ? `<div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900"><strong>Advertencia:</strong> ${escapeHtml(official.lineDifference.message)}</div>`
+        : '';
 
     return `
         <div class="text-left text-sm space-y-1">
+            ${lineDifference}
             ${productionContext}
             <p><strong>Línea:</strong> ${escapeHtml(line)}</p>
             <p><strong>Local:</strong> ${escapeHtml(local)}</p>
@@ -55,10 +61,10 @@ function getConfirmationHtml(form, fields) {
     `;
 }
 
-export async function confirmSubmit(form, fields) {
+export async function confirmSubmit(form, fields, jobLookupState = {}) {
     const result = await Swal.fire({
         title: '¿Confirmas el envío de la requisición?',
-        html: getConfirmationHtml(form, fields),
+        html: getConfirmationHtml(form, fields, jobLookupState),
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Sí, enviar',

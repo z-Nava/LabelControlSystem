@@ -27,11 +27,14 @@ class StoreMasterRequestRequest extends FormRequest
     public function rules(): array
     {
         $productionContextPresence = $this->isKioskRequest() ? 'required' : 'nullable';
+        $lineRules = $this->isKioskRequest()
+            ? ['required', 'integer', 'exists:production_lines,id']
+            : ['prohibited'];
 
         return [
             'request_date' => [$productionContextPresence, 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
-            'line_id' => ['required', 'integer', 'exists:production_lines,id'],
+            'line_id' => $lineRules,
             'shift_id' => [$productionContextPresence, 'integer', 'exists:shifts,id'],
             'leader_name' => [$productionContextPresence, 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],
 
@@ -124,6 +127,10 @@ class StoreMasterRequestRequest extends FormRequest
                         return;
                     }
 
+                    if (! $this->isKioskRequest()) {
+                        return;
+                    }
+
                     $lineType = ProductionLine::query()
                         ->whereKey($this->input('line_id'))
                         ->value('line_type');
@@ -164,6 +171,10 @@ class StoreMasterRequestRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                if (! $this->isKioskRequest()) {
+                    return;
+                }
+
                 foreach (['line_id', 'request_type', 'job_assembly', 'job_packaging'] as $field) {
                     if ($validator->errors()->has($field)) {
                         return;

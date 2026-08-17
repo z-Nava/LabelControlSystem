@@ -7,6 +7,7 @@ export function getMasterRequestElements() {
 
     return {
         form,
+        requestSource: form.dataset.requestSource || 'kiosk',
         lookupUrl: form.dataset.lookupUrl,
         fields: {
             requestDate: document.getElementById('requestDate'),
@@ -35,6 +36,40 @@ export function getMasterRequestElements() {
             container: document.getElementById('lineMatchStatus'),
             title: document.getElementById('lineMatchStatusTitle'),
             message: document.getElementById('lineMatchStatusMessage'),
+        },
+        jobDrivenContext: {
+            jobs: {
+                assembly: {
+                    container: document.getElementById('jobAssemblyContext'),
+                    line: document.getElementById('jobAssemblyLine'),
+                    lineType: document.getElementById('jobAssemblyLineType'),
+                    inventory: document.getElementById('jobAssemblyInventory'),
+                },
+                packaging: {
+                    container: document.getElementById('jobPackagingContext'),
+                    line: document.getElementById('jobPackagingLine'),
+                    lineType: document.getElementById('jobPackagingLineType'),
+                    inventory: document.getElementById('jobPackagingInventory'),
+                },
+            },
+            status: {
+                container: document.getElementById('productionContextStatus'),
+                title: document.getElementById('productionContextStatusTitle'),
+                message: document.getElementById('productionContextStatusMessage'),
+            },
+            lineDifference: {
+                container: document.getElementById('lineDifferenceStatus'),
+                message: document.getElementById('lineDifferenceMessage'),
+            },
+            officialLine: document.getElementById('officialLineDisplay'),
+        },
+        summary: {
+            jobs: document.getElementById('summaryJobs'),
+            type: document.getElementById('summaryType'),
+            officialLine: document.getElementById('summaryOfficialLine'),
+            inventory: document.getElementById('summaryInventory'),
+            folios: document.getElementById('summaryFolios'),
+            request: document.getElementById('summaryRequest'),
         },
     };
 }

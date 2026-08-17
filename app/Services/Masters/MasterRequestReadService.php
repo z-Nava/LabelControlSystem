@@ -50,7 +50,15 @@ class MasterRequestReadService
         ];
     }
 
-    public function buildCreateFormData(): array
+    public function buildLabelRoomCreateFormData(): array
+    {
+        return [
+            'masterRequestTypes' => MasterModelMapping::requestOptions(),
+            'ortAssemblyConfig' => MasterModelMapping::ortAssemblyRequestConfiguration(),
+        ];
+    }
+
+    public function buildKioskCreateFormData(): array
     {
         $inventoryMappings = StockLocator::query()
             ->where('active', true)

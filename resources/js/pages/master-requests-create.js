@@ -6,8 +6,12 @@ import {
     renderMasterRequestLineResult,
     showMasterRequestLineAlert,
 } from './master-requests-create/line-match';
+import {
+    refreshJobDrivenContext,
+    showJobDrivenContextAlert,
+} from './master-requests-create/job-driven-context';
 import { createJobLookupHandler } from './master-requests-create/lookup';
-import { refreshPreview } from './master-requests-create/preview';
+import { refreshLabelRoomSummary, refreshPreview } from './master-requests-create/preview';
 import { attachValidationClearListeners, validateBeforeSubmit } from './master-requests-create/validation';
 
 function initializeLineTypeFilter(fields) {
@@ -192,23 +196,41 @@ function initializeInventoryDestination(fields) {
         return;
     }
 
-    const { form, fields, preview, lineMatchStatus, lookupUrl } = page;
+    const {
+        form,
+        fields,
+        preview,
+        lineMatchStatus,
+        jobDrivenContext,
+        summary,
+        lookupUrl,
+        requestSource,
+    } = page;
+    const isLabelRoomRequest = requestSource === 'label_room';
     const jobLookupState = {
         assembly: null,
         packaging: null,
     };
-    let currentLineMatchResult = { status: 'idle', message: '' };
+    let currentValidationResult = { status: 'idle', message: '' };
     const updatePageState = () => {
+        if (isLabelRoomRequest) {
+            currentValidationResult = refreshJobDrivenContext(fields, jobDrivenContext, jobLookupState);
+        } else {
+            currentValidationResult = getMasterRequestLineResult(fields, jobLookupState);
+            renderMasterRequestLineResult(lineMatchStatus, currentValidationResult);
+        }
+
         refreshPreview(fields, preview, jobLookupState);
-        currentLineMatchResult = getMasterRequestLineResult(fields, jobLookupState);
-        renderMasterRequestLineResult(lineMatchStatus, currentLineMatchResult);
+        refreshLabelRoomSummary(form, fields, summary, jobLookupState);
     };
 
     let isSubmitting = false;
 
-    initializeLineTypeFilter(fields);
-    initializeRequestTypeFilter(fields);
-    initializeInventoryDestination(fields);
+    if (!isLabelRoomRequest) {
+        initializeLineTypeFilter(fields);
+        initializeRequestTypeFilter(fields);
+        initializeInventoryDestination(fields);
+    }
 
     const assemblyLookup = createJobLookupHandler({
         inputElement: fields.jobAssembly,
@@ -260,6 +282,14 @@ function initializeInventoryDestination(fields) {
         element?.addEventListener('input', updatePageState);
     });
 
+    if (isLabelRoomRequest) {
+        fields.requestType?.addEventListener('change', () => {
+            fields.requestType.dataset.initialValue = '';
+        });
+        form.addEventListener('input', () => refreshLabelRoomSummary(form, fields, summary, jobLookupState));
+        form.addEventListener('change', () => refreshLabelRoomSummary(form, fields, summary, jobLookupState));
+    }
+
     attachValidationClearListeners(form);
 
     form.addEventListener('submit', async (event) => {
@@ -276,12 +306,22 @@ function initializeInventoryDestination(fields) {
 
         updatePageState();
 
-        if (['pending', 'mismatch', 'unverifiable'].includes(currentLineMatchResult.status)) {
-            await showMasterRequestLineAlert(currentLineMatchResult);
+        if (isLabelRoomRequest) {
+            if (currentValidationResult.status !== 'ready') {
+                await showJobDrivenContextAlert(currentValidationResult);
+                return;
+            }
+        } else if (['pending', 'mismatch', 'unverifiable'].includes(currentValidationResult.status)) {
+            await showMasterRequestLineAlert(currentValidationResult);
+
             return;
         }
 
-        const confirmed = await confirmSubmit(form, fields);
+        const confirmed = await confirmSubmit(
+            form,
+            fields,
+            isLabelRoomRequest ? jobLookupState : {},
+        );
 
         if (!confirmed) {
             return;

@@ -16,6 +16,7 @@ class MasterRequestService
     public function __construct(
         private readonly OracleJobService $oracleJobService,
         private readonly StockLocatorService $stockLocatorService,
+        private readonly MasterRequestProductionContextService $productionContextService,
     ) {}
 
     public function create(array $data, string $requestSource): MasterRequest
@@ -28,6 +29,7 @@ class MasterRequestService
             $data['request_date'] = null;
             $data['shift_id'] = null;
             $data['leader_name'] = null;
+            unset($data['line_id']);
         }
 
         $data['request_source'] = $requestSource;
@@ -64,34 +66,37 @@ class MasterRequestService
             $data['po_number'] = $this->normalizeNullable($packagingOracleJob?->ttl_cust_po);
             $data['destination'] = $this->normalizeNullable($packagingOracleJob?->ship_code);
 
-            $selectedOracleLine = $this->normalize(
-                ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')
-            );
-            $jobOracleLine = $this->normalize($oracleJob?->line);
-            $oracleLine = $selectedOracleLine !== '' ? $selectedOracleLine : $jobOracleLine;
-            $isOrtAssembly = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ORT_ASSEMBLY;
-
-            if ($isOrtAssembly) {
-                $resolvedLocal = $this->normalize($data['local'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_LOCAL;
-                $resolvedSubinventory = $this->normalize($data['subinventory'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_SUBINVENTORY;
+            if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
+                $productionContext = $this->productionContextService->resolveForLabelRoom($data);
+                $data = [...$data, ...$productionContext];
             } else {
-                $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
-                $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
-                $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
-            }
+                $oracleLine = $this->normalize(
+                    ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')
+                );
+                $isOrtAssembly = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ORT_ASSEMBLY;
 
-            if ($oracleLine === '' || $resolvedLocal === '' || $resolvedSubinventory === '') {
-                throw ValidationException::withMessages([
-                    'line_id' => sprintf(
-                        'La Oracle Line %s no tiene un destino completo configurado en Locals by Oracle Line.',
-                        $oracleLine !== '' ? $oracleLine : 'seleccionada',
-                    ),
-                ]);
-            }
+                if ($isOrtAssembly) {
+                    $resolvedLocal = $this->normalize($data['local'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_LOCAL;
+                    $resolvedSubinventory = $this->normalize($data['subinventory'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_SUBINVENTORY;
+                } else {
+                    $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
+                    $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
+                    $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
+                }
 
-            $data['oracle_line'] = $oracleLine;
-            $data['subinventory'] = $resolvedSubinventory;
-            $data['local'] = $resolvedLocal;
+                if ($oracleLine === '' || $resolvedLocal === '' || $resolvedSubinventory === '') {
+                    throw ValidationException::withMessages([
+                        'line_id' => sprintf(
+                            'La Oracle Line %s no tiene un destino completo configurado en Locals by Oracle Line.',
+                            $oracleLine !== '' ? $oracleLine : 'seleccionada',
+                        ),
+                    ]);
+                }
+
+                $data['oracle_line'] = $oracleLine;
+                $data['subinventory'] = $resolvedSubinventory;
+                $data['local'] = $resolvedLocal;
+            }
 
             $mr = MasterRequest::create($data);
 
@@ -181,7 +186,14 @@ class MasterRequestService
      */
     public function lookupOracleJob(string $jobNumber): array
     {
-        return $this->oracleJobService->buildLookupPayload($jobNumber);
+        $payload = $this->oracleJobService->buildLookupPayload($jobNumber);
+
+        if ($payload['found'] ?? false) {
+            $payload['production_context'] = $this->productionContextService
+                ->describeOracleLine($payload['line'] ?? null);
+        }
+
+        return $payload;
     }
 
     private function normalize(mixed $value): string
