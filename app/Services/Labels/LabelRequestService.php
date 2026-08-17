@@ -4,6 +4,7 @@ namespace App\Services\Labels;
 
 use App\Models\LabelPrintBatch;
 use App\Models\LabelRequest;
+use App\Models\OracleJob;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
 use App\Services\Oracle\OracleJobService;
@@ -12,12 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 class LabelRequestService
 {
-    private const STATUS_REQUESTED = 'requested';
-    private const STATUS_COMPLETED = 'completed';
-    private const STATUS_CANCELLED = 'cancelled';
-
     public function __construct(
         private readonly OracleJobService $oracleJobService,
+        private readonly LabelRequestJobAvailabilityService $availabilityService,
     ) {}
 
     public function create(array $data): LabelRequest
@@ -29,41 +27,116 @@ class LabelRequestService
         });
     }
 
-    public function lookupOracleJob(string $jobNumber): array
+    public function createKiosk(array $data): LabelRequest
     {
-        return $this->oracleJobService->buildLookupPayload($jobNumber);
+        return DB::transaction(function () use ($data): LabelRequest {
+            $jobNumber = strtoupper(trim((string) ($data['job_number'] ?? '')));
+            $job = OracleJob::query()
+                ->whereRaw('UPPER(TRIM(job_number)) = ?', [$jobNumber])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $job) {
+                throw ValidationException::withMessages([
+                    'job_number' => 'El Job no existe en Oracle Jobs.',
+                ]);
+            }
+
+            $availability = $this->availabilityService->calculate($job);
+            $requestedQuantity = (int) ($data['quantity_requested'] ?? 0);
+
+            if ($requestedQuantity > $availability['available_quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity_requested' => "La cantidad solicitada supera la disponibilidad actual del Job ({$availability['available_quantity']}).",
+                ]);
+            }
+
+            $data['job_number'] = $jobNumber;
+            $data['serial_standard'] = 'UL';
+            $data['folio_start'] = null;
+            $data['folio_end'] = null;
+            $data['po_number'] = $this->valueOrOracleFallback($data['po_number'] ?? null, $job->ttl_cust_po);
+            $data['destination'] = $this->valueOrOracleFallback($data['destination'] ?? null, $job->ship_code);
+
+            return LabelRequest::query()
+                ->create($this->buildCreatePayload($data))
+                ->load(['line', 'shift']);
+        }, attempts: 3);
     }
 
-    public function complete(LabelRequest $labelRequest, bool $forceWithoutPrintedBatch = false): LabelRequest
+    public function lookupOracleJob(string $jobNumber): array
     {
-        if ($labelRequest->status === self::STATUS_CANCELLED) {
+        $payload = $this->oracleJobService->buildLookupPayload($jobNumber);
+
+        if (! ($payload['found'] ?? false)) {
+            return $payload;
+        }
+
+        $job = $this->oracleJobService->findByJobNumber($jobNumber);
+
+        if (! $job) {
+            return $payload;
+        }
+
+        return [...$payload, ...$this->availabilityService->calculate($job)];
+    }
+
+    public function markRequisitionPrinted(LabelRequest $labelRequest, ?int $userId): LabelRequest
+    {
+        if (! $labelRequest->canMarkRequisitionPrinted()) {
             throw ValidationException::withMessages([
-                'status' => 'No se puede completar una requisición cancelada.',
+                'status' => 'Solo una requisición pendiente puede marcarse como impresa.',
             ]);
         }
 
-        $hasPrintedPrintBatch = LabelPrintBatch::query()
-            ->where('label_request_id', $labelRequest->id)
-            ->where('batch_type', 'print')
-            ->whereNotNull('printed_at')
-            ->exists();
-
-        if (!$hasPrintedPrintBatch && !$forceWithoutPrintedBatch) {
-            throw ValidationException::withMessages([
-                'status' => 'Esta requisición no tiene un batch print confirmado como impreso. Si continúas, el serial quedará asignado y no podrá reutilizarse automáticamente.',
-            ]);
-        }
-
-        $labelRequest->update(['status' => self::STATUS_COMPLETED]);
+        $labelRequest->update([
+            'status' => LabelRequest::STATUS_IN_PROGRESS,
+            'requisition_printed_at' => now(),
+            'requisition_printed_by_user_id' => $userId,
+        ]);
 
         return $labelRequest->refresh();
     }
 
-    public function cancel(LabelRequest $labelRequest): LabelRequest
+    public function markAttended(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
-        if (in_array($labelRequest->status, [self::STATUS_COMPLETED, self::STATUS_CANCELLED], true)) {
+        if (! $labelRequest->canMarkAttended()) {
             throw ValidationException::withMessages([
-                'status' => 'Solo se pueden cancelar requisiciones en estado requested o in_progress.',
+                'status' => 'Solo una requisición impresa puede marcarse como atendida.',
+            ]);
+        }
+
+        $labelRequest->update([
+            'status' => LabelRequest::STATUS_ATTENDED,
+            'attended_at' => now(),
+            'attended_by_user_id' => $userId,
+        ]);
+
+        return $labelRequest->refresh();
+    }
+
+    public function complete(LabelRequest $labelRequest, ?int $userId): LabelRequest
+    {
+        if (! $labelRequest->canMarkDelivered()) {
+            throw ValidationException::withMessages([
+                'status' => 'Solo una requisición atendida puede marcarse como entregada.',
+            ]);
+        }
+
+        $labelRequest->update([
+            'status' => LabelRequest::STATUS_COMPLETED,
+            'delivered_at' => now(),
+            'delivered_by_user_id' => $userId,
+        ]);
+
+        return $labelRequest->refresh();
+    }
+
+    public function cancel(LabelRequest $labelRequest, ?int $userId = null): LabelRequest
+    {
+        if (! $labelRequest->canCancel()) {
+            throw ValidationException::withMessages([
+                'status' => 'Solo se pueden cancelar requisiciones pendientes o con hoja impresa.',
             ]);
         }
 
@@ -79,7 +152,7 @@ class LabelRequestService
             ]);
         }
 
-        DB::transaction(function () use ($labelRequest): void {
+        DB::transaction(function () use ($labelRequest, $userId): void {
             $serialWeekIds = $labelRequest->serialRanges()
                 ->select('serial_week_id')
                 ->distinct()
@@ -117,7 +190,11 @@ class LabelRequestService
                     ->update(['last_serial_number' => $lastSerialNumber]);
             }
 
-            $labelRequest->update(['status' => self::STATUS_CANCELLED]);
+            $labelRequest->update([
+                'status' => LabelRequest::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+                'cancelled_by_user_id' => $userId,
+            ]);
         });
 
         return $labelRequest->refresh();
@@ -126,7 +203,7 @@ class LabelRequestService
     private function buildCreatePayload(array $data): array
     {
         $payload = $data;
-        $payload['status'] = self::STATUS_REQUESTED;
+        $payload['status'] = LabelRequest::STATUS_REQUESTED;
 
         $jobNumber = (string) ($payload['job_number'] ?? '');
 
@@ -136,7 +213,7 @@ class LabelRequestService
 
         $job = $this->oracleJobService->findByJobNumber($jobNumber);
 
-        if (!$job) {
+        if (! $job) {
             return $payload;
         }
 
@@ -149,5 +226,18 @@ class LabelRequestService
         }
 
         return $payload;
+    }
+
+    private function valueOrOracleFallback(mixed $value, mixed $oracleValue): ?string
+    {
+        $normalizedValue = strtoupper(trim((string) $value));
+
+        if ($normalizedValue !== '') {
+            return $normalizedValue;
+        }
+
+        $fallback = strtoupper(trim((string) $oracleValue));
+
+        return $fallback !== '' ? $fallback : null;
     }
 }

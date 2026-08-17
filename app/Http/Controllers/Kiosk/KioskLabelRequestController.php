@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Kiosk\StoreKioskLabelRequestRequest;
 use App\Http\Requests\Labels\LookupOracleLabelJobRequest;
-use App\Http\Requests\Labels\StoreLabelRequestRequest;
 use App\Models\User;
 use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
@@ -21,10 +21,10 @@ class KioskLabelRequestController extends Controller
 
     public function create(): View
     {
-        return view('kiosk.label-requests.create', $this->readService->buildCreateFormData());
+        return view('kiosk.label-requests.create', $this->readService->buildKioskCreateFormData());
     }
 
-    public function store(StoreLabelRequestRequest $request): RedirectResponse
+    public function store(StoreKioskLabelRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
         /** @var User $kioskUser */
@@ -32,7 +32,7 @@ class KioskLabelRequestController extends Controller
         $data['requested_by_user_id'] = $kioskUser->id;
         $data['requested_by_name'] = $kioskUser->name;
 
-        $labelRequest = $this->service->create($data);
+        $labelRequest = $this->service->createKiosk($data);
 
         return redirect()
             ->route('kiosk.dashboard')

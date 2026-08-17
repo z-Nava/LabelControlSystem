@@ -11,7 +11,6 @@ use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LabelRequestController extends Controller
@@ -51,6 +50,13 @@ class LabelRequestController extends Controller
         return view('label_requests.show', compact('labelRequest'));
     }
 
+    public function requisitionSheet(LabelRequest $label_request): View
+    {
+        $labelRequest = $this->readService->findForShow($label_request->id);
+
+        return view('label_requests.requisition_sheet', compact('labelRequest'));
+    }
+
     public function lookup(LookupOracleLabelJobRequest $request): JsonResponse
     {
         return response()->json(
@@ -60,18 +66,29 @@ class LabelRequestController extends Controller
 
     public function cancel(LabelRequest $label_request): RedirectResponse
     {
-        $this->service->cancel($label_request);
+        $this->service->cancel($label_request, auth()->id());
 
-        return redirect()->route('label_requests.show', $label_request)->with('success', 'Requisición cancelada.');
+        return back()->with('success', 'Requisición cancelada.');
     }
 
-    public function complete(Request $request, LabelRequest $label_request): RedirectResponse
+    public function markPrinted(LabelRequest $label_request): RedirectResponse
     {
-        $this->service->complete(
-            $label_request,
-            $request->boolean('force_without_printed_batch'),
-        );
+        $this->service->markRequisitionPrinted($label_request, auth()->id());
 
-        return redirect()->route('label_requests.show', $label_request)->with('success', 'Requisición completada.');
+        return back()->with('success', 'Requisición marcada como impresa.');
+    }
+
+    public function attend(LabelRequest $label_request): RedirectResponse
+    {
+        $this->service->markAttended($label_request, auth()->id());
+
+        return back()->with('success', 'Requisición marcada como atendida.');
+    }
+
+    public function complete(LabelRequest $label_request): RedirectResponse
+    {
+        $this->service->complete($label_request, auth()->id());
+
+        return back()->with('success', 'Requisición marcada como entregada.');
     }
 }

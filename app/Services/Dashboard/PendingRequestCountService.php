@@ -19,7 +19,7 @@ class PendingRequestCountService
                 ? MasterRequest::query()->where('status', MasterRequest::STATUS_REQUESTED)->count()
                 : 0,
             'labels' => $user->hasModuleAccess('labels')
-                ? LabelRequest::query()->where('status', LabelRequest::STATUS_REQUESTED)->count()
+                ? LabelRequest::query()->open()->count()
                 : 0,
             'dummy' => $user->hasModuleAccess('dummy')
                 ? DummyRequest::query()->where('status', DummyRequest::STATUS_REQUESTED)->count()

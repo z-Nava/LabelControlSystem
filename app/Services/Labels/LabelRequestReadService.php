@@ -5,8 +5,8 @@ namespace App\Services\Labels;
 use App\Models\LabelRequest;
 use App\Models\LabelSku;
 use App\Models\ProductionLine;
-use App\Models\SkuSerialFormat;
 use App\Models\Shift;
+use App\Models\SkuSerialFormat;
 use App\Support\SerialStandards;
 
 class LabelRequestReadService
@@ -18,7 +18,7 @@ class LabelRequestReadService
             'date_to' => $filters['date_to'] ?? null,
             'line_id' => $filters['line_id'] ?? null,
             'shift_id' => $filters['shift_id'] ?? null,
-            'status' => $filters['status'] ?? null,
+            'status' => $filters['status'] ?? 'active',
             'sku_np' => trim((string) ($filters['sku_np'] ?? '')),
         ];
 
@@ -29,12 +29,17 @@ class LabelRequestReadService
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
             ->when($validated['line_id'], fn ($query, $value) => $query->where('line_id', $value))
             ->when($validated['shift_id'], fn ($query, $value) => $query->where('shift_id', $value))
-            ->when($validated['status'], fn ($query, $value) => $query->where('status', $value))
+            ->when($validated['status'] === 'active', fn ($query) => $query->open())
+            ->when(
+                ! in_array($validated['status'], ['active', 'all'], true),
+                fn ($query) => $query->where('status', $validated['status'])
+            )
             ->when($validated['sku_np'] !== '', function ($query) use ($validated) {
                 $search = $validated['sku_np'];
 
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('label_part_number', 'like', "%{$search}%")
+                        ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
                             $labelSkuQuery->select('label_part_number')
                                 ->from('label_skus')
@@ -68,7 +73,7 @@ class LabelRequestReadService
                 ->active()
                 ->whereExists(function ($query) {
                     $query->selectRaw('1')
-                        ->from((new SkuSerialFormat())->getTable())
+                        ->from((new SkuSerialFormat)->getTable())
                         ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
                         ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
                         ->where('sku_serial_formats.is_active', true);
@@ -86,6 +91,22 @@ class LabelRequestReadService
         ];
     }
 
+    public function buildKioskCreateFormData(): array
+    {
+        return [
+            'defaultDate' => now()->toDateString(),
+            'defaultWeek' => (int) now()->isoWeek(),
+            'lines' => ProductionLine::query()
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'line_type']),
+            'shifts' => Shift::query()
+                ->where('active', true)
+                ->orderBy('id')
+                ->get(['id', 'name', 'code']),
+        ];
+    }
+
     public function findForShow(int $id): LabelRequest
     {
         return LabelRequest::query()
@@ -93,6 +114,11 @@ class LabelRequestReadService
                 'line:id,name,code',
                 'shift:id,name,code',
                 'requestedByUser:id,name',
+                'oracleJob:id,job_number,assembly,part_description,job_qty,quantity_remainder',
+                'requisitionPrintedByUser:id,name',
+                'attendedByUser:id,name',
+                'deliveredByUser:id,name',
+                'cancelledByUser:id,name',
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
                 'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),
             ])

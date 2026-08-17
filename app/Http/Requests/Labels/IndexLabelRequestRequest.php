@@ -18,7 +18,7 @@ class IndexLabelRequestRequest extends FormRequest
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
             'line_id' => ['nullable', 'integer', 'exists:production_lines,id'],
             'shift_id' => ['nullable', 'integer', 'exists:shifts,id'],
-            'status' => ['nullable', 'in:requested,in_progress,completed,cancelled'],
+            'status' => ['nullable', 'in:active,all,requested,in_progress,attended,completed,cancelled'],
             'sku_np' => ['nullable', 'string', 'max:80'],
         ];
     }

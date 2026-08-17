@@ -32,13 +32,13 @@ class OracleJobService
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($qq) use ($q) {
                     $qq->where('job_number', 'like', "%{$q}%")
-                       ->orWhere('assembly', 'like', "%{$q}%")
-                       ->orWhere('part_description', 'like', "%{$q}%")
-                       ->orWhere('ttl_cust_po', 'like', "%{$q}%");
+                        ->orWhere('assembly', 'like', "%{$q}%")
+                        ->orWhere('part_description', 'like', "%{$q}%")
+                        ->orWhere('ttl_cust_po', 'like', "%{$q}%");
                 });
             })
-            ->when($line, fn($query) => $query->where('line', $line))
-            ->when($status, fn($query) => $query->where('job_status', $status))
+            ->when($line, fn ($query) => $query->where('line', $line))
+            ->when($status, fn ($query) => $query->where('job_status', $status))
             ->orderByDesc('last_update_date')
             ->paginate($perPage)
             ->withQueryString();
@@ -47,7 +47,7 @@ class OracleJobService
     public function importFromExcel(UploadedFile $file): array
     {
         // Leemos el excel con heading row
-        $rows = Excel::toArray(new OracleJobsImport(), $file)[0] ?? [];
+        $rows = Excel::toArray(new OracleJobsImport, $file)[0] ?? [];
 
         $sourceName = $file->getClientOriginalName();
         $now = now();
@@ -62,6 +62,7 @@ class OracleJobService
 
                 if (empty($data['job_number'])) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -70,7 +71,7 @@ class OracleJobService
 
                 $existing = OracleJob::where('job_number', $data['job_number'])->first();
 
-                if (!$existing) {
+                if (! $existing) {
                     OracleJob::create($data);
                     $inserted++;
                 } else {
@@ -121,7 +122,7 @@ class OracleJobService
         $normalizedJobNumber = strtoupper(trim($jobNumber));
         $job = $this->findByJobNumber($normalizedJobNumber);
 
-        if (!$job) {
+        if (! $job) {
             return [
                 'found' => false,
                 'job_number' => $normalizedJobNumber,
@@ -132,6 +133,8 @@ class OracleJobService
             'found' => true,
             'job_number' => $job->job_number,
             'job_qty' => $job->job_qty,
+            'qty_completed' => $job->qty_completed,
+            'quantity_remainder' => $job->quantity_remainder,
             'line' => $job->line,
             'assembly' => $job->assembly,
             'part_description' => $job->part_description,

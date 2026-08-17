@@ -196,6 +196,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');
             Route::post('/label-requests', [LabelRequestController::class, 'store'])->name('label_requests.store');
             Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->name('label_requests.show');
+            Route::get('/label-requests/{label_request}/requisition-sheet', [LabelRequestController::class, 'requisitionSheet'])->name('label_requests.requisition_sheet');
+            Route::post('/label-requests/{label_request}/mark-printed', [LabelRequestController::class, 'markPrinted'])->name('label_requests.mark_printed');
+            Route::post('/label-requests/{label_request}/attend', [LabelRequestController::class, 'attend'])->name('label_requests.attend');
             Route::post('/label-requests/{label_request}/cancel', [LabelRequestController::class, 'cancel'])->name('label_requests.cancel');
             Route::post('/label-requests/{label_request}/complete', [LabelRequestController::class, 'complete'])->name('label_requests.complete');
 
