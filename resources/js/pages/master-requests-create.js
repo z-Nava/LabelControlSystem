@@ -293,11 +293,16 @@ function initializeInventoryDestination(fields) {
     attachValidationClearListeners(form);
 
     form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
         if (isSubmitting) {
             return;
         }
 
-        event.preventDefault();
+        const submissionAction = event.submitter?.value === 'save_and_print'
+            ? 'save_and_print'
+            : 'save';
+        const shouldOpenPrintInNewTab = isLabelRoomRequest && submissionAction === 'save_and_print';
 
         if (!validateBeforeSubmit(form)) {
             form.reportValidity();
@@ -321,6 +326,7 @@ function initializeInventoryDestination(fields) {
             form,
             fields,
             isLabelRoomRequest ? jobLookupState : {},
+            submissionAction,
         );
 
         if (!confirmed) {
@@ -328,7 +334,28 @@ function initializeInventoryDestination(fields) {
         }
 
         isSubmitting = true;
+
+        if (isLabelRoomRequest) {
+            const submissionActionInput = document.createElement('input');
+            submissionActionInput.type = 'hidden';
+            submissionActionInput.name = 'submission_action';
+            submissionActionInput.value = submissionAction;
+            form.appendChild(submissionActionInput);
+
+            if (shouldOpenPrintInNewTab) {
+                form.target = '_blank';
+            }
+        }
+
+        form.querySelectorAll('button[type="submit"]').forEach((button) => {
+            button.disabled = true;
+        });
+
         form.submit();
+
+        if (shouldOpenPrintInNewTab && form.dataset.afterPrintUrl) {
+            window.setTimeout(() => window.location.assign(form.dataset.afterPrintUrl), 0);
+        }
     });
 
     updatePageState();

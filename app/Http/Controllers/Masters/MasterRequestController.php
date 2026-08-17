@@ -8,6 +8,7 @@ use App\Http\Requests\Masters\IndexMasterRequestRequest;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
 use App\Models\MasterRequest;
+use App\Services\Masters\MasterRequestPrintWorkflowService;
 use App\Services\Masters\MasterRequestReadService;
 use App\Services\Masters\MasterRequestService;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ class MasterRequestController extends Controller
     public function __construct(
         private readonly MasterRequestService $service,
         private readonly MasterRequestReadService $readService,
+        private readonly MasterRequestPrintWorkflowService $printWorkflowService,
     ) {}
 
     public function index(IndexMasterRequestRequest $request): View
@@ -40,10 +42,22 @@ class MasterRequestController extends Controller
     public function store(StoreMasterRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $submissionAction = $data['submission_action'];
+        unset($data['submission_action']);
 
-        // ✅ trazabilidad (del sistema, no del form)
         $data['requested_by_user_id'] = auth()->id();
         $data['requested_by_name'] = (string) auth()->user()?->name;
+
+        if ($submissionAction === StoreMasterRequestRequest::ACTION_SAVE_AND_PRINT) {
+            $batch = $this->printWorkflowService->createAndStartInitialPrint(
+                data: $data,
+                requestSource: MasterRequest::SOURCE_LABEL_ROOM,
+                userId: auth()->id(),
+                userName: (string) auth()->user()?->name,
+            );
+
+            return redirect()->route('master_print_batches.print', $batch);
+        }
 
         $mr = $this->service->create($data, MasterRequest::SOURCE_LABEL_ROOM);
 

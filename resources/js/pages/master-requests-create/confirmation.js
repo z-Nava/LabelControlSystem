@@ -61,13 +61,16 @@ function getConfirmationHtml(form, fields, jobLookupState) {
     `;
 }
 
-export async function confirmSubmit(form, fields, jobLookupState = {}) {
+export async function confirmSubmit(form, fields, jobLookupState = {}, submissionAction = 'save') {
+    const shouldPrint = submissionAction === 'save_and_print';
     const result = await Swal.fire({
-        title: '¿Confirmas el envío de la requisición?',
+        title: shouldPrint
+            ? '¿Guardar e imprimir la requisición?'
+            : '¿Confirmas el envío de la requisición?',
         html: getConfirmationHtml(form, fields, jobLookupState),
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Sí, enviar',
+        confirmButtonText: shouldPrint ? 'Sí, guardar e imprimir' : 'Sí, guardar',
         cancelButtonText: 'Cancelar',
         focusCancel: true,
         reverseButtons: true,

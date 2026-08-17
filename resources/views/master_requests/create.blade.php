@@ -23,6 +23,7 @@
     <form id="masterRequestCreate"
           data-lookup-url="{{ route('oracle.lookup_job') }}"
           data-request-source="label_room"
+          data-after-print-url="{{ route('master_requests.create') }}"
           class="mt-6 space-y-4"
           method="POST"
           action="{{ route('master_requests.store') }}">
@@ -337,11 +338,28 @@
             </div>
         </section>
 
-        <div class="pt-2">
-            <button class="w-full rounded-xl bg-red-600 py-3 font-semibold text-white transition hover:bg-red-500">
-                Guardar requisición Master
+        <div class="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
+            <button
+                type="submit"
+                name="submission_action"
+                value="save"
+                class="rounded-xl border border-slate-300 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60">
+                Guardar solamente
+            </button>
+
+            <button
+                type="submit"
+                name="submission_action"
+                value="save_and_print"
+                formtarget="_blank"
+                class="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white transition hover:bg-red-500 disabled:cursor-wait disabled:opacity-60">
+                Guardar e imprimir
             </button>
         </div>
+
+        <p class="text-center text-xs text-slate-500">
+            Guardar e imprimir creará un batch con todos los folios de esta requisición, una copia por folio.
+        </p>
     </form>
 </div>
 @endsection

@@ -13,6 +13,10 @@ use Illuminate\Validation\Validator;
 
 class StoreMasterRequestRequest extends FormRequest
 {
+    public const ACTION_SAVE = 'save';
+
+    public const ACTION_SAVE_AND_PRINT = 'save_and_print';
+
     private ?OracleJobService $oracleJobService = null;
 
     private ?MasterRequestLineValidationService $lineValidationService = null;
@@ -30,8 +34,12 @@ class StoreMasterRequestRequest extends FormRequest
         $lineRules = $this->isKioskRequest()
             ? ['required', 'integer', 'exists:production_lines,id']
             : ['prohibited'];
+        $submissionActionRules = $this->isKioskRequest()
+            ? ['prohibited']
+            : ['required', Rule::in([self::ACTION_SAVE, self::ACTION_SAVE_AND_PRINT])];
 
         return [
+            'submission_action' => $submissionActionRules,
             'request_date' => [$productionContextPresence, 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
             'line_id' => $lineRules,
@@ -151,7 +159,7 @@ class StoreMasterRequestRequest extends FormRequest
         $local = $this->cleanInput($this->input('local', ''));
         $subinventory = $this->cleanInput($this->input('subinventory', ''));
 
-        $this->merge([
+        $normalized = [
             'week' => $this->isKioskRequest() ? $this->input('week') : now()->weekOfYear,
             'leader_name' => $this->cleanInput($this->input('leader_name', '')),
             'po_number' => $this->cleanInput($this->input('po_number', '')),
@@ -161,7 +169,13 @@ class StoreMasterRequestRequest extends FormRequest
             'local' => $local !== null ? strtoupper($local) : null,
             'subinventory' => $subinventory !== null ? strtoupper($subinventory) : null,
             'notes' => $this->cleanInput($this->input('notes', '')),
-        ]);
+        ];
+
+        if (! $this->isKioskRequest()) {
+            $normalized['submission_action'] = $this->input('submission_action', self::ACTION_SAVE);
+        }
+
+        $this->merge($normalized);
     }
 
     /**
