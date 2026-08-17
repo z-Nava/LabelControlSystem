@@ -21,7 +21,7 @@ class MasterRequestStatusService
     {
         $mr->refresh();
 
-        if ($mr->status === 'cancelled') {
+        if ($mr->isCancelled()) {
             return $mr;
         }
 
@@ -31,8 +31,9 @@ class MasterRequestStatusService
             ->count();
 
         if ($totalFolios === 0) {
-            $mr->status = 'requested';
+            $mr->status = MasterRequest::STATUS_REQUESTED;
             $mr->save();
+
             return $mr;
         }
 
@@ -43,8 +44,9 @@ class MasterRequestStatusService
 
         // Si ya todos impresos -> completed
         if (! $pendingExists) {
-            $mr->status = 'completed';
+            $mr->status = MasterRequest::STATUS_COMPLETED;
             $mr->save();
+
             return $mr;
         }
 
@@ -54,7 +56,9 @@ class MasterRequestStatusService
             ->where('status', 'printed')
             ->exists();
 
-        $mr->status = $anyPrinted ? 'in_progress' : 'requested';
+        $mr->status = $anyPrinted
+            ? MasterRequest::STATUS_IN_PROGRESS
+            : MasterRequest::STATUS_REQUESTED;
         $mr->save();
 
         return $mr;

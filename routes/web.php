@@ -163,6 +163,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
             Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
             Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
+            Route::post('/master-requests/{master_request}/cancel', [MasterRequestController::class, 'cancel'])->name('master_requests.cancel');
 
             Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
             Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');

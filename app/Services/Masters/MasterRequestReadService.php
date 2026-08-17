@@ -21,9 +21,12 @@ class MasterRequestReadService
                 'folios as total_folios',
                 'folios as printed_folios' => fn ($query) => $query->where('status', 'printed'),
             ])
-            ->when($status === 'pending', fn ($query) => $query->whereIn('status', ['requested', 'in_progress']))
-            ->when($status === 'completed', fn ($query) => $query->where('status', 'completed'))
-            ->when($status === 'cancelled', fn ($query) => $query->where('status', 'cancelled'))
+            ->when($status === 'pending', fn ($query) => $query->whereIn('status', [
+                MasterRequest::STATUS_REQUESTED,
+                MasterRequest::STATUS_IN_PROGRESS,
+            ]))
+            ->when($status === 'completed', fn ($query) => $query->where('status', MasterRequest::STATUS_COMPLETED))
+            ->when($status === 'cancelled', fn ($query) => $query->where('status', MasterRequest::STATUS_CANCELLED))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('id', $q)
@@ -65,6 +68,6 @@ class MasterRequestReadService
 
     public function findForShow(int $id): MasterRequest
     {
-        return MasterRequest::with(['line', 'shift', 'folios'])->findOrFail($id);
+        return MasterRequest::with(['line', 'shift', 'folios', 'cancelledBy:id,name'])->findOrFail($id);
     }
 }

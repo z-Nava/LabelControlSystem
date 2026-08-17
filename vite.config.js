@@ -9,6 +9,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/pages/label-room-dashboard.js',
                 'resources/js/pages/master-requests-create.js',
+                'resources/js/pages/master-requests-index.js',
                 'resources/js/pages/master-requests-show.js',
                 'resources/js/pages/master-print-create.js',
                 'resources/js/pages/master-print-template.js',

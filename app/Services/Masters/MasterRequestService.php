@@ -121,6 +121,61 @@ class MasterRequestService
         });
     }
 
+    public function cancel(
+        MasterRequest $masterRequest,
+        string $reason,
+        ?int $cancelledByUserId,
+        string $cancelledByName,
+    ): MasterRequest {
+        $reason = trim($reason);
+
+        if ($reason === '' || mb_strlen($reason) > 500) {
+            throw ValidationException::withMessages([
+                'cancellation_reason' => 'El motivo de cancelación es obligatorio y no puede exceder 500 caracteres.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($masterRequest, $reason, $cancelledByUserId, $cancelledByName): MasterRequest {
+            $lockedRequest = MasterRequest::query()
+                ->whereKey($masterRequest->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedRequest->status !== MasterRequest::STATUS_REQUESTED) {
+                throw ValidationException::withMessages([
+                    'status' => 'Solo se pueden cancelar requisiciones Master en estado requested.',
+                ]);
+            }
+
+            $hasPrintedFolios = MasterRequestFolio::query()
+                ->where('master_request_id', $lockedRequest->id)
+                ->where('status', 'printed')
+                ->exists();
+
+            if ($hasPrintedFolios) {
+                throw ValidationException::withMessages([
+                    'status' => 'No se puede cancelar: la requisición ya tiene folios impresos.',
+                ]);
+            }
+
+            if ($lockedRequest->printBatches()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => 'No se puede cancelar: la requisición ya tiene batches de impresión.',
+                ]);
+            }
+
+            $lockedRequest->update([
+                'status' => MasterRequest::STATUS_CANCELLED,
+                'cancellation_reason' => $reason,
+                'cancelled_at' => now(),
+                'cancelled_by_user_id' => $cancelledByUserId,
+                'cancelled_by_name' => $cancelledByName,
+            ]);
+
+            return $lockedRequest->refresh();
+        });
+    }
+
     /**
      * Lookup: dado un job_number te regresa lo que ocupará el front.
      */

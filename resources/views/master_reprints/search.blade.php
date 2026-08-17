@@ -67,9 +67,15 @@
                             <a href="{{ route('master_requests.reprints.index', $mr->id) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">
                                 Ver historial
                             </a>
-                            <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-500 ml-1">
-                                Reimprimir
-                            </a>
+                            @if($mr->isCancelled())
+                                <span class="ml-1 inline-flex cursor-not-allowed rounded-lg bg-slate-200 px-3 py-1.5 text-slate-500" title="La requisición está cancelada.">
+                                    Reimpresión bloqueada
+                                </span>
+                            @else
+                                <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-500 ml-1">
+                                    Reimprimir
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @empty

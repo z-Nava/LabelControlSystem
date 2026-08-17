@@ -35,9 +35,13 @@ class MasterPrintService
         return DB::transaction(function () use (
             $masterRequest, $folioIds, $batchType, $copies, $reason, $printedByUserId, $printedByName
         ) {
-            $masterRequest->refresh()->load(['line', 'shift']);
+            $masterRequest = MasterRequest::query()
+                ->with(['line', 'shift'])
+                ->whereKey($masterRequest->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            if ($masterRequest->status === 'cancelled') {
+            if ($masterRequest->isCancelled()) {
                 throw ValidationException::withMessages([
                     'batch_type' => 'No se puede imprimir: la requisición está cancelada.',
                 ]);
@@ -109,6 +113,14 @@ class MasterPrintService
 
     public function renderPrintable(MasterPrintBatch $batch): View
     {
+        $batch->loadMissing('masterRequest');
+
+        if ($batch->masterRequest?->isCancelled()) {
+            throw ValidationException::withMessages([
+                'batch_type' => 'No se puede abrir la impresión: la requisición está cancelada.',
+            ]);
+        }
+
         $data = $this->buildMasterEnsambleData($batch);
 
         return view($this->resolveTemplateView($batch->masterRequest?->request_type), $data + ['mode' => 'print']);

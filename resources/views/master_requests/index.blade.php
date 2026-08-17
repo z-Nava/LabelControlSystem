@@ -14,6 +14,18 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @if($errors->any())
         <div class="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {{ $errors->first() }}
@@ -84,14 +96,31 @@
                         </td>
                         <td class="py-3 pr-3">{{ $printed }}/{{ $total }}</td>
                         <td class="py-3 pr-3">
-                            <span class="rounded-full px-2 py-1 text-xs
-                                {{ $mr->status === 'completed' ? 'bg-green-100 text-green-800' : ($mr->status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800') }}">
-                                {{ $mr->status }}
+                            <span class="rounded-full px-2 py-1 text-xs {{ $mr->statusBadgeClasses() }}">
+                                {{ $mr->statusLabel() }}
                             </span>
                         </td>
-                        <td class="py-3 pr-3 whitespace-nowrap">
-                            <a href="{{ route('master_requests.show', $mr->id) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">Ver</a>
-                            <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-500">Imprimir</a>
+                        <td class="py-3 pr-3">
+                            <div class="flex items-center gap-2 whitespace-nowrap">
+                                <a href="{{ route('master_requests.show', $mr->id) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">Ver</a>
+                                @if($mr->isCancelled())
+                                    <span class="inline-flex cursor-not-allowed rounded-lg bg-slate-200 px-3 py-1.5 text-slate-500" title="La requisición está cancelada.">
+                                        Impresión bloqueada
+                                    </span>
+                                @else
+                                    <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-500">Imprimir</a>
+                                @endif
+                                @if($mr->canBeCancelled())
+                                    <button
+                                        type="button"
+                                        class="js-cancel-master-request rounded-lg border border-red-200 px-3 py-1.5 text-red-700 hover:bg-red-50"
+                                        data-request-id="{{ $mr->id }}"
+                                        data-cancel-url="{{ route('master_requests.cancel', $mr) }}"
+                                    >
+                                        Cancelar
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -106,5 +135,14 @@
     <div class="mt-4">
         {{ $masterRequests->links() }}
     </div>
+
+    <form id="cancel-master-request-form" method="POST" class="hidden">
+        @csrf
+        <input id="cancel-master-request-reason" type="hidden" name="cancellation_reason">
+    </form>
 </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/master-requests-index.js')
+@endpush

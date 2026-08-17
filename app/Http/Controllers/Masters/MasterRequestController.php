@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Masters;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Masters\CancelMasterRequestRequest;
 use App\Http\Requests\Masters\IndexMasterRequestRequest;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
 use App\Http\Requests\Masters\StoreMasterRequestRequest;
@@ -56,6 +57,22 @@ class MasterRequestController extends Controller
         $mr = $this->readService->findForShow($id);
 
         return view('master_requests.show', compact('mr'));
+    }
+
+    public function cancel(
+        CancelMasterRequestRequest $request,
+        MasterRequest $master_request,
+    ): RedirectResponse {
+        $this->service->cancel(
+            masterRequest: $master_request,
+            reason: $request->string('cancellation_reason')->toString(),
+            cancelledByUserId: $request->user()?->id,
+            cancelledByName: (string) $request->user()?->name,
+        );
+
+        return redirect()
+            ->back()
+            ->with('success', "Requisición Master #{$master_request->id} cancelada.");
     }
 
     // Endpoint para autollenar (AJAX)

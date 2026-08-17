@@ -11,10 +11,16 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <a href="{{ route('master_requests.print.create', $mr->id) }}"
-               class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
-                Nueva impresión
-            </a>
+            @if($mr->isCancelled())
+                <span class="inline-flex cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500" title="La requisición está cancelada.">
+                    Impresión bloqueada
+                </span>
+            @else
+                <a href="{{ route('master_requests.print.create', $mr->id) }}"
+                   class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
+                    Nueva impresión
+                </a>
+            @endif
 
             <a href="{{ route('master_requests.show', $mr->id) }}"
                class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
@@ -59,10 +65,16 @@
                         </div>
                     </td>
                     <td class="py-3 pl-3 text-right whitespace-nowrap">
-                        <a href="{{ route('master_print_batches.print', $batch) }}" target="_blank"
-                           class="rounded-lg border px-3 py-1.5 hover:bg-slate-50 ml-1">
-                            Imprimir
-                        </a>
+                        @if($mr->isCancelled())
+                            <span class="inline-flex cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-500">
+                                Bloqueada
+                            </span>
+                        @else
+                            <a href="{{ route('master_print_batches.print', $batch) }}" target="_blank"
+                               class="rounded-lg border px-3 py-1.5 hover:bg-slate-50 ml-1">
+                                Imprimir
+                            </a>
+                        @endif
                     </td>
                 </tr>
             @empty

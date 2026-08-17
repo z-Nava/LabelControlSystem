@@ -12,12 +12,16 @@ use Illuminate\View\View;
 
 class MasterPrintController extends Controller
 {
-    public function __construct(private readonly MasterPrintService $service)
-    {
-    }
+    public function __construct(private readonly MasterPrintService $service) {}
 
-    public function create(MasterRequest $master_request): View
+    public function create(MasterRequest $master_request): RedirectResponse|View
     {
+        if ($master_request->isCancelled()) {
+            return redirect()
+                ->route('master_requests.show', $master_request)
+                ->with('error', 'No se puede imprimir: la requisición está cancelada.');
+        }
+
         $mr = $master_request->load([
             'line',
             'shift',
@@ -57,8 +61,16 @@ class MasterPrintController extends Controller
             ->with('batch_id', $batch->id);
     }
 
-    public function print(MasterPrintBatch $batch)
+    public function print(MasterPrintBatch $batch): RedirectResponse|View
     {
+        $batch->loadMissing('masterRequest');
+
+        if ($batch->masterRequest?->isCancelled()) {
+            return redirect()
+                ->route('master_requests.show', $batch->master_request_id)
+                ->with('error', 'No se puede abrir la impresión: la requisición está cancelada.');
+        }
+
         return $this->service->renderPrintable($batch);
     }
 }
