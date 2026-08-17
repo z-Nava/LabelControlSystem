@@ -43,16 +43,19 @@ class LabelRequest extends Model
         'requested_by_name',
         'requested_by_user_id',
         'label_part_number',
+        'serial_part_number',
         'serial_standard',
         'po_number',
         'destination',
         'model',
         'job_number',
         'quantity_requested',
+        'shipping_quantity',
         'folio_start',
         'folio_end',
         'include_serial',
         'include_rating',
+        'include_inner',
         'include_shipping',
         'status',
         'requisition_printed_at',
@@ -73,10 +76,12 @@ class LabelRequest extends Model
         'shift_id' => 'integer',
         'requested_by_user_id' => 'integer',
         'quantity_requested' => 'integer',
+        'shipping_quantity' => 'integer',
         'folio_start' => 'integer',
         'folio_end' => 'integer',
         'include_serial' => 'boolean',
         'include_rating' => 'boolean',
+        'include_inner' => 'boolean',
         'include_shipping' => 'boolean',
         'requisition_printed_at' => 'datetime',
         'requisition_printed_by_user_id' => 'integer',
@@ -117,6 +122,13 @@ class LabelRequest extends Model
     public function serialRanges(): HasMany
     {
         return $this->hasMany(SerialRange::class, 'label_request_id');
+    }
+
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(LabelRequestRating::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 
     public function requisitionPrintedByUser(): BelongsTo
@@ -167,8 +179,73 @@ class LabelRequest extends Model
         return array_values(array_filter([
             $this->include_serial ? 'Serial' : null,
             $this->include_rating ? 'Rating' : null,
+            $this->include_inner ? 'Inner' : null,
             $this->include_shipping ? 'Shipping' : null,
         ]));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function requestedRatingPartNumbers(): array
+    {
+        $partNumbers = ($this->relationLoaded('ratings')
+            ? $this->ratings
+            : $this->ratings()->get())
+            ->pluck('part_number')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($partNumbers === [] && $this->include_rating && $this->label_part_number) {
+            return [(string) $this->label_part_number];
+        }
+
+        return $partNumbers;
+    }
+
+    /**
+     * @return array<int, array{type: string, part_number: ?string, quantity: int}>
+     */
+    public function requestedLabelLines(): array
+    {
+        $lines = [];
+
+        if ($this->include_serial) {
+            $lines[] = [
+                'type' => 'Serial',
+                'part_number' => $this->serial_part_number ?: $this->label_part_number,
+                'quantity' => (int) $this->quantity_requested,
+            ];
+        }
+
+        if ($this->include_rating) {
+            foreach ($this->requestedRatingPartNumbers() as $partNumber) {
+                $lines[] = [
+                    'type' => 'Rating',
+                    'part_number' => $partNumber,
+                    'quantity' => (int) $this->quantity_requested,
+                ];
+            }
+        }
+
+        if ($this->include_inner) {
+            $lines[] = [
+                'type' => 'Inner',
+                'part_number' => null,
+                'quantity' => (int) $this->quantity_requested,
+            ];
+        }
+
+        if ($this->include_shipping) {
+            $lines[] = [
+                'type' => 'Shipping',
+                'part_number' => null,
+                'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
+            ];
+        }
+
+        return $lines;
     }
 
     public function getStatusLabelAttribute(): string

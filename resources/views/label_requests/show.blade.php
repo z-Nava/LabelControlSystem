@@ -51,7 +51,8 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Solicitud</div>
             <div class="mt-1 font-semibold">{{ implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'Sin tipo' }}</div>
-            <div class="text-slate-700">Cantidad por tipo: {{ number_format($labelRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">Cantidad general: {{ number_format($labelRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">Cantidad Shipping: {{ $labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida' }}</div>
             <div class="text-slate-700">Semana: {{ $labelRequest->week }}</div>
             <div class="text-slate-700">Solicita: {{ $labelRequest->requested_by_name }}</div>
         </div>
@@ -65,8 +66,13 @@
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div class="text-xs uppercase tracking-wide text-slate-500">Etiqueta y folios</div>
-            <div class="mt-1 font-semibold">NP Rating: {{ $labelRequest->include_rating ? ($labelRequest->label_part_number ?: '—') : 'No requerido' }}</div>
+            <div class="text-xs uppercase tracking-wide text-slate-500">Números de parte y folios</div>
+            <div class="mt-1 font-semibold">NP Serial: {{ $labelRequest->serial_part_number ?: ($labelRequest->label_part_number ?: '—') }}</div>
+            @forelse($labelRequest->requestedRatingPartNumbers() as $ratingPartNumber)
+                <div class="text-slate-700">NP Rating: {{ $ratingPartNumber }}</div>
+            @empty
+                <div class="text-slate-700">NP Rating: No requerido</div>
+            @endforelse
             <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? 'No requerido' }}</div>
             <div class="text-slate-700">Folio final: {{ $labelRequest->folio_end ?? 'No requerido' }}</div>
         </div>
@@ -77,6 +83,37 @@
             <div class="text-slate-700">Destino: {{ $labelRequest->destination ?: '—' }}</div>
             <div class="text-slate-700">Job Qty: {{ $labelRequest->oracleJob?->job_qty !== null ? number_format($labelRequest->oracleJob->job_qty) : '—' }}</div>
             <div class="text-slate-700">Restante: {{ $labelRequest->oracleJob?->quantity_remainder !== null ? number_format($labelRequest->oracleJob->quantity_remainder) : '—' }}</div>
+        </div>
+    </div>
+
+    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200">
+        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <h2 class="font-semibold text-slate-900">Detalle de etiquetas solicitado</h2>
+            <p class="mt-1 text-xs text-slate-500">Cada Rating del combo conserva la cantidad general completa.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[720px] text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 text-left text-slate-500">
+                        <th class="px-4 py-3">Job</th>
+                        <th class="px-4 py-3">Modelo</th>
+                        <th class="px-4 py-3">Tipo</th>
+                        <th class="px-4 py-3">Número de parte</th>
+                        <th class="px-4 py-3 text-right">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    @foreach($labelRequest->requestedLabelLines() as $line)
+                        <tr>
+                            <td class="px-4 py-3 font-medium">{{ $labelRequest->job_number ?: '—' }}</td>
+                            <td class="px-4 py-3">{{ $labelRequest->model ?: '—' }}</td>
+                            <td class="px-4 py-3">{{ $line['type'] }}</td>
+                            <td class="px-4 py-3 font-mono">{{ $line['part_number'] ?: 'No aplica' }}</td>
+                            <td class="px-4 py-3 text-right font-semibold">{{ number_format($line['quantity']) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
 

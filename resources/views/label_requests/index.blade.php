@@ -69,8 +69,8 @@
             </select>
         </div>
         <div>
-            <label class="text-sm text-slate-600">Job / NP Rating</label>
-            <input type="text" name="sku_np" value="{{ $filters['sku_np'] }}" placeholder="Job o NP Rating" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <label class="text-sm text-slate-600">Job / NP Serial o Rating</label>
+            <input type="text" name="sku_np" value="{{ $filters['sku_np'] }}" placeholder="Job o número de parte" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
         </div>
 
         <div class="flex gap-2 md:col-span-6">
@@ -102,13 +102,21 @@
                         <td class="px-4 py-3">
                             <div class="font-semibold">{{ $request->job_number ?: 'Sin Job' }}</div>
                             <div class="text-xs text-slate-500">{{ $request->model ?: 'Sin modelo' }}</div>
+                            @if($request->serial_part_number)
+                                <div class="mt-1 text-xs text-slate-500">NP Serial: {{ $request->serial_part_number }}</div>
+                            @endif
                             @if($request->include_rating)
-                                <div class="mt-1 text-xs text-slate-500">NP: {{ $request->label_part_number ?: '—' }}</div>
+                                @foreach($request->requestedRatingPartNumbers() as $ratingPartNumber)
+                                    <div class="mt-1 text-xs text-slate-500">NP Rating: {{ $ratingPartNumber }}</div>
+                                @endforeach
                             @endif
                         </td>
                         <td class="px-4 py-3">{{ implode(' + ', $request->requestedLabelTypes()) ?: '—' }}</td>
                         <td class="px-4 py-3">
-                            <div class="font-semibold">{{ number_format($request->quantity_requested) }}</div>
+                            <div class="font-semibold">General: {{ number_format($request->quantity_requested) }}</div>
+                            @if($request->include_shipping)
+                                <div class="text-xs text-slate-500">Shipping: {{ number_format($request->shipping_quantity ?? $request->quantity_requested) }}</div>
+                            @endif
                             <div class="text-xs text-slate-500">
                                 {{ $request->folio_start !== null ? $request->folio_start.' – '.$request->folio_end : 'Sin folios' }}
                             </div>

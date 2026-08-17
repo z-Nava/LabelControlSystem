@@ -9,7 +9,7 @@
     <style>
         @page {
             size: letter landscape;
-            margin: 8mm;
+            margin: 5mm;
         }
 
         html, body {
@@ -21,46 +21,137 @@
         body {
             color: #111827;
             font-family: Arial, Helvetica, sans-serif;
+            font-size: 12.5px;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
         .sheet {
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
             width: 100%;
-            max-width: 263mm;
+            max-width: 269mm;
             min-height: 190mm;
             margin: 0 auto;
             border: 1.5px solid #111827;
-            border-radius: 5mm;
+            border-radius: 3mm;
             overflow: hidden;
         }
 
+        .sheet-header > div {
+            min-height: 19mm;
+            padding: 2mm 3mm !important;
+        }
+
+        .sheet-header img {
+            max-height: 14mm !important;
+        }
+
+        .sheet-header h1 {
+            margin-top: 0 !important;
+            font-size: 22px !important;
+            line-height: 1;
+        }
+
+        .header-meta > div {
+            padding: 1.3mm 2.5mm !important;
+            font-size: 11px;
+        }
+
+        .general-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
         .field {
-            min-height: 22mm;
+            min-height: 16mm;
             border-right: 1px solid #cbd5e1;
             border-bottom: 1px solid #cbd5e1;
-            padding: 3mm 4mm;
+            padding: 1.8mm 2.7mm;
+            overflow-wrap: anywhere;
+        }
+
+        .general-grid .field {
+            border-right: 1px solid #cbd5e1 !important;
+        }
+
+        .general-grid .field:nth-child(6n) {
+            border-right: 0 !important;
         }
 
         .field-label {
             color: #64748b;
             font-size: 9px;
             font-weight: 700;
-            letter-spacing: .08em;
+            letter-spacing: .06em;
             text-transform: uppercase;
         }
 
         .field-value {
-            margin-top: 2mm;
-            font-size: 16px;
+            margin-top: 1mm;
+            font-size: 14px;
             font-weight: 700;
-            line-height: 1.15;
+            line-height: 1.1;
+        }
+
+        .request-summary > div {
+            min-height: 22mm;
+            padding: 2mm 3mm !important;
+        }
+
+        .type-grid {
+            margin-top: 2mm !important;
+            gap: 1.5mm 3.5mm !important;
+            font-size: 12px !important;
+        }
+
+        .type-box {
+            width: 6mm !important;
+            height: 6mm !important;
+            font-size: 12px !important;
         }
 
         .manual-line {
-            height: 13mm;
-            margin-top: 4mm;
+            height: 8mm;
+            margin-top: 1.5mm;
             border-bottom: 1px solid #111827;
+        }
+
+        .detail-title {
+            padding: 1.5mm 3mm !important;
+        }
+
+        .detail-section {
+            flex: 1 1 auto;
+        }
+
+        .detail-table {
+            table-layout: fixed;
+            font-size: 12px !important;
+            line-height: 1.1;
+        }
+
+        .detail-table th,
+        .detail-table td {
+            padding: 1.6mm 3mm !important;
+            overflow-wrap: anywhere;
+        }
+
+        .notes-section {
+            min-height: 16mm;
+            padding: 2mm 3mm !important;
+        }
+
+        .notes-content {
+            margin-top: 1.5mm !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+        }
+
+        .signature-footer > div {
+            min-height: 16mm;
+            padding: 1.8mm 3mm !important;
         }
 
         @media screen {
@@ -76,16 +167,27 @@
         }
 
         @media print {
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+
             .sheet {
                 max-width: none;
+                height: 205mm;
                 box-shadow: none;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border-radius: 0;
             }
         }
     </style>
 </head>
 <body data-render-qrs="0" data-auto-print="1">
     <main class="sheet">
-        <header class="grid grid-cols-12 border-b-2 border-slate-900">
+        <header class="sheet-header grid grid-cols-12 border-b-2 border-slate-900">
             <div class="col-span-3 flex items-center justify-center border-r border-slate-300 p-4">
                 <img src="{{ asset('images/LOGO-MILWAUKEE.png') }}" alt="Milwaukee" class="max-h-[18mm] w-auto object-contain">
             </div>
@@ -95,7 +197,7 @@
                     <h1 class="mt-1 text-[25px] font-black uppercase tracking-wide text-slate-950">Requisición de etiquetas</h1>
                 </div>
             </div>
-            <div class="col-span-3 grid grid-cols-2 text-sm">
+            <div class="header-meta col-span-3 grid grid-cols-2 text-sm">
                 <div class="border-b border-r border-slate-300 p-3 font-bold">Requisición</div>
                 <div class="border-b border-slate-300 p-3 text-right text-lg font-black">#{{ $labelRequest->id }}</div>
                 <div class="border-r border-slate-300 p-3 font-bold">Estatus</div>
@@ -103,7 +205,7 @@
             </div>
         </header>
 
-        <section class="grid grid-cols-4">
+        <section class="general-grid">
             <div class="field"><div class="field-label">Fecha</div><div class="field-value">{{ $labelRequest->request_date?->format('d/m/Y') }}</div></div>
             <div class="field"><div class="field-label">Semana</div><div class="field-value">{{ $labelRequest->week }}</div></div>
             <div class="field"><div class="field-label">Línea</div><div class="field-value">{{ $labelRequest->line?->code }} · {{ $labelRequest->line?->name }}</div></div>
@@ -117,24 +219,28 @@
             <div class="field"><div class="field-label">Modelo</div><div class="field-value">{{ $labelRequest->model ?: '—' }}</div></div>
             <div class="field"><div class="field-label">PO</div><div class="field-value">{{ $labelRequest->po_number ?: '—' }}</div></div>
             <div class="field"><div class="field-label">Destino</div><div class="field-value">{{ $labelRequest->destination ?: '—' }}</div></div>
-            <div class="field !border-r-0"><div class="field-label">Cantidad por tipo</div><div class="field-value">{{ number_format($labelRequest->quantity_requested) }}</div></div>
+            <div class="field !border-r-0">
+                <div class="field-label">Cantidades</div>
+                <div class="field-value">General: {{ number_format($labelRequest->quantity_requested) }}</div>
+                <div class="mt-1 text-sm font-semibold">Shipping: {{ $labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida' }}</div>
+            </div>
         </section>
 
-        <section class="grid grid-cols-12 border-b border-slate-300">
-            <div class="col-span-5 border-r border-slate-300 p-4">
+        <section class="request-summary grid grid-cols-12 border-b border-slate-300">
+            <div class="col-span-4 border-r border-slate-300 p-4">
                 <div class="field-label">Tipos solicitados</div>
-                <div class="mt-3 flex gap-5 text-lg font-bold">
-                    @foreach(['Shipping' => $labelRequest->include_shipping, 'Rating' => $labelRequest->include_rating, 'Serial' => $labelRequest->include_serial] as $type => $selected)
+                <div class="type-grid mt-3 grid grid-cols-2 gap-3 text-base font-bold">
+                    @foreach(['Serial' => $labelRequest->include_serial, 'Rating' => $labelRequest->include_rating, 'Inner' => $labelRequest->include_inner, 'Shipping' => $labelRequest->include_shipping] as $type => $selected)
                         <div class="flex items-center gap-2">
-                            <span class="inline-flex h-7 w-7 items-center justify-center border-2 border-slate-900 text-base">{{ $selected ? '✓' : '' }}</span>
+                            <span class="type-box inline-flex h-7 w-7 items-center justify-center border-2 border-slate-900 text-base">{{ $selected ? '✓' : '' }}</span>
                             <span>{{ $type }}</span>
                         </div>
                     @endforeach
                 </div>
             </div>
-            <div class="col-span-3 border-r border-slate-300 p-4">
-                <div class="field-label">NP de Rating</div>
-                <div class="field-value">{{ $labelRequest->include_rating ? ($labelRequest->label_part_number ?: '—') : 'No requerido' }}</div>
+            <div class="col-span-4 border-r border-slate-300 p-4">
+                <div class="field-label">NP de Serial</div>
+                <div class="field-value">{{ $labelRequest->serial_part_number ?: ($labelRequest->label_part_number ?: '—') }}</div>
             </div>
             <div class="col-span-2 border-r border-slate-300 p-4">
                 <div class="field-label">Folio inicial</div>
@@ -146,14 +252,41 @@
             </div>
         </section>
 
+        <section class="detail-section border-b border-slate-300">
+            <div class="detail-title border-b border-slate-300 bg-slate-50 px-4 py-2 field-label">Detalle solicitado</div>
+            <table class="detail-table w-full border-collapse text-sm">
+                <colgroup>
+                    <col style="width: 24%">
+                    <col style="width: 54%">
+                    <col style="width: 22%">
+                </colgroup>
+                <thead>
+                    <tr class="border-b border-slate-300 text-left">
+                        <th class="border-r border-slate-300 px-4 py-2">Tipo</th>
+                        <th class="border-r border-slate-300 px-4 py-2">Número de parte</th>
+                        <th class="px-4 py-2 text-right">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($labelRequest->requestedLabelLines() as $line)
+                        <tr class="border-b border-slate-200 last:border-b-0">
+                            <td class="border-r border-slate-300 px-4 py-2">{{ $line['type'] }}</td>
+                            <td class="border-r border-slate-300 px-4 py-2 font-mono">{{ $line['part_number'] ?: 'No aplica' }}</td>
+                            <td class="px-4 py-2 text-right font-bold">{{ number_format($line['quantity']) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </section>
+
         <section class="grid grid-cols-12 border-b border-slate-300">
-            <div class="col-span-12 min-h-[24mm] p-4">
+            <div class="notes-section col-span-12 p-4">
                 <div class="field-label">Notas</div>
-                <div class="mt-2 text-sm leading-relaxed">{{ $labelRequest->notes ?: 'Sin notas adicionales.' }}</div>
+                <div class="notes-content mt-2 text-sm leading-relaxed">{{ $labelRequest->notes ?: 'Sin notas adicionales.' }}</div>
             </div>
         </section>
 
-        <footer class="grid grid-cols-3">
+        <footer class="signature-footer grid grid-cols-3">
             <div class="border-r border-slate-300 p-4">
                 <div class="field-label text-center">Imprimió</div>
                 <div class="manual-line"></div>

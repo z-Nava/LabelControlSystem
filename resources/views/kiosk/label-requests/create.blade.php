@@ -1,6 +1,12 @@
 @extends('layouts.kiosk', ['title' => 'Nueva requisición de etiquetas'])
 
 @section('content')
+@php
+    $oldRatingPartNumbers = old('rating_part_numbers', ['']);
+    $oldRatingPartNumbers = is_array($oldRatingPartNumbers) && $oldRatingPartNumbers !== []
+        ? $oldRatingPartNumbers
+        : [''];
+@endphp
 <div class="space-y-6">
     @include('kiosk.partials.request-guide', [
         'title' => 'Crear requisición de etiquetas',
@@ -12,8 +18,8 @@
         ],
         'preparationItems' => [
             'Job de Empaque disponible en Oracle.',
-            'Modelo de la herramienta y cantidad requerida.',
-            'NP de Rating cuando solicites un nameplate.',
+            'Modelo, NP de Serial y cantidad general requerida.',
+            'Cada NP de Rating cuando la Job maneje un combo.',
             'LabelRoom asignará los folios después de recibir la requisición.',
         ],
     ])
@@ -96,6 +102,57 @@
                 </div>
 
                 <div class="space-y-5 p-5">
+                    <div>
+                        <label class="text-sm font-medium text-slate-700">Tipo de etiqueta</label>
+                        <p class="mt-1 text-xs text-slate-500">Elige primero todos los tipos requeridos. La cantidad general se aplica a Serial, cada Rating e Inner.</p>
+
+                        <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            @foreach([
+                                ['id' => 'includeSerial', 'name' => 'include_serial', 'label' => 'Serial', 'description' => 'Etiqueta normal en blanco; LabelRoom asignará los folios.'],
+                                ['id' => 'includeRating', 'name' => 'include_rating', 'label' => 'Rating', 'description' => 'Nameplate con uno o varios NP para combos.'],
+                                ['id' => 'includeInner', 'name' => 'include_inner', 'label' => 'Inner', 'description' => 'Etiqueta interior con la cantidad general.'],
+                                ['id' => 'includeShipping', 'name' => 'include_shipping', 'label' => 'Shipping', 'description' => 'Etiqueta con cantidad independiente.'],
+                            ] as $type)
+                                <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
+                                    <input id="{{ $type['id'] }}" type="checkbox" name="{{ $type['name'] }}" value="1" @checked(old($type['name'])) class="mt-0.5 h-6 w-6 rounded border-slate-300 text-red-600 focus:ring-red-600" />
+                                    <span>
+                                        <span class="block font-medium text-slate-900">{{ $type['label'] }}</span>
+                                        <span class="mt-1 block text-sm text-slate-500">{{ $type['description'] }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <p id="typeHint" class="mt-2 text-xs text-slate-500">Selecciona al menos un tipo.</p>
+                    </div>
+
+                    <div id="ratingFields" class="max-w-2xl space-y-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <div class="text-sm font-medium text-slate-700">NP de Rating</div>
+                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por cada rating del combo.</p>
+                            </div>
+                            <button id="addRatingPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
+                                + Agregar rating
+                            </button>
+                        </div>
+
+                        <div id="ratingPartNumbers" class="space-y-2">
+                            @foreach($oldRatingPartNumbers as $ratingPartNumber)
+                                <div class="rating-part-number-row flex items-center gap-2">
+                                    <input type="text" name="rating_part_numbers[]" value="{{ $ratingPartNumber }}" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <template id="ratingPartNumberTemplate">
+                        <div class="rating-part-number-row flex items-center gap-2">
+                            <input type="text" name="rating_part_numbers[]" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+                        </div>
+                    </template>
+
                     <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                         Captura el Job completo y espera la confirmación de Oracle. La disponibilidad se calcula con el Job Qty menos las requisiciones no canceladas.
                     </div>
@@ -118,6 +175,12 @@
                         </div>
 
                         <div>
+                            <label for="serialPartNumber" class="text-sm font-medium text-slate-700">NP de Serial</label>
+                            <input id="serialPartNumber" type="text" name="serial_part_number" value="{{ old('serial_part_number') }}" maxlength="80" placeholder="Ej: 12-34-5678" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Obligatorio y único para toda la requisición.</p>
+                        </div>
+
+                        <div>
                             <label for="poNumber" class="text-sm font-medium text-slate-700">PO</label>
                             <input id="poNumber" type="text" name="po_number" value="{{ old('po_number') }}" maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" placeholder="Autollenado desde Oracle" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                         </div>
@@ -128,9 +191,15 @@
                         </div>
 
                         <div>
-                            <label for="quantityRequested" class="text-sm font-medium text-slate-700">Cantidad por tipo</label>
+                            <label for="quantityRequested" class="text-sm font-medium text-slate-700">Cantidad general</label>
                             <input id="quantityRequested" type="number" name="quantity_requested" min="1" max="100000" value="{{ old('quantity_requested') }}" placeholder="Ej: 250" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <p id="quantityHint" class="mt-2 text-xs text-slate-500">Primero valida el Job para conocer la disponibilidad.</p>
+                        </div>
+
+                        <div>
+                            <label for="shippingQuantity" class="text-sm font-medium text-slate-700">Cantidad Shipping</label>
+                            <input id="shippingQuantity" type="number" name="shipping_quantity" min="1" max="100000" value="{{ old('shipping_quantity') }}" placeholder="No requerida" @disabled(!old('include_shipping')) class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p class="mt-1 text-xs text-slate-500">Independiente de la cantidad general; déjala vacía si no solicitas Shipping.</p>
                         </div>
                     </div>
 
@@ -138,36 +207,6 @@
                         <div><span class="block text-xs uppercase text-slate-500">Job Qty</span><strong id="jobQtyValue">—</strong></div>
                         <div><span class="block text-xs uppercase text-slate-500">Ya solicitado</span><strong id="reservedQuantityValue">—</strong></div>
                         <div><span class="block text-xs uppercase text-slate-500">Disponible</span><strong id="availableQuantityValue" class="text-emerald-700">—</strong></div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm font-medium text-slate-700">Tipo de etiqueta</label>
-                        <p class="mt-1 text-xs text-slate-500">Puedes seleccionar varias. La cantidad capturada se aplicará completa a cada tipo.</p>
-
-                        <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-                            @foreach([
-                                ['id' => 'includeSerial', 'name' => 'include_serial', 'label' => 'Serial', 'description' => 'Etiqueta normal en blanco; LabelRoom asignará los folios.'],
-                                ['id' => 'includeRating', 'name' => 'include_rating', 'label' => 'Rating', 'description' => 'Nameplate con NP de Rating; LabelRoom asignará los folios.'],
-                                ['id' => 'includeShipping', 'name' => 'include_shipping', 'label' => 'Shipping', 'description' => 'Etiqueta normal en blanco.'],
-                            ] as $type)
-                                <label class="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 hover:border-red-300 hover:bg-red-50/40">
-                                    <input id="{{ $type['id'] }}" type="checkbox" name="{{ $type['name'] }}" value="1" @checked(old($type['name'])) class="mt-0.5 h-6 w-6 rounded border-slate-300 text-red-600 focus:ring-red-600" />
-                                    <span>
-                                        <span class="block font-medium text-slate-900">{{ $type['label'] }}</span>
-                                        <span class="mt-1 block text-sm text-slate-500">{{ $type['description'] }}</span>
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
-                        <p id="typeHint" class="mt-2 text-xs text-slate-500">Selecciona al menos un tipo.</p>
-                    </div>
-
-                    <div class="max-w-xl">
-                        <div>
-                            <label for="ratingPartNumber" class="text-sm font-medium text-slate-700">NP de Rating</label>
-                            <input id="ratingPartNumber" type="text" name="label_part_number" value="{{ old('label_part_number') }}" maxlength="80" placeholder="Obligatorio únicamente para Rating" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                            <p class="mt-1 text-xs text-slate-500">Captura libre del NP del nameplate.</p>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -218,7 +257,9 @@
                         <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Etiquetas</div>
                         <div id="previewTypes" class="mt-1 font-semibold text-slate-900">Tipo pendiente</div>
                         <div id="previewQuantity" class="mt-1 text-sm text-slate-600">Cantidad no definida</div>
+                        <div id="previewSerialPartNumber" class="mt-1 text-sm text-slate-600">NP de Serial pendiente</div>
                         <div id="previewRatingPartNumber" class="mt-1 text-sm text-slate-600">NP de Rating no requerido</div>
+                        <div id="previewShippingQuantity" class="mt-1 text-sm text-slate-600">Shipping no requerido</div>
                     </div>
 
                     <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -231,10 +272,11 @@
             <div class="rounded-2xl border border-slate-200 bg-slate-900 p-5 text-slate-100 shadow-sm">
                 <div class="text-base font-semibold">Reglas importantes</div>
                 <ul class="mt-3 space-y-3 text-sm text-slate-300">
-                    <li><span class="font-semibold text-white">Cantidad:</span> se aplica completa a cada tipo seleccionado.</li>
-                    <li><span class="font-semibold text-white">Rating:</span> requiere el NP del nameplate.</li>
+                    <li><span class="font-semibold text-white">Cantidad general:</span> se aplica a Serial, cada Rating e Inner.</li>
+                    <li><span class="font-semibold text-white">Rating:</span> agrega un NP por cada variante del combo.</li>
+                    <li><span class="font-semibold text-white">Inner:</span> utiliza la cantidad general.</li>
                     <li><span class="font-semibold text-white">Folios:</span> serán asignados y registrados manualmente por LabelRoom.</li>
-                    <li><span class="font-semibold text-white">Shipping:</span> no necesita NP.</li>
+                    <li><span class="font-semibold text-white">Shipping:</span> utiliza su propia cantidad y no necesita NP.</li>
                 </ul>
             </div>
         </aside>

@@ -30,6 +30,14 @@ class LabelRequestService
     public function createKiosk(array $data): LabelRequest
     {
         return DB::transaction(function () use ($data): LabelRequest {
+            $ratingPartNumbers = collect($data['rating_part_numbers'] ?? [])
+                ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
+                ->filter()
+                ->unique()
+                ->values();
+
+            unset($data['rating_part_numbers']);
+
             $jobNumber = strtoupper(trim((string) ($data['job_number'] ?? '')));
             $job = OracleJob::query()
                 ->whereRaw('UPPER(TRIM(job_number)) = ?', [$jobNumber])
@@ -53,14 +61,28 @@ class LabelRequestService
 
             $data['job_number'] = $jobNumber;
             $data['serial_standard'] = 'UL';
+            $data['label_part_number'] = $data['include_rating']
+                ? $ratingPartNumbers->first()
+                : null;
             $data['folio_start'] = null;
             $data['folio_end'] = null;
             $data['po_number'] = $this->valueOrOracleFallback($data['po_number'] ?? null, $job->ttl_cust_po);
             $data['destination'] = $this->valueOrOracleFallback($data['destination'] ?? null, $job->ship_code);
 
-            return LabelRequest::query()
-                ->create($this->buildCreatePayload($data))
-                ->load(['line', 'shift']);
+            $labelRequest = LabelRequest::query()->create($this->buildCreatePayload($data));
+
+            if ($data['include_rating']) {
+                $labelRequest->ratings()->createMany(
+                    $ratingPartNumbers
+                        ->map(fn (string $partNumber, int $position) => [
+                            'part_number' => $partNumber,
+                            'position' => $position + 1,
+                        ])
+                        ->all(),
+                );
+            }
+
+            return $labelRequest->load(['line', 'shift', 'ratings']);
         }, attempts: 3);
     }
 

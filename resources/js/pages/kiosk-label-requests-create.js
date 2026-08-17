@@ -19,14 +19,20 @@ import { debounce } from './utils/debounce';
         job: byId('jobNumber'),
         assembly: byId('assemblyInfo'),
         model: byId('modelInput'),
+        serialPartNumber: byId('serialPartNumber'),
         po: byId('poNumber'),
         destination: byId('destination'),
         quantity: byId('quantityRequested'),
+        shippingQuantity: byId('shippingQuantity'),
         serial: byId('includeSerial'),
         rating: byId('includeRating'),
+        inner: byId('includeInner'),
         shipping: byId('includeShipping'),
-        ratingPartNumber: byId('ratingPartNumber'),
     };
+    const ratingFields = byId('ratingFields');
+    const ratingPartNumbersContainer = byId('ratingPartNumbers');
+    const ratingPartNumberTemplate = byId('ratingPartNumberTemplate');
+    const addRatingPartNumberButton = byId('addRatingPartNumber');
     const preview = {
         lineShift: byId('previewLineShift'),
         leader: byId('previewLeader'),
@@ -36,7 +42,9 @@ import { debounce } from './utils/debounce';
         model: byId('previewModel'),
         types: byId('previewTypes'),
         quantity: byId('previewQuantity'),
+        serialPartNumber: byId('previewSerialPartNumber'),
         ratingPartNumber: byId('previewRatingPartNumber'),
+        shippingQuantity: byId('previewShippingQuantity'),
         extras: byId('previewExtras'),
     };
     const jobHint = byId('jobHint');
@@ -65,8 +73,15 @@ import { debounce } from './utils/debounce';
     const selectedTypes = () => [
         inputs.serial.checked ? 'Serial' : null,
         inputs.rating.checked ? 'Rating' : null,
+        inputs.inner.checked ? 'Inner' : null,
         inputs.shipping.checked ? 'Shipping' : null,
     ].filter(Boolean);
+    const ratingPartNumberInputs = () => Array.from(
+        ratingPartNumbersContainer.querySelectorAll('.rating-part-number-input'),
+    );
+    const ratingPartNumbers = () => ratingPartNumberInputs()
+        .map((input) => input.value.trim())
+        .filter(Boolean);
     const lineOptions = Array.from(inputs.line.options).filter((option) => option.value !== '');
 
     function formatDate(value) {
@@ -79,10 +94,18 @@ import { debounce } from './utils/debounce';
 
     function syncConditionalFields() {
         const hasRating = inputs.rating.checked;
+        const hasShipping = inputs.shipping.checked;
 
-        inputs.ratingPartNumber.required = hasRating;
-        inputs.ratingPartNumber.disabled = !hasRating;
-        if (!hasRating) inputs.ratingPartNumber.value = '';
+        ratingFields.classList.toggle('hidden', !hasRating);
+        ratingPartNumberInputs().forEach((input) => {
+            input.required = hasRating;
+            input.disabled = !hasRating;
+        });
+
+        inputs.shippingQuantity.required = hasShipping;
+        inputs.shippingQuantity.disabled = !hasShipping;
+
+        if (!hasShipping) inputs.shippingQuantity.value = '';
 
         inputs.serial.setCustomValidity(selectedTypes().length ? '' : 'Selecciona al menos un tipo de etiqueta.');
         setHint(
@@ -155,12 +178,22 @@ import { debounce } from './utils/debounce';
         setText(preview.assembly, inputs.assembly.value ? `Assembly: ${inputs.assembly.value}` : 'Assembly pendiente');
         setText(preview.model, inputs.model.value.trim() ? `Modelo: ${inputs.model.value.trim()}` : 'Modelo pendiente');
         setText(preview.types, types.length ? types.join(' + ') : 'Tipo pendiente');
-        setText(preview.quantity, inputs.quantity.value ? `${inputs.quantity.value} etiqueta(s) de cada tipo` : 'Cantidad no definida');
+        setText(preview.quantity, inputs.quantity.value ? `Cantidad general: ${inputs.quantity.value}` : 'Cantidad general no definida');
+        setText(
+            preview.serialPartNumber,
+            `NP Serial: ${inputs.serialPartNumber.value.trim() || 'pendiente'}`,
+        );
         setText(
             preview.ratingPartNumber,
             inputs.rating.checked
-                ? `NP Rating: ${inputs.ratingPartNumber.value.trim() || 'pendiente'}`
+                ? `NP Rating: ${ratingPartNumbers().join(', ') || 'pendiente'}`
                 : 'NP de Rating no requerido',
+        );
+        setText(
+            preview.shippingQuantity,
+            inputs.shipping.checked
+                ? `Cantidad Shipping: ${inputs.shippingQuantity.value || 'pendiente'}`
+                : 'Shipping no requerido',
         );
         setText(preview.extras, extras.length ? extras.join(' · ') : 'PO y destino pendientes.');
     }
@@ -248,10 +281,11 @@ import { debounce } from './utils/debounce';
         inputs.shift,
         inputs.leader,
         inputs.model,
+        inputs.serialPartNumber,
         inputs.po,
         inputs.destination,
         inputs.quantity,
-        inputs.ratingPartNumber,
+        inputs.shippingQuantity,
     ].forEach((input) => {
         input.addEventListener('input', () => {
             validateQuantityAvailability();
@@ -263,7 +297,35 @@ import { debounce } from './utils/debounce';
         });
     });
 
-    [inputs.serial, inputs.rating, inputs.shipping].forEach((input) => {
+    function updateRemoveRatingButtons() {
+        const rows = Array.from(ratingPartNumbersContainer.querySelectorAll('.rating-part-number-row'));
+
+        rows.forEach((row) => {
+            row.querySelector('.remove-rating-part-number')?.classList.toggle('hidden', rows.length === 1);
+        });
+    }
+
+    addRatingPartNumberButton.addEventListener('click', () => {
+        const row = ratingPartNumberTemplate.content.firstElementChild.cloneNode(true);
+        ratingPartNumbersContainer.append(row);
+        syncConditionalFields();
+        updateRemoveRatingButtons();
+        row.querySelector('.rating-part-number-input')?.focus();
+        updatePreview();
+    });
+
+    ratingPartNumbersContainer.addEventListener('input', updatePreview);
+    ratingPartNumbersContainer.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('.remove-rating-part-number');
+
+        if (!removeButton) return;
+
+        removeButton.closest('.rating-part-number-row')?.remove();
+        updateRemoveRatingButtons();
+        updatePreview();
+    });
+
+    [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
         input.addEventListener('change', () => {
             syncConditionalFields();
             updatePreview();
@@ -313,8 +375,10 @@ import { debounce } from './utils/debounce';
                     <li><strong>Modelo:</strong> ${escapeHtml(inputs.model.value)}</li>
                     <li><strong>PO / Destino:</strong> ${escapeHtml(inputs.po.value || 'Sin dato')} / ${escapeHtml(inputs.destination.value || 'Sin dato')}</li>
                     <li><strong>Tipos:</strong> ${escapeHtml(types)}</li>
-                    <li><strong>Cantidad:</strong> ${escapeHtml(inputs.quantity.value)} de cada tipo</li>
-                    <li><strong>NP Rating:</strong> ${escapeHtml(inputs.ratingPartNumber.value || 'No requerido')}</li>
+                    <li><strong>Cantidad general:</strong> ${escapeHtml(inputs.quantity.value)}</li>
+                    <li><strong>Cantidad Shipping:</strong> ${escapeHtml(inputs.shipping.checked ? inputs.shippingQuantity.value : 'No requerida')}</li>
+                    <li><strong>NP Serial:</strong> ${escapeHtml(inputs.serialPartNumber.value)}</li>
+                    <li><strong>NP Rating:</strong> ${escapeHtml(inputs.rating.checked ? ratingPartNumbers().join(', ') : 'No requerido')}</li>
                 </ul>
             </div>`;
 
@@ -332,6 +396,7 @@ import { debounce } from './utils/debounce';
         if (result.isConfirmed) form.submit();
     });
 
+    updateRemoveRatingButtons();
     syncConditionalFields();
     initializeLineTypeFilter();
     updatePreview();
