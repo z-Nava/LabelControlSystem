@@ -16,6 +16,7 @@ class MasterRequestReadService
         $q = trim((string) ($query['q'] ?? ''));
 
         $masterRequests = MasterRequest::query()
+            ->whereNull('parent_master_request_id')
             ->with(['line', 'shift'])
             ->withCount([
                 'folios as total_folios',
@@ -76,6 +77,12 @@ class MasterRequestReadService
 
     public function findForShow(int $id): MasterRequest
     {
-        return MasterRequest::with(['line', 'shift', 'folios', 'cancelledBy:id,name'])->findOrFail($id);
+        return MasterRequest::with([
+            'line',
+            'shift',
+            'folios',
+            'cancelledBy:id,name',
+            'revisions' => fn ($query) => $query->with(['line', 'reworkedBy:id,name'])->withCount('folios'),
+        ])->findOrFail($id);
     }
 }

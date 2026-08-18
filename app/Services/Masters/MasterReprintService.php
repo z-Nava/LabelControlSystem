@@ -22,8 +22,10 @@ class MasterReprintService
     {
         return MasterRequest::query()
             ->whereNotNull('request_type')
+            ->whereNull('parent_master_request_id')
             ->with(['line', 'shift'])
             ->withCount('printBatches')
+            ->withCount('revisions')
             ->when($job !== '', function ($query) use ($job) {
                 $query->where(function ($nested) use ($job) {
                     $nested->where('job_assembly', 'like', "%{$job}%")

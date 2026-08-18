@@ -67,6 +67,13 @@ class MasterRequestService
             // submitted by the browser or fall back to the assembly Job.
             $data['po_number'] = $this->normalizeNullable($packagingOracleJob?->ttl_cust_po);
             $data['destination'] = $this->normalizeNullable($packagingOracleJob?->ship_code);
+            $data['model'] = $this->normalizeNullable(
+                $this->masterModelMappingService->resolveModelFromJobs(
+                    (string) ($data['request_type'] ?? ''),
+                    $oracleJob?->assembly,
+                    $packagingOracleJob?->assembly,
+                )
+            );
 
             if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
                 $productionContext = $this->productionContextService->resolveForLabelRoom($data);

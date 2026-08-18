@@ -49,7 +49,9 @@
                     <th class="py-3 pr-3">Turno</th>
                     <th class="py-3 pr-3">Job Assembly</th>
                     <th class="py-3 pr-3">Job Packaging</th>
+                    <th class="py-3 pr-3">Estado</th>
                     <th class="py-3 pr-3">Impresiones</th>
+                    <th class="py-3 pr-3">Revisiones</th>
                     <th class="py-3 pr-3 text-right">Acciones</th>
                 </tr>
             </thead>
@@ -62,7 +64,11 @@
                         <td class="py-3 pr-3">{{ $mr->shift?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_assembly ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_packaging ?: '-' }}</td>
+                        <td class="py-3 pr-3">
+                            <span class="rounded-full px-2 py-1 text-xs {{ $mr->statusBadgeClasses() }}">{{ $mr->statusLabel() }}</span>
+                        </td>
                         <td class="py-3 pr-3">{{ $mr->print_batches_count }}</td>
+                        <td class="py-3 pr-3">{{ $mr->revisions_count }}</td>
                         <td class="py-3 pl-3 text-right whitespace-nowrap">
                             <a href="{{ route('master_requests.reprints.index', $mr->id) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">
                                 Ver historial
@@ -76,11 +82,20 @@
                                     Reimprimir
                                 </a>
                             @endif
+                            @if($mr->canBeReworked())
+                                <a href="{{ route('master_reworks.create', $mr) }}" class="ml-1 rounded-lg bg-purple-700 px-3 py-1.5 text-white hover:bg-purple-600">
+                                    Retrabajar
+                                </a>
+                            @elseif(!$mr->isCancelled())
+                                <span class="ml-1 inline-flex cursor-not-allowed rounded-lg bg-slate-100 px-3 py-1.5 text-slate-400" title="Disponible cuando la requisición esté en proceso o completada.">
+                                    Retrabajo no disponible
+                                </span>
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="py-6 text-center text-slate-500">
+                        <td colspan="10" class="py-6 text-center text-slate-500">
                             No se encontraron requisiciones master con ese job.
                         </td>
                     </tr>

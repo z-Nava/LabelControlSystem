@@ -11,6 +11,7 @@ export default defineConfig({
                 'resources/js/pages/master-requests-create.js',
                 'resources/js/pages/master-requests-index.js',
                 'resources/js/pages/master-requests-show.js',
+                'resources/js/pages/master-reworks-create.js',
                 'resources/js/pages/master-print-create.js',
                 'resources/js/pages/master-print-template.js',
                 'resources/js/pages/oracle-jobs-import.js',

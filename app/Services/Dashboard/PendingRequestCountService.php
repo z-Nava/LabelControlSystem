@@ -16,7 +16,10 @@ class PendingRequestCountService
     {
         return [
             'master' => $user->hasModuleAccess('master')
-                ? MasterRequest::query()->where('status', MasterRequest::STATUS_REQUESTED)->count()
+                ? MasterRequest::query()
+                    ->whereNull('parent_master_request_id')
+                    ->where('status', MasterRequest::STATUS_REQUESTED)
+                    ->count()
                 : 0,
             'labels' => $user->hasModuleAccess('labels')
                 ? LabelRequest::query()->open()->count()

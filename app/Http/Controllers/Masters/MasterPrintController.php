@@ -16,6 +16,10 @@ class MasterPrintController extends Controller
 
     public function create(MasterRequest $master_request): RedirectResponse|View
     {
+        if ($master_request->isRework() && ! $master_request->printBatches()->exists()) {
+            return redirect()->route('master_reworks.show', $master_request);
+        }
+
         if ($master_request->isCancelled()) {
             return redirect()
                 ->route('master_requests.show', $master_request)
@@ -34,6 +38,12 @@ class MasterPrintController extends Controller
     public function store(StoreMasterPrintBatchRequest $request, MasterRequest $master_request): RedirectResponse
     {
         $data = $request->validated();
+
+        if ($master_request->isRework() && $data['batch_type'] === 'print') {
+            return back()
+                ->withErrors(['batch_type' => 'Las revisiones Master deben imprimirse como retrabajo.'])
+                ->withInput();
+        }
 
         // reason obligatorio si es reprint/rework
         if (

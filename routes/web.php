@@ -25,6 +25,7 @@ use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
+use App\Http\Controllers\Masters\MasterReworkController;
 use App\Http\Controllers\Masters\MasterRequestController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use Illuminate\Support\Facades\Route;
@@ -169,6 +170,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
             Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
             Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
+            Route::get('/master-reprints/{master_request}/rework', [MasterReworkController::class, 'create'])->name('master_reworks.create');
+            Route::post('/master-reprints/{master_request}/rework', [MasterReworkController::class, 'store'])->name('master_reworks.store');
+            Route::get('/master-reworks/{master_request}', [MasterReworkController::class, 'show'])->name('master_reworks.show');
+            Route::post('/master-reworks/{master_request}/print', [MasterReworkController::class, 'print'])->name('master_reworks.print');
             Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
         });
         Route::middleware('module_access:dummy')->group(function () {

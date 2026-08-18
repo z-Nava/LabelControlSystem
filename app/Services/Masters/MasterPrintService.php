@@ -139,8 +139,12 @@ class MasterPrintService
 
         $mr = $batch->masterRequest;
 
-        $items = $batch->items
-            ->map(fn ($i) => $i->folio)
+        $batchItems = $batch->items
+            ->sortBy(fn ($item) => $item->folio?->folio_number ?? PHP_INT_MAX)
+            ->values();
+        $items = $batchItems
+            ->map(fn ($item) => $item->folio)
+            ->filter()
             ->sortBy('folio_number')
             ->values();
 
@@ -152,7 +156,14 @@ class MasterPrintService
             ->where('job_number', $mr->job_packaging)
             ->first();
 
-        $sheets = $this->buildSheetsForRequest($mr, $items);
+        $fallbackSheets = $this->buildSheetsForRequest($mr, $items)->keyBy('folio_id');
+        $sheets = $batchItems->map(function ($item) use ($fallbackSheets): array {
+            if (is_array($item->sheet_snapshot) && $item->sheet_snapshot !== []) {
+                return $item->sheet_snapshot;
+            }
+
+            return $fallbackSheets->get($item->master_request_folio_id, []);
+        })->filter()->values();
 
         return compact('batch', 'mr', 'oracle', 'oraclePackaging', 'sheets');
     }
@@ -202,7 +213,8 @@ class MasterPrintService
             )));
             $requestType = (string) ($masterRequest->request_type ?? '');
             $resolvedModel = $this->resolveModelForSheet(
-                $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging),
+                $masterRequest->model
+                    ?: $this->masterModelMappingService->resolveModelFromJobs($requestType, $np, $npPackaging),
             );
 
             $lote = $job !== '' ? ($job.'-'.$folioNo) : '';

@@ -27,6 +27,8 @@ class MasterRequest extends Model
 
     protected $fillable = [
         'request_date',
+        'parent_master_request_id',
+        'revision_number',
         'week',
         'line_id',
         'shift_id',
@@ -41,6 +43,7 @@ class MasterRequest extends Model
         'oracle_line',
         'subinventory',
         'local',
+        'model',
         'folios_from',
         'folios_to',
         'std_pack_qty',
@@ -49,6 +52,11 @@ class MasterRequest extends Model
         'request_type',
         'kind',
         'status',
+        'rework_reason',
+        'reworked_by_user_id',
+        'reworked_by_name',
+        'reworked_at',
+        'rework_changes',
         'cancellation_reason',
         'cancelled_at',
         'cancelled_by_user_id',
@@ -58,6 +66,9 @@ class MasterRequest extends Model
 
     protected $casts = [
         'request_date' => 'date',
+        'revision_number' => 'integer',
+        'reworked_at' => 'datetime',
+        'rework_changes' => 'array',
         'cancelled_at' => 'datetime',
     ];
 
@@ -79,6 +90,22 @@ class MasterRequest extends Model
     public function cancelledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by_user_id');
+    }
+
+    public function originalRequest(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_master_request_id');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_master_request_id')
+            ->orderBy('revision_number');
+    }
+
+    public function reworkedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reworked_by_user_id');
     }
 
     public function folios(): HasMany
@@ -104,6 +131,16 @@ class MasterRequest extends Model
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_CANCELLED;
+    }
+
+    public function isRework(): bool
+    {
+        return $this->parent_master_request_id !== null;
+    }
+
+    public function canBeReworked(): bool
+    {
+        return in_array($this->status, [self::STATUS_IN_PROGRESS, self::STATUS_COMPLETED], true);
     }
 
     public function canBeCancelled(): bool

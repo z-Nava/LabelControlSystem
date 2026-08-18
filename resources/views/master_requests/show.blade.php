@@ -163,6 +163,35 @@
         </div>
     </div>
 
+    <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Modelo</div>
+            <div class="font-semibold">{{ $mr->model ?: '-' }}</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Local</div>
+            <div class="font-semibold">{{ $mr->local ?: '-' }}</div>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Subinventory</div>
+            <div class="font-semibold">{{ $mr->subinventory ?: '-' }}</div>
+        </div>
+    </div>
+
+    @if(!$mr->isRework() && $mr->revisions->isNotEmpty())
+        <section class="mt-6 rounded-2xl border border-purple-200 bg-purple-50 p-4">
+            <h2 class="font-semibold text-slate-900">Revisiones de retrabajo</h2>
+            <div class="mt-3 space-y-2">
+                @foreach($mr->revisions as $revision)
+                    <a href="{{ route('master_reworks.show', $revision) }}" class="flex flex-col gap-1 rounded-xl border border-purple-200 bg-white px-4 py-3 hover:bg-purple-50 sm:flex-row sm:items-center sm:justify-between">
+                        <span class="font-semibold text-purple-800">R{{ $revision->revision_number }} · Revisión #{{ $revision->id }}</span>
+                        <span class="text-sm text-slate-600">{{ $revision->folios_count }} folio(s) · {{ $revision->reworked_by_name ?: $revision->reworkedBy?->name ?: '—' }} · {{ $revision->reworked_at?->format('Y-m-d H:i') ?: '—' }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     <div class="mt-6">
         <h2 class="font-semibold text-slate-900">Folios</h2>
         <p class="mt-1 text-sm text-slate-500">Listado de folios incluidos en esta requisición master.</p>
