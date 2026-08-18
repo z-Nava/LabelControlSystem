@@ -70,7 +70,7 @@ class StoreMasterRequestRequest extends FormRequest
                     }
 
                     if (! $this->isAssemblyJob($job)) {
-                        $fail('El Job Ensamble debe pertenecer a Ensamble/Subensamble (001/103/130/139/208/270/290/291/299/399/770) o a Motores-Moldeo (MEXMI/MXM).');
+                        $fail($this->oracleJobService()->classificationValidationMessage('assembly'));
                     }
                 },
             ],
@@ -98,7 +98,7 @@ class StoreMasterRequestRequest extends FormRequest
                     }
 
                     if (! $this->isPackagingJob($job)) {
-                        $fail('El Job Empaque debe pertenecer a Empaque (assembly 018/055/001/270).');
+                        $fail($this->oracleJobService()->classificationValidationMessage('packaging'));
                     }
                 },
             ],

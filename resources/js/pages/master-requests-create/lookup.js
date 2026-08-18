@@ -118,7 +118,7 @@ function validateLookupByRole(inputElement, data, role) {
     inputElement?.setCustomValidity('');
 
     if (role === 'assembly' && !data.valid_for_assembly) {
-        inputElement?.setCustomValidity('El Job Ensamble debe pertenecer a Ensamble/Subensamble (001/103/130/139/208/270/290/291/299/399/770) o a Motores-Moldeo (MEXMI/MXM).');
+        inputElement?.setCustomValidity(data.classification_messages?.assembly || 'El Job no coincide con una regla activa de Ensamble.');
         return {
             type: 'warn',
             message: 'Tipo inválido para Ensamble.',
@@ -126,7 +126,7 @@ function validateLookupByRole(inputElement, data, role) {
     }
 
     if (role === 'packaging' && !data.valid_for_packaging) {
-        inputElement?.setCustomValidity('El Job Empaque debe pertenecer a Empaque (assembly 018/055/001/270).');
+        inputElement?.setCustomValidity(data.classification_messages?.packaging || 'El Job no coincide con una regla activa de Empaque.');
         return {
             type: 'warn',
             message: 'Tipo inválido para Empaque.',

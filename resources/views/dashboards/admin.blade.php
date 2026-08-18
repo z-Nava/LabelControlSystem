@@ -102,6 +102,11 @@
                         <div class="font-semibold">Importar Oracle Jobs</div>
                         <div class="text-sm text-slate-600 mt-1">Cargar archivo Excel desde Oracle.</div>
                     </a>
+
+                    <a href="{{ route('admin.master_assembly_classification_rules.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Master Assemblies Classification Rules</div>
+                        <div class="text-sm text-slate-600 mt-1">Alta de prefijos de Ensamble y Empaque sin modificar código.</div>
+                    </a>
                 </div>
             </section>
         </div>

@@ -119,7 +119,7 @@ function createJobLookupHandler(elements, onStateChange) {
             }
 
             if (!data.valid_for_packaging) {
-                inputs.jobNumber.setCustomValidity('El Job debe pertenecer a Empaque (assembly 018/055/001/270).');
+                inputs.jobNumber.setCustomValidity(data.classification_messages?.packaging || 'El Job no coincide con una regla activa de Empaque.');
                 setHint(hints.job, 'warn', 'Tipo inválido para Empaque.');
                 onStateChange();
                 return;

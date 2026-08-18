@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DummyQrTemplateController;
 use App\Http\Controllers\Admin\LabelSkuController;
+use App\Http\Controllers\Admin\MasterAssemblyClassificationRuleController;
 use App\Http\Controllers\Admin\MasterModelMappingController;
 use App\Http\Controllers\Admin\ProductionLineController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
@@ -25,8 +26,8 @@ use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
-use App\Http\Controllers\Masters\MasterReworkController;
 use App\Http\Controllers\Masters\MasterRequestController;
+use App\Http\Controllers\Masters\MasterReworkController;
 use App\Http\Controllers\Oracle\OracleJobController;
 use Illuminate\Support\Facades\Route;
 
@@ -93,6 +94,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/stock-locators/{stock_locator}/edit', [StockLocatorController::class, 'edit'])->name('stock_locators.edit');
         Route::put('/stock-locators/{stock_locator}', [StockLocatorController::class, 'update'])->name('stock_locators.update');
         Route::post('/stock-locators/{stock_locator}/toggle', [StockLocatorController::class, 'toggle'])->name('stock_locators.toggle');
+
+        Route::get('/master-assembly-classification-rules', [MasterAssemblyClassificationRuleController::class, 'index'])->name('admin.master_assembly_classification_rules.index');
+        Route::get('/master-assembly-classification-rules/create', [MasterAssemblyClassificationRuleController::class, 'create'])->name('admin.master_assembly_classification_rules.create');
+        Route::post('/master-assembly-classification-rules', [MasterAssemblyClassificationRuleController::class, 'store'])->name('admin.master_assembly_classification_rules.store');
+        Route::get('/master-assembly-classification-rules/{assembly_rule}/edit', [MasterAssemblyClassificationRuleController::class, 'edit'])->name('admin.master_assembly_classification_rules.edit');
+        Route::put('/master-assembly-classification-rules/{assembly_rule}', [MasterAssemblyClassificationRuleController::class, 'update'])->name('admin.master_assembly_classification_rules.update');
+        Route::post('/master-assembly-classification-rules/{assembly_rule}/toggle', [MasterAssemblyClassificationRuleController::class, 'toggle'])->name('admin.master_assembly_classification_rules.toggle');
 
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');

@@ -242,7 +242,7 @@ import { debounce } from './utils/debounce';
 
             if (!data.valid_for_packaging) {
                 clearJobResult('El Job no pertenece a Empaque.');
-                inputs.job.setCustomValidity('El Job debe pertenecer a Empaque.');
+                inputs.job.setCustomValidity(data.classification_messages?.packaging || 'El Job no coincide con una regla activa de Empaque.');
                 setHint(jobHint, 'El Job no pertenece a Empaque.', 'text-red-700');
                 updatePreview();
                 return;

@@ -123,7 +123,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
         }
 
         if (! $jobService->isPackagingJob($job)) {
-            $validator->errors()->add('job_number', 'El Job debe pertenecer a Empaque (assembly 018/055/001/270).');
+            $validator->errors()->add('job_number', $jobService->classificationValidationMessage('packaging'));
 
             return;
         }
