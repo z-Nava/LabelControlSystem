@@ -121,6 +121,8 @@ function initializeInventoryDestination(fields) {
     }
 
     const ortAssemblyType = requestType.dataset.ortAssemblyType;
+    const inventoryWarning = document.getElementById('inventoryDestinationWarning');
+    const inventoryWarningMessage = document.getElementById('inventoryDestinationWarningMessage');
     let previousRequestType = requestType.value;
 
     const getSelectedLineMapping = () => {
@@ -131,6 +133,22 @@ function initializeInventoryDestination(fields) {
             stockLocator: (selectedLineOption?.dataset.stockLocator || '').trim(),
             subinventory: (selectedLineOption?.dataset.subinventory || '').trim(),
         };
+    };
+
+    const renderInventoryWarning = () => {
+        const missingFields = [
+            !localInput.value.trim() ? 'Local' : null,
+            !subinventoryInput.value.trim() ? 'Subinventory' : null,
+        ].filter(Boolean);
+        const shouldShow = Boolean(lineSelect.value) && missingFields.length > 0;
+
+        inventoryWarning?.classList.toggle('hidden', !shouldShow);
+
+        if (inventoryWarningMessage) {
+            inventoryWarningMessage.textContent = shouldShow
+                ? `Falta ${missingFields.join(' y ')}. Puedes continuar con la requisición.`
+                : '';
+        }
     };
 
     const applyMappedInventoryDestination = () => {
@@ -144,12 +162,13 @@ function initializeInventoryDestination(fields) {
         subinventoryInput.placeholder = mapping.oracleLine && !mapping.subinventory
             ? 'Sin mapeo en Locals by Oracle Line'
             : 'Se resolverá desde Locals by Oracle Line';
+        renderInventoryWarning();
     };
 
     const setOrtFieldState = (isOrtAssembly) => {
         [localInput, subinventoryInput].forEach((input) => {
             input.readOnly = !isOrtAssembly;
-            input.required = isOrtAssembly;
+            input.required = false;
             input.classList.toggle('bg-slate-100', !isOrtAssembly);
             input.classList.toggle('bg-white', isOrtAssembly);
         });
@@ -178,6 +197,8 @@ function initializeInventoryDestination(fields) {
         }
 
         previousRequestType = currentRequestType;
+        setOrtFieldState(isOrtAssembly);
+        renderInventoryWarning();
     };
 
     lineSelect.addEventListener('change', () => {
@@ -186,6 +207,8 @@ function initializeInventoryDestination(fields) {
         }
     });
     requestType.addEventListener('change', applyRequestTypeInventoryDestination);
+    localInput.addEventListener('input', renderInventoryWarning);
+    subinventoryInput.addEventListener('input', renderInventoryWarning);
     applyRequestTypeInventoryDestination();
 }
 
@@ -275,6 +298,7 @@ function initializeInventoryDestination(fields) {
         fields.lineTypeSelect,
         fields.lineSelect,
         fields.localInput,
+        fields.subinventoryInput,
         fields.shiftSelect,
         fields.requestType,
     ].forEach((element) => {

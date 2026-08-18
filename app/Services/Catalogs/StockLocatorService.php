@@ -61,9 +61,16 @@ class StockLocatorService
     {
         $data['oracle_line'] = strtoupper(trim($data['oracle_line']));
         $data['subinventory'] = strtoupper(trim($data['subinventory']));
-        $data['stock_locator'] = strtoupper(trim($data['stock_locator']));
+        $data['stock_locator'] = $this->normalizeNullable($data['stock_locator'] ?? null);
         $data['active'] = (bool) ($data['active'] ?? $defaultActive);
 
         return $data;
+    }
+
+    private function normalizeNullable(mixed $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

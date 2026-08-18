@@ -16,7 +16,7 @@ class StoreStockLocatorRequest extends FormRequest
         return [
             'oracle_line' => ['required', 'string', 'max:40', 'unique:stock_locators,oracle_line'],
             'subinventory' => ['required', 'string', 'max:20'],
-            'stock_locator' => ['required', 'string', 'max:40'],
+            'stock_locator' => ['nullable', 'string', 'max:40'],
             'active' => ['nullable', 'boolean'],
         ];
     }

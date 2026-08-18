@@ -84,12 +84,9 @@ class MasterRequestService
                     $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
                 }
 
-                if ($oracleLine === '' || $resolvedLocal === '' || $resolvedSubinventory === '') {
+                if ($oracleLine === '') {
                     throw ValidationException::withMessages([
-                        'line_id' => sprintf(
-                            'La Oracle Line %s no tiene un destino completo configurado en Locals by Oracle Line.',
-                            $oracleLine !== '' ? $oracleLine : 'seleccionada',
-                        ),
+                        'line_id' => 'La línea seleccionada no tiene una Oracle Line configurada.',
                     ]);
                 }
 

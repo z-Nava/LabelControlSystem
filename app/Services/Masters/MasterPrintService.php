@@ -82,14 +82,6 @@ class MasterPrintService
             $sheetSnapshotsByFolioId = $this->buildSheetsForRequest($masterRequest, $folios)
                 ->keyBy('folio_id');
 
-            if ($sheetSnapshotsByFolioId->contains(
-                fn (array $sheet): bool => $sheet['subinventory'] === '' || $sheet['local'] === ''
-            )) {
-                throw ValidationException::withMessages([
-                    'folio_ids' => 'No se puede imprimir: falta configurar Subinventory o Stock Locator en Locals by Oracle Line.',
-                ]);
-            }
-
             foreach ($folios as $folio) {
                 MasterRequestBatchItem::create([
                     'master_print_batch_id' => $batch->id,

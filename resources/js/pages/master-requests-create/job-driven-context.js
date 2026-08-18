@@ -71,9 +71,14 @@ function renderJobContext(elements, lookup) {
     } else if (!context?.production_line_configured) {
         inventoryMessage = 'La línea no existe o no está activa en el catálogo de producción.';
     } else if (!context.inventory_configured) {
-        inventoryMessage = 'La línea no tiene Local y Subinventory completos en el catálogo.';
+        const missingFields = [
+            !context.stock_locator ? 'Local' : null,
+            !context.subinventory ? 'Subinventory' : null,
+        ].filter(Boolean);
+
+        inventoryMessage = `Aviso: falta ${missingFields.join(' y ')}. Puedes continuar con la requisición.`;
     } else {
-        inventoryMessage = `Local: ${context.stock_locator} · Subinventory: ${context.subinventory}`;
+        inventoryMessage = `Local: ${context.stock_locator || '—'} · Subinventory: ${context.subinventory || '—'}`;
         isConfigured = true;
     }
 
@@ -127,15 +132,20 @@ function filterRequestTypes(fields, jobLookups) {
     return availableOptions.map((option) => option.value);
 }
 
-function setInventoryFieldState(input, isEditable) {
-    if (!input) {
-        return;
-    }
+function setInventoryFieldState(fields, isEditable) {
+    const localInput = fields.localInput;
+    const subinventoryInput = fields.subinventoryInput;
 
-    input.readOnly = !isEditable;
-    input.required = isEditable;
-    input.classList.toggle('bg-slate-100', !isEditable);
-    input.classList.toggle('bg-white', isEditable);
+    [localInput, subinventoryInput].forEach((input) => {
+        if (!input) {
+            return;
+        }
+
+        input.readOnly = !isEditable;
+        input.required = false;
+        input.classList.toggle('bg-slate-100', !isEditable);
+        input.classList.toggle('bg-white', isEditable);
+    });
 }
 
 function applyOfficialProductionContext(fields, jobLookups) {
@@ -146,8 +156,7 @@ function applyOfficialProductionContext(fields, jobLookups) {
     const isOrtAssembly = requestType === ORT_ASSEMBLY_TYPE;
     const previousRequestType = fields.requestType?.dataset.appliedRequestType || '';
 
-    setInventoryFieldState(fields.localInput, isOrtAssembly);
-    setInventoryFieldState(fields.subinventoryInput, isOrtAssembly);
+    setInventoryFieldState(fields, isOrtAssembly);
 
     if (!requestType || !context) {
         if (fields.localInput) {
@@ -181,6 +190,8 @@ function applyOfficialProductionContext(fields, jobLookups) {
     if (fields.requestType) {
         fields.requestType.dataset.appliedRequestType = requestType;
     }
+
+    setInventoryFieldState(fields, isOrtAssembly);
 
     return {
         role,
@@ -320,13 +331,6 @@ function evaluateContext(fields, jobLookups, availableRequestTypes) {
         return {
             status: 'invalid',
             message: `El Tipo de Master seleccionado no está disponible para la línea ${context.line_code}.`,
-        };
-    }
-
-    if (requestType !== ORT_ASSEMBLY_TYPE && !context.inventory_configured) {
-        return {
-            status: 'invalid',
-            message: `La línea ${context.line_code} no tiene Local y Subinventory completos en el catálogo.`,
         };
     }
 

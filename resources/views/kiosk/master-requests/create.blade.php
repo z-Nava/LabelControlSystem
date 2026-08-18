@@ -209,6 +209,14 @@
                     </div>
                 </div>
 
+                <div id="inventoryDestinationWarning"
+                     class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 md:col-span-2"
+                     role="status"
+                     aria-live="polite">
+                    <span class="font-semibold">Aviso:</span>
+                    <span id="inventoryDestinationWarningMessage"></span>
+                </div>
+
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                             <label class="text-sm text-slate-600">Custom PO</label>

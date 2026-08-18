@@ -21,7 +21,7 @@
         <label class="block text-sm font-medium text-slate-700">Stock Locator (Local)</label>
         <input name="stock_locator" value="{{ old('stock_locator', $stockLocator->stock_locator ?? '') }}"
                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
-               placeholder="SMARKET-1" required />
+               placeholder="Opcional" />
         @error('stock_locator') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
 

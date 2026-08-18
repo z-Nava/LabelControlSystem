@@ -112,8 +112,6 @@ final class MasterRequestProductionContextService
         } else {
             $local = (string) ($context['stock_locator'] ?? '');
             $subinventory = (string) ($context['subinventory'] ?? '');
-
-            $this->validateInventoryConfiguration($oracleLine, $local, $subinventory);
         }
 
         return [
@@ -139,23 +137,6 @@ final class MasterRequestProductionContextService
                 ? 'El Job Empaque no corresponde a una operación de Empaque.'
                 : 'El Job Ensamble no corresponde a una operación de Ensamble/Subensamble o Motores-Moldeo.',
         ]);
-    }
-
-    private function validateInventoryConfiguration(string $oracleLine, string $local, string $subinventory): void
-    {
-        $errors = [];
-
-        if ($local === '') {
-            $errors['local'] = "La línea {$oracleLine} no tiene Local configurado en Locals by Oracle Line.";
-        }
-
-        if ($subinventory === '') {
-            $errors['subinventory'] = "La línea {$oracleLine} no tiene Subinventory configurado en Locals by Oracle Line.";
-        }
-
-        if ($errors !== []) {
-            throw ValidationException::withMessages($errors);
-        }
     }
 
     private function normalize(mixed $value): string
