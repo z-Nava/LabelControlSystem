@@ -92,7 +92,7 @@
                     @enderror
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4 md:col-span-2 md:grid-cols-3">
                     <div>
                         <label for="poNumber" class="text-sm text-slate-600">Custom PO</label>
                         <input id="poNumber"
@@ -118,9 +118,19 @@
                                class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700"
                                placeholder="Se tomará del Job Empaque">
                     </div>
+
+                    <div>
+                        <label for="modelDisplay" class="text-sm text-slate-600">Modelo</label>
+                        <input id="modelDisplay"
+                               value=""
+                               readonly
+                               aria-readonly="true"
+                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700"
+                               placeholder="Se resolverá desde Master Model Mapping">
+                    </div>
                 </div>
 
-                <p class="text-xs text-slate-500 md:col-span-2">PO y Destino se toman exclusivamente del Job Empaque registrado en Oracle.</p>
+                <p class="text-xs text-slate-500 md:col-span-2">PO y Destino se toman exclusivamente del Job Empaque registrado en Oracle. El Modelo corresponde al Job Empaque cuando está capturado; de lo contrario, al Job Ensamble.</p>
             </div>
         </details>
 

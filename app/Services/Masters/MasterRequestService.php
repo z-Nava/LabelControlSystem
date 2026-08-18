@@ -6,6 +6,7 @@ use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
 use App\Models\ProductionLine;
+use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Catalogs\StockLocatorService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class MasterRequestService
         private readonly OracleJobService $oracleJobService,
         private readonly StockLocatorService $stockLocatorService,
         private readonly MasterRequestProductionContextService $productionContextService,
+        private readonly MasterModelMappingService $masterModelMappingService,
     ) {}
 
     public function create(array $data, string $requestSource): MasterRequest
@@ -188,6 +190,8 @@ class MasterRequestService
         if ($payload['found'] ?? false) {
             $payload['production_context'] = $this->productionContextService
                 ->describeOracleLine($payload['line'] ?? null);
+            $payload['models_by_request_type'] = $this->masterModelMappingService
+                ->resolveModelsForNp($payload['assembly'] ?? null);
         }
 
         return $payload;

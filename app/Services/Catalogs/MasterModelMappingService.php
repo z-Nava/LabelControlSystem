@@ -93,6 +93,22 @@ class MasterModelMappingService
         return null;
     }
 
+    /**
+     * Resolve the model that an NP would use for each supported request type.
+     *
+     * @return array<string, string|null>
+     */
+    public function resolveModelsForNp(?string $np): array
+    {
+        $models = [];
+
+        foreach (MasterModelMapping::REQUEST_TYPES as $requestType) {
+            $models[$requestType] = $this->resolveModelFromJobs($requestType, $np, $np);
+        }
+
+        return $models;
+    }
+
     public function importFromExcel(UploadedFile $file, ?string $forcedType = null): array
     {
         $rows = Excel::toArray(new MasterModelMappingsImport, $file)[0] ?? [];

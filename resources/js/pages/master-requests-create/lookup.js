@@ -40,6 +40,58 @@ function updatePackagingFields(fields, data = null) {
     }
 }
 
+function resolveDisplayModel(lookup, role, requestType) {
+    if (requestType) {
+        return lookup.models_by_request_type?.[requestType] || '';
+    }
+
+    const allowedRequestTypes = lookup.production_context?.allowed_request_types || [];
+    const candidateModels = allowedRequestTypes
+        .filter((type) => role === 'packaging'
+            ? type === 'assembly_packaging'
+            : type !== 'assembly_packaging')
+        .map((type) => lookup.models_by_request_type?.[type] || '')
+        .filter(Boolean);
+    const uniqueModels = [...new Set(candidateModels)];
+
+    return uniqueModels.length === 1 ? uniqueModels[0] : '';
+}
+
+export function updateModelField(fields, jobLookups = {}) {
+    const modelInput = fields.modelDisplay;
+
+    if (!modelInput) {
+        return;
+    }
+
+    const hasPackagingJob = Boolean((fields.jobPackaging?.value || '').trim());
+    const role = hasPackagingJob ? 'packaging' : 'assembly';
+    const jobInput = role === 'packaging' ? fields.jobPackaging : fields.jobAssembly;
+    const lookup = jobLookups?.[role];
+    const requestType = (fields.requestType?.value || '').trim();
+    const validFlag = role === 'packaging' ? 'valid_for_packaging' : 'valid_for_assembly';
+    const isResolvedJob = Boolean(lookup?.found && lookup[validFlag]);
+    const model = isResolvedJob
+        ? resolveDisplayModel(lookup, role, requestType)
+        : '';
+
+    modelInput.value = model;
+
+    if (!((jobInput?.value || '').trim())) {
+        modelInput.placeholder = 'Captura un Job para consultar el modelo';
+    } else if (!lookup) {
+        modelInput.placeholder = 'Esperando validación del Job';
+    } else if (!isResolvedJob) {
+        modelInput.placeholder = `Job ${role === 'packaging' ? 'Empaque' : 'Ensamble'} no válido`;
+    } else if (!requestType) {
+        modelInput.placeholder = 'Selecciona el Tipo de Master';
+    } else if (!model) {
+        modelInput.placeholder = 'Sin modelo activo en Master Model Mapping';
+    } else {
+        modelInput.placeholder = '';
+    }
+}
+
 function formatJobQty(jobQty) {
     if (jobQty === null || jobQty === undefined || jobQty === '') {
         return '—';

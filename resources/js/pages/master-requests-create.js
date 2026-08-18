@@ -10,7 +10,7 @@ import {
     refreshJobDrivenContext,
     showJobDrivenContextAlert,
 } from './master-requests-create/job-driven-context';
-import { createJobLookupHandler } from './master-requests-create/lookup';
+import { createJobLookupHandler, updateModelField } from './master-requests-create/lookup';
 import { refreshLabelRoomSummary, refreshPreview } from './master-requests-create/preview';
 import { attachValidationClearListeners, validateBeforeSubmit } from './master-requests-create/validation';
 
@@ -243,6 +243,7 @@ function initializeInventoryDestination(fields) {
             renderMasterRequestLineResult(lineMatchStatus, currentValidationResult);
         }
 
+        updateModelField(fields, jobLookupState);
         refreshPreview(fields, preview, jobLookupState);
         refreshLabelRoomSummary(form, fields, summary, jobLookupState);
     };
