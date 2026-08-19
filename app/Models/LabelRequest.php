@@ -131,6 +131,13 @@ class LabelRequest extends Model
             ->orderBy('id');
     }
 
+    public function serials(): HasMany
+    {
+        return $this->hasMany(LabelRequestSerial::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
     public function requisitionPrintedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requisition_printed_by_user_id');
@@ -205,6 +212,28 @@ class LabelRequest extends Model
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function requestedSerialPartNumbers(): array
+    {
+        $partNumbers = ($this->relationLoaded('serials')
+            ? $this->serials
+            : $this->serials()->get())
+            ->pluck('part_number')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($partNumbers === [] && $this->include_serial) {
+            $legacyPartNumber = $this->serial_part_number ?: $this->label_part_number;
+
+            return $legacyPartNumber ? [(string) $legacyPartNumber] : [];
+        }
+
+        return $partNumbers;
+    }
+
+    /**
      * @return array<int, array{type: string, part_number: ?string, quantity: int}>
      */
     public function requestedLabelLines(): array
@@ -212,11 +241,13 @@ class LabelRequest extends Model
         $lines = [];
 
         if ($this->include_serial) {
-            $lines[] = [
-                'type' => 'Serial',
-                'part_number' => $this->serial_part_number ?: $this->label_part_number,
-                'quantity' => (int) $this->quantity_requested,
-            ];
+            foreach ($this->requestedSerialPartNumbers() as $partNumber) {
+                $lines[] = [
+                    'type' => 'Serial',
+                    'part_number' => $partNumber,
+                    'quantity' => (int) $this->quantity_requested,
+                ];
+            }
         }
 
         if ($this->include_rating) {

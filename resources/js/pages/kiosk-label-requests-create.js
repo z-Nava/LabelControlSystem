@@ -19,7 +19,6 @@ import { debounce } from './utils/debounce';
         job: byId('jobNumber'),
         assembly: byId('assemblyInfo'),
         model: byId('modelInput'),
-        serialPartNumber: byId('serialPartNumber'),
         po: byId('poNumber'),
         destination: byId('destination'),
         quantity: byId('quantityRequested'),
@@ -29,6 +28,10 @@ import { debounce } from './utils/debounce';
         inner: byId('includeInner'),
         shipping: byId('includeShipping'),
     };
+    const serialFields = byId('serialFields');
+    const serialPartNumbersContainer = byId('serialPartNumbers');
+    const serialPartNumberTemplate = byId('serialPartNumberTemplate');
+    const addSerialPartNumberButton = byId('addSerialPartNumber');
     const ratingFields = byId('ratingFields');
     const ratingPartNumbersContainer = byId('ratingPartNumbers');
     const ratingPartNumberTemplate = byId('ratingPartNumberTemplate');
@@ -42,7 +45,7 @@ import { debounce } from './utils/debounce';
         model: byId('previewModel'),
         types: byId('previewTypes'),
         quantity: byId('previewQuantity'),
-        serialPartNumber: byId('previewSerialPartNumber'),
+        serialPartNumbers: byId('previewSerialPartNumbers'),
         ratingPartNumber: byId('previewRatingPartNumber'),
         shippingQuantity: byId('previewShippingQuantity'),
         extras: byId('previewExtras'),
@@ -76,6 +79,12 @@ import { debounce } from './utils/debounce';
         inputs.inner.checked ? 'Inner' : null,
         inputs.shipping.checked ? 'Shipping' : null,
     ].filter(Boolean);
+    const serialPartNumberInputs = () => Array.from(
+        serialPartNumbersContainer.querySelectorAll('.serial-part-number-input'),
+    );
+    const serialPartNumbers = () => serialPartNumberInputs()
+        .map((input) => input.value.trim())
+        .filter(Boolean);
     const ratingPartNumberInputs = () => Array.from(
         ratingPartNumbersContainer.querySelectorAll('.rating-part-number-input'),
     );
@@ -93,8 +102,15 @@ import { debounce } from './utils/debounce';
     }
 
     function syncConditionalFields() {
+        const hasSerial = inputs.serial.checked;
         const hasRating = inputs.rating.checked;
         const hasShipping = inputs.shipping.checked;
+
+        serialFields.classList.toggle('hidden', !hasSerial);
+        serialPartNumberInputs().forEach((input) => {
+            input.required = hasSerial;
+            input.disabled = !hasSerial;
+        });
 
         ratingFields.classList.toggle('hidden', !hasRating);
         ratingPartNumberInputs().forEach((input) => {
@@ -180,8 +196,10 @@ import { debounce } from './utils/debounce';
         setText(preview.types, types.length ? types.join(' + ') : 'Tipo pendiente');
         setText(preview.quantity, inputs.quantity.value ? `Cantidad general: ${inputs.quantity.value}` : 'Cantidad general no definida');
         setText(
-            preview.serialPartNumber,
-            `NP Serial: ${inputs.serialPartNumber.value.trim() || 'pendiente'}`,
+            preview.serialPartNumbers,
+            inputs.serial.checked
+                ? `NP Serial: ${serialPartNumbers().join(', ') || 'pendiente'}`
+                : 'NP de Serial no requerido',
         );
         setText(
             preview.ratingPartNumber,
@@ -281,7 +299,6 @@ import { debounce } from './utils/debounce';
         inputs.shift,
         inputs.leader,
         inputs.model,
-        inputs.serialPartNumber,
         inputs.po,
         inputs.destination,
         inputs.quantity,
@@ -295,6 +312,34 @@ import { debounce } from './utils/debounce';
             validateQuantityAvailability();
             updatePreview();
         });
+    });
+
+    function updateRemoveSerialButtons() {
+        const rows = Array.from(serialPartNumbersContainer.querySelectorAll('.serial-part-number-row'));
+
+        rows.forEach((row) => {
+            row.querySelector('.remove-serial-part-number')?.classList.toggle('hidden', rows.length === 1);
+        });
+    }
+
+    addSerialPartNumberButton.addEventListener('click', () => {
+        const row = serialPartNumberTemplate.content.firstElementChild.cloneNode(true);
+        serialPartNumbersContainer.append(row);
+        syncConditionalFields();
+        updateRemoveSerialButtons();
+        row.querySelector('.serial-part-number-input')?.focus();
+        updatePreview();
+    });
+
+    serialPartNumbersContainer.addEventListener('input', updatePreview);
+    serialPartNumbersContainer.addEventListener('click', (event) => {
+        const removeButton = event.target.closest('.remove-serial-part-number');
+
+        if (!removeButton) return;
+
+        removeButton.closest('.serial-part-number-row')?.remove();
+        updateRemoveSerialButtons();
+        updatePreview();
     });
 
     function updateRemoveRatingButtons() {
@@ -377,7 +422,7 @@ import { debounce } from './utils/debounce';
                     <li><strong>Tipos:</strong> ${escapeHtml(types)}</li>
                     <li><strong>Cantidad general:</strong> ${escapeHtml(inputs.quantity.value)}</li>
                     <li><strong>Cantidad Shipping:</strong> ${escapeHtml(inputs.shipping.checked ? inputs.shippingQuantity.value : 'No requerida')}</li>
-                    <li><strong>NP Serial:</strong> ${escapeHtml(inputs.serialPartNumber.value)}</li>
+                    <li><strong>NP Serial:</strong> ${escapeHtml(inputs.serial.checked ? serialPartNumbers().join(', ') : 'No requerido')}</li>
                     <li><strong>NP Rating:</strong> ${escapeHtml(inputs.rating.checked ? ratingPartNumbers().join(', ') : 'No requerido')}</li>
                 </ul>
             </div>`;
@@ -396,6 +441,7 @@ import { debounce } from './utils/debounce';
         if (result.isConfirmed) form.submit();
     });
 
+    updateRemoveSerialButtons();
     updateRemoveRatingButtons();
     syncConditionalFields();
     initializeLineTypeFilter();

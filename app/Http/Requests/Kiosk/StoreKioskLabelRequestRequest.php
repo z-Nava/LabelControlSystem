@@ -22,6 +22,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
      */
     public function rules(): array
     {
+        $requiresSerialPartNumber = fn (): bool => $this->boolean('include_serial');
         $requiresRatingPartNumber = fn (): bool => $this->boolean('include_rating');
         $requiresShippingQuantity = fn (): bool => $this->boolean('include_shipping');
 
@@ -35,7 +36,8 @@ class StoreKioskLabelRequestRequest extends FormRequest
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
             'model' => ['required', 'string', 'max:80'],
-            'serial_part_number' => ['required', 'string', 'max:80'],
+            'serial_part_numbers' => [Rule::requiredIf($requiresSerialPartNumber), 'array'],
+            'serial_part_numbers.*' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
             'rating_part_numbers' => [Rule::requiredIf($requiresRatingPartNumber), 'array'],
             'rating_part_numbers.*' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
             'quantity_requested' => ['required', 'integer', 'min:1', 'max:100000'],
@@ -50,8 +52,10 @@ class StoreKioskLabelRequestRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $includeSerial = $this->boolean('include_serial');
         $includeRating = $this->boolean('include_rating');
         $includeShipping = $this->boolean('include_shipping');
+        $serialPartNumbers = $this->normalizePartNumbers($this->input('serial_part_numbers', []));
         $ratingPartNumbers = $this->input('rating_part_numbers', []);
 
         if (! is_array($ratingPartNumbers)) {
@@ -67,11 +71,11 @@ class StoreKioskLabelRequestRequest extends FormRequest
         ));
 
         $this->merge([
-            'include_serial' => $this->boolean('include_serial'),
+            'include_serial' => $includeSerial,
             'include_rating' => $includeRating,
             'include_inner' => $this->boolean('include_inner'),
             'include_shipping' => $includeShipping,
-            'serial_part_number' => strtoupper(trim((string) $this->input('serial_part_number'))),
+            'serial_part_numbers' => $includeSerial ? $serialPartNumbers : [],
             'rating_part_numbers' => $includeRating ? $ratingPartNumbers : [],
             'shipping_quantity' => $includeShipping && trim((string) $this->input('shipping_quantity')) !== ''
                 ? $this->input('shipping_quantity')
@@ -81,6 +85,24 @@ class StoreKioskLabelRequestRequest extends FormRequest
             'destination' => strtoupper(trim((string) $this->input('destination'))),
             'model' => strtoupper(trim((string) $this->input('model'))),
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizePartNumbers(mixed $partNumbers): array
+    {
+        if (! is_array($partNumbers)) {
+            $partNumbers = [$partNumbers];
+        }
+
+        return array_values(array_filter(
+            array_map(
+                static fn ($partNumber): string => strtoupper(trim((string) $partNumber)),
+                $partNumbers,
+            ),
+            static fn (string $partNumber): bool => $partNumber !== '',
+        ));
     }
 
     public function withValidator(Validator $validator): void

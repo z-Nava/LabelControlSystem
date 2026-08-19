@@ -102,8 +102,10 @@
                         <td class="px-4 py-3">
                             <div class="font-semibold">{{ $request->job_number ?: 'Sin Job' }}</div>
                             <div class="text-xs text-slate-500">{{ $request->model ?: 'Sin modelo' }}</div>
-                            @if($request->serial_part_number)
-                                <div class="mt-1 text-xs text-slate-500">NP Serial: {{ $request->serial_part_number }}</div>
+                            @if($request->include_serial)
+                                @foreach($request->requestedSerialPartNumbers() as $serialPartNumber)
+                                    <div class="mt-1 text-xs text-slate-500">NP Serial: {{ $serialPartNumber }}</div>
+                                @endforeach
                             @endif
                             @if($request->include_rating)
                                 @foreach($request->requestedRatingPartNumbers() as $ratingPartNumber)

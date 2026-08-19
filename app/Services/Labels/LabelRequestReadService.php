@@ -23,7 +23,12 @@ class LabelRequestReadService
         ];
 
         $labelRequests = LabelRequest::query()
-            ->with(['line:id,name,code', 'shift:id,name,code', 'ratings:id,label_request_id,part_number,position'])
+            ->with([
+                'line:id,name,code',
+                'shift:id,name,code',
+                'serials:id,label_request_id,part_number,position',
+                'ratings:id,label_request_id,part_number,position',
+            ])
             ->withCount('printBatches')
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
@@ -40,6 +45,7 @@ class LabelRequestReadService
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('label_part_number', 'like', "%{$search}%")
                         ->orWhere('serial_part_number', 'like', "%{$search}%")
+                        ->orWhereHas('serials', fn ($serialQuery) => $serialQuery->where('part_number', 'like', "%{$search}%"))
                         ->orWhereHas('ratings', fn ($ratingQuery) => $ratingQuery->where('part_number', 'like', "%{$search}%"))
                         ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
@@ -121,6 +127,7 @@ class LabelRequestReadService
                 'attendedByUser:id,name',
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
+                'serials:id,label_request_id,part_number,position',
                 'ratings:id,label_request_id,part_number,position',
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
                 'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),

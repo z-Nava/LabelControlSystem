@@ -240,7 +240,11 @@
             </div>
             <div class="col-span-4 border-r border-slate-300 p-4">
                 <div class="field-label">NP de Serial</div>
-                <div class="field-value">{{ $labelRequest->serial_part_number ?: ($labelRequest->label_part_number ?: '—') }}</div>
+                @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
+                    <div class="field-value">{{ $serialPartNumber }}</div>
+                @empty
+                    <div class="field-value">—</div>
+                @endforelse
             </div>
             <div class="col-span-2 border-r border-slate-300 p-4">
                 <div class="field-label">Folio inicial</div>

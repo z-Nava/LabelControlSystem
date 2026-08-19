@@ -30,13 +30,18 @@ class LabelRequestService
     public function createKiosk(array $data): LabelRequest
     {
         return DB::transaction(function () use ($data): LabelRequest {
+            $serialPartNumbers = collect($data['serial_part_numbers'] ?? [])
+                ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
+                ->filter()
+                ->unique()
+                ->values();
             $ratingPartNumbers = collect($data['rating_part_numbers'] ?? [])
                 ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
                 ->filter()
                 ->unique()
                 ->values();
 
-            unset($data['rating_part_numbers']);
+            unset($data['serial_part_numbers'], $data['rating_part_numbers']);
 
             $jobNumber = strtoupper(trim((string) ($data['job_number'] ?? '')));
             $job = OracleJob::query()
@@ -61,6 +66,9 @@ class LabelRequestService
 
             $data['job_number'] = $jobNumber;
             $data['serial_standard'] = 'UL';
+            $data['serial_part_number'] = $data['include_serial']
+                ? $serialPartNumbers->first()
+                : null;
             $data['label_part_number'] = $data['include_rating']
                 ? $ratingPartNumbers->first()
                 : null;
@@ -70,6 +78,17 @@ class LabelRequestService
             $data['destination'] = $this->valueOrOracleFallback($data['destination'] ?? null, $job->ship_code);
 
             $labelRequest = LabelRequest::query()->create($this->buildCreatePayload($data));
+
+            if ($data['include_serial']) {
+                $labelRequest->serials()->createMany(
+                    $serialPartNumbers
+                        ->map(fn (string $partNumber, int $position) => [
+                            'part_number' => $partNumber,
+                            'position' => $position + 1,
+                        ])
+                        ->all(),
+                );
+            }
 
             if ($data['include_rating']) {
                 $labelRequest->ratings()->createMany(
@@ -82,7 +101,7 @@ class LabelRequestService
                 );
             }
 
-            return $labelRequest->load(['line', 'shift', 'ratings']);
+            return $labelRequest->load(['line', 'shift', 'serials', 'ratings']);
         }, attempts: 3);
     }
 

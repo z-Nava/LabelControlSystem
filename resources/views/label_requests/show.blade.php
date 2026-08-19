@@ -67,7 +67,11 @@
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Números de parte y folios</div>
-            <div class="mt-1 font-semibold">NP Serial: {{ $labelRequest->serial_part_number ?: ($labelRequest->label_part_number ?: '—') }}</div>
+            @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
+                <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">NP Serial: {{ $serialPartNumber }}</div>
+            @empty
+                <div class="mt-1 font-semibold">NP Serial: No requerido</div>
+            @endforelse
             @forelse($labelRequest->requestedRatingPartNumbers() as $ratingPartNumber)
                 <div class="text-slate-700">NP Rating: {{ $ratingPartNumber }}</div>
             @empty
@@ -89,7 +93,7 @@
     <div class="mt-6 overflow-hidden rounded-xl border border-slate-200">
         <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
             <h2 class="font-semibold text-slate-900">Detalle de etiquetas solicitado</h2>
-            <p class="mt-1 text-xs text-slate-500">Cada Rating del combo conserva la cantidad general completa.</p>
+            <p class="mt-1 text-xs text-slate-500">Cada NP de Serial y Rating conserva la cantidad general completa.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[720px] text-sm">
