@@ -33,8 +33,16 @@ export function validateBeforeSubmit(form) {
     const foliosToInput = form.elements.namedItem('folios_to');
     const partialFolioInput = form.elements.namedItem('partial_folio');
     const partialQtyInput = form.elements.namedItem('partial_qty');
+    const modelInput = form.querySelector('#modelDisplay');
 
     clearValidationErrors(form);
+
+    if (modelInput?.dataset.modelMappingMissing === 'true') {
+        modelInput.focus();
+        modelInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        return false;
+    }
 
     if (requestType !== 'assembly_packaging' && !assemblyValue) {
         assemblyInput?.setCustomValidity('El Job Ensamble es obligatorio.');

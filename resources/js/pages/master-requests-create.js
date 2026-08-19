@@ -329,12 +329,12 @@ function initializeInventoryDestination(fields) {
             : 'save';
         const shouldOpenPrintInNewTab = isLabelRoomRequest && submissionAction === 'save_and_print';
 
+        updatePageState();
+
         if (!validateBeforeSubmit(form)) {
             form.reportValidity();
             return;
         }
-
-        updatePageState();
 
         if (isLabelRoomRequest) {
             if (currentValidationResult.status !== 'ready') {

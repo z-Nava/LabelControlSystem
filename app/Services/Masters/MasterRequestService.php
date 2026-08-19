@@ -75,6 +75,15 @@ class MasterRequestService
                 )
             );
 
+            if (
+                $data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM
+                && $data['model'] === null
+            ) {
+                throw ValidationException::withMessages([
+                    'model' => 'No se puede enviar la requisición: el assembly no tiene un modelo activo en Master Model Mapping.',
+                ]);
+            }
+
             if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
                 $productionContext = $this->productionContextService->resolveForLabelRoom($data);
                 $data = [...$data, ...$productionContext];

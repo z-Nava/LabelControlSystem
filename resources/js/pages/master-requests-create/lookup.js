@@ -88,6 +88,7 @@ export function updateModelField(fields, jobLookups = {}) {
     );
 
     modelInput.value = model;
+    modelInput.dataset.modelMappingMissing = shouldWarnMissingModel ? 'true' : 'false';
     modelInput.classList.toggle('border-slate-300', !shouldWarnMissingModel);
     modelInput.classList.toggle('bg-slate-100', !shouldWarnMissingModel);
     modelInput.classList.toggle('text-slate-700', !shouldWarnMissingModel);
@@ -111,7 +112,7 @@ export function updateModelField(fields, jobLookups = {}) {
             : 'en Master Model Mapping.';
 
         fields.modelMappingWarning.textContent = shouldWarnMissingModel
-            ? `El assembly${assembly ? ` ${assembly}` : ''} no tiene un modelo cargado ${warningSuffix}`
+            ? `El assembly${assembly ? ` ${assembly}` : ''} no tiene un modelo cargado ${warningSuffix} Regístralo antes de enviar la requisición.`
             : '';
         fields.modelMappingWarning.classList.toggle('hidden', !shouldWarnMissingModel);
     }
