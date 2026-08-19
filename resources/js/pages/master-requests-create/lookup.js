@@ -40,16 +40,19 @@ function updatePackagingFields(fields, data = null) {
     }
 }
 
-function resolveDisplayModel(lookup, role, requestType) {
+function resolveRelevantRequestTypes(lookup, role, requestType) {
     if (requestType) {
-        return lookup.models_by_request_type?.[requestType] || '';
+        return [requestType];
     }
 
-    const allowedRequestTypes = lookup.production_context?.allowed_request_types || [];
-    const candidateModels = allowedRequestTypes
+    return (lookup.production_context?.allowed_request_types || [])
         .filter((type) => role === 'packaging'
             ? type === 'assembly_packaging'
-            : type !== 'assembly_packaging')
+            : type !== 'assembly_packaging');
+}
+
+function resolveDisplayModel(lookup, relevantRequestTypes) {
+    const candidateModels = relevantRequestTypes
         .map((type) => lookup.models_by_request_type?.[type] || '')
         .filter(Boolean);
     const uniqueModels = [...new Set(candidateModels)];
@@ -71,11 +74,47 @@ export function updateModelField(fields, jobLookups = {}) {
     const requestType = (fields.requestType?.value || '').trim();
     const validFlag = role === 'packaging' ? 'valid_for_packaging' : 'valid_for_assembly';
     const isResolvedJob = Boolean(lookup?.found && lookup[validFlag]);
+    const relevantRequestTypes = isResolvedJob
+        ? resolveRelevantRequestTypes(lookup, role, requestType)
+        : [];
     const model = isResolvedJob
-        ? resolveDisplayModel(lookup, role, requestType)
+        ? resolveDisplayModel(lookup, relevantRequestTypes)
         : '';
+    const hasRelevantModel = relevantRequestTypes.some(
+        (type) => Boolean(lookup.models_by_request_type?.[type]),
+    );
+    const shouldWarnMissingModel = Boolean(
+        isResolvedJob && relevantRequestTypes.length > 0 && !hasRelevantModel,
+    );
 
     modelInput.value = model;
+    modelInput.classList.toggle('border-slate-300', !shouldWarnMissingModel);
+    modelInput.classList.toggle('bg-slate-100', !shouldWarnMissingModel);
+    modelInput.classList.toggle('text-slate-700', !shouldWarnMissingModel);
+    modelInput.classList.toggle('border-red-500', shouldWarnMissingModel);
+    modelInput.classList.toggle('bg-red-50', shouldWarnMissingModel);
+    modelInput.classList.toggle('text-red-900', shouldWarnMissingModel);
+    modelInput.classList.toggle('ring-1', shouldWarnMissingModel);
+    modelInput.classList.toggle('ring-red-500', shouldWarnMissingModel);
+
+    if (shouldWarnMissingModel) {
+        modelInput.setAttribute('aria-invalid', 'true');
+    } else {
+        modelInput.removeAttribute('aria-invalid');
+    }
+
+    if (fields.modelMappingWarning) {
+        const assembly = (lookup?.assembly || '').trim();
+
+        const warningSuffix = requestType
+            ? 'para este tipo de Master.'
+            : 'en Master Model Mapping.';
+
+        fields.modelMappingWarning.textContent = shouldWarnMissingModel
+            ? `El assembly${assembly ? ` ${assembly}` : ''} no tiene un modelo cargado ${warningSuffix}`
+            : '';
+        fields.modelMappingWarning.classList.toggle('hidden', !shouldWarnMissingModel);
+    }
 
     if (!((jobInput?.value || '').trim())) {
         modelInput.placeholder = 'Captura un Job para consultar el modelo';

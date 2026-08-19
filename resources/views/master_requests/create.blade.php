@@ -125,8 +125,13 @@
                                value=""
                                readonly
                                aria-readonly="true"
+                               aria-describedby="modelMappingWarning"
                                class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700"
                                placeholder="Se resolverá desde Master Model Mapping">
+                        <p id="modelMappingWarning"
+                           class="mt-1 hidden text-xs font-medium text-red-700"
+                           role="alert"
+                           aria-live="polite"></p>
                     </div>
                 </div>
 

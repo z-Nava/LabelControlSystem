@@ -22,6 +22,7 @@ export function getMasterRequestElements() {
             poNumber: document.getElementById('poNumber'),
             destination: document.getElementById('destination'),
             modelDisplay: document.getElementById('modelDisplay'),
+            modelMappingWarning: document.getElementById('modelMappingWarning'),
             qtyAssembly: document.getElementById('jobAssemblyQty'),
             qtyPackaging: document.getElementById('jobPackagingQty'),
             hintAssembly: document.getElementById('jobAssemblyHint'),
