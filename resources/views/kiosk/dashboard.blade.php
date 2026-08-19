@@ -22,6 +22,32 @@
         </div>
     @endif
 
+    @if($requisitionPrintConfig)
+        <section id="kiosk-requisition-print" class="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Comprobante de requisición</p>
+                    <h2 class="mt-1 text-xl font-semibold text-slate-950">
+                        Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · Requisición #{{ $requisitionPrintConfig['requestId'] }}
+                    </h2>
+                    <p id="kiosk-requisition-print-status" class="mt-2 text-sm font-semibold text-slate-700">
+                        Preparando impresión automática…
+                    </p>
+                    <p class="mt-1 text-xs text-slate-600">
+                        Impresora: <span id="kiosk-requisition-printer">Buscando dispositivo Zebra…</span>
+                    </p>
+                </div>
+                <button id="kiosk-requisition-print-retry"
+                        type="button"
+                        class="hidden min-h-12 rounded-xl bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
+                    Reintentar impresión
+                </button>
+            </div>
+        </section>
+
+        <script id="kiosk-requisition-print-config" type="application/json">{!! json_encode($requisitionPrintConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+    @endif
+
     <section class="overflow-hidden rounded-3xl bg-slate-900 text-white shadow-lg">
         <div class="flex flex-col gap-5 px-6 py-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
             <div>
@@ -102,3 +128,7 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/pages/kiosk-dashboard.js')
+@endpush

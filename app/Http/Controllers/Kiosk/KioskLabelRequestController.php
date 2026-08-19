@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Kiosk\StoreKioskLabelRequestRequest;
 use App\Http\Requests\Labels\LookupOracleLabelJobRequest;
 use App\Models\User;
+use App\Services\Kiosk\KioskRequisitionPrintService;
 use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class KioskLabelRequestController extends Controller
@@ -17,6 +19,7 @@ class KioskLabelRequestController extends Controller
     public function __construct(
         private readonly LabelRequestReadService $readService,
         private readonly LabelRequestService $service,
+        private readonly KioskRequisitionPrintService $printService,
     ) {}
 
     public function create(): View
@@ -32,13 +35,19 @@ class KioskLabelRequestController extends Controller
         $data['requested_by_user_id'] = $kioskUser->id;
         $data['requested_by_name'] = $kioskUser->name;
 
-        $labelRequest = $this->service->createKiosk($data);
+        $labelRequest = DB::transaction(function () use ($data, $kioskUser) {
+            $labelRequest = $this->service->createKiosk($data);
+            $this->printService->prepare($labelRequest, $kioskUser);
+
+            return $labelRequest;
+        });
 
         return redirect()
             ->route('kiosk.dashboard')
             ->with('success', 'Requisición de etiquetas registrada correctamente.')
             ->with('kiosk_receipt', [
                 'type' => 'Requisición de etiquetas',
+                'request_kind' => 'label',
                 'request_id' => $labelRequest->id,
                 'created_at' => now()->format('d/m/Y H:i'),
             ]);

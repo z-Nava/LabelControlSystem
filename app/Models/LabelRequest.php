@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LabelRequest extends Model
 {
@@ -136,6 +137,11 @@ class LabelRequest extends Model
         return $this->hasMany(LabelRequestSerial::class)
             ->orderBy('position')
             ->orderBy('id');
+    }
+
+    public function kioskRequisitionPrintJob(): HasOne
+    {
+        return $this->hasOne(KioskRequisitionPrintJob::class);
     }
 
     public function requisitionPrintedByUser(): BelongsTo
