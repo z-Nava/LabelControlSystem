@@ -1,6 +1,11 @@
+import Swal from '../lib/sweetalert';
 import { debounce } from './utils/debounce';
 import { confirmSubmit } from './master-requests-create/confirmation';
 import { getMasterRequestElements } from './master-requests-create/dom';
+import {
+    folioValidationAlertMessage,
+    refreshFolioValidation,
+} from './master-requests-create/folio-validation';
 import {
     getMasterRequestLineResult,
     renderMasterRequestLineResult,
@@ -225,6 +230,7 @@ function initializeInventoryDestination(fields) {
         preview,
         lineMatchStatus,
         jobDrivenContext,
+        folioValidation,
         summary,
         lookupUrl,
         requestSource,
@@ -235,6 +241,7 @@ function initializeInventoryDestination(fields) {
         packaging: null,
     };
     let currentValidationResult = { status: 'idle', message: '' };
+    let currentFolioValidationResult = { status: 'idle', jobs: [] };
     const updatePageState = () => {
         if (isLabelRoomRequest) {
             currentValidationResult = refreshJobDrivenContext(fields, jobDrivenContext, jobLookupState);
@@ -246,6 +253,14 @@ function initializeInventoryDestination(fields) {
         updateModelField(fields, jobLookupState);
         refreshPreview(fields, preview, jobLookupState);
         refreshLabelRoomSummary(form, fields, summary, jobLookupState);
+
+        if (isLabelRoomRequest) {
+            currentFolioValidationResult = refreshFolioValidation(
+                form,
+                folioValidation.container,
+                jobLookupState,
+            );
+        }
     };
 
     let isSubmitting = false;
@@ -311,8 +326,17 @@ function initializeInventoryDestination(fields) {
         fields.requestType?.addEventListener('change', () => {
             fields.requestType.dataset.initialValue = '';
         });
-        form.addEventListener('input', () => refreshLabelRoomSummary(form, fields, summary, jobLookupState));
-        form.addEventListener('change', () => refreshLabelRoomSummary(form, fields, summary, jobLookupState));
+        const refreshLabelRoomFormState = () => {
+            refreshLabelRoomSummary(form, fields, summary, jobLookupState);
+            currentFolioValidationResult = refreshFolioValidation(
+                form,
+                folioValidation.container,
+                jobLookupState,
+            );
+        };
+
+        form.addEventListener('input', refreshLabelRoomFormState);
+        form.addEventListener('change', refreshLabelRoomFormState);
     }
 
     attachValidationClearListeners(form);
@@ -339,6 +363,17 @@ function initializeInventoryDestination(fields) {
         if (isLabelRoomRequest) {
             if (currentValidationResult.status !== 'ready') {
                 await showJobDrivenContextAlert(currentValidationResult);
+                return;
+            }
+
+            if (currentFolioValidationResult.status !== 'valid') {
+                await Swal.fire({
+                    title: 'Revisa los folios y las cantidades',
+                    text: folioValidationAlertMessage(currentFolioValidationResult),
+                    icon: currentFolioValidationResult.status === 'invalid' ? 'warning' : 'info',
+                    confirmButtonText: 'Entendido',
+                });
+
                 return;
             }
         } else if (['pending', 'mismatch', 'unverifiable'].includes(currentValidationResult.status)) {

@@ -93,7 +93,10 @@ class MasterRequestController extends Controller
     public function lookup(LookupOracleJobRequest $request)
     {
         return response()->json(
-            $this->service->lookupOracleJob($request->string('job_number')->toString())
+            $this->service->lookupOracleJob(
+                $request->string('job_number')->toString(),
+                includeLabelRoomState: true,
+            )
         );
     }
 }

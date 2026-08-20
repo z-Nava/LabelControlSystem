@@ -65,6 +65,9 @@ export function getMasterRequestElements() {
             },
             officialLine: document.getElementById('officialLineDisplay'),
         },
+        folioValidation: {
+            container: document.getElementById('folioLiveValidation'),
+        },
         summary: {
             jobs: document.getElementById('summaryJobs'),
             type: document.getElementById('summaryType'),

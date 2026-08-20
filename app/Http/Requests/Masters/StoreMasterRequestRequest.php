@@ -37,6 +37,7 @@ class StoreMasterRequestRequest extends FormRequest
         $submissionActionRules = $this->isKioskRequest()
             ? ['prohibited']
             : ['required', Rule::in([self::ACTION_SAVE, self::ACTION_SAVE_AND_PRINT])];
+        $standardPackPresence = $this->isKioskRequest() ? 'nullable' : 'required';
 
         return [
             'submission_action' => $submissionActionRules,
@@ -120,7 +121,7 @@ class StoreMasterRequestRequest extends FormRequest
 
             'folios_from' => ['required', 'integer', 'min:1'],
             'folios_to' => ['required', 'integer', 'min:1', 'gte:folios_from'],
-            'std_pack_qty' => ['nullable', 'integer', 'min:1'],
+            'std_pack_qty' => [$standardPackPresence, 'integer', 'min:1'],
 
             'partial_folio' => ['nullable', 'integer', 'min:1', 'required_with:partial_qty'],
             'partial_qty' => ['nullable', 'integer', 'min:1', 'required_with:partial_folio'],

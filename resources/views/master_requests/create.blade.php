@@ -269,7 +269,11 @@
                                type="number"
                                min="1"
                                value="{{ old('std_pack_qty') }}"
-                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
+                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600"
+                               required>
+                        @error('std_pack_qty')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
@@ -307,6 +311,11 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="folioLiveValidation"
+                     class="hidden space-y-3"
+                     role="status"
+                     aria-live="polite"></div>
 
                 <div>
                     <label class="text-sm text-slate-600">Notas (opcional)</label>

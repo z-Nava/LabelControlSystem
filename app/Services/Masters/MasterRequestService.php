@@ -19,6 +19,8 @@ class MasterRequestService
         private readonly StockLocatorService $stockLocatorService,
         private readonly MasterRequestProductionContextService $productionContextService,
         private readonly MasterModelMappingService $masterModelMappingService,
+        private readonly MasterRequestLabelRoomValidationService $labelRoomValidationService,
+        private readonly MasterRequestJobStateService $jobStateService,
     ) {}
 
     public function create(array $data, string $requestSource): MasterRequest
@@ -62,6 +64,14 @@ class MasterRequestService
             $packagingOracleJob = ! empty($data['job_packaging'])
                 ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
                 : null;
+
+            if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
+                $this->labelRoomValidationService->validate(
+                    $data,
+                    $oracleJob,
+                    $packagingOracleJob,
+                );
+            }
 
             // PO and destination belong to the packaging Job. Never trust values
             // submitted by the browser or fall back to the assembly Job.
@@ -199,7 +209,7 @@ class MasterRequestService
     /**
      * Lookup: dado un job_number te regresa lo que ocupará el front.
      */
-    public function lookupOracleJob(string $jobNumber): array
+    public function lookupOracleJob(string $jobNumber, bool $includeLabelRoomState = false): array
     {
         $payload = $this->oracleJobService->buildLookupPayload($jobNumber);
 
@@ -208,6 +218,14 @@ class MasterRequestService
                 ->describeOracleLine($payload['line'] ?? null);
             $payload['models_by_request_type'] = $this->masterModelMappingService
                 ->resolveModelsForNp($payload['assembly'] ?? null);
+
+            $oracleJob = $includeLabelRoomState
+                ? $this->oracleJobService->findByJobNumber($payload['job_number'])
+                : null;
+
+            if ($oracleJob) {
+                $payload['master_request_state'] = $this->jobStateService->summaryForJob($oracleJob);
+            }
         }
 
         return $payload;
