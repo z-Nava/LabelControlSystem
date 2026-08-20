@@ -27,9 +27,9 @@ class LabelRequestService
         });
     }
 
-    public function createKiosk(array $data): LabelRequest
+    public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
     {
-        return DB::transaction(function () use ($data): LabelRequest {
+        return DB::transaction(function () use ($data, $requestKind): LabelRequest {
             $serialPartNumbers = collect($data['serial_part_numbers'] ?? [])
                 ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
                 ->filter()
@@ -40,8 +40,21 @@ class LabelRequestService
                 ->filter()
                 ->unique()
                 ->values();
+            $shippingItems = collect($data['shipping_items'] ?? [])
+                ->map(fn ($item) => strtoupper(trim((string) $item)))
+                ->filter()
+                ->unique()
+                ->values();
 
-            unset($data['serial_part_numbers'], $data['rating_part_numbers']);
+            unset($data['serial_part_numbers'], $data['rating_part_numbers'], $data['shipping_items']);
+
+            $data['request_kind'] = $requestKind === LabelRequest::KIND_LPK
+                ? LabelRequest::KIND_LPK
+                : LabelRequest::KIND_STANDARD;
+
+            if ($data['request_kind'] !== LabelRequest::KIND_LPK || ! $data['include_shipping']) {
+                $shippingItems = collect();
+            }
 
             $jobNumber = strtoupper(trim((string) ($data['job_number'] ?? '')));
             $job = OracleJob::query()
@@ -101,7 +114,18 @@ class LabelRequestService
                 );
             }
 
-            return $labelRequest->load(['line', 'shift', 'serials', 'ratings']);
+            if ($shippingItems->isNotEmpty()) {
+                $labelRequest->shippingItems()->createMany(
+                    $shippingItems
+                        ->map(fn (string $itemReference, int $position) => [
+                            'item_reference' => $itemReference,
+                            'position' => $position + 1,
+                        ])
+                        ->all(),
+                );
+            }
+
+            return $labelRequest->load(['line', 'shift', 'serials', 'ratings', 'shippingItems']);
         }, attempts: 3);
     }
 

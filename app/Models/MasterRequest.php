@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MasterRequest extends Model
 {
@@ -116,6 +117,11 @@ class MasterRequest extends Model
     public function printBatches(): HasMany
     {
         return $this->hasMany(MasterPrintBatch::class, 'master_request_id');
+    }
+
+    public function kioskRequisitionPrintJob(): HasOne
+    {
+        return $this->hasOne(KioskRequisitionPrintJob::class);
     }
 
     public function isFromLabelRoom(): bool

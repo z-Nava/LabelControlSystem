@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
+use App\Models\KioskRequisitionPrintJob;
 use App\Models\LabelRequest;
+use App\Models\MasterRequest;
 use App\Models\User;
 use App\Services\Kiosk\KioskRequisitionPrintService;
 use Illuminate\Http\JsonResponse;
@@ -20,11 +22,32 @@ class KioskRequisitionPrintController extends Controller
         $data = $request->validate([
             'token' => ['required', 'uuid'],
         ]);
-        $result = $this->printService->claim(
+
+        return $this->claimResponse($this->printService->claim(
             $label_request,
             $this->kioskUser($request),
             $data['token'],
-        );
+        ));
+    }
+
+    public function claimMaster(Request $request, MasterRequest $master_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+        ]);
+
+        return $this->claimResponse($this->printService->claimMaster(
+            $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+        ));
+    }
+
+    /**
+     * @param  array{status: string, job: KioskRequisitionPrintJob}  $result
+     */
+    private function claimResponse(array $result): JsonResponse
+    {
 
         if ($result['status'] === 'sending') {
             return response()->json([
@@ -53,12 +76,32 @@ class KioskRequisitionPrintController extends Controller
             'token' => ['required', 'uuid'],
             'printer_name' => ['nullable', 'string', 'max:255'],
         ]);
-        $printJob = $this->printService->confirm(
+
+        return $this->confirmResponse($this->printService->confirm(
             $label_request,
             $this->kioskUser($request),
             $data['token'],
             $data['printer_name'] ?? null,
-        );
+        ));
+    }
+
+    public function confirmMaster(Request $request, MasterRequest $master_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->confirmResponse($this->printService->confirmMaster(
+            $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
+    private function confirmResponse(KioskRequisitionPrintJob $printJob): JsonResponse
+    {
 
         return response()->json([
             'status' => 'printed',
@@ -74,13 +117,35 @@ class KioskRequisitionPrintController extends Controller
             'error' => ['required', 'string', 'max:1000'],
             'printer_name' => ['nullable', 'string', 'max:255'],
         ]);
-        $printJob = $this->printService->fail(
+
+        return $this->failResponse($this->printService->fail(
             $label_request,
             $this->kioskUser($request),
             $data['token'],
             $data['error'],
             $data['printer_name'] ?? null,
-        );
+        ));
+    }
+
+    public function failMaster(Request $request, MasterRequest $master_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'error' => ['required', 'string', 'max:1000'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->failResponse($this->printService->failMaster(
+            $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['error'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
+    private function failResponse(KioskRequisitionPrintJob $printJob): JsonResponse
+    {
 
         return response()->json([
             'status' => $printJob->status,

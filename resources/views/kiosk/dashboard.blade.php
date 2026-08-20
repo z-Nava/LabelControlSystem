@@ -28,7 +28,7 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Comprobante de requisición</p>
                     <h2 class="mt-1 text-xl font-semibold text-slate-950">
-                        Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · Requisición #{{ $requisitionPrintConfig['requestId'] }}
+                        Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · {{ $requisitionPrintConfig['requestName'] }} #{{ $requisitionPrintConfig['requestId'] }}
                     </h2>
                     <p id="kiosk-requisition-print-status" class="mt-2 text-sm font-semibold text-slate-700">
                         Preparando impresión automática…
@@ -73,7 +73,7 @@
         </div>
     </section>
 
-    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <a href="{{ route('kiosk.master_requests.create') }}" class="group flex min-h-64 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600" aria-hidden="true">
                 <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -98,6 +98,19 @@
             <h2 class="mt-2 text-2xl font-semibold text-slate-900">Requisición de etiquetas</h2>
             <p class="mt-2 leading-6 text-slate-600">Etiquetas por Job, Label PN, estándar y cantidad requerida.</p>
             <div class="mt-auto pt-5 font-semibold text-red-600 group-hover:text-red-500">Crear requisición →</div>
+        </a>
+
+        <a href="{{ route('kiosk.lpk_label_requests.create') }}" class="group flex min-h-64 flex-col rounded-3xl border border-amber-200 bg-amber-50/40 p-6 shadow-sm transition hover:-translate-y-1 hover:border-amber-400 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.75 7.5v9A1.75 1.75 0 0 0 6.5 18.25h11a1.75 1.75 0 0 0 1.75-1.75v-9A1.75 1.75 0 0 0 17.5 5.75h-11A1.75 1.75 0 0 0 4.75 7.5Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 9.25h8M8 12h8M8 14.75h5" />
+                </svg>
+            </div>
+            <div class="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Shipping especial</div>
+            <h2 class="mt-2 text-2xl font-semibold text-slate-900">Requisición de etiquetas LPK</h2>
+            <p class="mt-2 leading-6 text-slate-600">Etiquetas LPK con modelos o herramientas incluidos en Shipping.</p>
+            <div class="mt-auto pt-5 font-semibold text-amber-700 group-hover:text-amber-600">Crear requisición →</div>
         </a>
 
         <a href="{{ route('kiosk.dummy_requests.create') }}" class="group flex min-h-64 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">

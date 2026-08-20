@@ -33,7 +33,7 @@
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>
     @endif
 
-    <form method="GET" action="{{ route('label_requests.index') }}" class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-6">
+    <form method="GET" action="{{ route('label_requests.index') }}" class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-7">
         <div>
             <label class="text-sm text-slate-600">Fecha desde</label>
             <input type="date" name="date_from" value="{{ $filters['date_from'] }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
@@ -61,6 +61,14 @@
             </select>
         </div>
         <div>
+            <label class="text-sm text-slate-600">Tipo</label>
+            <select name="request_kind" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                <option value="">Todos</option>
+                <option value="standard" @selected($filters['request_kind'] === 'standard')>Estándar</option>
+                <option value="lpk" @selected($filters['request_kind'] === 'lpk')>LPK</option>
+            </select>
+        </div>
+        <div>
             <label class="text-sm text-slate-600">Estatus</label>
             <select name="status" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                 @foreach($statusOptions as $status => $label)
@@ -69,11 +77,11 @@
             </select>
         </div>
         <div>
-            <label class="text-sm text-slate-600">Job / NP Serial o Rating</label>
-            <input type="text" name="sku_np" value="{{ $filters['sku_np'] }}" placeholder="Job o número de parte" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
+            <label class="text-sm text-slate-600">Job / NP / modelo Shipping</label>
+            <input type="text" name="sku_np" value="{{ $filters['sku_np'] }}" placeholder="Job, NP o elemento Shipping" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" />
         </div>
 
-        <div class="flex gap-2 md:col-span-6">
+        <div class="flex gap-2 md:col-span-7">
             <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">Aplicar filtros</button>
             <a href="{{ route('label_requests.index') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Limpiar</a>
         </div>
@@ -96,7 +104,12 @@
             <tbody class="divide-y">
                 @forelse($labelRequests as $request)
                     <tr class="align-top hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold">#{{ $request->id }}</td>
+                        <td class="px-4 py-3 font-semibold">
+                            <div>#{{ $request->id }}</div>
+                            @if($request->isLpk())
+                                <span class="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">LPK</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3">{{ $request->request_date?->format('Y-m-d') }}</td>
                         <td class="px-4 py-3">{{ $request->line?->code }} · {{ $request->shift?->code }}</td>
                         <td class="px-4 py-3">
@@ -110,6 +123,11 @@
                             @if($request->include_rating)
                                 @foreach($request->requestedRatingPartNumbers() as $ratingPartNumber)
                                     <div class="mt-1 text-xs text-slate-500">NP Rating: {{ $ratingPartNumber }}</div>
+                                @endforeach
+                            @endif
+                            @if($request->isLpk() && $request->include_shipping)
+                                @foreach($request->requestedShippingItemReferences() as $shippingItem)
+                                    <div class="mt-1 text-xs text-amber-700">Shipping: {{ $shippingItem }}</div>
                                 @endforeach
                             @endif
                         </td>

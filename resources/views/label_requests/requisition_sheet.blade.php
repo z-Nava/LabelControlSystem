@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Requisición de etiquetas #{{ $labelRequest->id }}</title>
+    <title>Requisición de etiquetas{{ $labelRequest->isLpk() ? ' LPK' : '' }} #{{ $labelRequest->id }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/pages/master-print-template.js'])
 
@@ -194,7 +194,7 @@
             <div class="col-span-6 flex items-center justify-center border-r border-slate-300 p-4 text-center">
                 <div>
                     <div class="text-[10px] font-bold uppercase tracking-[.22em] text-red-600">Label Control System</div>
-                    <h1 class="mt-1 text-[25px] font-black uppercase tracking-wide text-slate-950">Requisición de etiquetas</h1>
+                    <h1 class="mt-1 text-[25px] font-black uppercase tracking-wide text-slate-950">Requisición de etiquetas{{ $labelRequest->isLpk() ? ' LPK' : '' }}</h1>
                 </div>
             </div>
             <div class="header-meta col-span-3 grid grid-cols-2 text-sm">
@@ -216,7 +216,7 @@
             <div class="field"><div class="field-label">Job</div><div class="field-value">{{ $labelRequest->job_number ?: '—' }}</div></div>
             <div class="field !border-r-0"><div class="field-label">Assembly</div><div class="field-value">{{ $labelRequest->oracleJob?->assembly ?: '—' }}</div></div>
 
-            <div class="field"><div class="field-label">Modelo</div><div class="field-value">{{ $labelRequest->model ?: '—' }}</div></div>
+            <div class="field"><div class="field-label">{{ $labelRequest->isLpk() ? 'Ensamble final' : 'Modelo' }}</div><div class="field-value">{{ $labelRequest->model ?: '—' }}</div></div>
             <div class="field"><div class="field-label">PO</div><div class="field-value">{{ $labelRequest->po_number ?: '—' }}</div></div>
             <div class="field"><div class="field-label">Destino</div><div class="field-value">{{ $labelRequest->destination ?: '—' }}</div></div>
             <div class="field !border-r-0">
@@ -239,12 +239,21 @@
                 </div>
             </div>
             <div class="col-span-4 border-r border-slate-300 p-4">
-                <div class="field-label">NP de Serial</div>
-                @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
-                    <div class="field-value">{{ $serialPartNumber }}</div>
-                @empty
-                    <div class="field-value">—</div>
-                @endforelse
+                @if($labelRequest->isLpk())
+                    <div class="field-label">NP / modelos / herramientas Shipping</div>
+                    @forelse($labelRequest->requestedShippingItemReferences() as $shippingItem)
+                        <div class="field-value">{{ $shippingItem }}</div>
+                    @empty
+                        <div class="field-value">—</div>
+                    @endforelse
+                @else
+                    <div class="field-label">NP de Serial</div>
+                    @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
+                        <div class="field-value">{{ $serialPartNumber }}</div>
+                    @empty
+                        <div class="field-value">—</div>
+                    @endforelse
+                @endif
             </div>
             <div class="col-span-2 border-r border-slate-300 p-4">
                 <div class="field-label">Folio inicial</div>
@@ -267,7 +276,7 @@
                 <thead>
                     <tr class="border-b border-slate-300 text-left">
                         <th class="border-r border-slate-300 px-4 py-2">Tipo</th>
-                        <th class="border-r border-slate-300 px-4 py-2">Número de parte</th>
+                        <th class="border-r border-slate-300 px-4 py-2">{{ $labelRequest->isLpk() ? 'NP / modelo / herramienta' : 'Número de parte' }}</th>
                         <th class="px-4 py-2 text-right">Cantidad</th>
                     </tr>
                 </thead>

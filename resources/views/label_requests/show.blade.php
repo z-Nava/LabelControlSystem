@@ -10,7 +10,10 @@
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <div class="flex flex-wrap items-center gap-3">
-                <h1 class="text-2xl font-semibold text-slate-900">Requisición #{{ $labelRequest->id }}</h1>
+                <h1 class="text-2xl font-semibold text-slate-900">Requisición{{ $labelRequest->isLpk() ? ' LPK' : '' }} #{{ $labelRequest->id }}</h1>
+                @if($labelRequest->isLpk())
+                    <span class="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">LPK</span>
+                @endif
                 <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold {{ $labelRequest->status_badge_classes }}">{{ $labelRequest->status_label }}</span>
             </div>
             <p class="mt-1 text-slate-600">{{ $labelRequest->line?->code }} · Turno {{ $labelRequest->shift?->code }} · {{ $labelRequest->request_date?->format('Y-m-d') }}</p>
@@ -61,7 +64,7 @@
             <div class="text-xs uppercase tracking-wide text-slate-500">Producción</div>
             <div class="mt-1 font-semibold">Job: {{ $labelRequest->job_number ?: '—' }}</div>
             <div class="text-slate-700">Assembly: {{ $labelRequest->oracleJob?->assembly ?: '—' }}</div>
-            <div class="text-slate-700">Modelo: {{ $labelRequest->model ?: '—' }}</div>
+            <div class="text-slate-700">{{ $labelRequest->isLpk() ? 'Ensamble final' : 'Modelo' }}: {{ $labelRequest->model ?: '—' }}</div>
             <div class="text-slate-700">Líder: {{ $labelRequest->leader_name }}</div>
         </div>
 
@@ -77,6 +80,13 @@
             @empty
                 <div class="text-slate-700">NP Rating: No requerido</div>
             @endforelse
+            @if($labelRequest->isLpk())
+                @forelse($labelRequest->requestedShippingItemReferences() as $shippingItem)
+                    <div class="text-amber-800">Shipping: {{ $shippingItem }}</div>
+                @empty
+                    <div class="text-slate-700">Elementos Shipping: No requeridos</div>
+                @endforelse
+            @endif
             <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? 'No requerido' }}</div>
             <div class="text-slate-700">Folio final: {{ $labelRequest->folio_end ?? 'No requerido' }}</div>
         </div>
@@ -93,7 +103,7 @@
     <div class="mt-6 overflow-hidden rounded-xl border border-slate-200">
         <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
             <h2 class="font-semibold text-slate-900">Detalle de etiquetas solicitado</h2>
-            <p class="mt-1 text-xs text-slate-500">Cada NP de Serial y Rating conserva la cantidad general completa.</p>
+            <p class="mt-1 text-xs text-slate-500">Cada NP de Serial y Rating conserva la cantidad general; cada elemento Shipping LPK conserva la cantidad Shipping.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full min-w-[720px] text-sm">
@@ -102,7 +112,7 @@
                         <th class="px-4 py-3">Job</th>
                         <th class="px-4 py-3">Modelo</th>
                         <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Número de parte</th>
+                        <th class="px-4 py-3">{{ $labelRequest->isLpk() ? 'NP / modelo / herramienta' : 'Número de parte' }}</th>
                         <th class="px-4 py-3 text-right">Cantidad</th>
                     </tr>
                 </thead>

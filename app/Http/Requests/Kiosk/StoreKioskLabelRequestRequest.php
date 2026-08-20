@@ -55,20 +55,8 @@ class StoreKioskLabelRequestRequest extends FormRequest
         $includeSerial = $this->boolean('include_serial');
         $includeRating = $this->boolean('include_rating');
         $includeShipping = $this->boolean('include_shipping');
-        $serialPartNumbers = $this->normalizePartNumbers($this->input('serial_part_numbers', []));
-        $ratingPartNumbers = $this->input('rating_part_numbers', []);
-
-        if (! is_array($ratingPartNumbers)) {
-            $ratingPartNumbers = [$ratingPartNumbers];
-        }
-
-        $ratingPartNumbers = array_values(array_filter(
-            array_map(
-                static fn ($partNumber): string => strtoupper(trim((string) $partNumber)),
-                $ratingPartNumbers,
-            ),
-            static fn (string $partNumber): bool => $partNumber !== '',
-        ));
+        $serialPartNumbers = $this->normalizeStringList($this->input('serial_part_numbers', []));
+        $ratingPartNumbers = $this->normalizeStringList($this->input('rating_part_numbers', []));
 
         $this->merge([
             'include_serial' => $includeSerial,
@@ -90,18 +78,18 @@ class StoreKioskLabelRequestRequest extends FormRequest
     /**
      * @return array<int, string>
      */
-    private function normalizePartNumbers(mixed $partNumbers): array
+    protected function normalizeStringList(mixed $values): array
     {
-        if (! is_array($partNumbers)) {
-            $partNumbers = [$partNumbers];
+        if (! is_array($values)) {
+            $values = [$values];
         }
 
         return array_values(array_filter(
             array_map(
-                static fn ($partNumber): string => strtoupper(trim((string) $partNumber)),
-                $partNumbers,
+                static fn ($value): string => strtoupper(trim((string) $value)),
+                $values,
             ),
-            static fn (string $partNumber): bool => $partNumber !== '',
+            static fn (string $value): bool => $value !== '',
         ));
     }
 

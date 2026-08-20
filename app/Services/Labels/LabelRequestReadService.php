@@ -18,6 +18,7 @@ class LabelRequestReadService
             'date_to' => $filters['date_to'] ?? null,
             'line_id' => $filters['line_id'] ?? null,
             'shift_id' => $filters['shift_id'] ?? null,
+            'request_kind' => $filters['request_kind'] ?? null,
             'status' => $filters['status'] ?? 'active',
             'sku_np' => trim((string) ($filters['sku_np'] ?? '')),
         ];
@@ -28,12 +29,14 @@ class LabelRequestReadService
                 'shift:id,name,code',
                 'serials:id,label_request_id,part_number,position',
                 'ratings:id,label_request_id,part_number,position',
+                'shippingItems:id,label_request_id,item_reference,position',
             ])
             ->withCount('printBatches')
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
             ->when($validated['line_id'], fn ($query, $value) => $query->where('line_id', $value))
             ->when($validated['shift_id'], fn ($query, $value) => $query->where('shift_id', $value))
+            ->when($validated['request_kind'], fn ($query, $value) => $query->where('request_kind', $value))
             ->when($validated['status'] === 'active', fn ($query) => $query->open())
             ->when(
                 ! in_array($validated['status'], ['active', 'all'], true),
@@ -47,6 +50,7 @@ class LabelRequestReadService
                         ->orWhere('serial_part_number', 'like', "%{$search}%")
                         ->orWhereHas('serials', fn ($serialQuery) => $serialQuery->where('part_number', 'like', "%{$search}%"))
                         ->orWhereHas('ratings', fn ($ratingQuery) => $ratingQuery->where('part_number', 'like', "%{$search}%"))
+                        ->orWhereHas('shippingItems', fn ($itemQuery) => $itemQuery->where('item_reference', 'like', "%{$search}%"))
                         ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
                             $labelSkuQuery->select('label_part_number')
@@ -129,6 +133,7 @@ class LabelRequestReadService
                 'cancelledByUser:id,name',
                 'serials:id,label_request_id,part_number,position',
                 'ratings:id,label_request_id,part_number,position',
+                'shippingItems:id,label_request_id,item_reference,position',
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
                 'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),
             ])

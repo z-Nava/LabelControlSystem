@@ -9,6 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LabelRequest extends Model
 {
+    public const KIND_STANDARD = 'standard';
+
+    public const KIND_LPK = 'lpk';
+
+    public const KIND_LABELS = [
+        self::KIND_STANDARD => 'Estándar',
+        self::KIND_LPK => 'LPK',
+    ];
+
     public const STATUS_REQUESTED = 'requested';
 
     public const STATUS_IN_PROGRESS = 'in_progress';
@@ -36,6 +45,7 @@ class LabelRequest extends Model
     protected $table = 'label_requests';
 
     protected $fillable = [
+        'request_kind',
         'request_date',
         'week',
         'line_id',
@@ -128,6 +138,13 @@ class LabelRequest extends Model
     public function ratings(): HasMany
     {
         return $this->hasMany(LabelRequestRating::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    public function shippingItems(): HasMany
+    {
+        return $this->hasMany(LabelRequestShippingItem::class)
             ->orderBy('position')
             ->orderBy('id');
     }
@@ -240,6 +257,20 @@ class LabelRequest extends Model
     }
 
     /**
+     * @return array<int, string>
+     */
+    public function requestedShippingItemReferences(): array
+    {
+        return ($this->relationLoaded('shippingItems')
+            ? $this->shippingItems
+            : $this->shippingItems()->get())
+            ->pluck('item_reference')
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<int, array{type: string, part_number: ?string, quantity: int}>
      */
     public function requestedLabelLines(): array
@@ -275,11 +306,23 @@ class LabelRequest extends Model
         }
 
         if ($this->include_shipping) {
-            $lines[] = [
-                'type' => 'Shipping',
-                'part_number' => null,
-                'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
-            ];
+            $shippingItemReferences = $this->requestedShippingItemReferences();
+
+            if ($shippingItemReferences === []) {
+                $lines[] = [
+                    'type' => 'Shipping',
+                    'part_number' => null,
+                    'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
+                ];
+            } else {
+                foreach ($shippingItemReferences as $itemReference) {
+                    $lines[] = [
+                        'type' => 'Shipping LPK',
+                        'part_number' => $itemReference,
+                        'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
+                    ];
+                }
+            }
         }
 
         return $lines;
@@ -288,6 +331,16 @@ class LabelRequest extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS_LABELS[$this->status] ?? ucfirst(str_replace('_', ' ', (string) $this->status));
+    }
+
+    public function getRequestKindLabelAttribute(): string
+    {
+        return self::KIND_LABELS[$this->request_kind] ?? ucfirst((string) $this->request_kind);
+    }
+
+    public function isLpk(): bool
+    {
+        return $this->request_kind === self::KIND_LPK;
     }
 
     public function getStatusBadgeClassesAttribute(): string

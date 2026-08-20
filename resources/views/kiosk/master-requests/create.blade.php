@@ -327,7 +327,7 @@
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <div class="font-semibold text-slate-900">Última revisión</div>
-                    <p class="mt-1 text-sm text-slate-600">Confirma el resumen. Al enviar, Label Room recibirá la solicitud; no se imprimirá automáticamente.</p>
+                    <p class="mt-1 text-sm text-slate-600">Confirma el resumen. Al enviar, Label Room recibirá la solicitud y el kiosco imprimirá un comprobante.</p>
                 </div>
 
                 <button class="min-h-12 shrink-0 rounded-xl bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">

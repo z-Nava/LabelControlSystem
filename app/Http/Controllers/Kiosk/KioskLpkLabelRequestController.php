@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Kiosk\StoreKioskLabelRequestRequest;
+use App\Http\Requests\Kiosk\StoreKioskLpkLabelRequestRequest;
 use App\Http\Requests\Labels\LookupOracleLabelJobRequest;
 use App\Models\LabelRequest;
 use App\Models\User;
@@ -15,7 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
-class KioskLabelRequestController extends Controller
+class KioskLpkLabelRequestController extends Controller
 {
     public function __construct(
         private readonly LabelRequestReadService $readService,
@@ -25,10 +25,10 @@ class KioskLabelRequestController extends Controller
 
     public function create(): View
     {
-        return view('kiosk.label-requests.create', $this->readService->buildKioskCreateFormData());
+        return view('kiosk.lpk-label-requests.create', $this->readService->buildKioskCreateFormData());
     }
 
-    public function store(StoreKioskLabelRequestRequest $request): RedirectResponse
+    public function store(StoreKioskLpkLabelRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
         /** @var User $kioskUser */
@@ -37,7 +37,7 @@ class KioskLabelRequestController extends Controller
         $data['requested_by_name'] = $kioskUser->name;
 
         $labelRequest = DB::transaction(function () use ($data, $kioskUser) {
-            $labelRequest = $this->service->createKiosk($data, LabelRequest::KIND_STANDARD);
+            $labelRequest = $this->service->createKiosk($data, LabelRequest::KIND_LPK);
             $this->printService->prepare($labelRequest, $kioskUser);
 
             return $labelRequest;
@@ -45,9 +45,9 @@ class KioskLabelRequestController extends Controller
 
         return redirect()
             ->route('kiosk.dashboard')
-            ->with('success', 'Requisición de etiquetas registrada correctamente.')
+            ->with('success', 'Requisición de etiquetas LPK registrada correctamente.')
             ->with('kiosk_receipt', [
-                'type' => 'Requisición de etiquetas',
+                'type' => 'Requisición de etiquetas LPK',
                 'request_kind' => 'label',
                 'request_id' => $labelRequest->id,
                 'created_at' => now()->format('d/m/Y H:i'),
