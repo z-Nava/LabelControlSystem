@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
+use App\Models\DummyRequest;
 use App\Models\KioskRequisitionPrintJob;
 use App\Models\LabelRequest;
 use App\Models\MasterRequest;
@@ -38,6 +39,19 @@ class KioskRequisitionPrintController extends Controller
 
         return $this->claimResponse($this->printService->claimMaster(
             $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+        ));
+    }
+
+    public function claimDummy(Request $request, DummyRequest $dummy_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+        ]);
+
+        return $this->claimResponse($this->printService->claimDummy(
+            $dummy_request,
             $this->kioskUser($request),
             $data['token'],
         ));
@@ -100,6 +114,21 @@ class KioskRequisitionPrintController extends Controller
         ));
     }
 
+    public function confirmDummy(Request $request, DummyRequest $dummy_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->confirmResponse($this->printService->confirmDummy(
+            $dummy_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
     private function confirmResponse(KioskRequisitionPrintJob $printJob): JsonResponse
     {
 
@@ -137,6 +166,23 @@ class KioskRequisitionPrintController extends Controller
 
         return $this->failResponse($this->printService->failMaster(
             $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['error'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
+    public function failDummy(Request $request, DummyRequest $dummy_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'error' => ['required', 'string', 'max:1000'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->failResponse($this->printService->failDummy(
+            $dummy_request,
             $this->kioskUser($request),
             $data['token'],
             $data['error'],

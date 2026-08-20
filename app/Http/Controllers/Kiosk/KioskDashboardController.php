@@ -25,10 +25,14 @@ class KioskDashboardController extends Controller
         $preferredMasterRequestId = ($receipt['request_kind'] ?? null) === 'master'
             ? (int) ($receipt['request_id'] ?? 0)
             : null;
+        $preferredDummyRequestId = ($receipt['request_kind'] ?? null) === 'dummy'
+            ? (int) ($receipt['request_id'] ?? 0)
+            : null;
         $printJob = $this->printService->pendingForUser(
             $kioskUser,
             $preferredLabelRequestId ?: null,
             $preferredMasterRequestId ?: null,
+            $preferredDummyRequestId ?: null,
         );
 
         return view('kiosk.dashboard', [

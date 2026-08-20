@@ -8,8 +8,10 @@ use App\Http\Requests\Dummies\StoreDummyRequestRequest;
 use App\Models\User;
 use App\Services\Dummies\DummyRequestReadService;
 use App\Services\Dummies\DummyRequestService;
+use App\Services\Kiosk\KioskRequisitionPrintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class KioskDummyRequestController extends Controller
@@ -17,6 +19,7 @@ class KioskDummyRequestController extends Controller
     public function __construct(
         private readonly DummyRequestReadService $readService,
         private readonly DummyRequestService $service,
+        private readonly KioskRequisitionPrintService $printService,
     ) {}
 
     public function create(): View
@@ -32,13 +35,19 @@ class KioskDummyRequestController extends Controller
         $data['requested_by_user_id'] = $kioskUser->id;
         $data['requested_by_name'] = $kioskUser->name;
 
-        $dummyRequest = $this->service->create($data);
+        $dummyRequest = DB::transaction(function () use ($data, $kioskUser) {
+            $dummyRequest = $this->service->create($data);
+            $this->printService->prepareDummy($dummyRequest, $kioskUser);
+
+            return $dummyRequest;
+        });
 
         return redirect()
             ->route('kiosk.dashboard')
             ->with('success', 'Requisición Dummy QR registrada correctamente.')
             ->with('kiosk_receipt', [
                 'type' => 'Requisición Dummy QR',
+                'request_kind' => 'dummy',
                 'request_id' => $dummyRequest->id,
                 'created_at' => now()->format('d/m/Y H:i'),
             ]);

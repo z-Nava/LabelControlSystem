@@ -2,6 +2,7 @@
 
 namespace App\Services\Kiosk;
 
+use App\Models\DummyRequest;
 use App\Models\KioskRequisitionPrintJob;
 use App\Models\LabelRequest;
 use App\Models\MasterRequest;
@@ -14,6 +15,7 @@ class KioskRequisitionPrintService
     public function __construct(
         private readonly KioskRequisitionLabelZplBuilder $labelZplBuilder,
         private readonly KioskMasterRequisitionLabelZplBuilder $masterZplBuilder,
+        private readonly KioskDummyRequisitionLabelZplBuilder $dummyZplBuilder,
     ) {}
 
     public function prepare(LabelRequest $labelRequest, User $user): KioskRequisitionPrintJob
@@ -62,10 +64,34 @@ class KioskRequisitionPrintService
         ]);
     }
 
+    public function prepareDummy(DummyRequest $dummyRequest, User $user): KioskRequisitionPrintJob
+    {
+        $existingJob = KioskRequisitionPrintJob::query()
+            ->where('dummy_request_id', $dummyRequest->id)
+            ->first();
+
+        if ($existingJob) {
+            return $existingJob;
+        }
+
+        $dummyRequest->loadMissing(['line', 'shift']);
+        $dpi = (int) config('kiosk.requisition_label.dpi', 203);
+
+        return KioskRequisitionPrintJob::query()->create([
+            'token' => (string) Str::uuid(),
+            'dummy_request_id' => $dummyRequest->id,
+            'requested_by_user_id' => $user->id,
+            'status' => KioskRequisitionPrintJob::STATUS_PENDING,
+            'attempts' => 0,
+            'zpl' => $this->dummyZplBuilder->build($dummyRequest, $dpi),
+        ]);
+    }
+
     public function pendingForUser(
         User $user,
         ?int $preferredLabelRequestId = null,
         ?int $preferredMasterRequestId = null,
+        ?int $preferredDummyRequestId = null,
     ): ?KioskRequisitionPrintJob {
         $query = KioskRequisitionPrintJob::query()
             ->where('requested_by_user_id', $user->id)
@@ -73,7 +99,8 @@ class KioskRequisitionPrintService
             ->where(function ($query) {
                 $query
                     ->whereHas('labelRequest', fn ($query) => $query->where('status', '<>', LabelRequest::STATUS_CANCELLED))
-                    ->orWhereHas('masterRequest', fn ($query) => $query->where('status', '<>', MasterRequest::STATUS_CANCELLED));
+                    ->orWhereHas('masterRequest', fn ($query) => $query->where('status', '<>', MasterRequest::STATUS_CANCELLED))
+                    ->orWhereHas('dummyRequest', fn ($query) => $query->where('status', '<>', DummyRequest::STATUS_CANCELLED));
             });
 
         if ($preferredLabelRequestId !== null) {
@@ -96,6 +123,16 @@ class KioskRequisitionPrintService
             }
         }
 
+        if ($preferredDummyRequestId !== null) {
+            $preferredJob = (clone $query)
+                ->where('dummy_request_id', $preferredDummyRequestId)
+                ->first();
+
+            if ($preferredJob) {
+                return $preferredJob;
+            }
+        }
+
         return $query->oldest('created_at')->oldest('id')->first();
     }
 
@@ -105,14 +142,20 @@ class KioskRequisitionPrintService
     public function clientPayload(KioskRequisitionPrintJob $printJob): array
     {
         $isMaster = $printJob->master_request_id !== null;
-        $requestId = $isMaster
-            ? $printJob->master_request_id
-            : $printJob->label_request_id;
-        $routePrefix = $isMaster
-            ? 'kiosk.master_requests.requisition_label'
-            : 'kiosk.label_requests.requisition_label';
+        $isDummy = $printJob->dummy_request_id !== null;
+        $requestId = match (true) {
+            $isMaster => $printJob->master_request_id,
+            $isDummy => $printJob->dummy_request_id,
+            default => $printJob->label_request_id,
+        };
+        $routePrefix = match (true) {
+            $isMaster => 'kiosk.master_requests.requisition_label',
+            $isDummy => 'kiosk.dummy_requests.requisition_label',
+            default => 'kiosk.label_requests.requisition_label',
+        };
         $requestName = match (true) {
             $isMaster => 'Requisición Master',
+            $isDummy => 'Requisición Dummy QR',
             $printJob->labelRequest?->isLpk() => 'Requisición de etiquetas LPK',
             default => 'Requisición de etiquetas',
         };
@@ -155,8 +198,16 @@ class KioskRequisitionPrintService
     /**
      * @return array{status: string, job: KioskRequisitionPrintJob}
      */
+    public function claimDummy(DummyRequest $dummyRequest, User $user, string $token): array
+    {
+        return $this->claimRequest($dummyRequest, 'dummy_request_id', $user, $token);
+    }
+
+    /**
+     * @return array{status: string, job: KioskRequisitionPrintJob}
+     */
     private function claimRequest(
-        LabelRequest|MasterRequest $request,
+        DummyRequest|LabelRequest|MasterRequest $request,
         string $foreignKey,
         User $user,
         string $token,
@@ -207,8 +258,17 @@ class KioskRequisitionPrintService
         return $this->confirmRequest($masterRequest, 'master_request_id', $user, $token, $printerName);
     }
 
+    public function confirmDummy(
+        DummyRequest $dummyRequest,
+        User $user,
+        string $token,
+        ?string $printerName,
+    ): KioskRequisitionPrintJob {
+        return $this->confirmRequest($dummyRequest, 'dummy_request_id', $user, $token, $printerName);
+    }
+
     private function confirmRequest(
-        LabelRequest|MasterRequest $request,
+        DummyRequest|LabelRequest|MasterRequest $request,
         string $foreignKey,
         User $user,
         string $token,
@@ -252,8 +312,18 @@ class KioskRequisitionPrintService
         return $this->failRequest($masterRequest, 'master_request_id', $user, $token, $error, $printerName);
     }
 
+    public function failDummy(
+        DummyRequest $dummyRequest,
+        User $user,
+        string $token,
+        string $error,
+        ?string $printerName,
+    ): KioskRequisitionPrintJob {
+        return $this->failRequest($dummyRequest, 'dummy_request_id', $user, $token, $error, $printerName);
+    }
+
     private function failRequest(
-        LabelRequest|MasterRequest $request,
+        DummyRequest|LabelRequest|MasterRequest $request,
         string $foreignKey,
         User $user,
         string $token,
@@ -278,7 +348,7 @@ class KioskRequisitionPrintService
     }
 
     private function authorizedJobQuery(
-        LabelRequest|MasterRequest $request,
+        DummyRequest|LabelRequest|MasterRequest $request,
         string $foreignKey,
         User $user,
         string $token,

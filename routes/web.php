@@ -77,6 +77,9 @@ Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(funct
     Route::get('/dummy-requests/lookup-job', [KioskDummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
     Route::get('/dummy-requests/create', [KioskDummyRequestController::class, 'create'])->name('dummy_requests.create');
     Route::post('/dummy-requests', [KioskDummyRequestController::class, 'store'])->name('dummy_requests.store');
+    Route::post('/dummy-requests/{dummy_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimDummy'])->name('dummy_requests.requisition_label.claim');
+    Route::post('/dummy-requests/{dummy_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmDummy'])->name('dummy_requests.requisition_label.confirm');
+    Route::post('/dummy-requests/{dummy_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failDummy'])->name('dummy_requests.requisition_label.fail');
 
     Route::get('/oracle-jobs', [KioskOracleJobController::class, 'index'])->name('oracle_jobs.index');
     Route::get('/oracle-jobs/lookup', [KioskOracleJobController::class, 'lookup'])->name('oracle_jobs.lookup');

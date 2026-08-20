@@ -5,12 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DummyRequest extends Model
 {
     public const STATUS_REQUESTED = 'requested';
+
     public const STATUS_IN_PROGRESS = 'in_progress';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     public const REPRINT_SELECTION_ELIGIBLE_STATUSES = [
@@ -72,6 +76,11 @@ class DummyRequest extends Model
     public function printBatches(): HasMany
     {
         return $this->hasMany(DummyPrintBatch::class, 'dummy_request_id');
+    }
+
+    public function kioskRequisitionPrintJob(): HasOne
+    {
+        return $this->hasOne(KioskRequisitionPrintJob::class);
     }
 
     public function scopeOpen($query)
@@ -138,7 +147,7 @@ class DummyRequest extends Model
 
     public function canAccessSelectionReprint(): bool
     {
-        if (!in_array($this->status, self::REPRINT_SELECTION_ELIGIBLE_STATUSES, true)) {
+        if (! in_array($this->status, self::REPRINT_SELECTION_ELIGIBLE_STATUSES, true)) {
             return false;
         }
 
@@ -147,11 +156,11 @@ class DummyRequest extends Model
 
     public function selectionReprintBlockedReason(): ?string
     {
-        if (!in_array($this->status, self::REPRINT_SELECTION_ELIGIBLE_STATUSES, true)) {
+        if (! in_array($this->status, self::REPRINT_SELECTION_ELIGIBLE_STATUSES, true)) {
             return 'Disponible solo en requisiciones En proceso o Completadas.';
         }
 
-        if (!$this->hasPrintedInitialBatch()) {
+        if (! $this->hasPrintedInitialBatch()) {
             return 'Debes imprimir y confirmar al menos un batch inicial para habilitar reimpresión por selección.';
         }
 
