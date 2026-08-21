@@ -54,6 +54,7 @@ class MasterRequestReadService
         return [
             'masterRequestTypes' => MasterModelMapping::requestOptions(),
             'ortAssemblyConfig' => MasterModelMapping::ortAssemblyRequestConfiguration(),
+            'alternateStockLocator' => MasterModelMapping::ALTERNATE_STOCK_LOCATOR,
         ];
     }
 

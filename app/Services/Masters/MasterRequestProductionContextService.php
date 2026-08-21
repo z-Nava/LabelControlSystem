@@ -107,12 +107,14 @@ final class MasterRequestProductionContextService
         }
 
         if ($requestType === MasterModelMapping::TYPE_ORT_ASSEMBLY) {
-            $local = $this->normalize($data['local'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_LOCAL;
+            $systemLocal = MasterModelMapping::ORT_DEFAULT_LOCAL;
             $subinventory = $this->normalize($data['subinventory'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_SUBINVENTORY;
         } else {
-            $local = (string) ($context['stock_locator'] ?? '');
+            $systemLocal = (string) ($context['stock_locator'] ?? '');
             $subinventory = (string) ($context['subinventory'] ?? '');
         }
+
+        $local = $this->resolveSelectedLocal($data['local'] ?? null, $systemLocal);
 
         return [
             'line_id' => (int) $context['production_line_id'],
@@ -149,5 +151,31 @@ final class MasterRequestProductionContextService
         $normalized = $this->normalize($value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    public function resolveSelectedLocal(mixed $selectedLocal, mixed $systemLocal): string
+    {
+        $selectedLocal = $this->normalize($selectedLocal);
+        $systemLocal = $this->normalize($systemLocal);
+
+        if ($selectedLocal === '') {
+            return $systemLocal;
+        }
+
+        $allowedLocals = array_values(array_unique(array_filter([
+            $systemLocal,
+            MasterModelMapping::ALTERNATE_STOCK_LOCATOR,
+        ])));
+
+        if (! in_array($selectedLocal, $allowedLocals, true)) {
+            throw ValidationException::withMessages([
+                'local' => sprintf(
+                    'Selecciona el Stock Locator configurado por el sistema o %s.',
+                    MasterModelMapping::ALTERNATE_STOCK_LOCATOR,
+                ),
+            ]);
+        }
+
+        return $selectedLocal;
     }
 }

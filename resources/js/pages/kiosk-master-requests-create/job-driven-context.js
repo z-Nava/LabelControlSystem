@@ -136,16 +136,73 @@ function setInventoryFieldState(fields, isEditable) {
     const localInput = fields.localInput;
     const subinventoryInput = fields.subinventoryInput;
 
-    [localInput, subinventoryInput].forEach((input) => {
-        if (!input) {
-            return;
-        }
+    if (localInput) {
+        localInput.disabled = false;
+        localInput.required = false;
+        localInput.classList.remove('bg-slate-100');
+        localInput.classList.add('bg-white');
+    }
 
-        input.readOnly = !isEditable;
-        input.required = false;
-        input.classList.toggle('bg-slate-100', !isEditable);
-        input.classList.toggle('bg-white', isEditable);
-    });
+    if (subinventoryInput) {
+        subinventoryInput.readOnly = !isEditable;
+        subinventoryInput.required = false;
+        subinventoryInput.classList.toggle('bg-slate-100', !isEditable);
+        subinventoryInput.classList.toggle('bg-white', isEditable);
+    }
+}
+
+function renderLocalOptions(localSelect, systemLocal, contextKey) {
+    if (!localSelect) {
+        return;
+    }
+
+    const normalizedSystemLocal = normalize(systemLocal);
+    const alternateLocal = normalize(localSelect.dataset.alternateValue);
+    const initialLocal = normalize(localSelect.dataset.initialValue);
+    const currentLocal = normalize(localSelect.value);
+    const previousContextKey = localSelect.dataset.appliedContextKey || '';
+    const contextChanged = contextKey !== '' && contextKey !== previousContextKey;
+    const allowedLocals = [...new Set([normalizedSystemLocal, alternateLocal].filter(Boolean))];
+    let selectedLocal = '';
+
+    if (contextChanged) {
+        selectedLocal = allowedLocals.includes(initialLocal) ? initialLocal : normalizedSystemLocal;
+        localSelect.dataset.initialValue = '';
+    } else if (allowedLocals.includes(currentLocal)) {
+        selectedLocal = currentLocal;
+    } else if (contextKey === '' && initialLocal) {
+        selectedLocal = initialLocal;
+    } else {
+        selectedLocal = normalizedSystemLocal;
+    }
+
+    const options = [];
+
+    if (!normalizedSystemLocal) {
+        options.push({
+            value: '',
+            label: 'Se resolverá desde la línea oficial',
+        });
+    }
+
+    if (contextKey === '' && initialLocal && !allowedLocals.includes(initialLocal)) {
+        options.push({ value: initialLocal, label: initialLocal });
+    }
+
+    if (normalizedSystemLocal) {
+        options.push({
+            value: normalizedSystemLocal,
+            label: `${normalizedSystemLocal} (Sistema)`,
+        });
+    }
+
+    if (alternateLocal && alternateLocal !== normalizedSystemLocal) {
+        options.push({ value: alternateLocal, label: alternateLocal });
+    }
+
+    localSelect.replaceChildren(...options.map(({ value, label }) => new Option(label, value)));
+    localSelect.value = selectedLocal;
+    localSelect.dataset.appliedContextKey = contextKey;
 }
 
 function applyOfficialProductionContext(fields, jobLookups) {
@@ -155,33 +212,29 @@ function applyOfficialProductionContext(fields, jobLookups) {
     const context = productionContext(lookup);
     const isOrtAssembly = requestType === ORT_ASSEMBLY_TYPE;
     const previousRequestType = fields.requestType?.dataset.appliedRequestType || '';
+    const systemLocal = isOrtAssembly
+        ? fields.localInput?.dataset.ortDefaultValue || ''
+        : context?.stock_locator || '';
+    const localContextKey = requestType && context
+        ? [requestType, normalize(context.line_code), normalize(systemLocal)].join('|')
+        : '';
 
     setInventoryFieldState(fields, isOrtAssembly);
+    renderLocalOptions(fields.localInput, systemLocal, localContextKey);
 
     if (!requestType || !context) {
-        if (fields.localInput) {
-            fields.localInput.value = '';
-        }
         if (fields.subinventoryInput) {
             fields.subinventoryInput.value = '';
         }
     } else if (isOrtAssembly) {
         const switchedToOrt = previousRequestType !== ORT_ASSEMBLY_TYPE;
-        const initialLocal = fields.localInput?.dataset.initialValue || '';
         const initialSubinventory = fields.subinventoryInput?.dataset.initialValue || '';
 
-        if (fields.localInput && switchedToOrt) {
-            fields.localInput.value = initialLocal || fields.localInput.dataset.ortDefaultValue || '';
-            fields.localInput.dataset.initialValue = '';
-        }
         if (fields.subinventoryInput && switchedToOrt) {
             fields.subinventoryInput.value = initialSubinventory || fields.subinventoryInput.dataset.ortDefaultValue || '';
             fields.subinventoryInput.dataset.initialValue = '';
         }
     } else {
-        if (fields.localInput) {
-            fields.localInput.value = context.stock_locator || '';
-        }
         if (fields.subinventoryInput) {
             fields.subinventoryInput.value = context.subinventory || '';
         }
@@ -396,4 +449,3 @@ export async function showJobDrivenContextAlert(result) {
         confirmButtonText: 'Corregir',
     });
 }
-

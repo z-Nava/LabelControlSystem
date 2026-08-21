@@ -20,6 +20,8 @@ class MasterModelMapping extends Model
 
     public const ORT_DEFAULT_LOCAL = 'RELIABILITY';
 
+    public const ALTERNATE_STOCK_LOCATOR = 'SMARKET-1';
+
     public const TYPES = [
         self::TYPE_ASSEMBLY,
         self::TYPE_ASSEMBLY_PACKAGING,

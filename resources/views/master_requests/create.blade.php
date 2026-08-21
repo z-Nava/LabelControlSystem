@@ -1,5 +1,7 @@
 @extends('layouts.app', ['title' => 'Nueva requisición Master'])
 
+@php($initialLocal = strtoupper(trim((string) old('local', ''))))
+
 @section('content')
 <div class="rounded-2xl bg-white p-6 shadow">
     <div class="flex items-start justify-between gap-4">
@@ -196,16 +198,20 @@
 
                     <div>
                         <label for="localInput" class="text-sm text-slate-600">Stock Locator (Local)</label>
-                        <input id="localInput"
-                               name="local"
-                               value="{{ old('local') }}"
-                               maxlength="20"
-                               pattern="^[A-Za-z0-9\-._]+$"
-                               data-ort-default-value="{{ $ortAssemblyConfig['default_local'] }}"
-                               data-initial-value="{{ old('request_type') === $ortAssemblyConfig['type'] ? old('local') : '' }}"
-                               readonly
-                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 uppercase text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600"
-                               placeholder="Se resolverá desde la línea oficial">
+                        <select id="localInput"
+                                name="local"
+                                data-ort-default-value="{{ $ortAssemblyConfig['default_local'] }}"
+                                data-alternate-value="{{ $alternateStockLocator }}"
+                                data-initial-value="{{ $initialLocal }}"
+                                class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 uppercase text-slate-700 focus:outline-none focus:ring-2 focus:ring-red-600">
+                            <option value="" @selected($initialLocal === '')>Se resolverá desde la línea oficial</option>
+                            @if($initialLocal !== '')
+                                <option value="{{ $initialLocal }}" selected>{{ $initialLocal }}</option>
+                            @endif
+                            @if($initialLocal !== $alternateStockLocator)
+                                <option value="{{ $alternateStockLocator }}">{{ $alternateStockLocator }}</option>
+                            @endif
+                        </select>
                         @error('local')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
