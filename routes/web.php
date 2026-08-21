@@ -18,7 +18,6 @@ use App\Http\Controllers\Dummies\DummyRequestController;
 use App\Http\Controllers\Kiosk\KioskDashboardController;
 use App\Http\Controllers\Kiosk\KioskDummyRequestController;
 use App\Http\Controllers\Kiosk\KioskLabelRequestController;
-use App\Http\Controllers\Kiosk\KioskLpkLabelRequestController;
 use App\Http\Controllers\Kiosk\KioskMasterRequestController;
 use App\Http\Controllers\Kiosk\KioskOracleJobController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
@@ -64,15 +63,15 @@ Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(funct
     Route::post('/master-requests/{master_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMaster'])->name('master_requests.requisition_label.fail');
 
     Route::get('/label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
-    Route::get('/label-requests/create', [KioskLabelRequestController::class, 'create'])->name('label_requests.create');
-    Route::post('/label-requests', [KioskLabelRequestController::class, 'store'])->name('label_requests.store');
+    Route::get('/label-requests/create', [KioskLabelRequestController::class, 'createStandard'])->name('label_requests.create');
+    Route::post('/label-requests', [KioskLabelRequestController::class, 'storeStandard'])->name('label_requests.store');
     Route::post('/label-requests/{label_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claim'])->name('label_requests.requisition_label.claim');
     Route::post('/label-requests/{label_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirm'])->name('label_requests.requisition_label.confirm');
     Route::post('/label-requests/{label_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'fail'])->name('label_requests.requisition_label.fail');
 
-    Route::get('/lpk-label-requests/lookup-job', [KioskLpkLabelRequestController::class, 'lookup'])->name('lpk_label_requests.lookup_job');
-    Route::get('/lpk-label-requests/create', [KioskLpkLabelRequestController::class, 'create'])->name('lpk_label_requests.create');
-    Route::post('/lpk-label-requests', [KioskLpkLabelRequestController::class, 'store'])->name('lpk_label_requests.store');
+    Route::get('/lpk-label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('lpk_label_requests.lookup_job');
+    Route::get('/lpk-label-requests/create', [KioskLabelRequestController::class, 'createLpk'])->name('lpk_label_requests.create');
+    Route::post('/lpk-label-requests', [KioskLabelRequestController::class, 'storeLpk'])->name('lpk_label_requests.store');
 
     Route::get('/dummy-requests/lookup-job', [KioskDummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
     Route::get('/dummy-requests/create', [KioskDummyRequestController::class, 'create'])->name('dummy_requests.create');
