@@ -2,12 +2,10 @@
 
 namespace App\Services\Masters;
 
-use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
-use App\Models\ProductionLine;
 use App\Services\Catalogs\MasterModelMappingService;
-use App\Services\Catalogs\StockLocatorService;
+use App\Services\Kiosk\KioskMasterRequestValidationService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,10 +14,10 @@ class MasterRequestService
 {
     public function __construct(
         private readonly OracleJobService $oracleJobService,
-        private readonly StockLocatorService $stockLocatorService,
         private readonly MasterRequestProductionContextService $productionContextService,
         private readonly MasterModelMappingService $masterModelMappingService,
         private readonly MasterRequestLabelRoomValidationService $labelRoomValidationService,
+        private readonly KioskMasterRequestValidationService $kioskValidationService,
         private readonly MasterRequestJobStateService $jobStateService,
     ) {}
 
@@ -29,16 +27,15 @@ class MasterRequestService
             throw new \InvalidArgumentException('Invalid master request source.');
         }
 
-        if ($requestSource === MasterRequest::SOURCE_LABEL_ROOM) {
-            $data['request_date'] = null;
-            $data['shift_id'] = null;
-            $data['leader_name'] = null;
-            unset($data['line_id']);
-        }
+        $data['request_date'] = null;
+        $data['shift_id'] = null;
+        $data['leader_name'] = null;
+        unset($data['line_id']);
 
         $data['request_source'] = $requestSource;
+        $validationService = $this->validationServiceFor($requestSource);
 
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $validationService) {
 
             $foliosFrom = (int) ($data['folios_from'] ?? 0);
             $foliosTo = (int) ($data['folios_to'] ?? 0);
@@ -65,13 +62,11 @@ class MasterRequestService
                 ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
                 : null;
 
-            if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
-                $this->labelRoomValidationService->validate(
-                    $data,
-                    $oracleJob,
-                    $packagingOracleJob,
-                );
-            }
+            $validationService->validate(
+                $data,
+                $oracleJob,
+                $packagingOracleJob,
+            );
 
             // PO and destination belong to the packaging Job. Never trust values
             // submitted by the browser or fall back to the assembly Job.
@@ -85,43 +80,10 @@ class MasterRequestService
                 )
             );
 
-            if (
-                $data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM
-                && $data['model'] === null
-            ) {
-                throw ValidationException::withMessages([
-                    'model' => 'No se puede enviar la requisición: el assembly no tiene un modelo activo en Master Model Mapping.',
-                ]);
-            }
+            $validationService->validateResolvedModel($data['model']);
 
-            if ($data['request_source'] === MasterRequest::SOURCE_LABEL_ROOM) {
-                $productionContext = $this->productionContextService->resolveForLabelRoom($data);
-                $data = [...$data, ...$productionContext];
-            } else {
-                $oracleLine = $this->normalize(
-                    ProductionLine::query()->whereKey($data['line_id'] ?? null)->value('code')
-                );
-                $isOrtAssembly = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ORT_ASSEMBLY;
-
-                if ($isOrtAssembly) {
-                    $resolvedLocal = $this->normalize($data['local'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_LOCAL;
-                    $resolvedSubinventory = $this->normalize($data['subinventory'] ?? '') ?: MasterModelMapping::ORT_DEFAULT_SUBINVENTORY;
-                } else {
-                    $lineMapping = $this->stockLocatorService->resolveActiveMappingByOracleLine($oracleLine);
-                    $resolvedLocal = $this->normalize($lineMapping?->stock_locator);
-                    $resolvedSubinventory = $this->normalize($lineMapping?->subinventory);
-                }
-
-                if ($oracleLine === '') {
-                    throw ValidationException::withMessages([
-                        'line_id' => 'La línea seleccionada no tiene una Oracle Line configurada.',
-                    ]);
-                }
-
-                $data['oracle_line'] = $oracleLine;
-                $data['subinventory'] = $resolvedSubinventory;
-                $data['local'] = $resolvedLocal;
-            }
+            $productionContext = $this->productionContextService->resolveFromJobs($data);
+            $data = [...$data, ...$productionContext];
 
             $mr = MasterRequest::create($data);
 
@@ -241,5 +203,13 @@ class MasterRequestService
         $normalized = $this->normalize($value);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    private function validationServiceFor(string $requestSource): MasterRequestValidationService
+    {
+        return match ($requestSource) {
+            MasterRequest::SOURCE_KIOSK => $this->kioskValidationService,
+            default => $this->labelRoomValidationService,
+        };
     }
 }

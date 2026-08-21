@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Kiosk\StoreKioskMasterRequestRequest;
 use App\Http\Requests\Masters\LookupOracleJobRequest;
-use App\Http\Requests\Masters\StoreMasterRequestRequest;
 use App\Models\MasterRequest;
 use App\Models\User;
 use App\Services\Kiosk\KioskRequisitionPrintService;
@@ -28,7 +28,7 @@ class KioskMasterRequestController extends Controller
         return view('kiosk.master-requests.create', $this->readService->buildKioskCreateFormData());
     }
 
-    public function store(StoreMasterRequestRequest $request): RedirectResponse
+    public function store(StoreKioskMasterRequestRequest $request): RedirectResponse
     {
         $data = $request->validated();
         /** @var User $kioskUser */
@@ -57,7 +57,10 @@ class KioskMasterRequestController extends Controller
     public function lookup(LookupOracleJobRequest $request): JsonResponse
     {
         return response()->json(
-            $this->service->lookupOracleJob($request->string('job_number')->toString()),
+            $this->service->lookupOracleJob(
+                $request->string('job_number')->toString(),
+                includeLabelRoomState: true,
+            ),
         );
     }
 }

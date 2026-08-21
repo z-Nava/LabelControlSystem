@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Masters;
+namespace App\Http\Requests\Kiosk;
 
 use App\Models\MasterModelMapping;
 use App\Models\OracleJob;
@@ -8,12 +8,8 @@ use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreMasterRequestRequest extends FormRequest
+class StoreKioskMasterRequestRequest extends FormRequest
 {
-    public const ACTION_SAVE = 'save';
-
-    public const ACTION_SAVE_AND_PRINT = 'save_and_print';
-
     private ?OracleJobService $oracleJobService = null;
 
     private const NO_HTML_PATTERN = '/<[^>]*>/';
@@ -26,7 +22,7 @@ class StoreMasterRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'submission_action' => ['required', Rule::in([self::ACTION_SAVE, self::ACTION_SAVE_AND_PRINT])],
+            'submission_action' => ['prohibited'],
             'request_date' => ['nullable', 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
             'line_id' => ['prohibited'],
@@ -138,8 +134,6 @@ class StoreMasterRequestRequest extends FormRequest
             'subinventory' => $subinventory !== null ? strtoupper($subinventory) : null,
             'notes' => $this->cleanInput($this->input('notes', '')),
         ];
-
-        $normalized['submission_action'] = $this->input('submission_action', self::ACTION_SAVE);
 
         $this->merge($normalized);
     }

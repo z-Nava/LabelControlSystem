@@ -124,8 +124,12 @@
 
     <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Líder</div>
-            <div class="font-semibold">{{ $mr->leader_name ?: '-' }}</div>
+            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Registro</div>
+            <div class="font-semibold">Solicita: {{ $mr->requested_by_name ?: $mr->requestedBy?->name ?: '-' }}</div>
+            <div class="text-slate-700">{{ $mr->created_at?->format('Y-m-d H:i') ?? '-' }}</div>
+            @if($mr->leader_name)
+                <div class="mt-1 text-xs text-slate-500">Líder histórico: {{ $mr->leader_name }}</div>
+            @endif
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">

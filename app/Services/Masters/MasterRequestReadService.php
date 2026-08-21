@@ -4,9 +4,6 @@ namespace App\Services\Masters;
 
 use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
-use App\Models\ProductionLine;
-use App\Models\Shift;
-use App\Models\StockLocator;
 
 class MasterRequestReadService
 {
@@ -17,7 +14,7 @@ class MasterRequestReadService
 
         $masterRequests = MasterRequest::query()
             ->whereNull('parent_master_request_id')
-            ->with(['line', 'shift'])
+            ->with(['line', 'shift', 'requestedBy:id,name'])
             ->withCount([
                 'folios as total_folios',
                 'folios as printed_folios' => fn ($query) => $query->where('status', 'printed'),
@@ -31,6 +28,7 @@ class MasterRequestReadService
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($sub) use ($q) {
                     $sub->where('id', $q)
+                        ->orWhere('requested_by_name', 'like', "%{$q}%")
                         ->orWhere('leader_name', 'like', "%{$q}%")
                         ->orWhere('job_assembly', 'like', "%{$q}%")
                         ->orWhere('job_packaging', 'like', "%{$q}%")
@@ -61,18 +59,7 @@ class MasterRequestReadService
 
     public function buildKioskCreateFormData(): array
     {
-        $inventoryMappings = StockLocator::query()
-            ->where('active', true)
-            ->get()
-            ->keyBy(fn (StockLocator $mapping): string => strtoupper(trim($mapping->oracle_line)));
-
-        return [
-            'lines' => ProductionLine::where('active', true)->orderBy('code')->get(),
-            'shifts' => Shift::where('active', true)->orderBy('code')->get(),
-            'masterRequestTypes' => MasterModelMapping::requestOptions(),
-            'ortAssemblyConfig' => MasterModelMapping::ortAssemblyRequestConfiguration(),
-            'inventoryMappings' => $inventoryMappings,
-        ];
+        return $this->buildLabelRoomCreateFormData();
     }
 
     public function findForShow(int $id): MasterRequest
@@ -80,6 +67,7 @@ class MasterRequestReadService
         return MasterRequest::with([
             'line',
             'shift',
+            'requestedBy:id,name',
             'folios',
             'cancelledBy:id,name',
             'revisions' => fn ($query) => $query->with(['line', 'reworkedBy:id,name'])->withCount('folios'),

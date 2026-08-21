@@ -83,7 +83,7 @@ class MasterReworkService
                 ->where('parent_master_request_id', $rootRequestId)
                 ->max('revision_number')) + 1;
 
-            $resolvedContext = $this->productionContextService->resolveForLabelRoom([
+            $resolvedContext = $this->productionContextService->resolveFromJobs([
                 ...$data,
                 'local' => null,
                 'subinventory' => null,

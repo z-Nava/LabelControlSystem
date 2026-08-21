@@ -60,11 +60,11 @@ final class MasterRequestProductionContextService
     }
 
     /**
-     * Resolve the server-owned production fields for a Label Room request.
+     * Resolve the server-owned production fields from the official Oracle Job.
      *
      * @return array{line_id: int, oracle_line: string, local: string, subinventory: string}
      */
-    public function resolveForLabelRoom(array $data): array
+    public function resolveFromJobs(array $data): array
     {
         $requestType = (string) ($data['request_type'] ?? '');
         $usesPackagingLine = $requestType === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING;

@@ -179,7 +179,6 @@ class MasterPrintService
             ->first();
 
         return $folios->map(function ($folio) use ($masterRequest, $oracle, $oraclePackaging) {
-            $includeProductionContext = $masterRequest->isFromKiosk();
             $folioNo = str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT);
 
             $job = (string) ($masterRequest->job_assembly ?? '');
@@ -221,15 +220,11 @@ class MasterPrintService
             $lotePackaging = $jobPackaging !== '' ? ($jobPackaging.'-'.$folioNo) : '';
 
             return [
-                'leader' => $includeProductionContext ? (string) $masterRequest->leader_name : '',
-                'shift' => $includeProductionContext
-                    ? (string) ($masterRequest->shift?->code ?? $masterRequest->shift?->name ?? '')
-                    : '',
+                'leader' => '',
+                'shift' => '',
                 'line' => (string) ($masterRequest->line?->code ?? ''),
                 'model' => $resolvedModel,
-                'date' => $includeProductionContext
-                    ? (optional($masterRequest->request_date)->format('d/m/Y') ?? '')
-                    : '',
+                'date' => '',
                 'folio_id' => $folio->id,
                 'folio_no' => $folioNo,
                 'job' => $job,

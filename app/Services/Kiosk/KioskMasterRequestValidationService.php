@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Services\Masters;
+namespace App\Services\Kiosk;
 
 use App\Models\OracleJob;
+use App\Services\Masters\MasterRequestJobStateService;
+use App\Services\Masters\MasterRequestValidationService;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
-class MasterRequestLabelRoomValidationService implements MasterRequestValidationService
+class KioskMasterRequestValidationService implements MasterRequestValidationService
 {
     public function __construct(
         private readonly MasterRequestJobStateService $jobStateService,

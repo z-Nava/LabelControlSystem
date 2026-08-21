@@ -45,7 +45,7 @@
 
         <div class="md:col-span-2">
             <label class="text-sm text-slate-600">Buscar</label>
-           <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="# requisición, líder, job, PO" maxlength="80"
+           <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="# requisición, solicitante, job, PO" maxlength="80"
                    pattern="[A-Za-zÀ-ÖØ-öø-ÿ0-9#\-_.\/\x27\s]*"
                    title="Solo letras, números, espacios y # - _ . / '"
                    class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
@@ -65,7 +65,7 @@
                     <th class="py-3 pr-3">Origen</th>
                     <th class="py-3 pr-3">Fecha de requisición</th>
                     <th class="py-3 pr-3">Línea / Turno</th>
-                    <th class="py-3 pr-3">Líder</th>
+                    <th class="py-3 pr-3">Solicita</th>
                     <th class="py-3 pr-3">Jobs</th>
                     <th class="py-3 pr-3">Avance</th>
                     <th class="py-3 pr-3">Estado</th>
@@ -89,7 +89,7 @@
                         <td class="py-3 pr-3">
                             {{ $mr->line?->code ?? '-' }}{{ $mr->shift ? ' · '.$mr->shift->code : '' }}
                         </td>
-                        <td class="py-3 pr-3">{{ $mr->leader_name ?: '-' }}</td>
+                        <td class="py-3 pr-3">{{ $mr->requested_by_name ?: $mr->requestedBy?->name ?: '-' }}</td>
                         <td class="py-3 pr-3">
                             <div><span class="font-medium text-slate-600">Ensamble:</span> {{ $mr->job_assembly ?: '-' }}</div>
                             <div><span class="font-medium text-slate-600">Empaque:</span> {{ $mr->job_packaging ?: '-' }}</div>
