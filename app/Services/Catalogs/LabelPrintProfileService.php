@@ -5,6 +5,7 @@ namespace App\Services\Catalogs;
 use App\Models\LabelPrintProfile;
 use App\Models\LabelPrintProfileVersion;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class LabelPrintProfileService
 {
@@ -13,10 +14,10 @@ class LabelPrintProfileService
         return LabelPrintProfile::query()
             ->with(['sku', 'template'])
             ->when($search, function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
-                        ->orWhere('label_type', 'like', "%{$search}%")
-                        ->orWhere('serial_standard', 'like', "%{$search}%")
-                        ->orWhereHas('sku', fn ($q) => $q->where('sku', 'like', "%{$search}%"));
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('label_type', 'like', "%{$search}%")
+                    ->orWhere('serial_standard', 'like', "%{$search}%")
+                    ->orWhereHas('sku', fn ($q) => $q->where('sku', 'like', "%{$search}%"));
             })
             ->orderBy('is_active', 'desc')
             ->orderByDesc('updated_at')
@@ -52,17 +53,7 @@ class LabelPrintProfileService
 
     public function toggleActive(LabelPrintProfile $profile, ?int $userId = null): LabelPrintProfile
     {
-        $profile->update([
-            'is_active' => !$profile->is_active,
-            'updated_by_user_id' => $userId,
-        ]);
-
-        if ($profile->is_active) {
-            $this->deactivateOthers($profile, $userId);
-            $this->createVersionSnapshot($profile, $userId);
-        }
-
-        return $profile;
+        return $this->persistToggledActiveState($profile, $userId);
     }
 
     private function normalizeData(array $data, bool $defaultActive, ?int $userId): array
@@ -107,6 +98,31 @@ class LabelPrintProfileService
                 'is_active' => false,
                 'updated_by_user_id' => $userId,
             ]);
+    }
+
+    private function persistToggledActiveState(
+        LabelPrintProfile $profile,
+        ?int $userId,
+    ): LabelPrintProfile {
+        return DB::transaction(function () use ($profile, $userId): LabelPrintProfile {
+            $lockedProfile = LabelPrintProfile::query()
+                ->lockForUpdate()
+                ->findOrFail($profile->getKey());
+
+            $targetState = ! $lockedProfile->is_active;
+
+            $lockedProfile->update([
+                'is_active' => $targetState,
+                'updated_by_user_id' => $userId,
+            ]);
+
+            if ($targetState) {
+                $this->deactivateOthers($lockedProfile, $userId);
+                $this->createVersionSnapshot($lockedProfile, $userId);
+            }
+
+            return $lockedProfile->refresh();
+        }, 3);
     }
 
     private function createVersionSnapshot(LabelPrintProfile $profile, ?int $userId): void

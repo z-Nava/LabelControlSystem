@@ -37,6 +37,8 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
         $sku = LabelSku::query()->find($this->input('label_sku_id'));
         $serialStandard = strtoupper(trim((string) ($sku?->serial_standard ?? $this->input('serial_standard', 'UL'))));
         $forceRatingQr = $labelType === 'rating' && in_array($serialStandard, ['EMEA', 'ANZ'], true);
+        $templateName = $this->input('template_name');
+        $profileName = $this->input('profile_name');
 
         $this->merge([
             'template_is_active' => $this->boolean('template_is_active', true),
@@ -45,6 +47,8 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'rating_hide_sku' => $this->boolean('rating_hide_sku', false),
             'connection_type' => $this->input('connection_type', 'usb'),
             'sn_prefix' => trim((string) $this->input('sn_prefix', 'SN:')),
+            'template_name' => is_string($templateName) ? trim($templateName) : $templateName,
+            'profile_name' => is_string($profileName) ? trim($profileName) : $profileName,
             'label_type' => $labelType,
             'serial_standard' => $serialStandard,
             'qr_orientation' => $this->input('qr_orientation', 'N'),
@@ -57,6 +61,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
         $qrContentModes = $this->allowedQrContentModes($standard);
         $qrSerialStyles = $this->allowedQrSerialStyles($standard);
         $qrCustomFields = $this->allowedQrCustomFields($standard);
+        $configuration = $this->route('configuration');
 
         return [
             'label_sku_id' => [
@@ -102,7 +107,17 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             'serial_block_offset_y' => ['nullable', 'integer', 'min:0', 'max:5000'],
             'template_is_active' => ['required', 'boolean'],
 
-            'profile_name' => ['required', 'string', 'max:120'],
+            'profile_name' => [
+                'required',
+                'string',
+                'max:120',
+                Rule::unique('label_print_profiles', 'name')
+                    ->where(fn ($query) => $query
+                        ->where('label_sku_id', $this->input('label_sku_id'))
+                        ->where('label_type', $this->input('label_type'))
+                        ->where('serial_standard', $standard))
+                    ->ignore($configuration),
+            ],
             'default_printer_name' => ['required', 'string', 'max:120'],
             'connection_type' => ['required', Rule::in(['usb', 'network'])],
             'default_printer_ip' => ['nullable', 'ip', 'required_if:connection_type,network'],
@@ -124,7 +139,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             if ($this->input('connection_type') === 'usb') {
                 $usbConnected = filter_var($this->input('usb_connected', false), FILTER_VALIDATE_BOOLEAN);
 
-                if (!$usbConnected) {
+                if (! $usbConnected) {
                     $validator->errors()->add('usb_connected', 'Debes validar la conexión USB de la impresora antes de guardar.');
                 }
             }
@@ -132,7 +147,7 @@ class StoreSkuTemplateConfigurationRequest extends FormRequest
             $requiresQrLayout = $this->input('label_type') === 'serial'
                 || ($this->input('label_type') === 'rating' && $this->boolean('rating_with_qr'));
 
-            if (!$requiresQrLayout) {
+            if (! $requiresQrLayout) {
                 return;
             }
 

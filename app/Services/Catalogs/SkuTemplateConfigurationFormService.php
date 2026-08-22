@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 class SkuTemplateConfigurationFormService
 {
     private const SUPPORTED_STANDARDS = ['UL', 'EMEA', 'ANZ'];
+
     private const QR_CONTENT_OPTIONS = [
         'auto' => 'Automático por tipo (recomendado)',
         'serial_full' => 'Solo Serial completo',
@@ -18,21 +19,25 @@ class SkuTemplateConfigurationFormService
         'anz_customer_tool_serial' => 'ANZ customer_tool_code + Serial (CCCC | Serial)',
         'custom' => 'Personalizado (hasta 3 bloques)',
     ];
+
     private const ALLOWED_QR_CONTENT_BY_STANDARD = [
         'UL' => ['auto', 'serial_full', 'custom'],
         'EMEA' => ['auto', 'serial_full', 'rating_qr', 'custom'],
         'ANZ' => ['auto', 'serial_full', 'anz_customer_tool_serial', 'custom'],
     ];
+
     private const QR_SERIAL_STYLES = [
         'as_is' => 'Como viene del serial',
         'segmented' => 'Separado (5055 36 01 000002 A2026)',
         'compact' => 'Junto (50553601000002A2026)',
     ];
+
     private const ALLOWED_QR_SERIAL_STYLES_BY_STANDARD = [
         'UL' => ['as_is', 'compact'],
         'EMEA' => ['as_is', 'segmented', 'compact'],
         'ANZ' => ['as_is', 'compact'],
     ];
+
     private const QR_CUSTOM_OPTIONS = [
         '' => 'Vacío',
         'fixed_103' => 'Ensamble (assembly part number)',
@@ -47,18 +52,46 @@ class SkuTemplateConfigurationFormService
         'anz_sku' => 'ANZ SKU',
         'anz_customer_tool_code' => 'ANZ customer_tool_code',
     ];
+
     private const ALLOWED_QR_CUSTOM_BY_STANDARD = [
         'UL' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'console_sku', 'assembly_part_number', 'packaging_part_number'],
         'EMEA' => ['', 'fixed_103', 'serial_full', 'rating_qr_code', 'sku', 'label_part_number', 'emea_sku'],
         'ANZ' => ['', 'fixed_103', 'serial_full', 'sku', 'label_part_number', 'anz_sku', 'anz_customer_tool_code'],
     ];
+
     private const STANDARD_BY_SCHEME = [
         'ul_standard' => SerialStandards::UL,
         'emea_rating' => SerialStandards::EMEA,
         'anz_standard' => SerialStandards::ANZ,
     ];
 
-    public function build(LabelPrintProfile $configuration): array
+    public function buildForCreate(string $standard): array
+    {
+        $standard = $this->normalizeSupportedStandard($standard);
+        $configuration = new LabelPrintProfile;
+        $formData = $this->build($configuration);
+
+        $formData['formState']['selected_serial_standard'] = $standard;
+        $formData['forcedStandard'] = $standard;
+        $formData['marketStandards'] = [$standard];
+        $formData['activeStandard'] = $standard;
+
+        return ['configuration' => $configuration] + $this->withFormSelections($formData);
+    }
+
+    public function buildForEdit(LabelPrintProfile $configuration): array
+    {
+        $configuration->loadMissing('template');
+        $formData = $this->build($configuration);
+        $formData['marketStandards'] = $formData['availableStandards'];
+        $formData['activeStandard'] = $this->normalizeSupportedStandard(
+            (string) ($formData['formState']['selected_serial_standard'] ?? 'UL')
+        );
+
+        return ['configuration' => $configuration] + $this->withFormSelections($formData);
+    }
+
+    private function build(LabelPrintProfile $configuration): array
     {
         $labelSkus = $this->availableSkus($configuration);
         $formState = $this->buildFormState($configuration);
@@ -89,6 +122,25 @@ class SkuTemplateConfigurationFormService
             'allowedQrCustomByStandard' => self::ALLOWED_QR_CUSTOM_BY_STANDARD,
             'formState' => $formState,
         ];
+    }
+
+    private function withFormSelections(array $formData): array
+    {
+        $formData['selectedLabelType'] = $formData['formState']['selected_label_type'] ?? 'serial';
+        $formData['selectedConnectionType'] = $formData['formState']['connection_type'] ?? 'usb';
+        $formData['customFields'] = old(
+            'qr_custom_fields',
+            $formData['formState']['qr_layout']['custom_fields'] ?? [],
+        );
+
+        return $formData;
+    }
+
+    private function normalizeSupportedStandard(string $standard): string
+    {
+        $standard = strtoupper(trim($standard));
+
+        return in_array($standard, self::SUPPORTED_STANDARDS, true) ? $standard : 'UL';
     }
 
     private function buildSkuQrContext(Collection $labelSkus): array
@@ -204,7 +256,7 @@ class SkuTemplateConfigurationFormService
             ? LabelSku::query()->find($configuration->label_sku_id)
             : null;
 
-        if ($selectedSku && !$availableSkus->contains(fn (LabelSku $sku) => $sku->id === $selectedSku->id)) {
+        if ($selectedSku && ! $availableSkus->contains(fn (LabelSku $sku) => $sku->id === $selectedSku->id)) {
             $availableSkus->push($selectedSku);
         }
 
