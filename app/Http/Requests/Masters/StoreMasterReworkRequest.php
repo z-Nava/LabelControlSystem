@@ -43,6 +43,8 @@ class StoreMasterReworkRequest extends FormRequest
                 $this->validJobRoleRule('packaging'),
             ],
             'request_type' => ['required', Rule::in(MasterModelMapping::REQUEST_TYPES)],
+            'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
+            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'line_id' => [
                 'required',
                 'integer',
@@ -66,6 +68,8 @@ class StoreMasterReworkRequest extends FormRequest
         $this->merge([
             'job_assembly' => $this->normalize($this->input('job_assembly')),
             'job_packaging' => $this->normalize($this->input('job_packaging')),
+            'po_number' => $this->normalize($this->input('po_number')),
+            'destination' => $this->normalize($this->input('destination')),
             'local' => $this->normalize($this->input('local')),
             'subinventory' => $this->normalize($this->input('subinventory')),
             'model' => $this->normalize($this->input('model')),

@@ -43,6 +43,7 @@
           data-ort-type="{{ $ortAssemblyConfig['type'] }}"
           data-ort-local="{{ $ortAssemblyConfig['default_local'] }}"
           data-ort-subinventory="{{ $ortAssemblyConfig['default_subinventory'] }}"
+          data-preserve-final-values="{{ $errors->any() ? '1' : '0' }}"
           class="mt-5 space-y-5"
           method="POST"
           action="{{ route('master_reworks.store', $masterRequest) }}">
@@ -90,14 +91,17 @@
 
                 <div>
                     <label for="poNumber" class="text-sm text-slate-600">Custom PO</label>
-                    <input id="poNumber" value="{{ old('po_number', $masterRequest->po_number) }}" readonly
-                           class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700">
+                    <input id="poNumber" name="po_number" value="{{ old('po_number', $masterRequest->po_number) }}"
+                           maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" autocomplete="off"
+                           class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 focus:ring-2 focus:ring-red-600">
                 </div>
                 <div>
                     <label for="destination" class="text-sm text-slate-600">Destino</label>
-                    <input id="destination" value="{{ old('destination', $masterRequest->destination) }}" readonly
-                           class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700">
+                    <input id="destination" name="destination" value="{{ old('destination', $masterRequest->destination) }}"
+                           maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" autocomplete="off"
+                           class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 focus:ring-2 focus:ring-red-600">
                 </div>
+                <p class="text-xs text-slate-500 md:col-span-2">Oracle propone estos valores desde el Job Empaque; puedes ajustarlos para esta revisión.</p>
             </div>
         </section>
 

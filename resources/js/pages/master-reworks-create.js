@@ -57,6 +57,7 @@ const initializeMasterRework = () => {
     const state = { assembly: null, packaging: null };
     const originalMaximum = Number.parseInt(form.dataset.originalMaxFolio || '0', 10);
     const ortType = form.dataset.ortType || 'ort_assembly';
+    const preserveFinalValues = form.dataset.preserveFinalValues === '1';
 
     const lookupJob = async (jobNumber) => {
         const url = new URL(form.dataset.lookupUrl, window.location.origin);
@@ -193,10 +194,13 @@ const initializeMasterRework = () => {
         return state[role]?.models_by_request_type?.[requestType] || '';
     };
 
-    const applyResolution = (overwriteFinal) => {
+    const applyResolution = (overwriteFinal, overwritePackagingValues = false) => {
         const requestType = elements.requestType.value;
-        elements.poNumber.value = state.packaging?.found ? (state.packaging.ttl_cust_po || '') : '';
-        elements.destination.value = state.packaging?.found ? (state.packaging.ship_code || '') : '';
+
+        if (overwritePackagingValues) {
+            elements.poNumber.value = normalize(state.packaging?.found ? state.packaging.ttl_cust_po : '');
+            elements.destination.value = normalize(state.packaging?.found ? state.packaging.ship_code : '');
+        }
 
         if (!requestType) {
             elements.resolvedLine.textContent = '—';
@@ -258,11 +262,14 @@ const initializeMasterRework = () => {
         jobElements.input.addEventListener('change', async () => {
             await performLookup(role);
             filterRequestTypes();
-            applyResolution(true);
+            applyResolution(true, role === 'packaging');
         });
     });
 
     elements.requestType.addEventListener('change', () => applyResolution(true));
+    [elements.poNumber, elements.destination].forEach((input) => input.addEventListener('change', () => {
+        input.value = normalize(input.value);
+    }));
     elements.finalLine.addEventListener('change', () => {
         const inventory = inventorySuggestion();
         elements.resolvedLocal.textContent = inventory.local || '—';
@@ -321,7 +328,7 @@ const initializeMasterRework = () => {
         const initialType = elements.requestType.dataset.initialValue || elements.requestType.value;
         filterRequestTypes();
         if (initialType && isTypeAvailable(initialType)) elements.requestType.value = initialType;
-        applyResolution(false);
+        applyResolution(false, !preserveFinalValues);
     });
     refreshFolioPreview();
 };

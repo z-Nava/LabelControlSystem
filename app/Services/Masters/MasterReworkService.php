@@ -138,8 +138,10 @@ class MasterReworkService
             $partialFolio = isset($data['partial_folio']) ? (int) $data['partial_folio'] : null;
             $partialQty = isset($data['partial_qty']) ? (int) $data['partial_qty'] : null;
             $standardPack = isset($data['std_pack_qty']) ? (int) $data['std_pack_qty'] : null;
-            $poNumber = $this->normalizeNullable($packagingJob?->ttl_cust_po);
-            $destination = $this->normalizeNullable($packagingJob?->ship_code);
+            $resolvedPoNumber = $this->normalizeNullable($packagingJob?->ttl_cust_po);
+            $resolvedDestination = $this->normalizeNullable($packagingJob?->ship_code);
+            $finalPoNumber = $this->normalizeNullable($data['po_number'] ?? null);
+            $finalDestination = $this->normalizeNullable($data['destination'] ?? null);
             $originalValues = $this->originalValues($baseRequest);
             $resolvedValues = [
                 'line_id' => $resolvedContext['line_id'],
@@ -147,8 +149,8 @@ class MasterReworkService
                 'local' => $suggestedLocal,
                 'subinventory' => $suggestedSubinventory,
                 'model' => $this->normalizeNullable($suggestedModel),
-                'po_number' => $poNumber,
-                'destination' => $destination,
+                'po_number' => $resolvedPoNumber,
+                'destination' => $resolvedDestination,
             ];
             $finalValues = [
                 'job_assembly' => $this->normalizeNullable($data['job_assembly'] ?? null),
@@ -159,8 +161,8 @@ class MasterReworkService
                 'local' => $finalLocal,
                 'subinventory' => $finalSubinventory,
                 'model' => $finalModel,
-                'po_number' => $poNumber,
-                'destination' => $destination,
+                'po_number' => $finalPoNumber,
+                'destination' => $finalDestination,
                 'std_pack_qty' => $standardPack,
                 'partial_folio' => $partialFolio,
                 'partial_qty' => $partialQty,
@@ -177,10 +179,10 @@ class MasterReworkService
                 'request_source' => $baseRequest->request_source,
                 'requested_by_name' => $baseRequest->requested_by_name,
                 'requested_by_user_id' => $baseRequest->requested_by_user_id,
-                'po_number' => $poNumber,
+                'po_number' => $finalPoNumber,
                 'job_assembly' => $finalValues['job_assembly'],
                 'job_packaging' => $finalValues['job_packaging'],
-                'destination' => $destination,
+                'destination' => $finalDestination,
                 'oracle_line' => $finalValues['line'],
                 'subinventory' => $finalSubinventory,
                 'local' => $finalLocal,
