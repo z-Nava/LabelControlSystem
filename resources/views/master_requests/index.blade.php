@@ -85,7 +85,7 @@
                                 {{ $mr->request_source_label }}
                             </span>
                         </td>
-                        <td class="py-3 pr-3">{{ $mr->created_at?->format('Y-m-d') ?? '-' }}</td>
+                        <td class="py-3 pr-3">{{ $mr->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                         <td class="py-3 pr-3">
                             {{ $mr->line?->code ?? '-' }}{{ $mr->shift ? ' · '.$mr->shift->code : '' }}
                         </td>

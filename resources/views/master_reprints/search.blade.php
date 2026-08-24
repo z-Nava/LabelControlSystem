@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Reimpresión / Retrabajo Master'])
+@extends('layouts.app', ['title' => 'Reimpresión / Retrabajo Master', 'mainClass' => 'max-w-screen-2xl'])
 
 @section('content')
 <div class="bg-white rounded-2xl shadow p-6">
@@ -44,7 +44,7 @@
             <thead>
                 <tr class="text-left text-slate-500 border-b">
                     <th class="py-3 pr-3">Req.</th>
-                    <th class="py-3 pr-3">Fecha</th>
+                    <th class="py-3 pr-3">Creada el</th>
                     <th class="py-3 pr-3">Línea</th>
                     <th class="py-3 pr-3">Turno</th>
                     <th class="py-3 pr-3">Job Assembly</th>
@@ -59,7 +59,7 @@
                 @forelse($masterRequests as $mr)
                     <tr>
                         <td class="py-3 pr-3 font-semibold">#{{ $mr->id }}</td>
-                        <td class="py-3 pr-3">{{ optional($mr->request_date)->format('Y-m-d') }}</td>
+                        <td class="py-3 pr-3">{{ $mr->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->line?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->shift?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_assembly ?: '-' }}</td>

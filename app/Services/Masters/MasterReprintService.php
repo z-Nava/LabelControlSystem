@@ -32,7 +32,7 @@ class MasterReprintService
                         ->orWhere('job_packaging', 'like', "%{$job}%");
                 });
             })
-            ->orderByDesc('request_date')
+            ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
