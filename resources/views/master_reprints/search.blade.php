@@ -59,7 +59,7 @@
                 @forelse($masterRequests as $mr)
                     <tr>
                         <td class="py-3 pr-3 font-semibold">#{{ $mr->id }}</td>
-                        <td class="py-3 pr-3">{{ $mr->created_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                        <td class="py-3 pr-3">{{ $mr->created_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->line?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->shift?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_assembly ?: '-' }}</td>
