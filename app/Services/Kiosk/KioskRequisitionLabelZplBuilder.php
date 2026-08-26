@@ -43,11 +43,12 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
         $modelLabel = $labelRequest->isLpk() ? 'ENSAMBLE FINAL' : 'MODELO';
         $shippingLine = 'SHIPPING: '.$shippingQuantity.'  |  PO: '.($labelRequest->po_number ?: 'N/A');
         $destinationLine = 'DESTINO: '.($labelRequest->destination ?: 'N/A');
-        $requestDate = $this->formatDate($labelRequest->getRawOriginal('request_date'), 'd/m/Y');
+        $displayTimezone = $this->displayTimezone();
         $createdAt = $this->formatDate(
             $labelRequest->getRawOriginal('created_at'),
             'd/m/Y H:i',
-            Carbon::now()->format('d/m/Y H:i'),
+            Carbon::now($displayTimezone)->format('d/m/Y H:i'),
+            $displayTimezone,
         );
         $folio = sprintf('#%06d', (int) $labelRequest->id);
         $qrPayload = $hasGroupedLpkDetails
@@ -55,21 +56,20 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             : (string) $labelRequest->job_number;
 
         $details = $hasGroupedLpkDetails
-            ? $this->groupedLpkFields($labelRequest, $lineName, $requestDate, $createdAt, $qrPayload, $scale)
+            ? $this->groupedLpkFields($labelRequest, $lineName, $createdAt, $qrPayload, $scale)
             : ($labelRequest->isLpk()
             ? [
-                $this->field(38, 137, 720, 22, "FECHA: {$requestDate}  |  SEMANA: {$labelRequest->week}", $scale),
+                $this->field(38, 137, 720, 16, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
                 $this->field(38, 168, 720, 32, 'JOB: '.(string) $labelRequest->job_number, $scale),
                 $this->field(38, 208, 720, 22, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
-                $this->field(38, 259, 720, 18, "LINEA: {$lineName}", $scale, maxLines: 2),
-                $this->field(38, 300, 720, 17, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-                $this->field(38, 337, 720, 17, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
-                $this->field(38, 374, 720, 19, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types.' | INNER: '.$innerDetails, $scale, maxLines: 2),
-                $this->field(38, 415, 720, 16, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
-                $this->field(38, 451, 720, 16, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
+                $this->field(38, 259, 720, 17, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
+                $this->field(38, 296, 720, 17, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
+                $this->field(38, 333, 720, 19, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types.' | INNER: '.$innerDetails, $scale, maxLines: 2),
+                $this->field(38, 374, 720, 16, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
+                $this->field(38, 410, 720, 16, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
                 $this->field(
                     38,
-                    487,
+                    446,
                     720,
                     16,
                     sprintf(
@@ -89,7 +89,6 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
                     $scale,
                     maxLines: 2,
                 ),
-                $this->field(38, 692, 575, 15, "REGISTRADA: {$createdAt}", $scale),
                 $this->field(38, 714, 95, 17, 'IMPRIMIO:', $scale),
                 $this->line(130, 734, 145, 2, $scale),
                 $this->field(300, 714, 90, 17, 'RECIBIO:', $scale),
@@ -103,19 +102,17 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
                 $this->qr(650, 650, $qrPayload, $scale),
             ]
             : [
-                $this->field(38, 140, 720, 25, "FECHA: {$requestDate}  |  SEMANA: {$labelRequest->week}", $scale),
+                $this->field(38, 140, 720, 16, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
                 $this->field(38, 176, 720, 36, 'JOB: '.(string) $labelRequest->job_number, $scale),
                 $this->field(38, 220, 720, 27, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
-                $this->field(38, 276, 720, 24, "LINEA: {$lineName}", $scale, maxLines: 2),
-                $this->field(38, 326, 720, 23, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-                $this->field(38, 374, 720, 23, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
-                $this->field(38, 422, 720, 25, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types, $scale, maxLines: 2),
-                $this->field(38, 465, 720, 18, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
-                $this->field(38, 510, 720, 18, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
-                $this->field(38, 555, 720, 18, 'INNER NP / MODELO: '.$innerDetails, $scale),
-                $this->field(38, 585, 720, 18, $shippingLine.' | NP / MODELO: '.$shippingDetails, $scale, maxLines: 2),
-                $this->field(38, 635, 530, 18, $destinationLine, $scale),
-                $this->field(38, 674, 515, 18, "REGISTRADA: {$createdAt}", $scale),
+                $this->field(38, 286, 720, 23, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
+                $this->field(38, 332, 720, 23, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
+                $this->field(38, 378, 720, 25, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types, $scale, maxLines: 2),
+                $this->field(38, 423, 720, 18, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
+                $this->field(38, 466, 720, 18, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
+                $this->field(38, 509, 720, 18, 'INNER NP / MODELO: '.$innerDetails, $scale),
+                $this->field(38, 542, 720, 18, $shippingLine.' | NP / MODELO: '.$shippingDetails, $scale, maxLines: 2),
+                $this->field(38, 595, 530, 18, $destinationLine, $scale),
                 $this->field(38, 710, 95, 17, 'IMPRIMIO:', $scale),
                 $this->line(130, 730, 145, 2, $scale),
                 $this->field(300, 710, 90, 17, 'RECIBIO:', $scale),
@@ -153,7 +150,6 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
     private function groupedLpkFields(
         LabelRequest $labelRequest,
         string $lineName,
-        string $requestDate,
         string $createdAt,
         string $qrPayload,
         float $scale,
@@ -202,13 +198,12 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             ->all();
 
         return [
-            $this->field(38, 137, 720, 22, "FECHA: {$requestDate}  |  SEMANA: {$labelRequest->week}", $scale),
-            $this->field(38, 168, 720, 20, "LINEA: {$lineName}", $scale, maxLines: 2),
-            $this->field(38, 208, 720, 18, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-            $this->field(38, 242, 720, 18, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
+            $this->field(38, 137, 720, 15, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
+            $this->field(38, 180, 720, 18, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
+            $this->field(38, 214, 720, 18, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
             $this->field(
                 38,
-                278,
+                250,
                 720,
                 17,
                 sprintf(
@@ -221,7 +216,6 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             ),
             ...$groupFields,
             $this->field(38, 610, 590, 14, 'SHIPPING: JOBS/MODELOS INFORMATIVOS; NO RESERVA CANTIDAD', $scale),
-            $this->field(38, 641, 575, 15, "REGISTRADA: {$createdAt}", $scale),
             $this->field(38, 676, 95, 17, 'IMPRIMIO:', $scale),
             $this->line(130, 696, 145, 2, $scale),
             $this->field(300, 676, 90, 17, 'RECIBIO:', $scale),

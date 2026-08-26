@@ -4,6 +4,7 @@ namespace App\Services\Kiosk;
 
 use App\Support\LabelDimensions;
 use DateTimeInterface;
+use Illuminate\Container\Container;
 use Illuminate\Support\Carbon;
 
 abstract class AbstractKioskRequisitionLabelZplBuilder
@@ -76,9 +77,14 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
         );
     }
 
-    protected function qr(int $x, int $y, string $payload, float $scale): string
-    {
-        $magnification = max(2, min(10, (int) round(4 * $scale)));
+    protected function qr(
+        int $x,
+        int $y,
+        string $payload,
+        float $scale,
+        int $baseMagnification = 4,
+    ): string {
+        $magnification = max(2, min(10, (int) round($baseMagnification * $scale)));
 
         return sprintf(
             '^FO%d,%d^BQN,2,%d^FH^FDLA,%s^FS',
@@ -89,21 +95,43 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
         );
     }
 
-    protected function formatDate(mixed $value, string $format, string $fallback = ''): string
-    {
+    protected function formatDate(
+        mixed $value,
+        string $format,
+        string $fallback = '',
+        ?string $timezone = null,
+    ): string {
         if ($value instanceof DateTimeInterface) {
-            return $value->format($format);
+            $date = Carbon::instance($value)->copy();
+
+            return ($timezone ? $date->setTimezone($timezone) : $date)->format($format);
         }
 
         if (is_string($value) && trim($value) !== '') {
             try {
-                return Carbon::parse($value)->format($format);
+                $date = Carbon::parse($value);
+
+                return ($timezone ? $date->setTimezone($timezone) : $date)->format($format);
             } catch (\Throwable) {
                 return trim($value);
             }
         }
 
         return $fallback;
+    }
+
+    protected function displayTimezone(): string
+    {
+        $container = Container::getInstance();
+
+        if ($container->bound('config')) {
+            return (string) $container->make('config')->get(
+                'app.display_timezone',
+                'America/Mexico_City',
+            );
+        }
+
+        return 'America/Mexico_City';
     }
 
     private function scaled(int $value, float $scale): int
