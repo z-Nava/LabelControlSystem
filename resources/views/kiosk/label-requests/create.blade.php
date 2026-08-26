@@ -2,14 +2,14 @@
 
 @section('content')
 @php
-    $oldSerialPartNumbers = old('serial_part_numbers', ['']);
-    $oldSerialPartNumbers = is_array($oldSerialPartNumbers) && $oldSerialPartNumbers !== []
-        ? $oldSerialPartNumbers
-        : [''];
-    $oldRatingPartNumbers = old('rating_part_numbers', ['']);
-    $oldRatingPartNumbers = is_array($oldRatingPartNumbers) && $oldRatingPartNumbers !== []
-        ? $oldRatingPartNumbers
-        : [''];
+    $oldSerialItems = old('serial_items', [['part_number' => '', 'model' => '']]);
+    $oldSerialItems = is_array($oldSerialItems) && $oldSerialItems !== []
+        ? $oldSerialItems
+        : [['part_number' => '', 'model' => '']];
+    $oldRatingItems = old('rating_items', [['part_number' => '', 'model' => '']]);
+    $oldRatingItems = is_array($oldRatingItems) && $oldRatingItems !== []
+        ? $oldRatingItems
+        : [['part_number' => '', 'model' => '']];
 @endphp
 <div class="space-y-6">
     @include('kiosk.partials.request-guide', [
@@ -22,8 +22,8 @@
         ],
         'preparationItems' => [
             'Job de Empaque disponible en Oracle.',
-            'Modelo, cada NP de Serial y cantidad general requerida.',
-            'Cada NP de Rating cuando la Job maneje un combo.',
+            'Cada NP de etiqueta y su modelo, cuando aplique.',
+            'El modelo de cada NP es opcional.',
             'LabelRoom asignará los folios después de recibir la requisición.',
         ],
     ])
@@ -133,7 +133,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-medium text-slate-700">NP de Serial</div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por cada número de parte Serial requerido.</p>
+                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por NP; el modelo puede quedar vacío.</p>
                             </div>
                             <button id="addSerialPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar Serial
@@ -141,9 +141,10 @@
                         </div>
 
                         <div id="serialPartNumbers" class="space-y-2">
-                            @foreach($oldSerialPartNumbers as $serialPartNumber)
-                                <div class="serial-part-number-row flex items-center gap-2">
-                                    <input type="text" name="serial_part_numbers[]" value="{{ $serialPartNumber }}" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            @foreach($oldSerialItems as $index => $serialItem)
+                                <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                                    <input type="text" name="serial_items[{{ $index }}][part_number]" value="{{ is_array($serialItem) ? ($serialItem['part_number'] ?? '') : $serialItem }}" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="serial_items[{{ $index }}][model]" value="{{ is_array($serialItem) ? ($serialItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -151,8 +152,9 @@
                     </div>
 
                     <template id="serialPartNumberTemplate">
-                        <div class="serial-part-number-row flex items-center gap-2">
-                            <input type="text" name="serial_part_numbers[]" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                            <input type="text" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                         </div>
                     </template>
@@ -161,7 +163,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-medium text-slate-700">NP de Rating</div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por cada rating del combo.</p>
+                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por NP; el modelo puede quedar vacío.</p>
                             </div>
                             <button id="addRatingPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar rating
@@ -169,9 +171,10 @@
                         </div>
 
                         <div id="ratingPartNumbers" class="space-y-2">
-                            @foreach($oldRatingPartNumbers as $ratingPartNumber)
-                                <div class="rating-part-number-row flex items-center gap-2">
-                                    <input type="text" name="rating_part_numbers[]" value="{{ $ratingPartNumber }}" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            @foreach($oldRatingItems as $index => $ratingItem)
+                                <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                                    <input type="text" name="rating_items[{{ $index }}][part_number]" value="{{ is_array($ratingItem) ? ($ratingItem['part_number'] ?? '') : $ratingItem }}" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="rating_items[{{ $index }}][model]" value="{{ is_array($ratingItem) ? ($ratingItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -179,11 +182,30 @@
                     </div>
 
                     <template id="ratingPartNumberTemplate">
-                        <div class="rating-part-number-row flex items-center gap-2">
-                            <input type="text" name="rating_part_numbers[]" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                            <input type="text" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                         </div>
                     </template>
+
+                    <div id="innerFields" class="max-w-2xl rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div class="text-sm font-medium text-slate-700">Etiqueta Inner</div>
+                        <p class="mt-1 text-xs text-slate-500">Captura su NP y, si aplica, su modelo.</p>
+                        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <input id="innerPartNumber" type="text" name="inner_part_number" value="{{ old('inner_part_number') }}" maxlength="80" placeholder="NP de Inner" class="rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input id="innerModel" type="text" name="inner_model" value="{{ old('inner_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                    </div>
+
+                    <div id="shippingFields" class="max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                        <div class="text-sm font-medium text-slate-700">Etiqueta Shipping</div>
+                        <p class="mt-1 text-xs text-slate-500">Captura su NP y, si aplica, su modelo. La cantidad se captura abajo.</p>
+                        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" class="rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                            <input id="shippingModel" type="text" name="shipping_model" value="{{ old('shipping_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                        </div>
+                    </div>
 
                     <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
                         Captura el Job completo y espera la confirmación de Oracle. La disponibilidad se calcula con el Job Qty menos las requisiciones no canceladas.
@@ -202,8 +224,8 @@
                         </div>
 
                         <div>
-                            <label for="modelInput" class="text-sm font-medium text-slate-700">Modelo</label>
-                            <input id="modelInput" type="text" name="model" value="{{ old('model') }}" maxlength="80" placeholder="Ej: M18 FUEL" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <label for="modelInput" class="text-sm font-medium text-slate-700">Modelo general (opcional)</label>
+                            <input id="modelInput" type="text" name="model" value="{{ old('model') }}" maxlength="80" placeholder="Contexto general de la requisición" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                         </div>
 
                         <div>
@@ -276,7 +298,7 @@
                         <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Job</div>
                         <div id="previewJob" class="mt-1 font-semibold text-slate-900">Job no capturado</div>
                         <div id="previewAssembly" class="mt-1 text-sm text-slate-600">Assembly pendiente</div>
-                        <div id="previewModel" class="mt-1 text-sm text-slate-600">Modelo pendiente</div>
+                        <div id="previewModel" class="mt-1 text-sm text-slate-600">Sin modelo general</div>
                     </div>
 
                     <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -285,6 +307,7 @@
                         <div id="previewQuantity" class="mt-1 text-sm text-slate-600">Cantidad no definida</div>
                         <div id="previewSerialPartNumbers" class="mt-1 text-sm text-slate-600">NP de Serial no requerido</div>
                         <div id="previewRatingPartNumber" class="mt-1 text-sm text-slate-600">NP de Rating no requerido</div>
+                        <div id="previewInner" class="mt-1 text-sm text-slate-600">Inner no requerido</div>
                         <div id="previewShippingQuantity" class="mt-1 text-sm text-slate-600">Shipping no requerido</div>
                     </div>
 
@@ -299,11 +322,10 @@
                 <div class="text-base font-semibold">Reglas importantes</div>
                 <ul class="mt-3 space-y-3 text-sm text-slate-300">
                     <li><span class="font-semibold text-white">Cantidad general:</span> se aplica a cada Serial, cada Rating e Inner.</li>
-                    <li><span class="font-semibold text-white">Serial:</span> agrega un NP por cada etiqueta Serial requerida.</li>
-                    <li><span class="font-semibold text-white">Rating:</span> agrega un NP por cada variante del combo.</li>
-                    <li><span class="font-semibold text-white">Inner:</span> utiliza la cantidad general.</li>
+                    <li><span class="font-semibold text-white">Serial y Rating:</span> cada NP puede tener su propio modelo opcional.</li>
+                    <li><span class="font-semibold text-white">Inner:</span> requiere NP, admite modelo opcional y utiliza la cantidad general.</li>
                     <li><span class="font-semibold text-white">Folios:</span> serán asignados y registrados manualmente por LabelRoom.</li>
-                    <li><span class="font-semibold text-white">Shipping:</span> utiliza su propia cantidad y no necesita NP.</li>
+                    <li><span class="font-semibold text-white">Shipping:</span> requiere NP, admite modelo opcional y utiliza su propia cantidad.</li>
                 </ul>
             </div>
         </aside>

@@ -27,9 +27,13 @@ class LabelRequestReadService
             ->with([
                 'line:id,name,code',
                 'shift:id,name,code',
-                'serials:id,label_request_id,part_number,position',
-                'ratings:id,label_request_id,part_number,position',
-                'shippingItems:id,label_request_id,item_reference,position',
+                'serials:id,label_request_id,part_number,model,position',
+                'ratings:id,label_request_id,part_number,model,position',
+                'shippingItems:id,label_request_id,item_reference,model,position',
+                'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
             ])
             ->withCount('printBatches')
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
@@ -48,9 +52,32 @@ class LabelRequestReadService
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery->where('label_part_number', 'like', "%{$search}%")
                         ->orWhere('serial_part_number', 'like', "%{$search}%")
-                        ->orWhereHas('serials', fn ($serialQuery) => $serialQuery->where('part_number', 'like', "%{$search}%"))
-                        ->orWhereHas('ratings', fn ($ratingQuery) => $ratingQuery->where('part_number', 'like', "%{$search}%"))
-                        ->orWhereHas('shippingItems', fn ($itemQuery) => $itemQuery->where('item_reference', 'like', "%{$search}%"))
+                        ->orWhere('inner_part_number', 'like', "%{$search}%")
+                        ->orWhere('shipping_part_number', 'like', "%{$search}%")
+                        ->orWhere('model', 'like', "%{$search}%")
+                        ->orWhere('inner_model', 'like', "%{$search}%")
+                        ->orWhere('shipping_model', 'like', "%{$search}%")
+                        ->orWhereHas('serials', fn ($serialQuery) => $serialQuery
+                            ->where('part_number', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%"))
+                        ->orWhereHas('ratings', fn ($ratingQuery) => $ratingQuery
+                            ->where('part_number', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%"))
+                        ->orWhereHas('shippingItems', fn ($itemQuery) => $itemQuery
+                            ->where('item_reference', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%"))
+                        ->orWhereHas('lpkLabelGroups', fn ($groupQuery) => $groupQuery
+                            ->where('part_number', 'like', "%{$search}%")
+                            ->orWhereHas('items', fn ($itemQuery) => $itemQuery
+                                ->where('job_number', 'like', "%{$search}%")
+                                ->orWhere('model', 'like', "%{$search}%")))
+                        ->orWhereHas('lpkShippingGroups', fn ($groupQuery) => $groupQuery
+                            ->where('part_number', 'like', "%{$search}%")
+                            ->orWhere('po_number', 'like', "%{$search}%")
+                            ->orWhere('destination', 'like', "%{$search}%")
+                            ->orWhereHas('items', fn ($itemQuery) => $itemQuery
+                                ->where('job_number', 'like', "%{$search}%")
+                                ->orWhere('model', 'like', "%{$search}%")))
                         ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
                             $labelSkuQuery->select('label_part_number')
@@ -131,12 +158,87 @@ class LabelRequestReadService
                 'attendedByUser:id,name',
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
-                'serials:id,label_request_id,part_number,position',
-                'ratings:id,label_request_id,part_number,position',
-                'shippingItems:id,label_request_id,item_reference,position',
+                'serials:id,label_request_id,part_number,model,position',
+                'ratings:id,label_request_id,part_number,model,position',
+                'shippingItems:id,label_request_id,item_reference,model,position',
+                'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
                 'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
                 'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),
             ])
             ->findOrFail($id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildShowViewData(int $id): array
+    {
+        $labelRequest = $this->findForShow($id);
+        $printBatches = $labelRequest->printBatches;
+        $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
+
+        return [
+            'labelRequest' => $labelRequest,
+            'printBatches' => $printBatches,
+            'hasUnprintedPrintBatch' => $printBatches->contains(
+                fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at === null
+            ),
+            'hasGroupedLpkDetails' => $hasGroupedLpkDetails,
+            'lpkProductionJobs' => $hasGroupedLpkDetails
+                ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
+                : collect(),
+            'workBlocks' => $this->buildWorkBlocks($labelRequest, $hasGroupedLpkDetails),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildWorkBlocks(LabelRequest $labelRequest, bool $hasGroupedLpkDetails): array
+    {
+        $legacyLines = collect($labelRequest->requestedLabelLines());
+        $types = [
+            ['key' => 'serial', 'label' => 'Serial', 'selected' => $labelRequest->include_serial],
+            ['key' => 'rating', 'label' => 'Rating', 'selected' => $labelRequest->include_rating],
+            ['key' => 'inner', 'label' => 'Inner', 'selected' => $labelRequest->include_inner],
+            ['key' => 'shipping', 'label' => 'Shipping', 'selected' => $labelRequest->include_shipping],
+        ];
+
+        return collect($types)
+            ->filter(fn (array $type) => $type['selected'])
+            ->map(function (array $type) use ($labelRequest, $legacyLines, $hasGroupedLpkDetails): array {
+                if (! $hasGroupedLpkDetails) {
+                    $lines = $legacyLines
+                        ->filter(fn (array $line) => str_starts_with(strtolower($line['type']), $type['key']))
+                        ->values();
+
+                    return [
+                        'key' => $type['key'],
+                        'label' => $type['label'],
+                        'mode' => 'legacy',
+                        'groups' => collect(),
+                        'lines' => $lines,
+                        'task_count' => $lines->count(),
+                    ];
+                }
+
+                $groups = $type['key'] === 'shipping'
+                    ? $labelRequest->lpkShippingGroups
+                    : $labelRequest->lpkLabelGroups->where('label_type', $type['key'])->values();
+
+                return [
+                    'key' => $type['key'],
+                    'label' => $type['label'],
+                    'mode' => $type['key'] === 'shipping' ? 'shipping' : 'production',
+                    'groups' => $groups,
+                    'lines' => collect(),
+                    'task_count' => $groups->count(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }

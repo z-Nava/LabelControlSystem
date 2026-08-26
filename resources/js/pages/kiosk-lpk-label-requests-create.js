@@ -1,510 +1,361 @@
-import Swal from '../lib/sweetalert';
-import { debounce } from './utils/debounce';
+import Swal from 'sweetalert2';
 
-(function initializeKioskLpkLabelRequestCreateForm() {
+(() => {
     const form = document.getElementById('kioskLpkLabelRequestCreate');
 
-    if (!form) {
-        return;
-    }
+    if (!form) return;
 
-    const byId = (id) => document.getElementById(id);
-    const inputs = {
-        date: byId('requestDate'),
-        week: byId('requestWeek'),
-        lineType: byId('lineTypeFilter'),
-        line: byId('lineSelect'),
-        shift: byId('shiftSelect'),
-        leader: byId('leaderName'),
-        job: byId('jobNumber'),
-        assembly: byId('assemblyInfo'),
-        model: byId('modelInput'),
-        po: byId('poNumber'),
-        destination: byId('destination'),
-        quantity: byId('quantityRequested'),
-        shippingQuantity: byId('shippingQuantity'),
-        serial: byId('includeSerial'),
-        rating: byId('includeRating'),
-        inner: byId('includeInner'),
-        shipping: byId('includeShipping'),
-    };
-    const serialFields = byId('serialFields');
-    const serialPartNumbersContainer = byId('serialPartNumbers');
-    const serialPartNumberTemplate = byId('serialPartNumberTemplate');
-    const addSerialPartNumberButton = byId('addSerialPartNumber');
-    const ratingFields = byId('ratingFields');
-    const ratingPartNumbersContainer = byId('ratingPartNumbers');
-    const ratingPartNumberTemplate = byId('ratingPartNumberTemplate');
-    const addRatingPartNumberButton = byId('addRatingPartNumber');
-    const innerFields = byId('innerFields');
-    const shippingFields = byId('shippingFields');
-    const shippingItemsContainer = byId('shippingItems');
-    const shippingItemTemplate = byId('shippingItemTemplate');
-    const addShippingItemButton = byId('addShippingItem');
-    const preview = {
-        lineShift: byId('previewLineShift'),
-        leader: byId('previewLeader'),
-        dateWeek: byId('previewDateWeek'),
-        job: byId('previewJob'),
-        assembly: byId('previewAssembly'),
-        model: byId('previewModel'),
-        types: byId('previewTypes'),
-        quantity: byId('previewQuantity'),
-        serialPartNumbers: byId('previewSerialPartNumbers'),
-        ratingPartNumber: byId('previewRatingPartNumber'),
-        shippingQuantity: byId('previewShippingQuantity'),
-        shippingItems: byId('previewShippingItems'),
-        extras: byId('previewExtras'),
-    };
-    const jobHint = byId('jobHint');
-    const lineTypeHint = byId('lineTypeHint');
-    const quantityHint = byId('quantityHint');
-    const typeHint = byId('typeHint');
-    const capacity = {
-        container: byId('jobCapacitySummary'),
-        jobQty: byId('jobQtyValue'),
-        reserved: byId('reservedQuantityValue'),
-        available: byId('availableQuantityValue'),
-    };
-
-    let validatedJobNumber = '';
-    let availableQuantity = null;
+    const labelGroupsContainer = document.getElementById('lpkLabelGroups');
+    const shippingGroupsContainer = document.getElementById('lpkShippingGroups');
+    const labelGroupTemplate = document.getElementById('lpkLabelGroupTemplate');
+    const labelItemTemplate = document.getElementById('lpkLabelItemTemplate');
+    const shippingGroupTemplate = document.getElementById('lpkShippingGroupTemplate');
+    const shippingItemTemplate = document.getElementById('lpkShippingItemTemplate');
+    const lookupTimers = new WeakMap();
+    const lookupCache = new Map();
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
-    const setText = (element, value) => {
-        if (element) element.textContent = value;
-    };
-    const setHint = (element, message, colorClass = 'text-slate-500') => {
-        if (!element) return;
-        element.className = `mt-2 text-xs ${colorClass}`;
-        element.textContent = message;
-    };
-    const selectedTypes = () => [
-        inputs.serial.checked ? 'Serial' : null,
-        inputs.rating.checked ? 'Rating' : null,
-        inputs.inner.checked ? 'Inner' : null,
-        inputs.shipping.checked ? 'Shipping' : null,
-    ].filter(Boolean);
-    const serialPartNumberInputs = () => Array.from(
-        serialPartNumbersContainer.querySelectorAll('.serial-part-number-input'),
-    );
-    const serialPartNumbers = () => serialPartNumberInputs()
-        .map((input) => input.value.trim())
-        .filter(Boolean);
-    const ratingPartNumberInputs = () => Array.from(
-        ratingPartNumbersContainer.querySelectorAll('.rating-part-number-input'),
-    );
-    const ratingPartNumbers = () => ratingPartNumberInputs()
-        .map((input) => input.value.trim())
-        .filter(Boolean);
-    const shippingItemInputs = () => shippingItemsContainer
-        ? Array.from(shippingItemsContainer.querySelectorAll('.shipping-item-input'))
-        : [];
-    const shippingItems = () => shippingItemInputs()
-        .map((input) => input.value.trim())
-        .filter(Boolean);
-    const lineOptions = Array.from(inputs.line.options).filter((option) => option.value !== '');
+    const field = (container, name) => container.querySelector(`[data-field="${name}"]`);
+    const setStatus = (input, message, color = 'text-slate-500') => {
+        const status = input.closest('.lpk-label-item, .lpk-shipping-item')?.querySelector('[data-job-status]');
 
-    function formatDate(value) {
-        if (!value) return 'Fecha pendiente';
-        const date = new Date(`${value}T00:00:00`);
-        return Number.isNaN(date.getTime())
-            ? value
-            : new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+        if (!status) return;
+
+        status.textContent = message;
+        status.className = `mt-1 text-xs ${color}`;
+    };
+
+    function appendTemplate(template, container) {
+        const element = template.content.firstElementChild.cloneNode(true);
+        container.append(element);
+
+        return element;
     }
 
-    function syncConditionalFields() {
-        const hasSerial = inputs.serial.checked;
-        const hasRating = inputs.rating.checked;
-        const hasInner = inputs.inner.checked;
-        const hasShipping = inputs.shipping.checked;
+    function ensureGroupHasItem(group, shipping) {
+        const items = group.querySelector('[data-items]');
+        const rowSelector = shipping ? '.lpk-shipping-item' : '.lpk-label-item';
 
-        serialFields.classList.toggle('hidden', !hasSerial);
-        serialPartNumberInputs().forEach((input) => {
-            input.required = hasSerial;
-            input.disabled = !hasSerial;
-        });
-
-        ratingFields.classList.toggle('hidden', !hasRating);
-        ratingPartNumberInputs().forEach((input) => {
-            input.required = hasRating;
-            input.disabled = !hasRating;
-        });
-
-        innerFields.classList.toggle('hidden', !hasInner);
-        shippingFields.classList.toggle('hidden', !hasShipping);
-        inputs.shippingQuantity.required = hasShipping;
-        inputs.shippingQuantity.disabled = !hasShipping;
-
-        shippingItemInputs().forEach((input) => {
-            input.required = hasShipping;
-            input.disabled = !hasShipping;
-        });
-
-        if (!hasShipping) inputs.shippingQuantity.value = '';
-
-        [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
-            const card = input.closest('label');
-
-            if (!card) return;
-
-            card.classList.toggle('border-slate-200', !input.checked);
-            card.classList.toggle('border-red-400', input.checked);
-            card.classList.toggle('bg-red-50', input.checked);
-            card.classList.toggle('ring-1', input.checked);
-            card.classList.toggle('ring-red-200', input.checked);
-        });
-
-        inputs.serial.setCustomValidity(selectedTypes().length ? '' : 'Selecciona al menos un tipo de etiqueta.');
-        setHint(
-            typeHint,
-            selectedTypes().length ? `Seleccionado: ${selectedTypes().join(' + ')}` : 'Selecciona al menos un tipo.',
-            selectedTypes().length ? 'text-emerald-700' : 'text-slate-500',
-        );
-    }
-
-    function filterLinesByType({ preserveSelection = true } = {}) {
-        const selectedType = inputs.lineType.value;
-        const selectedLineId = inputs.line.value;
-        let visibleCount = 0;
-
-        lineOptions.forEach((option) => {
-            const isVisible = selectedType === '' || option.dataset.lineType === selectedType;
-            option.hidden = !isVisible;
-            option.disabled = !isVisible;
-            if (isVisible) visibleCount += 1;
-        });
-
-        if (preserveSelection && selectedLineId) {
-            const selectedOption = lineOptions.find((option) => option.value === selectedLineId);
-            if (selectedOption?.disabled) inputs.line.value = '';
+        if (!items.querySelector(rowSelector)) {
+            appendTemplate(shipping ? shippingItemTemplate : labelItemTemplate, items);
         }
-
-        setHint(
-            lineTypeHint,
-            selectedType
-                ? `${visibleCount} línea(s) activa(s) para ${selectedType}.`
-                : `Mostrando todos los tipos (${visibleCount} líneas activas).`,
-            visibleCount > 0 ? 'text-emerald-700' : 'text-red-700',
-        );
     }
 
-    function initializeLineTypeFilter() {
-        const selectedLineType = inputs.line.selectedOptions?.[0]?.dataset?.lineType || '';
-        if (selectedLineType) inputs.lineType.value = selectedLineType;
-        filterLinesByType();
+    function reindexForm() {
+        const labelGroups = Array.from(labelGroupsContainer.querySelectorAll('.lpk-label-group'));
+        const shippingGroups = Array.from(shippingGroupsContainer.querySelectorAll('.lpk-shipping-group'));
+
+        labelGroups.forEach((group, groupIndex) => {
+            ensureGroupHasItem(group, false);
+            field(group, 'label_type').name = `lpk_label_groups[${groupIndex}][label_type]`;
+            field(group, 'part_number').name = `lpk_label_groups[${groupIndex}][part_number]`;
+
+            const items = Array.from(group.querySelectorAll('.lpk-label-item'));
+            items.forEach((item, itemIndex) => {
+                field(item, 'job_number').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][job_number]`;
+                field(item, 'model').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][model]`;
+                field(item, 'quantity').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][quantity]`;
+                item.querySelector('.remove-lpk-label-item')?.classList.toggle('hidden', items.length === 1);
+            });
+        });
+
+        shippingGroups.forEach((group, groupIndex) => {
+            ensureGroupHasItem(group, true);
+            field(group, 'part_number').name = `lpk_shipping_groups[${groupIndex}][part_number]`;
+            field(group, 'quantity').name = `lpk_shipping_groups[${groupIndex}][quantity]`;
+            field(group, 'po_number').name = `lpk_shipping_groups[${groupIndex}][po_number]`;
+            field(group, 'destination').name = `lpk_shipping_groups[${groupIndex}][destination]`;
+
+            const items = Array.from(group.querySelectorAll('.lpk-shipping-item'));
+            items.forEach((item, itemIndex) => {
+                field(item, 'job_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][job_number]`;
+                field(item, 'model').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][model]`;
+                item.querySelector('.remove-lpk-shipping-item')?.classList.toggle('hidden', items.length === 1);
+            });
+        });
+
+        validateGroupUniqueness();
+        updatePreview();
     }
 
-    function validateQuantityAvailability() {
-        inputs.quantity.setCustomValidity('');
+    function validateGroupUniqueness() {
+        const seen = new Set();
+
+        labelGroupsContainer.querySelectorAll('.lpk-label-group').forEach((group) => {
+            const typeInput = field(group, 'label_type');
+            const partInput = field(group, 'part_number');
+            const key = `${typeInput.value}|${normalize(partInput.value)}`;
+            partInput.setCustomValidity('');
+
+            if (!normalize(partInput.value)) return;
+
+            if (seen.has(key)) {
+                partInput.setCustomValidity('Este tipo y NP ya existen. Agrega los modelos y Jobs al grupo existente.');
+            }
+
+            seen.add(key);
+        });
+    }
+
+    function productionReservations() {
+        const reservations = new Map();
+
+        labelGroupsContainer.querySelectorAll('.lpk-label-item').forEach((item) => {
+            const jobNumber = normalize(field(item, 'job_number').value);
+            const quantity = Number(field(item, 'quantity').value || 0);
+
+            if (jobNumber && quantity > (reservations.get(jobNumber) || 0)) {
+                reservations.set(jobNumber, quantity);
+            }
+        });
+
+        return reservations;
+    }
+
+    function validateQuantityForRow(jobInput) {
+        const item = jobInput.closest('.lpk-label-item');
+
+        if (!item) return;
+
+        const quantityInput = field(item, 'quantity');
+        const available = Number(jobInput.dataset.availableQuantity);
+        quantityInput.setCustomValidity('');
 
         if (
-            availableQuantity !== null
-            && inputs.quantity.value
-            && Number(inputs.quantity.value) > availableQuantity
+            jobInput.dataset.validatedJob
+            && Number.isFinite(available)
+            && Number(quantityInput.value || 0) > available
         ) {
-            inputs.quantity.setCustomValidity(`La cantidad no puede superar ${availableQuantity}.`);
-            return false;
+            quantityInput.setCustomValidity(`La cantidad no puede superar la disponibilidad del Job (${available}).`);
         }
-
-        return true;
     }
 
-    function updatePreview() {
-        const line = inputs.line.selectedOptions?.[0]?.textContent?.trim() || 'Línea pendiente';
-        const shift = inputs.shift.selectedOptions?.[0]?.textContent?.trim() || 'Turno pendiente';
-        const types = selectedTypes();
-        const extras = [
-            inputs.po.value.trim() ? `PO ${inputs.po.value.trim()}` : null,
-            inputs.destination.value.trim() ? `Destino ${inputs.destination.value.trim()}` : null,
-        ].filter(Boolean);
+    async function fetchJob(jobNumber) {
+        if (lookupCache.has(jobNumber)) return lookupCache.get(jobNumber);
 
-        setText(preview.lineShift, `${line} / ${shift}`);
-        setText(preview.leader, inputs.leader.value.trim() ? `Líder: ${inputs.leader.value.trim()}` : 'Sin líder capturado');
-        setText(preview.dateWeek, `${formatDate(inputs.date.value)} · Semana ${inputs.week.value || '—'}`);
-        setText(preview.job, inputs.job.value.trim() ? `Job: ${inputs.job.value.trim()}` : 'Job no capturado');
-        setText(preview.assembly, inputs.assembly.value ? `Assembly: ${inputs.assembly.value}` : 'Assembly pendiente');
-        setText(
-            preview.model,
-            inputs.model.value.trim()
-                ? `Ensamble final: ${inputs.model.value.trim()}`
-                : 'Ensamble final pendiente',
-        );
-        setText(preview.types, types.length ? types.join(' + ') : 'Tipo pendiente');
-        setText(preview.quantity, inputs.quantity.value ? `Cantidad general: ${inputs.quantity.value}` : 'Cantidad general no definida');
-        setText(
-            preview.serialPartNumbers,
-            inputs.serial.checked
-                ? `NP Serial: ${serialPartNumbers().join(', ') || 'pendiente'}`
-                : 'NP de Serial no requerido',
-        );
-        setText(
-            preview.ratingPartNumber,
-            inputs.rating.checked
-                ? `NP Rating: ${ratingPartNumbers().join(', ') || 'pendiente'}`
-                : 'NP de Rating no requerido',
-        );
-        setText(
-            preview.shippingQuantity,
-            inputs.shipping.checked
-                ? `Cantidad Shipping: ${inputs.shippingQuantity.value || 'pendiente'}`
-                : 'Shipping no requerido',
-        );
-        setText(
-            preview.shippingItems,
-            inputs.shipping.checked
-                ? `Elementos Shipping: ${shippingItems().join(', ') || 'pendiente'}`
-                : 'Elementos de Shipping no requeridos',
-        );
-        setText(preview.extras, extras.length ? extras.join(' · ') : 'PO y destino pendientes.');
-    }
-
-    function clearJobResult(message = 'Pendiente de validar en Oracle.') {
-        validatedJobNumber = '';
-        availableQuantity = null;
-        inputs.assembly.value = '';
-        inputs.quantity.removeAttribute('max');
-        inputs.quantity.setCustomValidity('');
-        capacity.container.classList.add('hidden');
-        capacity.container.classList.remove('grid');
-        setHint(jobHint, message);
-        setHint(quantityHint, 'Primero valida el Job para conocer la disponibilidad. Se aplica a Serial, Rating e Inner.');
-    }
-
-    const lookupJob = debounce(async () => {
-        const jobNumber = normalize(inputs.job.value);
-
-        if (!jobNumber) {
-            inputs.job.setCustomValidity('');
-            clearJobResult();
-            updatePreview();
-            return;
-        }
-
-        inputs.job.setCustomValidity('Espera a que termine la validación de Oracle.');
-        setHint(jobHint, 'Buscando en Oracle…');
-
-        try {
+        const lookup = (async () => {
             const url = new URL(form.dataset.lookupUrl, window.location.origin);
             url.searchParams.set('job_number', jobNumber);
             const response = await fetch(url, { headers: { Accept: 'application/json' } });
 
             if (!response.ok) throw new Error(`Lookup failed with HTTP ${response.status}`);
 
-            const data = await response.json();
+            return response.json();
+        })();
+
+        lookupCache.set(jobNumber, lookup);
+
+        try {
+            return await lookup;
+        } catch (error) {
+            lookupCache.delete(jobNumber);
+            throw error;
+        }
+    }
+
+    async function validateJob(input) {
+        const jobNumber = normalize(input.value);
+        input.value = jobNumber;
+        delete input.dataset.validatedJob;
+        delete input.dataset.availableQuantity;
+
+        if (!jobNumber) {
+            input.setCustomValidity('');
+            setStatus(input, 'Pendiente de validar.');
+            return;
+        }
+
+        input.dataset.lookupToken = jobNumber;
+        input.setCustomValidity('Espera a que termine la validación de Oracle.');
+        setStatus(input, 'Validando en Oracle…', 'text-blue-700');
+
+        try {
+            const data = await fetchJob(jobNumber);
+
+            if (input.dataset.lookupToken !== jobNumber || normalize(input.value) !== jobNumber) return;
 
             if (!data.found) {
-                clearJobResult('No encontrado en Oracle Jobs.');
-                inputs.job.setCustomValidity('El Job no existe en Oracle Jobs.');
-                setHint(jobHint, 'No encontrado en Oracle Jobs.', 'text-red-700');
-                updatePreview();
+                input.setCustomValidity('El Job no existe en Oracle Jobs.');
+                setStatus(input, 'No encontrado en Oracle Jobs.', 'text-red-700');
                 return;
             }
 
             if (!data.valid_for_packaging) {
-                clearJobResult('El Job no pertenece a Empaque.');
-                inputs.job.setCustomValidity(data.classification_messages?.packaging || 'El Job no coincide con una regla activa de Empaque.');
-                setHint(jobHint, 'El Job no pertenece a Empaque.', 'text-red-700');
-                updatePreview();
+                input.setCustomValidity(data.classification_messages?.packaging || 'El Job no pertenece a Empaque.');
+                setStatus(input, 'El Job no pertenece a Empaque.', 'text-red-700');
                 return;
             }
 
-            validatedJobNumber = normalize(data.job_number);
-            availableQuantity = Number(data.available_quantity || 0);
-            inputs.job.setCustomValidity('');
-            inputs.assembly.value = data.assembly || '';
-            inputs.po.value = data.ttl_cust_po || inputs.po.value;
-            inputs.destination.value = data.ship_code || inputs.destination.value;
-            inputs.quantity.max = String(Math.max(availableQuantity, 0));
+            input.dataset.validatedJob = normalize(data.job_number);
+            input.dataset.availableQuantity = String(Number(data.available_quantity || 0));
+            input.setCustomValidity('');
 
-            setText(capacity.jobQty, Number(data.job_qty || 0).toLocaleString('es-MX'));
-            setText(capacity.reserved, Number(data.reserved_quantity || 0).toLocaleString('es-MX'));
-            setText(capacity.available, availableQuantity.toLocaleString('es-MX'));
-            capacity.container.classList.remove('hidden');
-            capacity.container.classList.add('grid');
+            const isShipping = Boolean(input.closest('.lpk-shipping-item'));
+            const detail = data.assembly ? ` · ${data.assembly}` : '';
+            const availability = isShipping
+                ? 'Job válido (informativo)'
+                : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
+            setStatus(input, `${availability}${detail}`, 'text-emerald-700');
 
-            setHint(jobHint, `Job válido · Assembly ${data.assembly || 'sin dato'}`, 'text-emerald-700');
-            setHint(quantityHint, `Cantidad general para Serial, Rating e Inner · Máximo disponible: ${availableQuantity.toLocaleString('es-MX')}.`, availableQuantity > 0 ? 'text-emerald-700' : 'text-red-700');
-            validateQuantityAvailability();
+            if (isShipping) {
+                const group = input.closest('.lpk-shipping-group');
+                const poInput = field(group, 'po_number');
+                const destinationInput = field(group, 'destination');
+                if (!poInput.value && data.ttl_cust_po) poInput.value = data.ttl_cust_po;
+                if (!destinationInput.value && data.ship_code) destinationInput.value = data.ship_code;
+            }
+
+            validateQuantityForRow(input);
             updatePreview();
         } catch (error) {
-            clearJobResult('No fue posible consultar Oracle. Intenta nuevamente.');
-            inputs.job.setCustomValidity('No fue posible validar el Job en este momento.');
-            setHint(jobHint, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
-            updatePreview();
+            input.setCustomValidity('No fue posible validar el Job en este momento.');
+            setStatus(input, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
         }
-    }, 350);
-
-    [
-        inputs.date,
-        inputs.week,
-        inputs.line,
-        inputs.shift,
-        inputs.leader,
-        inputs.model,
-        inputs.po,
-        inputs.destination,
-        inputs.quantity,
-        inputs.shippingQuantity,
-    ].forEach((input) => {
-        input.addEventListener('input', () => {
-            validateQuantityAvailability();
-            updatePreview();
-        });
-        input.addEventListener('change', () => {
-            validateQuantityAvailability();
-            updatePreview();
-        });
-    });
-
-    function updateRemoveSerialButtons() {
-        const rows = Array.from(serialPartNumbersContainer.querySelectorAll('.serial-part-number-row'));
-
-        rows.forEach((row) => {
-            row.querySelector('.remove-serial-part-number')?.classList.toggle('hidden', rows.length === 1);
-        });
     }
 
-    addSerialPartNumberButton.addEventListener('click', () => {
-        const row = serialPartNumberTemplate.content.firstElementChild.cloneNode(true);
-        serialPartNumbersContainer.append(row);
-        syncConditionalFields();
-        updateRemoveSerialButtons();
-        row.querySelector('.serial-part-number-input')?.focus();
-        updatePreview();
-    });
-
-    serialPartNumbersContainer.addEventListener('input', updatePreview);
-    serialPartNumbersContainer.addEventListener('click', (event) => {
-        const removeButton = event.target.closest('.remove-serial-part-number');
-
-        if (!removeButton) return;
-
-        removeButton.closest('.serial-part-number-row')?.remove();
-        updateRemoveSerialButtons();
-        updatePreview();
-    });
-
-    function updateRemoveRatingButtons() {
-        const rows = Array.from(ratingPartNumbersContainer.querySelectorAll('.rating-part-number-row'));
-
-        rows.forEach((row) => {
-            row.querySelector('.remove-rating-part-number')?.classList.toggle('hidden', rows.length === 1);
-        });
+    function scheduleJobValidation(input) {
+        clearTimeout(lookupTimers.get(input));
+        input.setCustomValidity(input.value.trim() ? 'Espera a que termine la validación de Oracle.' : '');
+        delete input.dataset.validatedJob;
+        delete input.dataset.availableQuantity;
+        setStatus(input, input.value.trim() ? 'Esperando validación…' : 'Pendiente de validar.');
+        lookupTimers.set(input, setTimeout(() => validateJob(input), 350));
     }
 
-    addRatingPartNumberButton.addEventListener('click', () => {
-        const row = ratingPartNumberTemplate.content.firstElementChild.cloneNode(true);
-        ratingPartNumbersContainer.append(row);
-        syncConditionalFields();
-        updateRemoveRatingButtons();
-        row.querySelector('.rating-part-number-input')?.focus();
-        updatePreview();
-    });
+    function updatePreview() {
+        const labelGroupCount = labelGroupsContainer.querySelectorAll('.lpk-label-group').length;
+        const shippingGroupCount = shippingGroupsContainer.querySelectorAll('.lpk-shipping-group').length;
+        const line = document.getElementById('lineSelect').selectedOptions[0]?.textContent?.trim();
+        const shift = document.getElementById('shiftSelect').selectedOptions[0]?.textContent?.trim();
+        const reservations = Array.from(productionReservations(), ([job, quantity]) => `${job}: ${quantity}`);
 
-    ratingPartNumbersContainer.addEventListener('input', updatePreview);
-    ratingPartNumbersContainer.addEventListener('click', (event) => {
-        const removeButton = event.target.closest('.remove-rating-part-number');
-
-        if (!removeButton) return;
-
-        removeButton.closest('.rating-part-number-row')?.remove();
-        updateRemoveRatingButtons();
-        updatePreview();
-    });
-
-    function updateRemoveShippingItemButtons() {
-        if (!shippingItemsContainer) return;
-
-        const rows = Array.from(shippingItemsContainer.querySelectorAll('.shipping-item-row'));
-
-        rows.forEach((row) => {
-            row.querySelector('.remove-shipping-item')?.classList.toggle('hidden', rows.length === 1);
-        });
+        document.getElementById('lpkPreviewOperation').textContent = line && shift ? `${line} / ${shift}` : 'Pendiente';
+        document.getElementById('lpkPreviewLabelGroups').textContent = labelGroupCount
+            ? `${labelGroupCount} grupo${labelGroupCount === 1 ? '' : 's'}`
+            : 'Sin grupos de producción';
+        document.getElementById('lpkPreviewShippingGroups').textContent = shippingGroupCount
+            ? `${shippingGroupCount} grupo${shippingGroupCount === 1 ? '' : 's'}`
+            : 'Sin Shipping';
+        document.getElementById('lpkPreviewReservations').textContent = reservations.length
+            ? reservations.join('\n')
+            : 'Captura Jobs y cantidades';
     }
 
-    addShippingItemButton?.addEventListener('click', () => {
-        const row = shippingItemTemplate.content.firstElementChild.cloneNode(true);
-        shippingItemsContainer.append(row);
-        syncConditionalFields();
-        updateRemoveShippingItemButtons();
-        row.querySelector('.shipping-item-input')?.focus();
-        updatePreview();
-    });
+    function filterLines() {
+        const typeInput = document.getElementById('lineTypeFilter');
+        const lineInput = document.getElementById('lineSelect');
+        const selectedType = typeInput.value;
+        let visible = 0;
 
-    shippingItemsContainer?.addEventListener('input', updatePreview);
-    shippingItemsContainer?.addEventListener('click', (event) => {
-        const removeButton = event.target.closest('.remove-shipping-item');
-
-        if (!removeButton) return;
-
-        removeButton.closest('.shipping-item-row')?.remove();
-        updateRemoveShippingItemButtons();
-        updatePreview();
-    });
-
-    [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
-        input.addEventListener('change', () => {
-            syncConditionalFields();
-            updatePreview();
+        Array.from(lineInput.options).slice(1).forEach((option) => {
+            const show = !selectedType || option.dataset.lineType === selectedType;
+            option.hidden = !show;
+            option.disabled = !show;
+            if (show) visible += 1;
         });
+
+        if (lineInput.selectedOptions[0]?.disabled) lineInput.value = '';
+        document.getElementById('lineTypeHint').textContent = selectedType
+            ? `${visible} línea(s) activa(s) para ${selectedType}.`
+            : `Mostrando todos los tipos (${visible} líneas activas).`;
+        updatePreview();
+    }
+
+    document.getElementById('addLpkLabelGroup').addEventListener('click', () => {
+        const group = appendTemplate(labelGroupTemplate, labelGroupsContainer);
+        ensureGroupHasItem(group, false);
+        reindexForm();
+        field(group, 'part_number').focus();
     });
 
-    inputs.lineType.addEventListener('change', () => {
-        filterLinesByType();
+    document.getElementById('addLpkShippingGroup').addEventListener('click', () => {
+        const group = appendTemplate(shippingGroupTemplate, shippingGroupsContainer);
+        ensureGroupHasItem(group, true);
+        reindexForm();
+        field(group, 'part_number').focus();
+    });
+
+    form.addEventListener('click', (event) => {
+        const addLabelItem = event.target.closest('.add-lpk-label-item');
+        const addShippingItem = event.target.closest('.add-lpk-shipping-item');
+        const removeLabelItem = event.target.closest('.remove-lpk-label-item');
+        const removeShippingItem = event.target.closest('.remove-lpk-shipping-item');
+        const removeLabelGroup = event.target.closest('.remove-lpk-label-group');
+        const removeShippingGroup = event.target.closest('.remove-lpk-shipping-group');
+
+        if (addLabelItem) {
+            const item = appendTemplate(labelItemTemplate, addLabelItem.closest('.lpk-label-group').querySelector('[data-items]'));
+            reindexForm();
+            field(item, 'job_number').focus();
+        } else if (addShippingItem) {
+            const item = appendTemplate(shippingItemTemplate, addShippingItem.closest('.lpk-shipping-group').querySelector('[data-items]'));
+            reindexForm();
+            field(item, 'job_number').focus();
+        } else if (removeLabelItem) {
+            const group = removeLabelItem.closest('.lpk-label-group');
+            removeLabelItem.closest('.lpk-label-item').remove();
+            ensureGroupHasItem(group, false);
+            reindexForm();
+        } else if (removeShippingItem) {
+            const group = removeShippingItem.closest('.lpk-shipping-group');
+            removeShippingItem.closest('.lpk-shipping-item').remove();
+            ensureGroupHasItem(group, true);
+            reindexForm();
+        } else if (removeLabelGroup) {
+            removeLabelGroup.closest('.lpk-label-group').remove();
+            reindexForm();
+        } else if (removeShippingGroup) {
+            removeShippingGroup.closest('.lpk-shipping-group').remove();
+            reindexForm();
+        }
+    });
+
+    form.addEventListener('input', (event) => {
+        if (event.target.matches('.lpk-job-input')) scheduleJobValidation(event.target);
+        if (event.target.matches('.lpk-item-quantity')) {
+            validateQuantityForRow(event.target.closest('.lpk-label-item').querySelector('.lpk-job-input'));
+        }
+        if (event.target.matches('[data-field="part_number"], [data-field="label_type"]')) validateGroupUniqueness();
         updatePreview();
     });
 
-    inputs.job.addEventListener('input', () => {
-        inputs.po.value = '';
-        inputs.destination.value = '';
-        clearJobResult('Esperando validación de Oracle…');
-        inputs.job.setCustomValidity('Espera a que termine la validación de Oracle.');
+    form.addEventListener('change', (event) => {
+        if (event.target.matches('.lpk-job-input')) validateJob(event.target);
+        validateGroupUniqueness();
         updatePreview();
-        lookupJob();
     });
-    inputs.job.addEventListener('change', lookupJob);
+
+    document.getElementById('lineTypeFilter').addEventListener('change', filterLines);
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        syncConditionalFields();
-        validateQuantityAvailability();
+        reindexForm();
 
-        if (normalize(inputs.job.value) !== validatedJobNumber) {
-            inputs.job.setCustomValidity('Espera a que el Job quede validado en Oracle.');
+        const jobInputs = Array.from(form.querySelectorAll('.lpk-job-input'));
+        jobInputs.forEach((input) => {
+            if (normalize(input.value) !== input.dataset.validatedJob) {
+                input.setCustomValidity('Espera a que el Job quede validado en Oracle.');
+            }
+            validateQuantityForRow(input);
+        });
+
+        if (!labelGroupsContainer.children.length && !shippingGroupsContainer.children.length) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Agrega al menos un grupo',
+                text: 'La requisición necesita una etiqueta Serial, Rating, Inner o Shipping.',
+                confirmButtonColor: '#dc2626',
+            });
+            return;
         }
 
         if (!form.reportValidity()) return;
 
-        const escapeHtml = (value) => String(value)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
-        const types = selectedTypes().join(' + ');
-        const html = `
-            <div class="text-left text-sm">
-                <ul style="margin:0;padding-left:1rem;display:grid;gap:0.25rem;">
-                    <li><strong>Fecha / Semana:</strong> ${escapeHtml(inputs.date.value)} · ${escapeHtml(inputs.week.value)}</li>
-                    <li><strong>Línea / Turno:</strong> ${escapeHtml(inputs.line.selectedOptions[0]?.textContent?.trim() || '')} / ${escapeHtml(inputs.shift.selectedOptions[0]?.textContent?.trim() || '')}</li>
-                    <li><strong>Líder:</strong> ${escapeHtml(inputs.leader.value)}</li>
-                    <li><strong>Job / Assembly:</strong> ${escapeHtml(inputs.job.value)} / ${escapeHtml(inputs.assembly.value)}</li>
-                    <li><strong>Ensamble final:</strong> ${escapeHtml(inputs.model.value)}</li>
-                    <li><strong>PO / Destino:</strong> ${escapeHtml(inputs.po.value || 'Sin dato')} / ${escapeHtml(inputs.destination.value || 'Sin dato')}</li>
-                    <li><strong>Tipos:</strong> ${escapeHtml(types)}</li>
-                    <li><strong>Cantidad general:</strong> ${escapeHtml(inputs.quantity.value)}</li>
-                    <li><strong>Cantidad Shipping:</strong> ${escapeHtml(inputs.shipping.checked ? inputs.shippingQuantity.value : 'No requerida')}</li>
-                    <li><strong>NP / modelos / herramientas Shipping:</strong> ${escapeHtml(inputs.shipping.checked ? shippingItems().join(', ') : 'No requeridos')}</li>
-                    <li><strong>NP Serial:</strong> ${escapeHtml(inputs.serial.checked ? serialPartNumbers().join(', ') : 'No requerido')}</li>
-                    <li><strong>NP Rating:</strong> ${escapeHtml(inputs.rating.checked ? ratingPartNumbers().join(', ') : 'No requerido')}</li>
-                </ul>
-            </div>`;
-
+        const reservations = Array.from(productionReservations(), ([job, quantity]) => `${job}: ${quantity}`).join(', ');
         const result = await Swal.fire({
-            title: '¿Confirmas crear la requisición LPK?',
-            html,
             icon: 'question',
+            title: '¿Confirmas crear la requisición LPK?',
+            html: `<div class="text-left text-sm"><p><strong>Grupos de producción:</strong> ${labelGroupsContainer.children.length}</p><p><strong>Grupos Shipping:</strong> ${shippingGroupsContainer.children.length}</p><p><strong>Reserva única por Job:</strong> ${reservations || 'No aplica (sólo Shipping)'}</p></div>`,
             showCancelButton: true,
             confirmButtonText: 'Sí, crear requisición',
             cancelButtonText: 'Revisar datos',
@@ -515,17 +366,11 @@ import { debounce } from './utils/debounce';
         if (result.isConfirmed) form.submit();
     });
 
-    updateRemoveSerialButtons();
-    updateRemoveRatingButtons();
-    updateRemoveShippingItemButtons();
-    syncConditionalFields();
-    initializeLineTypeFilter();
-    updatePreview();
-
-    if (inputs.job.value.trim()) {
-        clearJobResult('Esperando validación de Oracle…');
-        inputs.job.setCustomValidity('Espera a que termine la validación de Oracle.');
-        lookupJob();
-    }
+    const selectedLineType = document.getElementById('lineSelect').selectedOptions[0]?.dataset?.lineType || '';
+    if (selectedLineType) document.getElementById('lineTypeFilter').value = selectedLineType;
+    reindexForm();
+    filterLines();
+    form.querySelectorAll('.lpk-job-input').forEach((input) => {
+        if (input.value.trim()) scheduleJobValidation(input);
+    });
 })();
-

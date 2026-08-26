@@ -9,6 +9,7 @@ class LabelRequestRating extends Model
 {
     protected $fillable = [
         'part_number',
+        'model',
         'position',
     ];
 

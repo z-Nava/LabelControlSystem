@@ -5,21 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LabelRequestShippingItem extends Model
+class LabelRequestLpkShippingItem extends Model
 {
     protected $fillable = [
-        'item_reference',
+        'job_number',
         'model',
         'position',
     ];
 
     protected $casts = [
-        'label_request_id' => 'integer',
         'position' => 'integer',
     ];
 
-    public function labelRequest(): BelongsTo
+    public function group(): BelongsTo
     {
-        return $this->belongsTo(LabelRequest::class);
+        return $this->belongsTo(
+            LabelRequestLpkShippingGroup::class,
+            'label_request_lpk_shipping_group_id',
+        );
     }
 }

@@ -4,10 +4,12 @@ namespace App\Services\Labels;
 
 use App\Models\LabelPrintBatch;
 use App\Models\LabelRequest;
+use App\Models\LabelRequestLpkLabelGroup;
 use App\Models\OracleJob;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
 use App\Services\Oracle\OracleJobService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -16,6 +18,7 @@ class LabelRequestService
     public function __construct(
         private readonly OracleJobService $oracleJobService,
         private readonly LabelRequestJobAvailabilityService $availabilityService,
+        private readonly LpkJobReservationCalculator $lpkReservationCalculator,
     ) {}
 
     public function create(array $data): LabelRequest
@@ -30,23 +33,21 @@ class LabelRequestService
     public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
     {
         return DB::transaction(function () use ($data, $requestKind): LabelRequest {
-            $serialPartNumbers = collect($data['serial_part_numbers'] ?? [])
-                ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
-                ->filter()
-                ->unique()
-                ->values();
-            $ratingPartNumbers = collect($data['rating_part_numbers'] ?? [])
-                ->map(fn ($partNumber) => strtoupper(trim((string) $partNumber)))
-                ->filter()
-                ->unique()
-                ->values();
-            $shippingItems = collect($data['shipping_items'] ?? [])
-                ->map(fn ($item) => strtoupper(trim((string) $item)))
-                ->filter()
-                ->unique()
-                ->values();
+            $serialItems = $this->normalizeRequestItems(
+                $data['serial_items'] ?? $data['serial_part_numbers'] ?? [],
+            );
+            $ratingItems = $this->normalizeRequestItems(
+                $data['rating_items'] ?? $data['rating_part_numbers'] ?? [],
+            );
+            $shippingItems = $this->normalizeRequestItems($data['shipping_items'] ?? []);
 
-            unset($data['serial_part_numbers'], $data['rating_part_numbers'], $data['shipping_items']);
+            unset(
+                $data['serial_items'],
+                $data['serial_part_numbers'],
+                $data['rating_items'],
+                $data['rating_part_numbers'],
+                $data['shipping_items'],
+            );
 
             $data['request_kind'] = $requestKind === LabelRequest::KIND_LPK
                 ? LabelRequest::KIND_LPK
@@ -54,6 +55,11 @@ class LabelRequestService
 
             if ($data['request_kind'] !== LabelRequest::KIND_LPK || ! $data['include_shipping']) {
                 $shippingItems = collect();
+            }
+
+            if ($data['request_kind'] === LabelRequest::KIND_LPK) {
+                $data['shipping_part_number'] = null;
+                $data['shipping_model'] = null;
             }
 
             $jobNumber = strtoupper(trim((string) ($data['job_number'] ?? '')));
@@ -80,10 +86,10 @@ class LabelRequestService
             $data['job_number'] = $jobNumber;
             $data['serial_standard'] = 'UL';
             $data['serial_part_number'] = $data['include_serial']
-                ? $serialPartNumbers->first()
+                ? data_get($serialItems->first(), 'part_number')
                 : null;
             $data['label_part_number'] = $data['include_rating']
-                ? $ratingPartNumbers->first()
+                ? data_get($ratingItems->first(), 'part_number')
                 : null;
             $data['folio_start'] = null;
             $data['folio_end'] = null;
@@ -94,9 +100,10 @@ class LabelRequestService
 
             if ($data['include_serial']) {
                 $labelRequest->serials()->createMany(
-                    $serialPartNumbers
-                        ->map(fn (string $partNumber, int $position) => [
-                            'part_number' => $partNumber,
+                    $serialItems
+                        ->map(fn (array $item, int $position) => [
+                            'part_number' => $item['part_number'],
+                            'model' => $item['model'],
                             'position' => $position + 1,
                         ])
                         ->all(),
@@ -105,9 +112,10 @@ class LabelRequestService
 
             if ($data['include_rating']) {
                 $labelRequest->ratings()->createMany(
-                    $ratingPartNumbers
-                        ->map(fn (string $partNumber, int $position) => [
-                            'part_number' => $partNumber,
+                    $ratingItems
+                        ->map(fn (array $item, int $position) => [
+                            'part_number' => $item['part_number'],
+                            'model' => $item['model'],
                             'position' => $position + 1,
                         ])
                         ->all(),
@@ -117,8 +125,9 @@ class LabelRequestService
             if ($shippingItems->isNotEmpty()) {
                 $labelRequest->shippingItems()->createMany(
                     $shippingItems
-                        ->map(fn (string $itemReference, int $position) => [
-                            'item_reference' => $itemReference,
+                        ->map(fn (array $item, int $position) => [
+                            'item_reference' => $item['part_number'],
+                            'model' => $item['model'],
                             'position' => $position + 1,
                         ])
                         ->all(),
@@ -126,6 +135,124 @@ class LabelRequestService
             }
 
             return $labelRequest->load(['line', 'shift', 'serials', 'ratings', 'shippingItems']);
+        }, attempts: 3);
+    }
+
+    public function createKioskLpk(array $data): LabelRequest
+    {
+        return DB::transaction(function () use ($data): LabelRequest {
+            $labelGroups = collect($data['lpk_label_groups'] ?? []);
+            $shippingGroups = collect($data['lpk_shipping_groups'] ?? []);
+            $reservedByJob = $this->lpkReservationCalculator->calculate($labelGroups);
+            $jobNumbers = $this->lpkJobNumbers($labelGroups, $shippingGroups);
+            $jobs = $this->lockAndValidateLpkJobs($jobNumbers, $reservedByJob);
+            $shippingGroups = $shippingGroups->map(function (array $group) use ($jobs): array {
+                $firstJobNumber = data_get($group, 'items.0.job_number');
+                $firstJob = filled($firstJobNumber) ? $jobs->get($firstJobNumber) : null;
+
+                if (! $firstJob) {
+                    return $group;
+                }
+
+                $group['po_number'] = $this->valueOrOracleFallback(
+                    $group['po_number'] ?? null,
+                    $firstJob->ttl_cust_po,
+                );
+                $group['destination'] = $this->valueOrOracleFallback(
+                    $group['destination'] ?? null,
+                    $firstJob->ship_code,
+                );
+
+                return $group;
+            });
+
+            $firstLabelGroup = $labelGroups->first();
+            $firstShippingGroup = $shippingGroups->first();
+            $firstProductionItem = data_get($firstLabelGroup, 'items.0');
+            $firstShippingItem = data_get($firstShippingGroup, 'items.0');
+            $representativeJob = data_get($firstProductionItem, 'job_number')
+                ?: data_get($firstShippingItem, 'job_number');
+            $serialGroup = $labelGroups->firstWhere('label_type', LabelRequestLpkLabelGroup::TYPE_SERIAL);
+            $ratingGroup = $labelGroups->firstWhere('label_type', LabelRequestLpkLabelGroup::TYPE_RATING);
+            $innerGroup = $labelGroups->firstWhere('label_type', LabelRequestLpkLabelGroup::TYPE_INNER);
+
+            $labelRequest = LabelRequest::query()->create([
+                'request_kind' => LabelRequest::KIND_LPK,
+                'request_date' => $data['request_date'],
+                'week' => $data['week'],
+                'line_id' => $data['line_id'],
+                'shift_id' => $data['shift_id'],
+                'leader_name' => $data['leader_name'],
+                'requested_by_name' => $data['requested_by_name'],
+                'requested_by_user_id' => $data['requested_by_user_id'],
+                'job_number' => $representativeJob,
+                'model' => data_get($firstProductionItem, 'model'),
+                'quantity_requested' => $reservedByJob->sum(),
+                'shipping_quantity' => $shippingGroups->sum('quantity') ?: null,
+                'serial_standard' => 'UL',
+                'serial_part_number' => data_get($serialGroup, 'part_number'),
+                'label_part_number' => data_get($ratingGroup, 'part_number'),
+                'inner_part_number' => data_get($innerGroup, 'part_number'),
+                'inner_model' => data_get($innerGroup, 'items.0.model'),
+                'shipping_part_number' => data_get($firstShippingGroup, 'part_number'),
+                'shipping_model' => data_get($firstShippingGroup, 'items.0.model'),
+                'po_number' => data_get($firstShippingGroup, 'po_number'),
+                'destination' => data_get($firstShippingGroup, 'destination'),
+                'folio_start' => null,
+                'folio_end' => null,
+                'include_serial' => $serialGroup !== null,
+                'include_rating' => $ratingGroup !== null,
+                'include_inner' => $innerGroup !== null,
+                'include_shipping' => $shippingGroups->isNotEmpty(),
+                'status' => LabelRequest::STATUS_REQUESTED,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            foreach ($labelGroups as $groupPosition => $groupData) {
+                $group = $labelRequest->lpkLabelGroups()->create([
+                    'label_type' => $groupData['label_type'],
+                    'part_number' => $groupData['part_number'],
+                    'position' => $groupPosition + 1,
+                ]);
+
+                $group->items()->createMany(
+                    collect($groupData['items'])
+                        ->map(fn (array $item, int $itemPosition): array => [
+                            'job_number' => $item['job_number'],
+                            'model' => $item['model'],
+                            'quantity' => (int) $item['quantity'],
+                            'position' => $itemPosition + 1,
+                        ])
+                        ->all(),
+                );
+            }
+
+            foreach ($shippingGroups as $groupPosition => $groupData) {
+                $group = $labelRequest->lpkShippingGroups()->create([
+                    'part_number' => $groupData['part_number'],
+                    'quantity' => (int) $groupData['quantity'],
+                    'po_number' => $groupData['po_number'],
+                    'destination' => $groupData['destination'],
+                    'position' => $groupPosition + 1,
+                ]);
+
+                $group->items()->createMany(
+                    collect($groupData['items'])
+                        ->map(fn (array $item, int $itemPosition): array => [
+                            'job_number' => $item['job_number'],
+                            'model' => $item['model'],
+                            'position' => $itemPosition + 1,
+                        ])
+                        ->all(),
+                );
+            }
+
+            return $labelRequest->load([
+                'line',
+                'shift',
+                'lpkLabelGroups.items',
+                'lpkShippingGroups.items',
+            ]);
         }, attempts: 3);
     }
 
@@ -304,5 +431,106 @@ class LabelRequestService
         $fallback = strtoupper(trim((string) $oracleValue));
 
         return $fallback !== '' ? $fallback : null;
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $labelGroups
+     * @param  Collection<int, array<string, mixed>>  $shippingGroups
+     * @return Collection<int, string>
+     */
+    private function lpkJobNumbers(Collection $labelGroups, Collection $shippingGroups): Collection
+    {
+        return $labelGroups
+            ->concat($shippingGroups)
+            ->flatMap(fn (array $group): array => $group['items'])
+            ->pluck('job_number')
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, string>  $jobNumbers
+     * @param  Collection<string, int>  $reservedByJob
+     * @return Collection<string, OracleJob>
+     */
+    private function lockAndValidateLpkJobs(Collection $jobNumbers, Collection $reservedByJob): Collection
+    {
+        if ($jobNumbers->isEmpty() || $jobNumbers->count() > 200) {
+            throw ValidationException::withMessages([
+                'lpk_label_groups' => 'La requisición debe incluir entre 1 y 200 Jobs distintos.',
+            ]);
+        }
+
+        $jobs = OracleJob::query()
+            ->where(function ($query) use ($jobNumbers): void {
+                foreach ($jobNumbers as $jobNumber) {
+                    $query->orWhereRaw('UPPER(TRIM(job_number)) = ?', [$jobNumber]);
+                }
+            })
+            ->orderBy('job_number')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy(fn (OracleJob $job): string => strtoupper(trim((string) $job->job_number)));
+
+        foreach ($jobNumbers as $jobNumber) {
+            /** @var OracleJob|null $job */
+            $job = $jobs->get($jobNumber);
+
+            if (! $job) {
+                throw ValidationException::withMessages([
+                    'lpk_label_groups' => "El Job {$jobNumber} no existe en Oracle Jobs.",
+                ]);
+            }
+
+            if (! $this->oracleJobService->isPackagingJob($job)) {
+                throw ValidationException::withMessages([
+                    'lpk_label_groups' => $this->oracleJobService->classificationValidationMessage('packaging'),
+                ]);
+            }
+
+            $requestedQuantity = $reservedByJob->get($jobNumber);
+
+            if ($requestedQuantity === null) {
+                continue;
+            }
+
+            $availability = $this->availabilityService->calculate($job);
+
+            if ($requestedQuantity > $availability['available_quantity']) {
+                throw ValidationException::withMessages([
+                    'lpk_label_groups' => "La cantidad solicitada para el Job {$jobNumber} supera su disponibilidad actual ({$availability['available_quantity']}).",
+                ]);
+            }
+        }
+
+        return $jobs;
+    }
+
+    /**
+     * @return Collection<int, array{part_number: string, model: ?string}>
+     */
+    private function normalizeRequestItems(mixed $items): Collection
+    {
+        return collect(is_array($items) ? $items : [$items])
+            ->map(fn ($item) => is_array($item)
+                ? [
+                    'part_number' => strtoupper(trim((string) ($item['part_number'] ?? ''))),
+                    'model' => $this->nullableUppercase($item['model'] ?? null),
+                ]
+                : [
+                    'part_number' => strtoupper(trim((string) $item)),
+                    'model' => null,
+                ])
+            ->filter(fn (array $item) => $item['part_number'] !== '')
+            ->unique('part_number')
+            ->values();
+    }
+
+    private function nullableUppercase(mixed $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

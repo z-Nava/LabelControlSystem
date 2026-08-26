@@ -1,11 +1,6 @@
 @extends('layouts.app', ['title' => 'Detalle de requisición de etiquetas'])
 
 @section('content')
-@php
-    $printBatches = $labelRequest->printBatches;
-    $hasUnprintedPrintBatch = $printBatches->contains(fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at === null);
-@endphp
-
 <div class="rounded-2xl bg-white p-6 shadow">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -54,37 +49,45 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Solicitud</div>
             <div class="mt-1 font-semibold">{{ implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'Sin tipo' }}</div>
-            <div class="text-slate-700">Cantidad general: {{ number_format($labelRequest->quantity_requested) }}</div>
-            <div class="text-slate-700">Cantidad Shipping: {{ $labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida' }}</div>
+            <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'Cantidad Shipping' }}: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
             <div class="text-slate-700">Semana: {{ $labelRequest->week }}</div>
             <div class="text-slate-700">Solicita: {{ $labelRequest->requested_by_name }}</div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Producción</div>
-            <div class="mt-1 font-semibold">Job: {{ $labelRequest->job_number ?: '—' }}</div>
-            <div class="text-slate-700">Assembly: {{ $labelRequest->oracleJob?->assembly ?: '—' }}</div>
-            <div class="text-slate-700">{{ $labelRequest->isLpk() ? 'Ensamble final' : 'Modelo' }}: {{ $labelRequest->model ?: '—' }}</div>
+            @if($hasGroupedLpkDetails)
+                <div class="mt-1 font-semibold">Jobs de producción: {{ $lpkProductionJobs->count() }}</div>
+                <div class="break-words text-slate-700">{{ $lpkProductionJobs->implode(', ') ?: 'Sólo Shipping' }}</div>
+                <div class="text-slate-700">Los Jobs Shipping son informativos.</div>
+            @else
+                <div class="mt-1 font-semibold">Job: {{ $labelRequest->job_number ?: '—' }}</div>
+                <div class="text-slate-700">Assembly: {{ $labelRequest->oracleJob?->assembly ?: '—' }}</div>
+                <div class="text-slate-700">{{ $labelRequest->isLpk() ? 'Ensamble final' : 'Modelo general' }}: {{ $labelRequest->model ?: '—' }}</div>
+            @endif
             <div class="text-slate-700">Líder: {{ $labelRequest->leader_name }}</div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Números de parte y folios</div>
-            @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
-                <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">NP Serial: {{ $serialPartNumber }}</div>
-            @empty
-                <div class="mt-1 font-semibold">NP Serial: No requerido</div>
-            @endforelse
-            @forelse($labelRequest->requestedRatingPartNumbers() as $ratingPartNumber)
-                <div class="text-slate-700">NP Rating: {{ $ratingPartNumber }}</div>
-            @empty
-                <div class="text-slate-700">NP Rating: No requerido</div>
-            @endforelse
-            @if($labelRequest->isLpk())
-                @forelse($labelRequest->requestedShippingItemReferences() as $shippingItem)
-                    <div class="text-amber-800">Shipping: {{ $shippingItem }}</div>
+            @if($hasGroupedLpkDetails)
+                @foreach($labelRequest->lpkLabelGroups as $group)
+                    <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">{{ $group->type_label }}: {{ $group->part_number }} · {{ $group->items->count() }} modelo(s)/Job(s)</div>
+                @endforeach
+                @foreach($labelRequest->lpkShippingGroups as $group)
+                    <div class="text-amber-800">Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)</div>
+                @endforeach
+            @else
+                @forelse($labelRequest->requestedSerialItems() as $item)
+                    <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">NP Serial: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
                 @empty
-                    <div class="text-slate-700">Elementos Shipping: No requeridos</div>
+                    <div class="mt-1 font-semibold">NP Serial: No requerido</div>
+                @endforelse
+                @forelse($labelRequest->requestedRatingItems() as $item)
+                    <div class="text-slate-700">NP Rating: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                @empty
+                    <div class="text-slate-700">NP Rating: No requerido</div>
                 @endforelse
             @endif
             <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? 'No requerido' }}</div>
@@ -93,43 +96,164 @@
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Oracle</div>
-            <div class="mt-1 font-semibold">PO: {{ $labelRequest->po_number ?: '—' }}</div>
-            <div class="text-slate-700">Destino: {{ $labelRequest->destination ?: '—' }}</div>
-            <div class="text-slate-700">Job Qty: {{ $labelRequest->oracleJob?->job_qty !== null ? number_format($labelRequest->oracleJob->job_qty) : '—' }}</div>
-            <div class="text-slate-700">Restante: {{ $labelRequest->oracleJob?->quantity_remainder !== null ? number_format($labelRequest->oracleJob->quantity_remainder) : '—' }}</div>
+            @if($hasGroupedLpkDetails)
+                <div class="mt-1 font-semibold">Todos los Jobs fueron validados al crear la requisición.</div>
+                <div class="text-slate-700">La disponibilidad aplica sólo a Serial, Rating e Inner.</div>
+            @else
+                <div class="mt-1 font-semibold">PO: {{ $labelRequest->po_number ?: '—' }}</div>
+                <div class="text-slate-700">Destino: {{ $labelRequest->destination ?: '—' }}</div>
+                <div class="text-slate-700">Job Qty: {{ $labelRequest->oracleJob?->job_qty !== null ? number_format($labelRequest->oracleJob->job_qty) : '—' }}</div>
+                <div class="text-slate-700">Restante: {{ $labelRequest->oracleJob?->quantity_remainder !== null ? number_format($labelRequest->oracleJob->quantity_remainder) : '—' }}</div>
+            @endif
         </div>
     </div>
 
-    <div class="mt-6 overflow-hidden rounded-xl border border-slate-200">
-        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <h2 class="font-semibold text-slate-900">Detalle de etiquetas solicitado</h2>
-            <p class="mt-1 text-xs text-slate-500">Cada NP de Serial y Rating conserva la cantidad general; cada elemento Shipping LPK conserva la cantidad Shipping.</p>
+    <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/60">
+        <div class="border-b border-slate-200 bg-white px-5 py-4">
+            <h2 class="text-lg font-semibold text-slate-900">Bloques de trabajo por etiqueta</h2>
+            <p class="mt-1 text-sm text-slate-600">Cada bloque puede asignarse como una tarea independiente. Dentro de cada tipo, cada tarjeta corresponde a un NP de etiqueta física.</p>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[720px] text-sm">
-                <thead>
-                    <tr class="border-b border-slate-200 text-left text-slate-500">
-                        <th class="px-4 py-3">Job</th>
-                        <th class="px-4 py-3">Modelo</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">{{ $labelRequest->isLpk() ? 'NP / modelo / herramienta' : 'Número de parte' }}</th>
-                        <th class="px-4 py-3 text-right">Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    @foreach($labelRequest->requestedLabelLines() as $line)
-                        <tr>
-                            <td class="px-4 py-3 font-medium">{{ $labelRequest->job_number ?: '—' }}</td>
-                            <td class="px-4 py-3">{{ $labelRequest->model ?: '—' }}</td>
-                            <td class="px-4 py-3">{{ $line['type'] }}</td>
-                            <td class="px-4 py-3 font-mono">{{ $line['part_number'] ?: 'No aplica' }}</td>
-                            <td class="px-4 py-3 text-right font-semibold">{{ number_format($line['quantity']) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+
+        <div class="space-y-5 p-4 sm:p-5">
+            @foreach($workBlocks as $workBlock)
+                <article @class([
+                    'overflow-hidden rounded-2xl border bg-white shadow-sm',
+                    'border-blue-200' => $workBlock['key'] === 'serial',
+                    'border-violet-200' => $workBlock['key'] === 'rating',
+                    'border-emerald-200' => $workBlock['key'] === 'inner',
+                    'border-amber-200' => $workBlock['key'] === 'shipping',
+                ])>
+                    <header @class([
+                        'flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
+                        'border-blue-200 bg-blue-50' => $workBlock['key'] === 'serial',
+                        'border-violet-200 bg-violet-50' => $workBlock['key'] === 'rating',
+                        'border-emerald-200 bg-emerald-50' => $workBlock['key'] === 'inner',
+                        'border-amber-200 bg-amber-50' => $workBlock['key'] === 'shipping',
+                    ])>
+                        <div class="flex items-center gap-3">
+                            <span @class([
+                                'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white',
+                                'bg-blue-700' => $workBlock['key'] === 'serial',
+                                'bg-violet-700' => $workBlock['key'] === 'rating',
+                                'bg-emerald-700' => $workBlock['key'] === 'inner',
+                                'bg-amber-600' => $workBlock['key'] === 'shipping',
+                            ])>
+                                {{ $loop->iteration }}
+                            </span>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-950">Etiqueta {{ $workBlock['label'] }}</h3>
+                                <p class="text-xs text-slate-600">Bloque listo para asignar a una operadora.</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full border border-white/80 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                            {{ $workBlock['task_count'] }} {{ $workBlock['task_count'] === 1 ? 'NP físico' : 'NP físicos' }}
+                        </span>
+                    </header>
+
+                    <div class="space-y-4 p-4">
+                        @if($workBlock['mode'] === 'production')
+                            @forelse($workBlock['groups'] as $group)
+                                <section class="overflow-hidden rounded-xl border border-slate-200">
+                                    <div class="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Número de parte de etiqueta</div>
+                                            <div class="mt-0.5 font-mono text-base font-bold text-slate-950">{{ $group->part_number }}</div>
+                                        </div>
+                                        <span class="text-xs font-semibold text-slate-600">{{ $group->items->count() }} {{ $group->items->count() === 1 ? 'renglón' : 'renglones' }}</span>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full min-w-[560px] text-sm">
+                                            <thead class="bg-white text-left text-xs uppercase text-slate-500">
+                                                <tr>
+                                                    <th class="px-4 py-2.5">Job</th>
+                                                    <th class="px-4 py-2.5">Modelo</th>
+                                                    <th class="px-4 py-2.5 text-right">Cantidad</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100">
+                                                @foreach($group->items as $item)
+                                                    <tr>
+                                                        <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $item->job_number }}</td>
+                                                        <td class="px-4 py-3 text-slate-700">{{ $item->model ?: 'Sin modelo' }}</td>
+                                                        <td class="px-4 py-3 text-right text-base font-bold text-slate-950">{{ number_format($item->quantity) }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            @empty
+                                <div class="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">No hay NP capturados para este tipo.</div>
+                            @endforelse
+                        @elseif($workBlock['mode'] === 'shipping')
+                            @forelse($workBlock['groups'] as $group)
+                                <section class="overflow-hidden rounded-xl border border-amber-200">
+                                    <div class="grid grid-cols-1 gap-3 border-b border-amber-200 bg-amber-50/70 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+                                        <div>
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-amber-800">NP Shipping</div>
+                                            <div class="mt-0.5 font-mono text-base font-bold text-slate-950">{{ $group->part_number }}</div>
+                                        </div>
+                                        <div class="text-sm text-slate-700">
+                                            <span class="font-semibold">PO:</span> {{ $group->po_number ?: 'Sin PO' }}<br>
+                                            <span class="font-semibold">Destino:</span> {{ $group->destination ?: 'Sin destino' }}
+                                        </div>
+                                        <div class="rounded-xl bg-amber-600 px-4 py-2 text-center text-white">
+                                            <div class="text-[10px] font-semibold uppercase tracking-wide">Cantidad total</div>
+                                            <div class="text-xl font-black">{{ number_format($group->quantity) }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="border-b border-amber-100 bg-white px-4 py-2 text-xs font-medium text-amber-800">Esta cantidad corresponde al grupo completo; no se multiplica por los modelos.</div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full min-w-[480px] text-sm">
+                                            <thead class="bg-white text-left text-xs uppercase text-slate-500">
+                                                <tr>
+                                                    <th class="px-4 py-2.5">Job informativo</th>
+                                                    <th class="px-4 py-2.5">Modelo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100">
+                                                @foreach($group->items as $item)
+                                                    <tr>
+                                                        <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $item->job_number }}</td>
+                                                        <td class="px-4 py-3 text-slate-700">{{ $item->model ?: 'Sin modelo' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            @empty
+                                <div class="rounded-xl border border-dashed border-amber-300 p-4 text-sm text-amber-800">No hay grupos Shipping capturados.</div>
+                            @endforelse
+                        @else
+                            @forelse($workBlock['lines'] as $line)
+                                <section class="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div>
+                                        <div class="text-xs font-semibold uppercase text-slate-500">NP de etiqueta</div>
+                                        <div class="mt-1 font-mono font-bold text-slate-950">{{ $line['part_number'] ?: 'No capturado' }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-semibold uppercase text-slate-500">Job</div>
+                                        <div class="mt-1 font-mono font-semibold text-slate-900">{{ ($line['job_number'] ?? $labelRequest->job_number) ?: '—' }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-semibold uppercase text-slate-500">Modelo</div>
+                                        <div class="mt-1 text-slate-700">{{ $line['model'] ?: 'Sin modelo' }}</div>
+                                    </div>
+                                    <div class="sm:text-right">
+                                        <div class="text-xs font-semibold uppercase text-slate-500">Cantidad</div>
+                                        <div class="mt-1 text-xl font-black text-slate-950">{{ number_format($line['quantity']) }}</div>
+                                    </div>
+                                </section>
+                            @empty
+                                <div class="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">No hay detalle capturado para este tipo.</div>
+                            @endforelse
+                        @endif
+                    </div>
+                </article>
+            @endforeach
         </div>
-    </div>
+    </section>
 
     <div class="mt-6 rounded-xl border border-slate-200">
         <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">

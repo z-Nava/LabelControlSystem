@@ -45,9 +45,7 @@ class LabelRequestController extends Controller
 
     public function show(int $id): View
     {
-        $labelRequest = $this->readService->findForShow($id);
-
-        return view('label_requests.show', compact('labelRequest'));
+        return view('label_requests.show', $this->readService->buildShowViewData($id));
     }
 
     public function requisitionSheet(LabelRequest $label_request): View

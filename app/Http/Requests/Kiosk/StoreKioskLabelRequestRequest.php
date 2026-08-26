@@ -24,7 +24,9 @@ class StoreKioskLabelRequestRequest extends FormRequest
     {
         $requiresSerialPartNumber = fn (): bool => $this->boolean('include_serial');
         $requiresRatingPartNumber = fn (): bool => $this->boolean('include_rating');
+        $requiresInnerPartNumber = fn (): bool => $this->boolean('include_inner');
         $requiresShippingQuantity = fn (): bool => $this->boolean('include_shipping');
+        $requiresShippingPartNumber = fn (): bool => $this->boolean('include_shipping');
 
         return [
             'request_date' => ['required', 'date', 'before_or_equal:today'],
@@ -35,11 +37,17 @@ class StoreKioskLabelRequestRequest extends FormRequest
             'job_number' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z\-]+$/'],
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
-            'model' => ['required', 'string', 'max:80'],
-            'serial_part_numbers' => [Rule::requiredIf($requiresSerialPartNumber), 'array'],
-            'serial_part_numbers.*' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
-            'rating_part_numbers' => [Rule::requiredIf($requiresRatingPartNumber), 'array'],
-            'rating_part_numbers.*' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
+            'model' => ['nullable', 'string', 'max:80'],
+            'serial_items' => [Rule::requiredIf($requiresSerialPartNumber), 'array'],
+            'serial_items.*.part_number' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
+            'serial_items.*.model' => ['nullable', 'string', 'max:80'],
+            'rating_items' => [Rule::requiredIf($requiresRatingPartNumber), 'array'],
+            'rating_items.*.part_number' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
+            'rating_items.*.model' => ['nullable', 'string', 'max:80'],
+            'inner_part_number' => [Rule::requiredIf($requiresInnerPartNumber), 'nullable', 'string', 'max:80'],
+            'inner_model' => ['nullable', 'string', 'max:80'],
+            'shipping_part_number' => [Rule::requiredIf($requiresShippingPartNumber), 'nullable', 'string', 'max:80'],
+            'shipping_model' => ['nullable', 'string', 'max:80'],
             'quantity_requested' => ['required', 'integer', 'min:1', 'max:100000'],
             'shipping_quantity' => [Rule::requiredIf($requiresShippingQuantity), 'nullable', 'integer', 'min:1', 'max:100000'],
             'include_serial' => ['nullable', 'boolean'],
@@ -55,42 +63,91 @@ class StoreKioskLabelRequestRequest extends FormRequest
         $includeSerial = $this->boolean('include_serial');
         $includeRating = $this->boolean('include_rating');
         $includeShipping = $this->boolean('include_shipping');
-        $serialPartNumbers = $this->normalizeStringList($this->input('serial_part_numbers', []));
-        $ratingPartNumbers = $this->normalizeStringList($this->input('rating_part_numbers', []));
+        $serialItems = $this->normalizePartNumberItems(
+            $this->input('serial_items', $this->input('serial_part_numbers', [])),
+        );
+        $ratingItems = $this->normalizePartNumberItems(
+            $this->input('rating_items', $this->input('rating_part_numbers', [])),
+        );
 
         $this->merge([
             'include_serial' => $includeSerial,
             'include_rating' => $includeRating,
             'include_inner' => $this->boolean('include_inner'),
             'include_shipping' => $includeShipping,
-            'serial_part_numbers' => $includeSerial ? $serialPartNumbers : [],
-            'rating_part_numbers' => $includeRating ? $ratingPartNumbers : [],
+            'serial_items' => $includeSerial ? $serialItems : [],
+            'rating_items' => $includeRating ? $ratingItems : [],
+            'inner_part_number' => $this->boolean('include_inner')
+                ? strtoupper(trim((string) $this->input('inner_part_number')))
+                : null,
+            'inner_model' => $this->boolean('include_inner')
+                ? $this->nullableUppercase($this->input('inner_model'))
+                : null,
+            'shipping_part_number' => $includeShipping
+                ? strtoupper(trim((string) $this->input('shipping_part_number')))
+                : null,
+            'shipping_model' => $includeShipping
+                ? $this->nullableUppercase($this->input('shipping_model'))
+                : null,
             'shipping_quantity' => $includeShipping && trim((string) $this->input('shipping_quantity')) !== ''
                 ? $this->input('shipping_quantity')
                 : null,
             'job_number' => strtoupper(trim((string) $this->input('job_number'))),
             'po_number' => strtoupper(trim((string) $this->input('po_number'))),
             'destination' => strtoupper(trim((string) $this->input('destination'))),
-            'model' => strtoupper(trim((string) $this->input('model'))),
+            'model' => $this->nullableUppercase($this->input('model')),
         ]);
     }
 
     /**
-     * @return array<int, string>
+     * @return array<int, array{part_number: string, model: ?string}>
      */
-    protected function normalizeStringList(mixed $values): array
+    protected function normalizePartNumberItems(mixed $values): array
     {
         if (! is_array($values)) {
             $values = [$values];
         }
 
-        return array_values(array_filter(
-            array_map(
-                static fn ($value): string => strtoupper(trim((string) $value)),
-                $values,
-            ),
-            static fn (string $value): bool => $value !== '',
-        ));
+        return collect($values)
+            ->map(function ($value): array {
+                if (! is_array($value)) {
+                    return [
+                        'part_number' => strtoupper(trim((string) $value)),
+                        'model' => null,
+                    ];
+                }
+
+                return [
+                    'part_number' => strtoupper(trim((string) ($value['part_number'] ?? ''))),
+                    'model' => $this->nullableUppercase($value['model'] ?? null),
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['part_number'] !== '' || $item['model'] !== null)
+            ->values()
+            ->all();
+    }
+
+    protected function nullableUppercase(mixed $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'serial_items' => 'etiquetas Serial',
+            'serial_items.*.part_number' => 'NP de Serial',
+            'serial_items.*.model' => 'modelo de Serial',
+            'rating_items' => 'etiquetas Rating',
+            'rating_items.*.part_number' => 'NP de Rating',
+            'rating_items.*.model' => 'modelo de Rating',
+            'inner_part_number' => 'NP de Inner',
+            'inner_model' => 'modelo de Inner',
+            'shipping_part_number' => 'NP de Shipping',
+            'shipping_model' => 'modelo de Shipping',
+        ];
     }
 
     public function withValidator(Validator $validator): void

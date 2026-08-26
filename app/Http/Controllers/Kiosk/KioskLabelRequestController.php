@@ -62,7 +62,7 @@ class KioskLabelRequestController extends Controller
     }
 
     private function storeForKind(
-        StoreKioskLabelRequestRequest $request,
+        StoreKioskLabelRequestRequest|StoreKioskLpkLabelRequestRequest $request,
         string $kind,
         string $successMessage,
         string $receiptType,
@@ -74,7 +74,9 @@ class KioskLabelRequestController extends Controller
         $data['requested_by_name'] = $kioskUser->name;
 
         $labelRequest = DB::transaction(function () use ($data, $kioskUser, $kind) {
-            $labelRequest = $this->service->createKiosk($data, $kind);
+            $labelRequest = $kind === LabelRequest::KIND_LPK
+                ? $this->service->createKioskLpk($data)
+                : $this->service->createKiosk($data, $kind);
             $this->printService->prepare($labelRequest, $kioskUser);
 
             return $labelRequest;

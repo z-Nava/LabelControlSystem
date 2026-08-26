@@ -4,22 +4,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class LabelRequestSerial extends Model
+class LabelRequestLpkShippingGroup extends Model
 {
     protected $fillable = [
         'part_number',
-        'model',
+        'quantity',
+        'po_number',
+        'destination',
         'position',
     ];
 
     protected $casts = [
-        'label_request_id' => 'integer',
+        'quantity' => 'integer',
         'position' => 'integer',
     ];
 
     public function labelRequest(): BelongsTo
     {
         return $this->belongsTo(LabelRequest::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(LabelRequestLpkShippingItem::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 }

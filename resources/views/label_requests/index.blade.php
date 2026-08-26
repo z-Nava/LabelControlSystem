@@ -48,7 +48,7 @@
             <div class="md:col-span-2 lg:col-span-5">
                 <label for="labelRequestSearch" class="text-sm font-medium text-slate-700">Buscar por Job, NP o modelo</label>
                 <input id="labelRequestSearch" type="text" name="sku_np" value="{{ $filters['sku_np'] }}" maxlength="80" placeholder="Ej. Job 123456, NP 48-11-1850 o modelo M18" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                <p class="mt-1 text-xs text-slate-500">Busca también NP de Serial/Rating y modelos o herramientas de Shipping.</p>
+                <p class="mt-1 text-xs text-slate-500">Busca también NP y modelos de Serial, Rating, Inner y Shipping.</p>
             </div>
 
             <div class="lg:col-span-3">
@@ -123,7 +123,7 @@
                     <th class="px-4 py-3">Requisición</th>
                     <th class="px-4 py-3">Fecha</th>
                     <th class="px-4 py-3">Línea / Turno</th>
-                    <th class="px-4 py-3">Job / Modelo</th>
+                    <th class="px-4 py-3">Job / Detalle</th>
                     <th class="px-4 py-3">Tipos</th>
                     <th class="px-4 py-3">Cantidad / Folios</th>
                     <th class="px-4 py-3">Estatus</th>
@@ -133,9 +133,25 @@
             <tbody class="divide-y">
                 @forelse($labelRequests as $request)
                     @php
-                        $serialPartNumbers = $request->requestedSerialPartNumbers();
-                        $ratingPartNumbers = $request->requestedRatingPartNumbers();
-                        $shippingItems = $request->requestedShippingItemReferences();
+                        $serialPartNumbers = collect($request->requestedSerialItems())
+                            ->map(fn ($item) => $item['part_number'].($item['model'] ? ' · '.$item['model'] : ''))
+                            ->all();
+                        $ratingPartNumbers = collect($request->requestedRatingItems())
+                            ->map(fn ($item) => $item['part_number'].($item['model'] ? ' · '.$item['model'] : ''))
+                            ->all();
+                        $innerItem = $request->include_inner
+                            ? collect([$request->inner_part_number, $request->inner_model])->filter()->implode(' · ')
+                            : null;
+                        $shippingItems = collect($request->requestedShippingItems())
+                            ->map(fn ($item) => $item['part_number'].($item['model'] ? ' · '.$item['model'] : ''))
+                            ->all();
+                        $shippingItemSummary = $shippingItems !== []
+                            ? implode(', ', array_slice($shippingItems, 0, 2))
+                            : 'Sin NP capturado';
+                        $hasGroupedLpkDetails = $request->hasGroupedLpkDetails();
+                        $lpkProductionJobs = $hasGroupedLpkDetails
+                            ? $request->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
+                            : collect();
                     @endphp
                     <tr class="group align-top hover:bg-slate-50">
                         <td class="px-4 py-3 font-semibold">
@@ -150,12 +166,29 @@
                             <div class="mt-0.5 text-xs">Turno: {{ $request->shift?->code ?: '—' }}</div>
                         </td>
                         <td class="px-4 py-3 break-words">
-                            <div class="font-semibold text-slate-900">{{ $request->job_number ?: 'Sin Job' }}</div>
-                            <div class="mt-0.5 text-xs text-slate-500">Modelo: {{ $request->model ?: 'Sin modelo' }}</div>
+                            @if($hasGroupedLpkDetails)
+                                <div class="font-semibold text-slate-900">{{ $lpkProductionJobs->count() }} Job(s) de producción</div>
+                                <div class="mt-0.5 text-xs text-slate-500">{{ $lpkProductionJobs->take(3)->implode(', ') ?: 'Sólo Shipping' }}@if($lpkProductionJobs->count() > 3) · +{{ $lpkProductionJobs->count() - 3 }}@endif</div>
+
+                                @foreach($request->lpkLabelGroups->take(3) as $group)
+                                    <div class="mt-1 text-xs text-slate-600"><span class="font-semibold">{{ $group->type_label }} {{ $group->part_number }}:</span> {{ $group->items->count() }} renglón(es)</div>
+                                @endforeach
+                                @if($request->lpkLabelGroups->count() > 3)
+                                    <div class="mt-1 text-xs text-slate-500">+{{ $request->lpkLabelGroups->count() - 3 }} grupo(s) adicional(es)</div>
+                                @endif
+                                @foreach($request->lpkShippingGroups->take(2) as $group)
+                                    <div class="mt-1 text-xs text-amber-700"><span class="font-semibold text-amber-800">Shipping {{ $group->part_number }}:</span> {{ number_format($group->quantity) }} etiqueta(s), {{ $group->items->count() }} modelo(s)</div>
+                                @endforeach
+                                @if($request->lpkShippingGroups->count() > 2)
+                                    <div class="mt-1 text-xs text-amber-700">+{{ $request->lpkShippingGroups->count() - 2 }} Shipping adicional(es)</div>
+                                @endif
+                            @else
+                                <div class="font-semibold text-slate-900">{{ $request->job_number ?: 'Sin Job' }}</div>
+                                <div class="mt-0.5 text-xs text-slate-500">Modelo general: {{ $request->model ?: 'Sin modelo' }}</div>
 
                             @if($request->include_serial && $serialPartNumbers !== [])
                                 <div class="mt-2 text-xs text-slate-600" title="{{ implode(', ', $serialPartNumbers) }}">
-                                    <span class="font-semibold text-slate-700">NP Serial:</span>
+                                    <span class="font-semibold text-slate-700">Serial NP / modelo:</span>
                                     {{ implode(', ', array_slice($serialPartNumbers, 0, 2)) }}
                                     @if(count($serialPartNumbers) > 2)
                                         <span class="ml-1 inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">+{{ count($serialPartNumbers) - 2 }}</span>
@@ -165,7 +198,7 @@
 
                             @if($request->include_rating && $ratingPartNumbers !== [])
                                 <div class="mt-1 text-xs text-slate-600" title="{{ implode(', ', $ratingPartNumbers) }}">
-                                    <span class="font-semibold text-slate-700">NP Rating:</span>
+                                    <span class="font-semibold text-slate-700">Rating NP / modelo:</span>
                                     {{ implode(', ', array_slice($ratingPartNumbers, 0, 2)) }}
                                     @if(count($ratingPartNumbers) > 2)
                                         <span class="ml-1 inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">+{{ count($ratingPartNumbers) - 2 }}</span>
@@ -173,20 +206,30 @@
                                 </div>
                             @endif
 
-                            @if($request->isLpk() && $request->include_shipping && $shippingItems !== [])
-                                <div class="mt-1 text-xs text-amber-700" title="{{ implode(', ', $shippingItems) }}">
-                                    <span class="font-semibold text-amber-800">Shipping:</span>
-                                    {{ implode(', ', array_slice($shippingItems, 0, 2)) }}
+                            @if($request->include_inner)
+                                <div class="mt-1 text-xs text-slate-600" title="{{ $innerItem ?: 'Sin NP capturado' }}">
+                                    <span class="font-semibold text-slate-700">Inner NP / modelo:</span>
+                                    {{ $innerItem ?: 'Sin NP capturado' }}
+                                </div>
+                            @endif
+
+                            @if($request->include_shipping)
+                                <div class="mt-1 text-xs text-amber-700" title="{{ $shippingItems !== [] ? implode(', ', $shippingItems) : $shippingItemSummary }}">
+                                    <span class="font-semibold text-amber-800">Shipping NP / modelo:</span>
+                                    {{ $shippingItemSummary }}
                                     @if(count($shippingItems) > 2)
                                         <span class="ml-1 inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">+{{ count($shippingItems) - 2 }}</span>
                                     @endif
                                 </div>
                             @endif
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-slate-700">{{ implode(' + ', $request->requestedLabelTypes()) ?: '—' }}</td>
                         <td class="px-4 py-3">
-                            <div class="font-semibold">General: {{ number_format($request->quantity_requested) }}</div>
-                            @if($request->include_shipping)
+                            <div class="font-semibold">{{ $hasGroupedLpkDetails ? 'Reserva Jobs' : 'General' }}: {{ number_format($request->quantity_requested) }}</div>
+                            @if($hasGroupedLpkDetails)
+                                <div class="text-xs text-slate-500">Shipping: {{ $request->lpkShippingGroups->count() }} grupo(s)</div>
+                            @elseif($request->include_shipping)
                                 <div class="text-xs text-slate-500">Shipping: {{ number_format($request->shipping_quantity ?? $request->quantity_requested) }}</div>
                             @endif
                             <div class="text-xs text-slate-500">

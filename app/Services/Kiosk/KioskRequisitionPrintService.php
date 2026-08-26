@@ -28,7 +28,15 @@ class KioskRequisitionPrintService
             return $existingJob;
         }
 
-        $labelRequest->loadMissing(['line', 'shift', 'serials', 'ratings', 'shippingItems']);
+        $labelRequest->loadMissing([
+            'line',
+            'shift',
+            'serials',
+            'ratings',
+            'shippingItems',
+            'lpkLabelGroups.items',
+            'lpkShippingGroups.items',
+        ]);
         $dpi = (int) config('kiosk.requisition_label.dpi', 203);
 
         return KioskRequisitionPrintJob::query()->create([

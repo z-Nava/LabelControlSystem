@@ -55,6 +55,10 @@ class LabelRequest extends Model
         'requested_by_user_id',
         'label_part_number',
         'serial_part_number',
+        'inner_part_number',
+        'inner_model',
+        'shipping_part_number',
+        'shipping_model',
         'serial_standard',
         'po_number',
         'destination',
@@ -156,6 +160,20 @@ class LabelRequest extends Model
             ->orderBy('id');
     }
 
+    public function lpkLabelGroups(): HasMany
+    {
+        return $this->hasMany(LabelRequestLpkLabelGroup::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    public function lpkShippingGroups(): HasMany
+    {
+        return $this->hasMany(LabelRequestLpkShippingGroup::class)
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
     public function kioskRequisitionPrintJob(): HasOne
     {
         return $this->hasOne(KioskRequisitionPrintJob::class);
@@ -219,19 +237,7 @@ class LabelRequest extends Model
      */
     public function requestedRatingPartNumbers(): array
     {
-        $partNumbers = ($this->relationLoaded('ratings')
-            ? $this->ratings
-            : $this->ratings()->get())
-            ->pluck('part_number')
-            ->filter()
-            ->values()
-            ->all();
-
-        if ($partNumbers === [] && $this->include_rating && $this->label_part_number) {
-            return [(string) $this->label_part_number];
-        }
-
-        return $partNumbers;
+        return array_column($this->requestedRatingItems(), 'part_number');
     }
 
     /**
@@ -239,21 +245,63 @@ class LabelRequest extends Model
      */
     public function requestedSerialPartNumbers(): array
     {
-        $partNumbers = ($this->relationLoaded('serials')
+        return array_column($this->requestedSerialItems(), 'part_number');
+    }
+
+    /**
+     * @return array<int, array{part_number: string, model: ?string}>
+     */
+    public function requestedSerialItems(): array
+    {
+        $items = ($this->relationLoaded('serials')
             ? $this->serials
             : $this->serials()->get())
-            ->pluck('part_number')
-            ->filter()
+            ->filter(fn (LabelRequestSerial $item) => filled($item->part_number))
+            ->map(fn (LabelRequestSerial $item) => [
+                'part_number' => (string) $item->part_number,
+                'model' => filled($item->model) ? (string) $item->model : null,
+            ])
             ->values()
             ->all();
 
-        if ($partNumbers === [] && $this->include_serial) {
+        if ($items === [] && $this->include_serial) {
             $legacyPartNumber = $this->serial_part_number ?: $this->label_part_number;
 
-            return $legacyPartNumber ? [(string) $legacyPartNumber] : [];
+            if ($legacyPartNumber) {
+                return [[
+                    'part_number' => (string) $legacyPartNumber,
+                    'model' => filled($this->model) ? (string) $this->model : null,
+                ]];
+            }
         }
 
-        return $partNumbers;
+        return $items;
+    }
+
+    /**
+     * @return array<int, array{part_number: string, model: ?string}>
+     */
+    public function requestedRatingItems(): array
+    {
+        $items = ($this->relationLoaded('ratings')
+            ? $this->ratings
+            : $this->ratings()->get())
+            ->filter(fn (LabelRequestRating $item) => filled($item->part_number))
+            ->map(fn (LabelRequestRating $item) => [
+                'part_number' => (string) $item->part_number,
+                'model' => filled($item->model) ? (string) $item->model : null,
+            ])
+            ->values()
+            ->all();
+
+        if ($items === [] && $this->include_rating && $this->label_part_number) {
+            return [[
+                'part_number' => (string) $this->label_part_number,
+                'model' => filled($this->model) ? (string) $this->model : null,
+            ]];
+        }
+
+        return $items;
     }
 
     /**
@@ -261,37 +309,63 @@ class LabelRequest extends Model
      */
     public function requestedShippingItemReferences(): array
     {
-        return ($this->relationLoaded('shippingItems')
-            ? $this->shippingItems
-            : $this->shippingItems()->get())
-            ->pluck('item_reference')
-            ->filter()
-            ->values()
-            ->all();
+        return array_column($this->requestedShippingItems(), 'part_number');
     }
 
     /**
-     * @return array<int, array{type: string, part_number: ?string, quantity: int}>
+     * @return array<int, array{part_number: string, model: ?string}>
+     */
+    public function requestedShippingItems(): array
+    {
+        $items = ($this->relationLoaded('shippingItems')
+            ? $this->shippingItems
+            : $this->shippingItems()->get())
+            ->filter(fn (LabelRequestShippingItem $item) => filled($item->item_reference))
+            ->map(fn (LabelRequestShippingItem $item) => [
+                'part_number' => (string) $item->item_reference,
+                'model' => filled($item->model) ? (string) $item->model : null,
+            ])
+            ->values()
+            ->all();
+
+        if ($items === [] && $this->include_shipping && $this->shipping_part_number) {
+            return [[
+                'part_number' => (string) $this->shipping_part_number,
+                'model' => filled($this->shipping_model) ? (string) $this->shipping_model : null,
+            ]];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
      */
     public function requestedLabelLines(): array
     {
+        if ($this->hasGroupedLpkDetails()) {
+            return $this->groupedLpkLabelLines();
+        }
+
         $lines = [];
 
         if ($this->include_serial) {
-            foreach ($this->requestedSerialPartNumbers() as $partNumber) {
+            foreach ($this->requestedSerialItems() as $item) {
                 $lines[] = [
                     'type' => 'Serial',
-                    'part_number' => $partNumber,
+                    'part_number' => $item['part_number'],
+                    'model' => $item['model'],
                     'quantity' => (int) $this->quantity_requested,
                 ];
             }
         }
 
         if ($this->include_rating) {
-            foreach ($this->requestedRatingPartNumbers() as $partNumber) {
+            foreach ($this->requestedRatingItems() as $item) {
                 $lines[] = [
                     'type' => 'Rating',
-                    'part_number' => $partNumber,
+                    'part_number' => $item['part_number'],
+                    'model' => $item['model'],
                     'quantity' => (int) $this->quantity_requested,
                 ];
             }
@@ -300,29 +374,102 @@ class LabelRequest extends Model
         if ($this->include_inner) {
             $lines[] = [
                 'type' => 'Inner',
-                'part_number' => null,
+                'part_number' => $this->inner_part_number,
+                'model' => $this->inner_model,
                 'quantity' => (int) $this->quantity_requested,
             ];
         }
 
         if ($this->include_shipping) {
-            $shippingItemReferences = $this->requestedShippingItemReferences();
+            $shippingItems = $this->requestedShippingItems();
 
-            if ($shippingItemReferences === []) {
+            if ($shippingItems === []) {
                 $lines[] = [
                     'type' => 'Shipping',
-                    'part_number' => null,
+                    'part_number' => $this->shipping_part_number,
+                    'model' => $this->shipping_model,
                     'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
                 ];
             } else {
-                foreach ($shippingItemReferences as $itemReference) {
+                foreach ($shippingItems as $item) {
                     $lines[] = [
-                        'type' => 'Shipping LPK',
-                        'part_number' => $itemReference,
+                        'type' => $this->isLpk() ? 'Shipping LPK' : 'Shipping',
+                        'part_number' => $item['part_number'],
+                        'model' => $item['model'],
                         'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
                     ];
                 }
             }
+        }
+
+        return $lines;
+    }
+
+    public function hasGroupedLpkDetails(): bool
+    {
+        if (! $this->isLpk()) {
+            return false;
+        }
+
+        if ($this->relationLoaded('lpkLabelGroups') && $this->lpkLabelGroups->isNotEmpty()) {
+            return true;
+        }
+
+        if ($this->relationLoaded('lpkShippingGroups') && $this->lpkShippingGroups->isNotEmpty()) {
+            return true;
+        }
+
+        if (
+            $this->relationLoaded('lpkLabelGroups')
+            && $this->relationLoaded('lpkShippingGroups')
+        ) {
+            return false;
+        }
+
+        return $this->exists
+            && ($this->lpkLabelGroups()->exists() || $this->lpkShippingGroups()->exists());
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function groupedLpkLabelLines(): array
+    {
+        $labelGroups = $this->relationLoaded('lpkLabelGroups')
+            ? $this->lpkLabelGroups
+            : $this->lpkLabelGroups()->with('items')->get();
+        $shippingGroups = $this->relationLoaded('lpkShippingGroups')
+            ? $this->lpkShippingGroups
+            : $this->lpkShippingGroups()->with('items')->get();
+        $lines = [];
+
+        foreach ($labelGroups as $group) {
+            $items = $group->relationLoaded('items') ? $group->items : $group->items()->get();
+
+            foreach ($items as $item) {
+                $lines[] = [
+                    'type' => $group->type_label,
+                    'part_number' => $group->part_number,
+                    'model' => $item->model,
+                    'job_number' => $item->job_number,
+                    'quantity' => (int) $item->quantity,
+                ];
+            }
+        }
+
+        foreach ($shippingGroups as $group) {
+            $items = $group->relationLoaded('items') ? $group->items : $group->items()->get();
+
+            $lines[] = [
+                'type' => 'Shipping LPK',
+                'part_number' => $group->part_number,
+                'model' => $items->pluck('model')->filter()->implode(', ') ?: null,
+                'job_number' => $items->pluck('job_number')->filter()->implode(', ') ?: null,
+                'quantity' => (int) $group->quantity,
+                'po_number' => $group->po_number,
+                'destination' => $group->destination,
+                'models_count' => $items->count(),
+            ];
         }
 
         return $lines;

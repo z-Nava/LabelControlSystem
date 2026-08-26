@@ -186,6 +186,12 @@
     </style>
 </head>
 <body data-render-qrs="0" data-auto-print="1">
+    @php
+        $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
+        $lpkProductionJobs = $hasGroupedLpkDetails
+            ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
+            : collect();
+    @endphp
     <main class="sheet">
         <header class="sheet-header grid grid-cols-12 border-b-2 border-slate-900">
             <div class="col-span-3 flex items-center justify-center border-r border-slate-300 p-4">
@@ -213,16 +219,16 @@
 
             <div class="field"><div class="field-label">Solicita</div><div class="field-value">{{ $labelRequest->requested_by_name }}</div></div>
             <div class="field"><div class="field-label">Líder</div><div class="field-value">{{ $labelRequest->leader_name }}</div></div>
-            <div class="field"><div class="field-label">Job</div><div class="field-value">{{ $labelRequest->job_number ?: '—' }}</div></div>
-            <div class="field !border-r-0"><div class="field-label">Assembly</div><div class="field-value">{{ $labelRequest->oracleJob?->assembly ?: '—' }}</div></div>
+            <div class="field"><div class="field-label">{{ $hasGroupedLpkDetails ? 'Jobs de producción' : 'Job' }}</div><div class="field-value">{{ $hasGroupedLpkDetails ? ($lpkProductionJobs->implode(', ') ?: 'Sólo Shipping') : ($labelRequest->job_number ?: '—') }}</div></div>
+            <div class="field !border-r-0"><div class="field-label">{{ $hasGroupedLpkDetails ? 'Grupos de etiquetas' : 'Assembly' }}</div><div class="field-value">{{ $hasGroupedLpkDetails ? $labelRequest->lpkLabelGroups->count() : ($labelRequest->oracleJob?->assembly ?: '—') }}</div></div>
 
-            <div class="field"><div class="field-label">{{ $labelRequest->isLpk() ? 'Ensamble final' : 'Modelo' }}</div><div class="field-value">{{ $labelRequest->model ?: '—' }}</div></div>
-            <div class="field"><div class="field-label">PO</div><div class="field-value">{{ $labelRequest->po_number ?: '—' }}</div></div>
-            <div class="field"><div class="field-label">Destino</div><div class="field-value">{{ $labelRequest->destination ?: '—' }}</div></div>
+            <div class="field"><div class="field-label">{{ $hasGroupedLpkDetails ? 'Renglones Modelo / Job' : ($labelRequest->isLpk() ? 'Ensamble final' : 'Modelo general') }}</div><div class="field-value">{{ $hasGroupedLpkDetails ? $labelRequest->lpkLabelGroups->sum(fn ($group) => $group->items->count()) : ($labelRequest->model ?: '—') }}</div></div>
+            <div class="field"><div class="field-label">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'PO' }}</div><div class="field-value">{{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->po_number ?: '—') }}</div></div>
+            <div class="field"><div class="field-label">{{ $hasGroupedLpkDetails ? 'Cantidad Shipping total' : 'Destino' }}</div><div class="field-value">{{ $hasGroupedLpkDetails ? number_format($labelRequest->lpkShippingGroups->sum('quantity')) : ($labelRequest->destination ?: '—') }}</div></div>
             <div class="field !border-r-0">
                 <div class="field-label">Cantidades</div>
-                <div class="field-value">General: {{ number_format($labelRequest->quantity_requested) }}</div>
-                <div class="mt-1 text-sm font-semibold">Shipping: {{ $labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida' }}</div>
+                <div class="field-value">{{ $hasGroupedLpkDetails ? 'Reserva Jobs' : 'General' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
+                <div class="mt-1 text-sm font-semibold">Shipping: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count().' grupo(s)' : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
             </div>
         </section>
 
@@ -239,17 +245,24 @@
                 </div>
             </div>
             <div class="col-span-4 border-r border-slate-300 p-4">
-                @if($labelRequest->isLpk())
-                    <div class="field-label">NP / modelos / herramientas Shipping</div>
-                    @forelse($labelRequest->requestedShippingItemReferences() as $shippingItem)
-                        <div class="field-value">{{ $shippingItem }}</div>
+                @if($hasGroupedLpkDetails)
+                    <div class="field-label">Grupos Shipping</div>
+                    @forelse($labelRequest->lpkShippingGroups as $group)
+                        <div class="field-value">{{ $group->part_number }} · {{ number_format($group->quantity) }} etiq. · {{ $group->items->count() }} modelo(s)</div>
+                    @empty
+                        <div class="field-value">—</div>
+                    @endforelse
+                @elseif($labelRequest->isLpk())
+                    <div class="field-label">NP / modelo Shipping</div>
+                    @forelse($labelRequest->requestedShippingItems() as $item)
+                        <div class="field-value">{{ $item['part_number'] }}{{ $item['model'] ? ' · '.$item['model'] : '' }}</div>
                     @empty
                         <div class="field-value">—</div>
                     @endforelse
                 @else
                     <div class="field-label">NP de Serial</div>
-                    @forelse($labelRequest->requestedSerialPartNumbers() as $serialPartNumber)
-                        <div class="field-value">{{ $serialPartNumber }}</div>
+                    @forelse($labelRequest->requestedSerialItems() as $item)
+                        <div class="field-value">{{ $item['part_number'] }}{{ $item['model'] ? ' · '.$item['model'] : '' }}</div>
                     @empty
                         <div class="field-value">—</div>
                     @endforelse
@@ -269,14 +282,20 @@
             <div class="detail-title border-b border-slate-300 bg-slate-50 px-4 py-2 field-label">Detalle solicitado</div>
             <table class="detail-table w-full border-collapse text-sm">
                 <colgroup>
-                    <col style="width: 24%">
-                    <col style="width: 54%">
-                    <col style="width: 22%">
+                    <col style="width: 14%">
+                    <col style="width: 20%">
+                    <col style="width: 18%">
+                    <col style="width: 20%">
+                    <col style="width: 18%">
+                    <col style="width: 10%">
                 </colgroup>
                 <thead>
                     <tr class="border-b border-slate-300 text-left">
                         <th class="border-r border-slate-300 px-4 py-2">Tipo</th>
-                        <th class="border-r border-slate-300 px-4 py-2">{{ $labelRequest->isLpk() ? 'NP / modelo / herramienta' : 'Número de parte' }}</th>
+                        <th class="border-r border-slate-300 px-4 py-2">Número de parte</th>
+                        <th class="border-r border-slate-300 px-4 py-2">Job</th>
+                        <th class="border-r border-slate-300 px-4 py-2">Modelo</th>
+                        <th class="border-r border-slate-300 px-4 py-2">PO / Destino</th>
                         <th class="px-4 py-2 text-right">Cantidad</th>
                     </tr>
                 </thead>
@@ -285,6 +304,9 @@
                         <tr class="border-b border-slate-200 last:border-b-0">
                             <td class="border-r border-slate-300 px-4 py-2">{{ $line['type'] }}</td>
                             <td class="border-r border-slate-300 px-4 py-2 font-mono">{{ $line['part_number'] ?: 'No aplica' }}</td>
+                            <td class="border-r border-slate-300 px-4 py-2">{{ ($line['job_number'] ?? $labelRequest->job_number) ?: '—' }}</td>
+                            <td class="border-r border-slate-300 px-4 py-2">{{ $line['model'] ?: '—' }}</td>
+                            <td class="border-r border-slate-300 px-4 py-2">{{ collect([$line['po_number'] ?? null, $line['destination'] ?? null])->filter()->implode(' / ') ?: '—' }}</td>
                             <td class="px-4 py-2 text-right font-bold">{{ number_format($line['quantity']) }}</td>
                         </tr>
                     @endforeach
