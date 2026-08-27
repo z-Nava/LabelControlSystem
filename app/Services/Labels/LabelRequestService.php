@@ -304,33 +304,31 @@ class LabelRequestService
         ];
     }
 
-    public function markRequisitionPrinted(LabelRequest $labelRequest, ?int $userId): LabelRequest
+    public function startPreparation(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
-        if (! $labelRequest->canMarkRequisitionPrinted()) {
+        if (! $labelRequest->canStartPreparation()) {
             throw ValidationException::withMessages([
-                'status' => 'Solo una requisición pendiente puede marcarse como impresa.',
+                'status' => 'Solo una requisición pendiente puede iniciar preparación.',
             ]);
         }
 
         $labelRequest->update([
             'status' => LabelRequest::STATUS_IN_PROGRESS,
-            'requisition_printed_at' => now(),
-            'requisition_printed_by_user_id' => $userId,
         ]);
 
         return $labelRequest->refresh();
     }
 
-    public function markAttended(LabelRequest $labelRequest, ?int $userId): LabelRequest
+    public function markReadyForDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
-        if (! $labelRequest->canMarkAttended()) {
+        if (! $labelRequest->canMarkReadyForDelivery()) {
             throw ValidationException::withMessages([
-                'status' => 'Solo una requisición impresa puede marcarse como atendida.',
+                'status' => 'Solo una requisición en preparación puede marcarse como lista para entregar.',
             ]);
         }
 
         $labelRequest->update([
-            'status' => LabelRequest::STATUS_ATTENDED,
+            'status' => LabelRequest::STATUS_READY_FOR_DELIVERY,
             'attended_at' => now(),
             'attended_by_user_id' => $userId,
         ]);
@@ -338,11 +336,11 @@ class LabelRequestService
         return $labelRequest->refresh();
     }
 
-    public function complete(LabelRequest $labelRequest, ?int $userId): LabelRequest
+    public function confirmDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
-        if (! $labelRequest->canMarkDelivered()) {
+        if (! $labelRequest->canConfirmDelivery()) {
             throw ValidationException::withMessages([
-                'status' => 'Solo una requisición atendida puede marcarse como entregada.',
+                'status' => 'Solo una requisición lista para entregar puede confirmarse como entregada.',
             ]);
         }
 
@@ -359,7 +357,7 @@ class LabelRequestService
     {
         if (! $labelRequest->canCancel()) {
             throw ValidationException::withMessages([
-                'status' => 'Solo se pueden cancelar requisiciones pendientes o con hoja impresa.',
+                'status' => 'Solo se pueden cancelar requisiciones pendientes o en preparación.',
             ]);
         }
 

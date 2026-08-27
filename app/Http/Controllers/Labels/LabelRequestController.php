@@ -69,24 +69,24 @@ class LabelRequestController extends Controller
         return back()->with('success', 'Requisición cancelada.');
     }
 
-    public function markPrinted(LabelRequest $label_request): RedirectResponse
+    public function startPreparation(LabelRequest $label_request): RedirectResponse
     {
-        $this->service->markRequisitionPrinted($label_request, auth()->id());
+        $this->service->startPreparation($label_request, auth()->id());
 
-        return back()->with('success', 'Requisición marcada como impresa.');
+        return back()->with('success', 'Preparación de la requisición iniciada.');
     }
 
-    public function attend(LabelRequest $label_request): RedirectResponse
+    public function readyForDelivery(LabelRequest $label_request): RedirectResponse
     {
-        $this->service->markAttended($label_request, auth()->id());
+        $this->service->markReadyForDelivery($label_request, auth()->id());
 
-        return back()->with('success', 'Requisición marcada como atendida.');
+        return back()->with('success', 'Requisición lista para entregar.');
     }
 
-    public function complete(LabelRequest $label_request): RedirectResponse
+    public function deliver(LabelRequest $label_request): RedirectResponse
     {
-        $this->service->complete($label_request, auth()->id());
+        $this->service->confirmDelivery($label_request, auth()->id());
 
-        return back()->with('success', 'Requisición marcada como entregada.');
+        return back()->with('success', 'Entrega de la requisición confirmada.');
     }
 }

@@ -135,7 +135,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             '^LS0',
             '^MMT',
             $this->box(12, 12, 775, 775, 3, $scale),
-            $this->field(28, 25, 742, $labelRequest->isLpk() ? 27 : 30, $title, $scale, alignment: 'C'),
+            $this->field(28, 25, 742, $labelRequest->isLpk() ? 34 : 30, $title, $scale, alignment: 'C'),
             $this->field(28, 65, 742, 52, $folio, $scale, alignment: 'C'),
             $this->line(28, 124, 742, 3, $scale),
             ...$details,
@@ -186,26 +186,33 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             );
         }
 
+        [$groupFontSize, $groupStep, $groupMaxLines, $groupTextLimit] = match (true) {
+            $visibleLines->count() <= 4 => [24, 58, 2, 50],
+            $visibleLines->count() <= 6 => [21, 45, 2, 58],
+            default => [18, 32, 1, 68],
+        };
+
         $groupFields = $visibleLines
             ->map(fn (string $line, int $index): string => $this->field(
                 42,
-                316 + ($index * 31),
+                316 + ($index * $groupStep),
                 710,
-                15,
-                sprintf('%d. %s', $index + 1, Str::limit($line, 76, '...')),
+                $groupFontSize,
+                sprintf('%d. %s', $index + 1, Str::limit($line, $groupTextLimit, '...')),
                 $scale,
+                maxLines: $groupMaxLines,
             ))
             ->all();
 
         return [
-            $this->field(38, 137, 720, 15, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
-            $this->field(38, 180, 720, 18, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-            $this->field(38, 214, 720, 18, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
+            $this->field(38, 137, 720, 18, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, maxLines: 2, alignment: 'C'),
+            $this->field(38, 183, 720, 22, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 1),
+            $this->field(38, 222, 720, 22, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 1),
             $this->field(
                 38,
-                250,
+                260,
                 720,
-                17,
+                20,
                 sprintf(
                     'RESERVA JOBS: %s | GRUPOS PROD: %d | SHIPPING: %d',
                     number_format((int) $labelRequest->quantity_requested),
@@ -213,18 +220,19 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
                     $labelRequest->lpkShippingGroups->count(),
                 ),
                 $scale,
+                maxLines: 2,
             ),
             ...$groupFields,
-            $this->field(38, 610, 590, 14, 'SHIPPING: JOBS/MODELOS INFORMATIVOS; NO RESERVA CANTIDAD', $scale),
-            $this->field(38, 676, 95, 17, 'IMPRIMIO:', $scale),
+            $this->field(38, 610, 590, 17, 'SHIPPING: JOBS/MODELOS INFORMATIVOS; NO RESERVA CANTIDAD', $scale),
+            $this->field(38, 676, 105, 19, 'IMPRIMIO:', $scale),
             $this->line(130, 696, 145, 2, $scale),
-            $this->field(300, 676, 90, 17, 'RECIBIO:', $scale),
+            $this->field(300, 676, 100, 19, 'RECIBIO:', $scale),
             $this->line(390, 696, 160, 2, $scale),
-            $this->field(38, 710, 130, 17, 'FOLIO INICIAL:', $scale),
+            $this->field(38, 710, 145, 19, 'FOLIO INICIAL:', $scale),
             $this->line(165, 730, 110, 2, $scale),
-            $this->field(300, 710, 125, 17, 'FOLIO FINAL:', $scale),
+            $this->field(300, 710, 140, 19, 'FOLIO FINAL:', $scale),
             $this->line(425, 730, 125, 2, $scale),
-            $this->field(38, 749, 70, 17, 'TURNO:', $scale),
+            $this->field(38, 749, 80, 19, 'TURNO:', $scale),
             $this->line(105, 769, 170, 2, $scale),
             $this->qr(650, 650, $qrPayload, $scale),
         ];

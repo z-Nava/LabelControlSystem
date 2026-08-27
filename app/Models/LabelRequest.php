@@ -22,7 +22,10 @@ class LabelRequest extends Model
 
     public const STATUS_IN_PROGRESS = 'in_progress';
 
-    public const STATUS_ATTENDED = 'attended';
+    public const STATUS_READY_FOR_DELIVERY = 'attended';
+
+    /** @deprecated Use STATUS_READY_FOR_DELIVERY. */
+    public const STATUS_ATTENDED = self::STATUS_READY_FOR_DELIVERY;
 
     public const STATUS_COMPLETED = 'completed';
 
@@ -31,13 +34,13 @@ class LabelRequest extends Model
     public const OPEN_STATUSES = [
         self::STATUS_REQUESTED,
         self::STATUS_IN_PROGRESS,
-        self::STATUS_ATTENDED,
+        self::STATUS_READY_FOR_DELIVERY,
     ];
 
     public const STATUS_LABELS = [
         self::STATUS_REQUESTED => 'Pendiente',
-        self::STATUS_IN_PROGRESS => 'Requisición impresa',
-        self::STATUS_ATTENDED => 'Atendida',
+        self::STATUS_IN_PROGRESS => 'En preparación',
+        self::STATUS_READY_FOR_DELIVERY => 'Lista para entregar',
         self::STATUS_COMPLETED => 'Entregada',
         self::STATUS_CANCELLED => 'Cancelada',
     ];
@@ -184,9 +187,15 @@ class LabelRequest extends Model
         return $this->belongsTo(User::class, 'requisition_printed_by_user_id');
     }
 
-    public function attendedByUser(): BelongsTo
+    public function readyForDeliveryByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'attended_by_user_id');
+    }
+
+    /** @deprecated Use readyForDeliveryByUser(). */
+    public function attendedByUser(): BelongsTo
+    {
+        return $this->readyForDeliveryByUser();
     }
 
     public function deliveredByUser(): BelongsTo
@@ -199,19 +208,19 @@ class LabelRequest extends Model
         return $this->belongsTo(User::class, 'cancelled_by_user_id');
     }
 
-    public function canMarkRequisitionPrinted(): bool
+    public function canStartPreparation(): bool
     {
         return $this->status === self::STATUS_REQUESTED;
     }
 
-    public function canMarkAttended(): bool
+    public function canMarkReadyForDelivery(): bool
     {
         return $this->status === self::STATUS_IN_PROGRESS;
     }
 
-    public function canMarkDelivered(): bool
+    public function canConfirmDelivery(): bool
     {
-        return $this->status === self::STATUS_ATTENDED;
+        return $this->status === self::STATUS_READY_FOR_DELIVERY;
     }
 
     public function canCancel(): bool
@@ -494,7 +503,7 @@ class LabelRequest extends Model
     {
         return match ($this->status) {
             self::STATUS_IN_PROGRESS => 'border-violet-200 bg-violet-100 text-violet-700',
-            self::STATUS_ATTENDED => 'border-amber-200 bg-amber-100 text-amber-700',
+            self::STATUS_READY_FOR_DELIVERY => 'border-amber-200 bg-amber-100 text-amber-700',
             self::STATUS_COMPLETED => 'border-emerald-200 bg-emerald-100 text-emerald-700',
             self::STATUS_CANCELLED => 'border-red-200 bg-red-100 text-red-700',
             default => 'border-sky-200 bg-sky-100 text-sky-700',

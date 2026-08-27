@@ -286,13 +286,21 @@ class KioskRequisitionPrintService
             $printJob = $this->authorizedJobQuery($request, $foreignKey, $user, $token)
                 ->lockForUpdate()
                 ->firstOrFail();
+            $printedAt = $printJob->printed_at ?? now();
 
             if ($printJob->status !== KioskRequisitionPrintJob::STATUS_PRINTED) {
                 $printJob->update([
                     'status' => KioskRequisitionPrintJob::STATUS_PRINTED,
                     'printer_name' => $printerName ?: $printJob->printer_name,
                     'last_error' => null,
-                    'printed_at' => now(),
+                    'printed_at' => $printedAt,
+                ]);
+            }
+
+            if ($request instanceof LabelRequest && $request->requisition_printed_at === null) {
+                $request->update([
+                    'requisition_printed_at' => $printedAt,
+                    'requisition_printed_by_user_id' => $user->id,
                 ]);
             }
 

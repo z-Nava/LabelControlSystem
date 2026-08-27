@@ -35,7 +35,7 @@
 
     <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
         <div class="font-semibold">Impresión automática de etiquetas no disponible temporalmente</div>
-        <p class="mt-1 text-sm">La operación habilitada en este flujo es imprimir la hoja física de requisición y actualizar manualmente su avance.</p>
+        <p class="mt-1 text-sm">La preparación y entrega se controlan con el estatus general de la requisición. La impresión del comprobante en Kiosk se registra por separado.</p>
     </div>
 
     <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -266,14 +266,14 @@
                 <div class="text-slate-500">{{ $labelRequest->requested_by_name }}</div>
             </div>
             <div class="p-4">
-                <div class="font-semibold text-slate-900">Hoja impresa</div>
+                <div class="font-semibold text-slate-900">Comprobante Kiosk</div>
                 <div class="mt-1 text-slate-600">{{ $labelRequest->requisition_printed_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
                 <div class="text-slate-500">{{ $labelRequest->requisitionPrintedByUser?->name ?? '—' }}</div>
             </div>
             <div class="p-4">
-                <div class="font-semibold text-slate-900">Atendida</div>
+                <div class="font-semibold text-slate-900">Lista para entregar</div>
                 <div class="mt-1 text-slate-600">{{ $labelRequest->attended_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
-                <div class="text-slate-500">{{ $labelRequest->attendedByUser?->name ?? '—' }}</div>
+                <div class="text-slate-500">{{ $labelRequest->readyForDeliveryByUser?->name ?? '—' }}</div>
             </div>
             <div class="p-4">
                 <div class="font-semibold text-slate-900">Entregada</div>

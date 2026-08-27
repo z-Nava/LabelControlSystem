@@ -8,9 +8,20 @@ use App\Models\ProductionLine;
 use App\Models\Shift;
 use App\Models\SkuSerialFormat;
 use App\Support\SerialStandards;
+use App\ViewModels\Labels\LabelRequestIndexRow;
 
 class LabelRequestReadService
 {
+    private const INDEX_STATUS_OPTIONS = [
+        'active' => 'Pendientes (todas)',
+        LabelRequest::STATUS_REQUESTED => 'Pendiente',
+        LabelRequest::STATUS_IN_PROGRESS => 'En preparación',
+        LabelRequest::STATUS_READY_FOR_DELIVERY => 'Lista para entregar',
+        LabelRequest::STATUS_COMPLETED => 'Entregada',
+        LabelRequest::STATUS_CANCELLED => 'Cancelada',
+        'all' => 'Todas',
+    ];
+
     public function paginateForIndex(array $filters, int $perPage = 15): array
     {
         $validated = [
@@ -93,7 +104,10 @@ class LabelRequestReadService
 
         return [
             'labelRequests' => $labelRequests,
+            'labelRequestRows' => $labelRequests->getCollection()
+                ->map(fn (LabelRequest $labelRequest): LabelRequestIndexRow => LabelRequestIndexRow::from($labelRequest)),
             'filters' => $validated,
+            'statusOptions' => self::INDEX_STATUS_OPTIONS,
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
             'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
         ];
@@ -155,7 +169,7 @@ class LabelRequestReadService
                 'requestedByUser:id,name',
                 'oracleJob:id,job_number,assembly,part_description,job_qty,quantity_remainder',
                 'requisitionPrintedByUser:id,name',
-                'attendedByUser:id,name',
+                'readyForDeliveryByUser:id,name',
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
                 'serials:id,label_request_id,part_number,model,position',
