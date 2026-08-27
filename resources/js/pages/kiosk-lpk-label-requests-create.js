@@ -24,6 +24,63 @@ import Swal from 'sweetalert2';
         status.textContent = message;
         status.className = `mt-1 text-xs ${color}`;
     };
+    const modelInputForJob = (jobInput) => {
+        const item = jobInput.closest('.lpk-label-item, .lpk-shipping-item');
+
+        return item ? field(item, 'model') : null;
+    };
+    const setModelStatus = (jobInput, message, color = 'text-slate-500') => {
+        const status = jobInput.closest('.lpk-label-item, .lpk-shipping-item')?.querySelector('[data-model-status]');
+
+        if (!status) return;
+
+        status.textContent = message;
+        status.className = `mt-1 text-xs ${color}`;
+    };
+
+    function setJobModelState(jobInput, model, { clearManual = false, status = 'resolved' } = {}) {
+        const modelInput = modelInputForJob(jobInput);
+
+        if (!modelInput) return;
+
+        if (modelInput.dataset.modelInputConfigured !== 'true') {
+            modelInput.dataset.modelInputConfigured = 'true';
+            modelInput.dataset.manualPlaceholder = modelInput.placeholder || 'Modelo (opcional)';
+        }
+
+        const mappedModel = normalize(model);
+        const hasMappedModel = Boolean(mappedModel);
+
+        if (hasMappedModel) {
+            modelInput.value = mappedModel;
+        } else if (clearManual) {
+            modelInput.value = '';
+        }
+
+        modelInput.readOnly = hasMappedModel;
+        modelInput.dataset.mappedModel = hasMappedModel ? mappedModel : '';
+        modelInput.placeholder = hasMappedModel
+            ? 'Modelo mapeado'
+            : modelInput.dataset.manualPlaceholder;
+        modelInput.classList.toggle('cursor-not-allowed', hasMappedModel);
+        modelInput.classList.toggle('bg-slate-100', hasMappedModel);
+
+        if (hasMappedModel) {
+            setModelStatus(
+                jobInput,
+                `Modelo ${mappedModel} obtenido de Master Model Mapping.`,
+                'text-emerald-700',
+            );
+        } else if (status === 'resolved') {
+            setModelStatus(
+                jobInput,
+                'Sin modelo mapeado; captura el modelo manualmente.',
+                'text-amber-700',
+            );
+        } else {
+            setModelStatus(jobInput, 'Se consultará en Master Model Mapping.');
+        }
+    }
 
     function appendTemplate(template, container) {
         const element = template.content.firstElementChild.cloneNode(true);
@@ -162,6 +219,7 @@ import Swal from 'sweetalert2';
         if (!jobNumber) {
             input.setCustomValidity('');
             setStatus(input, 'Pendiente de validar.');
+            setJobModelState(input, null, { clearManual: true, status: 'pending' });
             return;
         }
 
@@ -177,12 +235,14 @@ import Swal from 'sweetalert2';
             if (!data.found) {
                 input.setCustomValidity('El Job no existe en Oracle Jobs.');
                 setStatus(input, 'No encontrado en Oracle Jobs.', 'text-red-700');
+                setJobModelState(input, null, { status: 'pending' });
                 return;
             }
 
             if (!data.valid_for_packaging) {
                 input.setCustomValidity(data.classification_messages?.packaging || 'El Job no pertenece a Empaque.');
                 setStatus(input, 'El Job no pertenece a Empaque.', 'text-red-700');
+                setJobModelState(input, null, { status: 'pending' });
                 return;
             }
 
@@ -196,6 +256,7 @@ import Swal from 'sweetalert2';
                 ? 'Job válido (informativo)'
                 : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
             setStatus(input, `${availability}${detail}`, 'text-emerald-700');
+            setJobModelState(input, data.mapped_model, { status: 'resolved' });
 
             if (isShipping) {
                 const group = input.closest('.lpk-shipping-group');
@@ -210,15 +271,17 @@ import Swal from 'sweetalert2';
         } catch (error) {
             input.setCustomValidity('No fue posible validar el Job en este momento.');
             setStatus(input, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
+            setJobModelState(input, null, { status: 'pending' });
         }
     }
 
-    function scheduleJobValidation(input) {
+    function scheduleJobValidation(input, { clearModel = true } = {}) {
         clearTimeout(lookupTimers.get(input));
         input.setCustomValidity(input.value.trim() ? 'Espera a que termine la validación de Oracle.' : '');
         delete input.dataset.validatedJob;
         delete input.dataset.availableQuantity;
         setStatus(input, input.value.trim() ? 'Esperando validación…' : 'Pendiente de validar.');
+        setJobModelState(input, null, { clearManual: clearModel, status: 'pending' });
         lookupTimers.set(input, setTimeout(() => validateJob(input), 350));
     }
 
@@ -371,6 +434,7 @@ import Swal from 'sweetalert2';
     reindexForm();
     filterLines();
     form.querySelectorAll('.lpk-job-input').forEach((input) => {
-        if (input.value.trim()) scheduleJobValidation(input);
+        setJobModelState(input, null, { status: 'pending' });
+        if (input.value.trim()) scheduleJobValidation(input, { clearModel: false });
     });
 })();

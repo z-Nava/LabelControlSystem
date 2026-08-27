@@ -130,7 +130,7 @@
 
                             <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
                                 <div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-500 md:grid">
-                                    <span>Job</span><span>Modelo (opcional)</span><span>Cantidad</span><span></span>
+                                    <span>Job</span><span>Modelo</span><span>Cantidad</span><span></span>
                                 </div>
                                 <div data-items class="divide-y divide-slate-200">
                                     @foreach(($group['items'] ?? []) as $item)
@@ -141,8 +141,9 @@
                                                 <p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p>
                                             </div>
                                             <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo (opcional)</label>
-                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Modelo" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label>
+                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                                <p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
                                             </div>
                                             <div>
                                                 <label class="text-xs font-semibold text-slate-500 md:hidden">Cantidad</label>
@@ -197,7 +198,7 @@
 
                             <div class="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white">
                                 <div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_auto] gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-semibold uppercase text-amber-800 md:grid">
-                                    <span>Job informativo</span><span>Modelo (opcional)</span><span></span>
+                                    <span>Job informativo</span><span>Modelo</span><span></span>
                                 </div>
                                 <div data-items class="divide-y divide-amber-100">
                                     @foreach(($group['items'] ?? []) as $item)
@@ -208,8 +209,9 @@
                                                 <p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p>
                                             </div>
                                             <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo (opcional)</label>
-                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Modelo" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label>
+                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                                <p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
                                             </div>
                                             <button type="button" class="remove-lpk-shipping-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                         </div>
@@ -252,7 +254,7 @@
 <template id="lpkLabelItemTemplate">
     <div class="lpk-label-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] md:items-start">
         <div><label class="text-xs font-semibold text-slate-500 md:hidden">Job</label><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo (opcional)</label><input data-field="model" type="text" maxlength="80" placeholder="Modelo" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
+        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
         <div><label class="text-xs font-semibold text-slate-500 md:hidden">Cantidad</label><input data-field="quantity" type="number" min="1" max="100000" required placeholder="Cant." class="lpk-item-quantity w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
         <button type="button" class="remove-lpk-label-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
     </div>
@@ -265,7 +267,7 @@
             <div><label class="text-sm font-semibold text-slate-800">NP de la etiqueta</label><input data-field="part_number" type="text" maxlength="80" required placeholder="Ej: 950410000" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
             <button type="button" class="remove-lpk-label-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar NP</button>
         </div>
-        <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-500 md:grid"><span>Job</span><span>Modelo (opcional)</span><span>Cantidad</span><span></span></div><div data-items class="divide-y divide-slate-200"></div></div>
+        <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-500 md:grid"><span>Job</span><span>Modelo</span><span>Cantidad</span><span></span></div><div data-items class="divide-y divide-slate-200"></div></div>
         <button type="button" class="add-lpk-label-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">+ Agregar Modelo / Job</button>
     </article>
 </template>
@@ -273,7 +275,7 @@
 <template id="lpkShippingItemTemplate">
     <div class="lpk-shipping-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_auto] md:items-start">
         <div><label class="text-xs font-semibold text-slate-500 md:hidden">Job</label><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo (opcional)</label><input data-field="model" type="text" maxlength="80" placeholder="Modelo" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
         <button type="button" class="remove-lpk-shipping-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
     </div>
 </template>
@@ -287,7 +289,7 @@
             <div><label class="text-sm font-semibold text-slate-800">Destino</label><input data-field="destination" type="text" maxlength="80" placeholder="Ej: BYHALA MFG" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
             <button type="button" class="remove-lpk-shipping-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar Shipping</button>
         </div>
-        <div class="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white"><div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_auto] gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-semibold uppercase text-amber-800 md:grid"><span>Job informativo</span><span>Modelo (opcional)</span><span></span></div><div data-items class="divide-y divide-amber-100"></div></div>
+        <div class="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white"><div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_auto] gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-semibold uppercase text-amber-800 md:grid"><span>Job informativo</span><span>Modelo</span><span></span></div><div data-items class="divide-y divide-amber-100"></div></div>
         <button type="button" class="add-lpk-shipping-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50">+ Agregar Modelo / Job</button>
     </article>
 </template>

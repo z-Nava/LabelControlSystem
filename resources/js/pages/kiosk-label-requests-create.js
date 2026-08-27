@@ -58,6 +58,7 @@ import { debounce } from './utils/debounce';
         extras: byId('previewExtras'),
     };
     const jobHint = byId('jobHint');
+    const modelMappingHint = byId('modelMappingHint');
     const lineTypeHint = byId('lineTypeHint');
     const quantityHint = byId('quantityHint');
     const typeHint = byId('typeHint');
@@ -70,6 +71,7 @@ import { debounce } from './utils/debounce';
 
     let validatedJobNumber = '';
     let availableQuantity = null;
+    let mappedModel = '';
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
     const setText = (element, value) => {
@@ -107,7 +109,63 @@ import { debounce } from './utils/debounce';
     const formatItems = (items) => items
         .map((item) => item.model ? `${item.partNumber} (${item.model})` : item.partNumber)
         .join(', ');
+    const modelInputs = () => Array.from(form.querySelectorAll('.mapped-model-input'));
     const lineOptions = Array.from(inputs.line.options).filter((option) => option.value !== '');
+
+    function configureModelInput(input) {
+        if (!input || input.dataset.modelInputConfigured === 'true') return;
+
+        input.dataset.modelInputConfigured = 'true';
+        input.dataset.manualPlaceholder = input.placeholder || 'Modelo (opcional)';
+        input.dataset.hadWhiteBackground = input.classList.contains('bg-white') ? 'true' : 'false';
+    }
+
+    function setModelInputState(input, model, { clearManual = false } = {}) {
+        if (!input) return;
+
+        configureModelInput(input);
+
+        const hasMappedModel = Boolean(model);
+
+        if (hasMappedModel) {
+            input.value = model;
+        } else if (clearManual) {
+            input.value = '';
+        }
+
+        input.readOnly = hasMappedModel;
+        input.dataset.mappedModel = hasMappedModel ? model : '';
+        input.placeholder = hasMappedModel
+            ? 'Modelo mapeado'
+            : input.dataset.manualPlaceholder;
+        input.classList.toggle('cursor-not-allowed', hasMappedModel);
+        input.classList.toggle('bg-slate-100', hasMappedModel);
+
+        if (input.dataset.hadWhiteBackground === 'true') {
+            input.classList.toggle('bg-white', !hasMappedModel);
+        }
+    }
+
+    function applyMappedModel(model, { clearManual = false, status = 'resolved' } = {}) {
+        mappedModel = normalize(model);
+        modelInputs().forEach((input) => setModelInputState(input, mappedModel, { clearManual }));
+
+        if (mappedModel) {
+            setHint(
+                modelMappingHint,
+                `Modelo ${mappedModel} obtenido de Master Model Mapping.`,
+                'text-emerald-700',
+            );
+        } else if (status === 'resolved') {
+            setHint(
+                modelMappingHint,
+                'El Assembly no tiene un modelo activo en Master Model Mapping; captura el modelo manualmente.',
+                'text-amber-700',
+            );
+        } else {
+            setHint(modelMappingHint, 'Se consultará en Master Model Mapping.');
+        }
+    }
 
     function formatDate(value) {
         if (!value) return 'Fecha pendiente';
@@ -247,7 +305,7 @@ import { debounce } from './utils/debounce';
         setText(preview.extras, extras.length ? extras.join(' · ') : 'PO y destino pendientes.');
     }
 
-    function clearJobResult(message = 'Pendiente de validar en Oracle.') {
+    function clearJobResult(message = 'Pendiente de validar en Oracle.', { clearModels = false } = {}) {
         validatedJobNumber = '';
         availableQuantity = null;
         inputs.assembly.value = '';
@@ -257,6 +315,10 @@ import { debounce } from './utils/debounce';
         capacity.container.classList.remove('grid');
         setHint(jobHint, message);
         setHint(quantityHint, 'Primero valida el Job para conocer la disponibilidad.');
+
+        if (clearModels) {
+            applyMappedModel(null, { clearManual: true, status: 'pending' });
+        }
     }
 
     const lookupJob = debounce(async () => {
@@ -304,6 +366,7 @@ import { debounce } from './utils/debounce';
             inputs.po.value = data.ttl_cust_po || inputs.po.value;
             inputs.destination.value = data.ship_code || inputs.destination.value;
             inputs.quantity.max = String(Math.max(availableQuantity, 0));
+            applyMappedModel(data.mapped_model, { status: 'resolved' });
 
             setText(capacity.jobQty, Number(data.job_qty || 0).toLocaleString('es-MX'));
             setText(capacity.reserved, Number(data.reserved_quantity || 0).toLocaleString('es-MX'));
@@ -366,6 +429,7 @@ import { debounce } from './utils/debounce';
         serialPartNumbersContainer.append(row);
         syncConditionalFields();
         updateRemoveSerialButtons();
+        setModelInputState(row.querySelector('.mapped-model-input'), mappedModel);
         row.querySelector('.serial-part-number-input')?.focus();
         updatePreview();
     });
@@ -398,6 +462,7 @@ import { debounce } from './utils/debounce';
         ratingPartNumbersContainer.append(row);
         syncConditionalFields();
         updateRemoveRatingButtons();
+        setModelInputState(row.querySelector('.mapped-model-input'), mappedModel);
         row.querySelector('.rating-part-number-input')?.focus();
         updatePreview();
     });
@@ -428,7 +493,7 @@ import { debounce } from './utils/debounce';
     inputs.job.addEventListener('input', () => {
         inputs.po.value = '';
         inputs.destination.value = '';
-        clearJobResult('Esperando validación de Oracle…');
+        clearJobResult('Esperando validación de Oracle…', { clearModels: true });
         inputs.job.setCustomValidity('Espera a que termine la validación de Oracle.');
         updatePreview();
         lookupJob();
@@ -492,6 +557,7 @@ import { debounce } from './utils/debounce';
     updateRemoveRatingButtons();
     syncConditionalFields();
     initializeLineTypeFilter();
+    applyMappedModel(null, { status: 'pending' });
     updatePreview();
 
     if (inputs.job.value.trim()) {

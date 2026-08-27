@@ -93,6 +93,44 @@ class MasterModelMappingService
         return null;
     }
 
+    public function resolveAssemblyPackagingModel(?string $assemblyNp): ?string
+    {
+        $normalizedAssemblyNp = $this->normalizeValue($assemblyNp);
+
+        if (! $normalizedAssemblyNp) {
+            return null;
+        }
+
+        return $this->findActiveMapping(
+            MasterModelMapping::TYPE_ASSEMBLY_PACKAGING,
+            $normalizedAssemblyNp,
+        )?->sku;
+    }
+
+    /**
+     * @param  iterable<mixed>  $assemblyNps
+     * @return array<string, string>
+     */
+    public function resolveAssemblyPackagingModels(iterable $assemblyNps): array
+    {
+        $normalizedAssemblyNps = collect($assemblyNps)
+            ->map(fn (mixed $assemblyNp): ?string => $this->normalizeValue($assemblyNp))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalizedAssemblyNps->isEmpty()) {
+            return [];
+        }
+
+        return MasterModelMapping::query()
+            ->where('master_sheet_type', MasterModelMapping::TYPE_ASSEMBLY_PACKAGING)
+            ->where('active', true)
+            ->whereIn('np', $normalizedAssemblyNps)
+            ->pluck('sku', 'np')
+            ->all();
+    }
+
     /**
      * Resolve the model that an NP would use for each supported request type.
      *

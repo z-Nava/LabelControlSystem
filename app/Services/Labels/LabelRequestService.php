@@ -8,6 +8,7 @@ use App\Models\LabelRequestLpkLabelGroup;
 use App\Models\OracleJob;
 use App\Models\SerialUnit;
 use App\Models\SerialWeek;
+use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class LabelRequestService
         private readonly OracleJobService $oracleJobService,
         private readonly LabelRequestJobAvailabilityService $availabilityService,
         private readonly LpkJobReservationCalculator $lpkReservationCalculator,
+        private readonly MasterModelMappingService $masterModelMappingService,
     ) {}
 
     public function create(array $data): LabelRequest
@@ -96,6 +98,18 @@ class LabelRequestService
             $data['po_number'] = $this->valueOrOracleFallback($data['po_number'] ?? null, $job->ttl_cust_po);
             $data['destination'] = $this->valueOrOracleFallback($data['destination'] ?? null, $job->ship_code);
 
+            $mappedModel = $this->masterModelMappingService
+                ->resolveAssemblyPackagingModel($job->assembly);
+
+            if ($mappedModel) {
+                $data['model'] = $mappedModel;
+                $data['inner_model'] = $data['include_inner'] ? $mappedModel : null;
+                $data['shipping_model'] = $data['include_shipping'] ? $mappedModel : null;
+                $serialItems = $this->applyModelToRequestItems($serialItems, $mappedModel);
+                $ratingItems = $this->applyModelToRequestItems($ratingItems, $mappedModel);
+                $shippingItems = $this->applyModelToRequestItems($shippingItems, $mappedModel);
+            }
+
             $labelRequest = LabelRequest::query()->create($this->buildCreatePayload($data));
 
             if ($data['include_serial']) {
@@ -146,6 +160,18 @@ class LabelRequestService
             $reservedByJob = $this->lpkReservationCalculator->calculate($labelGroups);
             $jobNumbers = $this->lpkJobNumbers($labelGroups, $shippingGroups);
             $jobs = $this->lockAndValidateLpkJobs($jobNumbers, $reservedByJob);
+            $mappedModelsByAssembly = $this->masterModelMappingService
+                ->resolveAssemblyPackagingModels($jobs->pluck('assembly'));
+            $labelGroups = $this->applyMappedModelsToLpkGroups(
+                $labelGroups,
+                $jobs,
+                $mappedModelsByAssembly,
+            );
+            $shippingGroups = $this->applyMappedModelsToLpkGroups(
+                $shippingGroups,
+                $jobs,
+                $mappedModelsByAssembly,
+            );
             $shippingGroups = $shippingGroups->map(function (array $group) use ($jobs): array {
                 $firstJobNumber = data_get($group, 'items.0.job_number');
                 $firstJob = filled($firstJobNumber) ? $jobs->get($firstJobNumber) : null;
@@ -270,7 +296,12 @@ class LabelRequestService
             return $payload;
         }
 
-        return [...$payload, ...$this->availabilityService->calculate($job)];
+        return [
+            ...$payload,
+            'mapped_model' => $this->masterModelMappingService
+                ->resolveAssemblyPackagingModel($job->assembly),
+            ...$this->availabilityService->calculate($job),
+        ];
     }
 
     public function markRequisitionPrinted(LabelRequest $labelRequest, ?int $userId): LabelRequest
@@ -525,6 +556,49 @@ class LabelRequestService
             ->filter(fn (array $item) => $item['part_number'] !== '')
             ->unique('part_number')
             ->values();
+    }
+
+    /**
+     * @param  Collection<int, array{part_number: string, model: ?string}>  $items
+     * @return Collection<int, array{part_number: string, model: string}>
+     */
+    private function applyModelToRequestItems(Collection $items, string $model): Collection
+    {
+        return $items->map(fn (array $item): array => [
+            ...$item,
+            'model' => $model,
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $groups
+     * @param  Collection<string, OracleJob>  $jobs
+     * @param  array<string, string>  $mappedModelsByAssembly
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function applyMappedModelsToLpkGroups(
+        Collection $groups,
+        Collection $jobs,
+        array $mappedModelsByAssembly,
+    ): Collection {
+        return $groups->map(function (array $group) use ($jobs, $mappedModelsByAssembly): array {
+            $group['items'] = collect($group['items'] ?? [])
+                ->map(function (array $item) use ($jobs, $mappedModelsByAssembly): array {
+                    $jobNumber = strtoupper(trim((string) ($item['job_number'] ?? '')));
+                    $job = $jobs->get($jobNumber);
+                    $assembly = strtoupper(trim((string) ($job?->assembly ?? '')));
+                    $mappedModel = $mappedModelsByAssembly[$assembly] ?? null;
+
+                    if ($mappedModel) {
+                        $item['model'] = $mappedModel;
+                    }
+
+                    return $item;
+                })
+                ->all();
+
+            return $group;
+        });
     }
 
     private function nullableUppercase(mixed $value): ?string

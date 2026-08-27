@@ -133,7 +133,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-medium text-slate-700">NP de Serial</div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por NP; el modelo puede quedar vacío.</p>
+                                <p class="mt-1 text-xs text-slate-500">El modelo se toma del Assembly; si no existe un mapeo, puedes capturarlo.</p>
                             </div>
                             <button id="addSerialPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar Serial
@@ -144,7 +144,7 @@
                             @foreach($oldSerialItems as $index => $serialItem)
                                 <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                                     <input type="text" name="serial_items[{{ $index }}][part_number]" value="{{ is_array($serialItem) ? ($serialItem['part_number'] ?? '') : $serialItem }}" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                    <input type="text" name="serial_items[{{ $index }}][model]" value="{{ is_array($serialItem) ? ($serialItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="serial_items[{{ $index }}][model]" value="{{ is_array($serialItem) ? ($serialItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -154,7 +154,7 @@
                     <template id="serialPartNumberTemplate">
                         <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                             <input type="text" maxlength="80" placeholder="NP de Serial" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                         </div>
                     </template>
@@ -163,7 +163,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-medium text-slate-700">NP de Rating</div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega un renglón por NP; el modelo puede quedar vacío.</p>
+                                <p class="mt-1 text-xs text-slate-500">El modelo se toma del Assembly; si no existe un mapeo, puedes capturarlo.</p>
                             </div>
                             <button id="addRatingPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar rating
@@ -174,7 +174,7 @@
                             @foreach($oldRatingItems as $index => $ratingItem)
                                 <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                                     <input type="text" name="rating_items[{{ $index }}][part_number]" value="{{ is_array($ratingItem) ? ($ratingItem['part_number'] ?? '') : $ratingItem }}" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                    <input type="text" name="rating_items[{{ $index }}][model]" value="{{ is_array($ratingItem) ? ($ratingItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="rating_items[{{ $index }}][model]" value="{{ is_array($ratingItem) ? ($ratingItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -184,26 +184,26 @@
                     <template id="ratingPartNumberTemplate">
                         <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                             <input type="text" maxlength="80" placeholder="NP de Rating" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input type="text" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                         </div>
                     </template>
 
                     <div id="innerFields" class="max-w-2xl rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="text-sm font-medium text-slate-700">Etiqueta Inner</div>
-                        <p class="mt-1 text-xs text-slate-500">Captura su NP y, si aplica, su modelo.</p>
+                        <p class="mt-1 text-xs text-slate-500">El modelo se toma del Assembly; si no existe un mapeo, puedes capturarlo.</p>
                         <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <input id="innerPartNumber" type="text" name="inner_part_number" value="{{ old('inner_part_number') }}" maxlength="80" placeholder="NP de Inner" class="rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                            <input id="innerModel" type="text" name="inner_model" value="{{ old('inner_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <input id="innerModel" type="text" name="inner_model" value="{{ old('inner_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                         </div>
                     </div>
 
                     <div id="shippingFields" class="max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-4">
                         <div class="text-sm font-medium text-slate-700">Etiqueta Shipping</div>
-                        <p class="mt-1 text-xs text-slate-500">Captura su NP y, si aplica, su modelo. La cantidad se captura abajo.</p>
+                        <p class="mt-1 text-xs text-slate-500">El modelo se toma del Assembly; si no existe un mapeo, puedes capturarlo. La cantidad se captura abajo.</p>
                         <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" class="rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
-                            <input id="shippingModel" type="text" name="shipping_model" value="{{ old('shipping_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                            <input id="shippingModel" type="text" name="shipping_model" value="{{ old('shipping_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
                         </div>
                     </div>
 
@@ -224,8 +224,9 @@
                         </div>
 
                         <div>
-                            <label for="modelInput" class="text-sm font-medium text-slate-700">Modelo general (opcional)</label>
-                            <input id="modelInput" type="text" name="model" value="{{ old('model') }}" maxlength="80" placeholder="Contexto general de la requisición" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <label for="modelInput" class="text-sm font-medium text-slate-700">Modelo general</label>
+                            <input id="modelInput" type="text" name="model" value="{{ old('model') }}" maxlength="80" placeholder="Valida el Job para consultar el modelo" class="mapped-model-input mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            <p id="modelMappingHint" class="mt-2 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
                         </div>
 
                         <div>
