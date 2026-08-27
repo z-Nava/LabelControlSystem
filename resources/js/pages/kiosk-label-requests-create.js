@@ -42,26 +42,14 @@ import { debounce } from './utils/debounce';
     const addRatingPartNumberButton = byId('addRatingPartNumber');
     const innerFields = byId('innerFields');
     const shippingFields = byId('shippingFields');
-    const preview = {
-        lineShift: byId('previewLineShift'),
-        leader: byId('previewLeader'),
-        dateWeek: byId('previewDateWeek'),
-        job: byId('previewJob'),
-        assembly: byId('previewAssembly'),
-        model: byId('previewModel'),
-        types: byId('previewTypes'),
-        quantity: byId('previewQuantity'),
-        serialPartNumbers: byId('previewSerialPartNumbers'),
-        ratingPartNumber: byId('previewRatingPartNumber'),
-        inner: byId('previewInner'),
-        shippingQuantity: byId('previewShippingQuantity'),
-        extras: byId('previewExtras'),
-    };
+    const typeCards = Array.from(form.querySelectorAll('[data-label-type-card]'));
     const jobHint = byId('jobHint');
     const modelMappingHint = byId('modelMappingHint');
     const lineTypeHint = byId('lineTypeHint');
     const quantityHint = byId('quantityHint');
     const typeHint = byId('typeHint');
+    const serialItemsHint = byId('serialItemsHint');
+    const ratingItemsHint = byId('ratingItemsHint');
     const capacity = {
         container: byId('jobCapacitySummary'),
         jobQty: byId('jobQtyValue'),
@@ -167,14 +155,6 @@ import { debounce } from './utils/debounce';
         }
     }
 
-    function formatDate(value) {
-        if (!value) return 'Fecha pendiente';
-        const date = new Date(`${value}T00:00:00`);
-        return Number.isNaN(date.getTime())
-            ? value
-            : new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
-    }
-
     function syncConditionalFields() {
         const hasSerial = inputs.serial.checked;
         const hasRating = inputs.rating.checked;
@@ -212,6 +192,30 @@ import { debounce } from './utils/debounce';
             selectedTypes().length ? `Seleccionado: ${selectedTypes().join(' + ')}` : 'Selecciona al menos un tipo.',
             selectedTypes().length ? 'text-emerald-700' : 'text-slate-500',
         );
+
+        updateTypeCards();
+    }
+
+    function updateTypeCards() {
+        typeCards.forEach((card) => {
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            const state = card.querySelector('[data-label-type-state]');
+            const isSelected = Boolean(checkbox?.checked);
+
+            card.classList.toggle('border-red-300', isSelected);
+            card.classList.toggle('bg-red-50', isSelected);
+            card.classList.toggle('ring-1', isSelected);
+            card.classList.toggle('ring-red-200', isSelected);
+            card.classList.toggle('border-slate-200', !isSelected);
+
+            if (state) {
+                state.textContent = isSelected ? 'Seleccionada' : 'Elegir';
+                state.classList.toggle('bg-red-600', isSelected);
+                state.classList.toggle('text-white', isSelected);
+                state.classList.toggle('bg-slate-100', !isSelected);
+                state.classList.toggle('text-slate-500', !isSelected);
+            }
+        });
     }
 
     function filterLinesByType({ preserveSelection = true } = {}) {
@@ -249,60 +253,84 @@ import { debounce } from './utils/debounce';
     function validateQuantityAvailability() {
         inputs.quantity.setCustomValidity('');
 
-        if (
-            availableQuantity !== null
-            && inputs.quantity.value
-            && Number(inputs.quantity.value) > availableQuantity
-        ) {
-            inputs.quantity.setCustomValidity(`La cantidad no puede superar ${availableQuantity}.`);
+        if (availableQuantity === null) {
+            return true;
+        }
+
+        const formattedAvailability = availableQuantity.toLocaleString('es-MX');
+        const requestedQuantity = Number(inputs.quantity.value || 0);
+
+        if (!inputs.quantity.value) {
+            setHint(
+                quantityHint,
+                `Disponible para solicitar: ${formattedAvailability}.`,
+                availableQuantity > 0 ? 'text-emerald-700' : 'text-red-700',
+            );
+            return true;
+        }
+
+        if (requestedQuantity < 1) {
+            inputs.quantity.setCustomValidity('La cantidad debe ser al menos 1.');
+            setHint(quantityHint, 'Captura una cantidad de al menos 1 etiqueta.', 'text-red-700');
             return false;
         }
+
+        if (requestedQuantity > availableQuantity) {
+            inputs.quantity.setCustomValidity(`La cantidad no puede superar ${availableQuantity}.`);
+            setHint(
+                quantityHint,
+                `Excede la disponibilidad por ${(requestedQuantity - availableQuantity).toLocaleString('es-MX')}. Reduce la cantidad a ${formattedAvailability} o menos.`,
+                'text-red-700',
+            );
+            return false;
+        }
+
+        setHint(
+            quantityHint,
+            `Cantidad válida. Quedarán ${(availableQuantity - requestedQuantity).toLocaleString('es-MX')} disponibles en el Job.`,
+            'text-emerald-700',
+        );
 
         return true;
     }
 
-    function updatePreview() {
-        const line = inputs.line.selectedOptions?.[0]?.textContent?.trim() || 'Línea pendiente';
-        const shift = inputs.shift.selectedOptions?.[0]?.textContent?.trim() || 'Turno pendiente';
-        const types = selectedTypes();
-        const extras = [
-            inputs.po.value.trim() ? `PO ${inputs.po.value.trim()}` : null,
-            inputs.destination.value.trim() ? `Destino ${inputs.destination.value.trim()}` : null,
-        ].filter(Boolean);
+    function validateDistinctPartNumbers(partNumberInputs, hint, label, isEnabled) {
+        const seenValues = new Set();
+        const duplicatedValues = new Set();
 
-        setText(preview.lineShift, `${line} / ${shift}`);
-        setText(preview.leader, inputs.leader.value.trim() ? `Líder: ${inputs.leader.value.trim()}` : 'Sin líder capturado');
-        setText(preview.dateWeek, `${formatDate(inputs.date.value)} · Semana ${inputs.week.value || '—'}`);
-        setText(preview.job, inputs.job.value.trim() ? `Job: ${inputs.job.value.trim()}` : 'Job no capturado');
-        setText(preview.assembly, inputs.assembly.value ? `Assembly: ${inputs.assembly.value}` : 'Assembly pendiente');
-        setText(preview.model, inputs.model.value.trim() ? `Modelo general: ${inputs.model.value.trim()}` : 'Sin modelo general');
-        setText(preview.types, types.length ? types.join(' + ') : 'Tipo pendiente');
-        setText(preview.quantity, inputs.quantity.value ? `Cantidad general: ${inputs.quantity.value}` : 'Cantidad general no definida');
-        setText(
-            preview.serialPartNumbers,
-            inputs.serial.checked
-                ? `Serial: ${formatItems(serialItems()) || 'pendiente'}`
-                : 'NP de Serial no requerido',
-        );
-        setText(
-            preview.ratingPartNumber,
-            inputs.rating.checked
-                ? `Rating: ${formatItems(ratingItems()) || 'pendiente'}`
-                : 'NP de Rating no requerido',
-        );
-        setText(
-            preview.inner,
-            inputs.inner.checked
-                ? `Inner: ${inputs.innerPartNumber.value.trim() || 'NP pendiente'}${inputs.innerModel.value.trim() ? ` (${inputs.innerModel.value.trim()})` : ''}`
-                : 'Inner no requerido',
-        );
-        setText(
-            preview.shippingQuantity,
-            inputs.shipping.checked
-                ? `Shipping: ${inputs.shippingPartNumber.value.trim() || 'NP pendiente'}${inputs.shippingModel.value.trim() ? ` (${inputs.shippingModel.value.trim()})` : ''} · Cantidad ${inputs.shippingQuantity.value || 'pendiente'}`
-                : 'Shipping no requerido',
-        );
-        setText(preview.extras, extras.length ? extras.join(' · ') : 'PO y destino pendientes.');
+        partNumberInputs.forEach((input) => {
+            input.setCustomValidity('');
+            input.classList.remove('border-red-400', 'bg-red-50');
+
+            if (!isEnabled) return;
+
+            const value = normalize(input.value);
+            if (!value) return;
+
+            if (seenValues.has(value)) duplicatedValues.add(value);
+            seenValues.add(value);
+        });
+
+        partNumberInputs.forEach((input) => {
+            const isDuplicate = isEnabled && duplicatedValues.has(normalize(input.value));
+            input.setCustomValidity(isDuplicate ? `El NP ${label} está repetido.` : '');
+            input.classList.toggle('border-red-400', isDuplicate);
+            input.classList.toggle('bg-red-50', isDuplicate);
+        });
+
+        if (duplicatedValues.size) {
+            setHint(hint, `NP repetido: ${Array.from(duplicatedValues).join(', ')}. Conserva solo una fila por NP.`, 'text-red-700');
+            return false;
+        }
+
+        setHint(hint, `No repitas el mismo NP ${label}.`);
+        return true;
+    }
+
+    function updateFormGuidance() {
+        updateTypeCards();
+        validateDistinctPartNumbers(serialPartNumberInputs(), serialItemsHint, 'Serial', inputs.serial.checked);
+        validateDistinctPartNumbers(ratingPartNumberInputs(), ratingItemsHint, 'Rating', inputs.rating.checked);
     }
 
     function clearJobResult(message = 'Pendiente de validar en Oracle.', { clearModels = false } = {}) {
@@ -327,7 +355,7 @@ import { debounce } from './utils/debounce';
         if (!jobNumber) {
             inputs.job.setCustomValidity('');
             clearJobResult();
-            updatePreview();
+            updateFormGuidance();
             return;
         }
 
@@ -347,7 +375,7 @@ import { debounce } from './utils/debounce';
                 clearJobResult('No encontrado en Oracle Jobs.');
                 inputs.job.setCustomValidity('El Job no existe en Oracle Jobs.');
                 setHint(jobHint, 'No encontrado en Oracle Jobs.', 'text-red-700');
-                updatePreview();
+                updateFormGuidance();
                 return;
             }
 
@@ -355,7 +383,7 @@ import { debounce } from './utils/debounce';
                 clearJobResult('El Job no pertenece a Empaque.');
                 inputs.job.setCustomValidity(data.classification_messages?.packaging || 'El Job no coincide con una regla activa de Empaque.');
                 setHint(jobHint, 'El Job no pertenece a Empaque.', 'text-red-700');
-                updatePreview();
+                updateFormGuidance();
                 return;
             }
 
@@ -377,12 +405,12 @@ import { debounce } from './utils/debounce';
             setHint(jobHint, `Job válido · Assembly ${data.assembly || 'sin dato'}`, 'text-emerald-700');
             setHint(quantityHint, `Máximo disponible para solicitar: ${availableQuantity.toLocaleString('es-MX')}.`, availableQuantity > 0 ? 'text-emerald-700' : 'text-red-700');
             validateQuantityAvailability();
-            updatePreview();
+            updateFormGuidance();
         } catch (error) {
             clearJobResult('No fue posible consultar Oracle. Intenta nuevamente.');
             inputs.job.setCustomValidity('No fue posible validar el Job en este momento.');
             setHint(jobHint, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
-            updatePreview();
+            updateFormGuidance();
         }
     }, 350);
 
@@ -404,11 +432,11 @@ import { debounce } from './utils/debounce';
     ].forEach((input) => {
         input.addEventListener('input', () => {
             validateQuantityAvailability();
-            updatePreview();
+            updateFormGuidance();
         });
         input.addEventListener('change', () => {
             validateQuantityAvailability();
-            updatePreview();
+            updateFormGuidance();
         });
     });
 
@@ -431,10 +459,10 @@ import { debounce } from './utils/debounce';
         updateRemoveSerialButtons();
         setModelInputState(row.querySelector('.mapped-model-input'), mappedModel);
         row.querySelector('.serial-part-number-input')?.focus();
-        updatePreview();
+        updateFormGuidance();
     });
 
-    serialPartNumbersContainer.addEventListener('input', updatePreview);
+    serialPartNumbersContainer.addEventListener('input', updateFormGuidance);
     serialPartNumbersContainer.addEventListener('click', (event) => {
         const removeButton = event.target.closest('.remove-serial-part-number');
 
@@ -442,7 +470,7 @@ import { debounce } from './utils/debounce';
 
         removeButton.closest('.serial-part-number-row')?.remove();
         updateRemoveSerialButtons();
-        updatePreview();
+        updateFormGuidance();
     });
 
     function updateRemoveRatingButtons() {
@@ -464,10 +492,10 @@ import { debounce } from './utils/debounce';
         updateRemoveRatingButtons();
         setModelInputState(row.querySelector('.mapped-model-input'), mappedModel);
         row.querySelector('.rating-part-number-input')?.focus();
-        updatePreview();
+        updateFormGuidance();
     });
 
-    ratingPartNumbersContainer.addEventListener('input', updatePreview);
+    ratingPartNumbersContainer.addEventListener('input', updateFormGuidance);
     ratingPartNumbersContainer.addEventListener('click', (event) => {
         const removeButton = event.target.closest('.remove-rating-part-number');
 
@@ -475,19 +503,19 @@ import { debounce } from './utils/debounce';
 
         removeButton.closest('.rating-part-number-row')?.remove();
         updateRemoveRatingButtons();
-        updatePreview();
+        updateFormGuidance();
     });
 
     [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
         input.addEventListener('change', () => {
             syncConditionalFields();
-            updatePreview();
+            updateFormGuidance();
         });
     });
 
     inputs.lineType.addEventListener('change', () => {
         filterLinesByType();
-        updatePreview();
+        updateFormGuidance();
     });
 
     inputs.job.addEventListener('input', () => {
@@ -495,7 +523,7 @@ import { debounce } from './utils/debounce';
         inputs.destination.value = '';
         clearJobResult('Esperando validación de Oracle…', { clearModels: true });
         inputs.job.setCustomValidity('Espera a que termine la validación de Oracle.');
-        updatePreview();
+        updateFormGuidance();
         lookupJob();
     });
     inputs.job.addEventListener('change', lookupJob);
@@ -506,6 +534,7 @@ import { debounce } from './utils/debounce';
         updateRemoveRatingButtons();
         syncConditionalFields();
         validateQuantityAvailability();
+        updateFormGuidance();
 
         if (normalize(inputs.job.value) !== validatedJobNumber) {
             inputs.job.setCustomValidity('Espera a que el Job quede validado en Oracle.');
@@ -558,7 +587,7 @@ import { debounce } from './utils/debounce';
     syncConditionalFields();
     initializeLineTypeFilter();
     applyMappedModel(null, { status: 'pending' });
-    updatePreview();
+    updateFormGuidance();
 
     if (inputs.job.value.trim()) {
         clearJobResult('Esperando validación de Oracle…');

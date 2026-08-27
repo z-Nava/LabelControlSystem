@@ -25,37 +25,43 @@
 
     <div class="border-t border-white/10 bg-white/5 px-5 py-4 lg:px-7">
         <div class="flex flex-col gap-4 2xl:flex-row 2xl:items-center 2xl:justify-between">
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
                 <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Sigue estos pasos</h2>
-                <ol class="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                <ol @class([
+                    'mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2',
+                    'xl:grid-cols-3' => count($steps) === 3,
+                    'xl:grid-cols-4' => count($steps) !== 3,
+                ])>
                     @foreach($steps as $step)
-                        <li class="flex min-w-0 items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                        <li class="flex min-h-16 min-w-0 items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3">
                             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold text-slate-900">
                                 {{ $loop->iteration }}
                             </span>
                             <div class="min-w-0">
                                 <div class="text-sm font-semibold leading-tight text-white">{{ $step['title'] }}</div>
-                                <p class="mt-0.5 hidden text-xs leading-4 text-slate-400 min-[1500px]:block">{{ $step['description'] }}</p>
+                                <p class="mt-1 text-xs leading-4 text-slate-400">{{ $step['description'] }}</p>
                             </div>
                         </li>
                     @endforeach
                 </ol>
             </div>
 
-            <details class="group shrink-0 2xl:w-80">
-                <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2.5 text-sm font-semibold text-amber-100">
-                    Antes de comenzar
-                    <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
-                </summary>
-                <ul class="mt-2 grid gap-1.5 rounded-xl bg-white p-3 text-sm text-slate-700 shadow-lg">
-                    @foreach($preparationItems as $item)
-                        <li class="flex gap-2">
-                            <span class="font-bold text-emerald-600" aria-hidden="true">✓</span>
-                            <span>{{ $item }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            </details>
+            @if(!empty($preparationItems))
+                <details class="group shrink-0 2xl:w-80">
+                    <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-4 py-2.5 text-sm font-semibold text-amber-100">
+                        Antes de comenzar
+                        <span class="transition group-open:rotate-180" aria-hidden="true">⌄</span>
+                    </summary>
+                    <ul class="mt-2 grid gap-1.5 rounded-xl bg-white p-3 text-sm text-slate-700 shadow-lg">
+                        @foreach($preparationItems as $item)
+                            <li class="flex gap-2">
+                                <span class="font-bold text-emerald-600" aria-hidden="true">✓</span>
+                                <span>{{ $item }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
         </div>
 
         <p class="mt-3 text-xs text-slate-400" role="note">
