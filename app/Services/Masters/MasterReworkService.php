@@ -21,6 +21,7 @@ class MasterReworkService
         private readonly MasterRequestProductionContextService $productionContextService,
         private readonly MasterModelMappingService $masterModelMappingService,
         private readonly MasterPrintService $masterPrintService,
+        private readonly MasterRequestFolioValidationService $folioValidationService,
     ) {}
 
     public function buildCreateFormData(MasterRequest $masterRequest): array
@@ -138,6 +139,20 @@ class MasterReworkService
             $partialFolio = isset($data['partial_folio']) ? (int) $data['partial_folio'] : null;
             $partialQty = isset($data['partial_qty']) ? (int) $data['partial_qty'] : null;
             $standardPack = isset($data['std_pack_qty']) ? (int) $data['std_pack_qty'] : null;
+            $finalFolioQuantities = $finalFolioNumbers->mapWithKeys(
+                fn (int $folioNumber): array => [
+                    $folioNumber => $partialFolio === $folioNumber ? $partialQty : $standardPack,
+                ]
+            );
+
+            $this->folioValidationService->validateRevision(
+                data: $data,
+                assemblyJob: $assemblyJob,
+                packagingJob: $packagingJob,
+                requestedFolios: $finalFolioQuantities,
+                rootRequestId: $rootRequestId,
+            );
+
             $resolvedPoNumber = $this->normalizeNullable($packagingJob?->ttl_cust_po);
             $resolvedDestination = $this->normalizeNullable($packagingJob?->ship_code);
             $finalPoNumber = $this->normalizeNullable($data['po_number'] ?? null);

@@ -171,8 +171,12 @@ class MasterRequestService
     /**
      * Lookup: dado un job_number te regresa lo que ocupará el front.
      */
-    public function lookupOracleJob(string $jobNumber, bool $includeLabelRoomState = false): array
-    {
+    public function lookupOracleJob(
+        string $jobNumber,
+        bool $includeLabelRoomState = false,
+        ?string $role = null,
+        ?string $counterpartJobNumber = null,
+    ): array {
         $payload = $this->oracleJobService->buildLookupPayload($jobNumber);
 
         if ($payload['found'] ?? false) {
@@ -185,8 +189,26 @@ class MasterRequestService
                 ? $this->oracleJobService->findByJobNumber($payload['job_number'])
                 : null;
 
-            if ($oracleJob) {
-                $payload['master_request_state'] = $this->jobStateService->summaryForJob($oracleJob);
+            if ($oracleJob && $role !== null) {
+                $payload['master_request_state'] = $this->jobStateService->summaryForJob($oracleJob, $role);
+
+                $counterpartJobNumber = $this->normalizeNullable($counterpartJobNumber);
+
+                if (
+                    $role === MasterRequestJobStateService::ROLE_PACKAGING
+                    || $counterpartJobNumber !== null
+                ) {
+                    $assemblyJobNumber = $role === MasterRequestJobStateService::ROLE_ASSEMBLY
+                        ? (string) $oracleJob->job_number
+                        : $counterpartJobNumber;
+                    $packagingJobNumber = $role === MasterRequestJobStateService::ROLE_PACKAGING
+                        ? (string) $oracleJob->job_number
+                        : $counterpartJobNumber;
+                    $payload['master_request_pair_state'] = $this->jobStateService->summaryForPair(
+                        $assemblyJobNumber,
+                        $packagingJobNumber,
+                    );
+                }
             }
         }
 

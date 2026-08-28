@@ -59,9 +59,11 @@ const initializeMasterRework = () => {
     const ortType = form.dataset.ortType || 'ort_assembly';
     const preserveFinalValues = form.dataset.preserveFinalValues === '1';
 
-    const lookupJob = async (jobNumber) => {
+    const lookupJob = async (jobNumber, role, counterpartJobNumber = '') => {
         const url = new URL(form.dataset.lookupUrl, window.location.origin);
         url.searchParams.set('job_number', jobNumber);
+        url.searchParams.set('role', role);
+        if (counterpartJobNumber) url.searchParams.set('counterpart_job_number', counterpartJobNumber);
         const response = await fetch(url, { headers: { Accept: 'application/json' } });
 
         if (!response.ok) throw new Error(`Oracle lookup failed with status ${response.status}`);
@@ -116,7 +118,9 @@ const initializeMasterRework = () => {
         jobElements.hint.textContent = 'Buscando en Oracle…';
 
         try {
-            const payload = await lookupJob(jobNumber);
+            const counterpartRole = role === 'assembly' ? 'packaging' : 'assembly';
+            const counterpartJobNumber = elements.jobs[counterpartRole].input.value.trim();
+            const payload = await lookupJob(jobNumber, role, counterpartJobNumber);
             if (jobElements.input.value.trim() !== jobNumber) return;
             state[role] = payload;
             renderJob(role, payload);

@@ -96,6 +96,8 @@ class MasterRequestController extends Controller
             $this->service->lookupOracleJob(
                 $request->string('job_number')->toString(),
                 includeLabelRoomState: true,
+                role: $request->string('role')->toString(),
+                counterpartJobNumber: $request->string('counterpart_job_number')->toString(),
             )
         );
     }

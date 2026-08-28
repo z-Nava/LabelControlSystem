@@ -13,9 +13,14 @@ function setHint(element, type, message = '') {
     element.textContent = message;
 }
 
-async function lookupJob(lookupUrl, jobNumber) {
+async function lookupJob(lookupUrl, jobNumber, role, counterpartJobNumber = '') {
     const url = new URL(lookupUrl, window.location.origin);
     url.searchParams.set('job_number', jobNumber);
+    url.searchParams.set('role', role);
+
+    if (counterpartJobNumber) {
+        url.searchParams.set('counterpart_job_number', counterpartJobNumber);
+    }
 
     const response = await fetch(url, {
         headers: {
@@ -208,9 +213,12 @@ export function createJobLookupHandler({
         onResolved?.(null);
         setHint(hintElement, 'muted', 'Buscando en Oracle…');
         let data;
+        const counterpartJobNumber = role === 'assembly'
+            ? (fields.jobPackaging?.value || '').trim()
+            : (fields.jobAssembly?.value || '').trim();
 
         try {
-            data = await lookupJob(lookupUrl, jobNumber);
+            data = await lookupJob(lookupUrl, jobNumber, role, counterpartJobNumber);
         } catch {
             if ((inputElement?.value || '').trim() !== jobNumber) {
                 return;
