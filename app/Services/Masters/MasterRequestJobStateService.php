@@ -60,6 +60,31 @@ class MasterRequestJobStateService
         string $role,
         ?int $excludeRootRequestId = null,
     ): Collection {
+        return $this->effectiveFolioReservationsForJob(
+            $jobNumber,
+            $role,
+            $excludeRootRequestId,
+        )
+            ->groupBy('folio_number')
+            ->map(fn (Collection $reservations): Collection => $reservations
+                ->flatMap(fn (array $reservation): Collection => $reservation['quantities'])
+                ->uniqueStrict()
+                ->values())
+            ->sortKeys();
+    }
+
+    /**
+     * A folio belongs to an exact Assy/Packaging pair. Different pairs may use
+     * the same folio number with different quantities, and each reservation
+     * must count independently against every Job involved.
+     *
+     * @return Collection<int, array{folio_number: int, quantities: Collection<int, int|null>}>
+     */
+    public function effectiveFolioReservationsForJob(
+        string $jobNumber,
+        string $role,
+        ?int $excludeRootRequestId = null,
+    ): Collection {
         $jobColumn = match ($role) {
             self::ROLE_ASSEMBLY => 'job_assembly',
             self::ROLE_PACKAGING => 'job_packaging',
@@ -70,11 +95,30 @@ class MasterRequestJobStateService
             ->whereRaw("UPPER(TRIM(master_requests.{$jobColumn})) = ?", [$normalizedJobNumber])
             ->orderByDesc('master_request_folios.id')
             ->get([
+                'master_requests.request_type',
+                'master_requests.job_assembly',
+                'master_requests.job_packaging',
                 'master_request_folios.folio_number',
                 'master_request_folios.qty_for_folio',
             ]);
 
-        return $this->groupFolioQuantities($folios);
+        return $folios
+            ->groupBy(fn (MasterRequestFolio $folio): string => $this->reservationKey($folio, $role))
+            ->map(function (Collection $group): array {
+                /** @var MasterRequestFolio $folio */
+                $folio = $group->first();
+
+                return [
+                    'folio_number' => (int) $folio->folio_number,
+                    'quantities' => $group
+                        ->map(fn (MasterRequestFolio $row): ?int => $row->qty_for_folio !== null
+                            ? (int) $row->qty_for_folio
+                            : null)
+                        ->uniqueStrict()
+                        ->values(),
+                ];
+            })
+            ->values();
     }
 
     /**
@@ -115,36 +159,47 @@ class MasterRequestJobStateService
      */
     public function summaryForJob(OracleJob $job, string $role): array
     {
-        $folioQuantities = $this->effectiveFolioQuantitiesForJob(
+        $reservations = $this->effectiveFolioReservationsForJob(
             (string) $job->job_number,
             $role,
         );
-        $registeredFolios = $folioQuantities->keys()
-            ->map(fn (mixed $folio): int => (int) $folio)
+        $registeredFolios = $reservations
+            ->pluck('folio_number')
+            ->unique()
             ->sort()
             ->values();
-        $foliosWithoutQuantity = $folioQuantities
-            ->filter(fn (Collection $quantities): bool => $quantities->containsStrict(null))
-            ->keys()
-            ->map(fn (mixed $folio): int => (int) $folio)
+        $foliosWithoutQuantity = $reservations
+            ->filter(fn (array $reservation): bool => $reservation['quantities']->containsStrict(null))
+            ->pluck('folio_number')
+            ->unique()
             ->sort()
             ->values();
-        $quantityConflicts = $folioQuantities
-            ->filter(fn (Collection $quantities): bool => $quantities
+        $quantityConflicts = $reservations
+            ->filter(fn (array $reservation): bool => $reservation['quantities']
                 ->filter(fn (?int $quantity): bool => $quantity !== null)
                 ->count() > 1)
-            ->keys()
-            ->map(fn (mixed $folio): int => (int) $folio)
+            ->pluck('folio_number')
+            ->unique()
             ->sort()
             ->values();
-        $effectiveFolios = $folioQuantities->map(
-            fn (Collection $quantities): ?int => $quantities->count() === 1
-                ? $quantities->first()
-                : null,
-        );
+        $folioQuantities = $reservations
+            ->groupBy('folio_number')
+            ->map(function (Collection $group): ?int {
+                $quantities = $group
+                    ->flatMap(fn (array $reservation): Collection => $reservation['quantities'])
+                    ->uniqueStrict()
+                    ->values();
+
+                return $quantities->count() === 1 ? $quantities->first() : null;
+            })
+            ->sortKeys();
         $hasCompleteQuantities = $foliosWithoutQuantity->isEmpty() && $quantityConflicts->isEmpty();
         $hasValidJobQuantity = $job->job_qty !== null && (int) $job->job_qty >= 0;
-        $reservedQuantity = $hasCompleteQuantities ? (int) $effectiveFolios->sum() : null;
+        $reservedQuantity = $hasCompleteQuantities
+            ? (int) $reservations->sum(
+                fn (array $reservation): int => (int) $reservation['quantities']->first(),
+            )
+            : null;
         $availableQuantity = $hasCompleteQuantities && $hasValidJobQuantity
             ? max(0, (int) $job->job_qty - $reservedQuantity)
             : null;
@@ -154,7 +209,7 @@ class MasterRequestJobStateService
             'reserved_quantity' => $reservedQuantity,
             'available_quantity' => $availableQuantity,
             'folios_without_quantity' => $foliosWithoutQuantity->all(),
-            'folio_quantities' => $effectiveFolios->all(),
+            'folio_quantities' => $folioQuantities->all(),
             'quantity_conflicts' => $quantityConflicts->all(),
         ];
     }
@@ -199,21 +254,20 @@ class MasterRequestJobStateService
             ->whereIn('master_requests.id', $effectiveRequestIds);
     }
 
-    /**
-     * @param  Collection<int, MasterRequestFolio>  $folios
-     * @return Collection<int, Collection<int, int|null>>
-     */
-    private function groupFolioQuantities(Collection $folios): Collection
+    private function reservationKey(MasterRequestFolio $folio, string $role): string
     {
-        return $folios
-            ->groupBy(fn (MasterRequestFolio $folio): int => (int) $folio->folio_number)
-            ->map(fn (Collection $group): Collection => $group
-                ->map(fn (MasterRequestFolio $folio): ?int => $folio->qty_for_folio !== null
-                    ? (int) $folio->qty_for_folio
-                    : null)
-                ->uniqueStrict()
-                ->values())
-            ->sortKeys();
+        $folioNumber = (int) $folio->folio_number;
+
+        if ($folio->request_type !== MasterModelMapping::TYPE_ASSEMBLY_PACKAGING) {
+            return "{$role}|single|{$folioNumber}";
+        }
+
+        return implode('|', [
+            $role,
+            $this->normalizeNullable($folio->job_assembly) ?? '',
+            $this->normalizeNullable($folio->job_packaging) ?? '',
+            $folioNumber,
+        ]);
     }
 
     private function normalizeNullable(mixed $value): ?string

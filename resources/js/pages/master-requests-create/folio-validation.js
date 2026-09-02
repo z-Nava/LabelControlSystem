@@ -34,25 +34,6 @@ function normalizeJobNumber(value) {
     return String(value || '').trim().toUpperCase();
 }
 
-function normalizedFolioQuantities(folioQuantities) {
-    const quantities = new Map();
-
-    if (!folioQuantities || typeof folioQuantities !== 'object') {
-        return quantities;
-    }
-
-    Object.entries(folioQuantities).forEach(([folioValue, quantityValue]) => {
-        const folio = positiveInteger(folioValue);
-        const quantity = positiveInteger(quantityValue);
-
-        if (folio !== null) {
-            quantities.set(folio, quantity);
-        }
-    });
-
-    return quantities;
-}
-
 function requestedValues(values) {
     const foliosFrom = positiveInteger(values.folios_from);
     const foliosTo = positiveInteger(values.folios_to);
@@ -138,7 +119,6 @@ export function evaluateFolioValidation(values, jobLookups = {}) {
             const registeredFolios = normalizedFolios(state?.registered_folios);
             const foliosWithoutQuantity = normalizedFolios(state?.folios_without_quantity);
             const quantityConflicts = normalizedFolios(state?.quantity_conflicts);
-            const existingQuantities = normalizedFolioQuantities(state?.folio_quantities);
             const jobQuantity = nonNegativeInteger(lookup.job_qty);
             const reservedQuantity = nonNegativeInteger(state?.reserved_quantity);
             const overlappingFolios = duplicateFolios(registeredFolios, request);
@@ -166,27 +146,16 @@ export function evaluateFolioValidation(values, jobLookups = {}) {
                     : `Los folios solicitados que ya existen son: ${duplicates.join(', ')}.`);
             }
 
-            const requestedQuantityConflicts = request.requestedFolios
-                .filter((folio) => {
-                    const existingQuantity = existingQuantities.get(folio);
-                    const requestedQuantity = request.folioQuantities.get(folio);
-
-                    return existingQuantity !== undefined
-                        && existingQuantity !== null
-                        && requestedQuantity !== existingQuantity;
-                });
-
-            if (requestedQuantityConflicts.length > 0) {
-                errors.push(`La cantidad solicitada no coincide con la registrada para los folios compartidos: ${requestedQuantityConflicts.join(', ')}.`);
-            }
-
             if (state && jobQuantity === null) {
                 errors.push('El Job no tiene una cantidad válida en Oracle Jobs.');
             }
 
+            const alreadyReservedFolios = isAssemblyPackaging
+                ? pairRegisteredFolios
+                : registeredFolios;
             const additionalQuantity = request.ready
                 ? request.requestedFolios
-                    .filter((folio) => !registeredFolios.includes(folio))
+                    .filter((folio) => !alreadyReservedFolios.includes(folio))
                     .reduce((total, folio) => total + request.folioQuantities.get(folio), 0)
                 : null;
             const resultingQuantity = additionalQuantity !== null && reservedQuantity !== null
@@ -210,7 +179,7 @@ export function evaluateFolioValidation(values, jobLookups = {}) {
 
                 if (sharedFolios.length > 0) {
                     const counterpart = role === 'assembly' ? 'Empaque' : 'Ensamble';
-                    notices.push(`Esta Job comparte los folios ${sharedFolios.join(', ')} con otras Jobs de ${counterpart}. No se reservan dos veces.`);
+                    notices.push(`Esta Job también usa los folios ${sharedFolios.join(', ')} en otras combinaciones de ${counterpart}. Para esta combinación se contabilizan como piezas adicionales.`);
                 }
             }
 

@@ -100,6 +100,7 @@ final class MasterRequestFolioValidationService
             ->filter(fn (mixed $job): bool => $job instanceof OracleJob);
         $lockedJobs = $this->jobStateService->lockJobs($availableJobs);
         $resolvedContexts = collect();
+        $registeredPairFolios = collect();
         $errors = [];
 
         foreach ($contexts as $context) {
@@ -152,12 +153,16 @@ final class MasterRequestFolioValidationService
             /** @var OracleJob $job */
             $job = $context['job'];
             $jobNumber = $context['job_number'];
-            $existingQuantities = $this->jobStateService->effectiveFolioQuantitiesForJob(
+            $existingReservations = $this->jobStateService->effectiveFolioReservationsForJob(
                 jobNumber: $jobNumber,
                 role: $context['role'],
                 excludeRootRequestId: $excludeRootRequestId,
             );
-            $registeredFolios = $existingQuantities->keys()->sort()->values();
+            $registeredFolios = $existingReservations
+                ->pluck('folio_number')
+                ->unique()
+                ->sort()
+                ->values();
 
             if (! $isAssemblyPackaging) {
                 $duplicateFolios = $requestedFolios->keys()
@@ -176,45 +181,19 @@ final class MasterRequestFolioValidationService
                 }
             }
 
-            $registeredWithoutQuantity = $existingQuantities
-                ->filter(fn (Collection $quantities): bool => $quantities->containsStrict(null))
-                ->keys()
+            $registeredWithoutQuantity = $existingReservations
+                ->filter(fn (array $reservation): bool => $reservation['quantities']->containsStrict(null))
+                ->pluck('folio_number')
+                ->unique()
                 ->sort()
                 ->values();
-            $registeredQuantityConflicts = $existingQuantities
-                ->filter(fn (Collection $quantities): bool => $quantities
+            $registeredQuantityConflicts = $existingReservations
+                ->filter(fn (array $reservation): bool => $reservation['quantities']
                     ->filter(fn (?int $quantity): bool => $quantity !== null)
                     ->count() > 1)
-                ->keys()
+                ->pluck('folio_number')
+                ->unique()
                 ->sort()
-                ->values();
-            $requestedQuantityConflicts = $requestedFolios
-                ->filter(function (int $requestedQuantity, int $folio) use ($existingQuantities): bool {
-                    /** @var Collection<int, int|null>|null $registeredQuantities */
-                    $registeredQuantities = $existingQuantities->get($folio);
-
-                    if (! $registeredQuantities instanceof Collection) {
-                        return false;
-                    }
-
-                    $knownQuantities = $registeredQuantities
-                        ->filter(fn (?int $quantity): bool => $quantity !== null);
-
-                    return $knownQuantities->count() === 1
-                        && $knownQuantities->first() !== $requestedQuantity;
-                })
-                ->map(function (int $requestedQuantity, int $folio) use ($existingQuantities): string {
-                    $registeredQuantity = $existingQuantities->get($folio)
-                        ->filter(fn (?int $quantity): bool => $quantity !== null)
-                        ->first();
-
-                    return sprintf(
-                        '%s (registrada: %s, solicitada: %s)',
-                        $folio,
-                        number_format((int) $registeredQuantity),
-                        number_format($requestedQuantity),
-                    );
-                })
                 ->values();
 
             if ($registeredWithoutQuantity->isNotEmpty()) {
@@ -235,18 +214,8 @@ final class MasterRequestFolioValidationService
                 );
             }
 
-            if ($requestedQuantityConflicts->isNotEmpty()) {
-                $errors['std_pack_qty'][] = sprintf(
-                    'La cantidad solicitada no coincide con la ya registrada para folios compartidos del %s %s: %s.',
-                    $context['label'],
-                    $jobNumber,
-                    $requestedQuantityConflicts->implode('; '),
-                );
-            }
-
             $hasQuantityErrors = $registeredWithoutQuantity->isNotEmpty()
-                || $registeredQuantityConflicts->isNotEmpty()
-                || $requestedQuantityConflicts->isNotEmpty();
+                || $registeredQuantityConflicts->isNotEmpty();
 
             if ($job->job_qty === null || (int) $job->job_qty < 0) {
                 $errors[$context['field']][] = "El {$context['label']} {$jobNumber} no tiene una cantidad válida en Oracle Jobs.";
@@ -258,11 +227,14 @@ final class MasterRequestFolioValidationService
                 continue;
             }
 
-            $reservedQuantity = (int) $existingQuantities->sum(
-                fn (Collection $quantities): int => (int) $quantities->first(),
+            $reservedQuantity = (int) $existingReservations->sum(
+                fn (array $reservation): int => (int) $reservation['quantities']->first(),
             );
+            $alreadyReservedFolios = $isAssemblyPackaging
+                ? $registeredPairFolios
+                : $registeredFolios;
             $additionalQuantity = (int) $requestedFolios
-                ->reject(fn (int $quantity, int $folio): bool => $existingQuantities->has($folio))
+                ->reject(fn (int $quantity, int $folio): bool => $alreadyReservedFolios->contains($folio))
                 ->sum();
             $resultingQuantity = $reservedQuantity + $additionalQuantity;
             $jobQuantity = (int) $job->job_qty;
