@@ -8,7 +8,7 @@ use App\Models\ProductionLine;
 use App\Models\Shift;
 use App\Models\SkuSerialFormat;
 use App\Support\SerialStandards;
-use App\ViewModels\Labels\LabelRequestIndexRow;
+use Illuminate\Support\Collection;
 
 class LabelRequestReadService
 {
@@ -105,11 +105,52 @@ class LabelRequestReadService
         return [
             'labelRequests' => $labelRequests,
             'labelRequestRows' => $labelRequests->getCollection()
-                ->map(fn (LabelRequest $labelRequest): LabelRequestIndexRow => LabelRequestIndexRow::from($labelRequest)),
+                ->map(fn (LabelRequest $labelRequest): array => $this->buildIndexRow($labelRequest)),
             'filters' => $validated,
             'statusOptions' => self::INDEX_STATUS_OPTIONS,
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
             'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     labelRequest: LabelRequest,
+     *     serialPartNumbers: array<int, string>,
+     *     ratingPartNumbers: array<int, string>,
+     *     innerItem: ?string,
+     *     shippingItems: array<int, string>,
+     *     shippingItemSummary: string,
+     *     hasGroupedLpkDetails: bool,
+     *     lpkProductionJobs: Collection<int, string>
+     * }
+     */
+    private function buildIndexRow(LabelRequest $labelRequest): array
+    {
+        $formatItems = fn (array $items): array => collect($items)
+            ->map(fn (array $item): string => $item['part_number'].($item['model'] ? ' · '.$item['model'] : ''))
+            ->all();
+
+        $serialPartNumbers = $formatItems($labelRequest->requestedSerialItems());
+        $ratingPartNumbers = $formatItems($labelRequest->requestedRatingItems());
+        $shippingItems = $formatItems($labelRequest->requestedShippingItems());
+        $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
+
+        return [
+            'labelRequest' => $labelRequest,
+            'serialPartNumbers' => $serialPartNumbers,
+            'ratingPartNumbers' => $ratingPartNumbers,
+            'innerItem' => $labelRequest->include_inner
+                ? collect([$labelRequest->inner_part_number, $labelRequest->inner_model])->filter()->implode(' · ')
+                : null,
+            'shippingItems' => $shippingItems,
+            'shippingItemSummary' => $shippingItems !== []
+                ? implode(', ', array_slice($shippingItems, 0, 2))
+                : 'Sin NP capturado',
+            'hasGroupedLpkDetails' => $hasGroupedLpkDetails,
+            'lpkProductionJobs' => $hasGroupedLpkDetails
+                ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
+                : collect(),
         ];
     }
 
