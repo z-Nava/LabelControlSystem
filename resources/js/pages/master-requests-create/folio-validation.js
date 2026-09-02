@@ -96,6 +96,18 @@ function matchingPairState(request, jobLookups) {
             && normalizeJobNumber(state.packaging_job) === request.packagingJob) || null;
 }
 
+function duplicatePairMessage(request, folios) {
+    const folioText = folios.length === 1
+        ? `registrado el folio ${folios[0]}`
+        : `registrados los folios ${folios.join(', ')}`;
+
+    if (!request.assemblyJob) {
+        return `El Job Empaque ${request.packagingJob} ya tiene ${folioText} en una requisición sin Job Ensamble.`;
+    }
+
+    return `La combinación Job Ensamble ${request.assemblyJob} / Job Empaque ${request.packagingJob} ya tiene ${folioText}.`;
+}
+
 export function evaluateFolioValidation(values, jobLookups = {}) {
     const request = requestedValues(values);
     const isAssemblyPackaging = request.requestType === 'assembly_packaging';
@@ -142,7 +154,7 @@ export function evaluateFolioValidation(values, jobLookups = {}) {
 
             if (duplicates.length > 0) {
                 errors.push(isAssemblyPackaging
-                    ? `La combinación exacta de Job Ensamble y Job Empaque ya tiene los folios: ${duplicates.join(', ')}.`
+                    ? duplicatePairMessage(request, duplicates)
                     : `Los folios solicitados que ya existen son: ${duplicates.join(', ')}.`);
             }
 

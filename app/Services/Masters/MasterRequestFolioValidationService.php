@@ -138,14 +138,24 @@ final class MasterRequestFolioValidationService
                 ->values();
 
             if ($duplicatePairFolios->isNotEmpty()) {
-                $assemblyLabel = $assemblyJobNumber ?: 'SIN JOB ENSAMBLE';
-                $errors['job_packaging'][] = sprintf(
-                    'La combinación Job Ensamble %s / Job Empaque %s ya tiene registrados los folios solicitados: %s. Todos los folios registrados para esta combinación son: %s.',
-                    $assemblyLabel,
-                    $packagingJobNumber,
-                    $duplicatePairFolios->implode(', '),
-                    $registeredPairFolios->implode(', '),
-                );
+                $duplicateDescription = $duplicatePairFolios->count() === 1
+                    ? "registrado el folio {$duplicatePairFolios->first()}"
+                    : "registrados los folios {$duplicatePairFolios->implode(', ')}";
+
+                $errors['job_packaging'][] = $assemblyJobNumber
+                    ? sprintf(
+                        'La combinación Job Ensamble %s / Job Empaque %s ya tiene %s. Todos los folios registrados para esta combinación son: %s.',
+                        $assemblyJobNumber,
+                        $packagingJobNumber,
+                        $duplicateDescription,
+                        $registeredPairFolios->implode(', '),
+                    )
+                    : sprintf(
+                        'El Job Empaque %s ya tiene %s en una requisición sin Job Ensamble. Todos los folios registrados para este Job Empaque sin Ensamble son: %s.',
+                        $packagingJobNumber,
+                        $duplicateDescription,
+                        $registeredPairFolios->implode(', '),
+                    );
             }
         }
 
