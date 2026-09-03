@@ -71,6 +71,7 @@ function validLookupForRole(lookup, role) {
     };
     let folioResult = { status: 'idle', jobs: [] };
     let isSubmitting = false;
+    let modelWasManuallyEdited = Boolean(fields.modelDisplay?.value.trim());
 
     const requestType = () => fields.requestType?.value || '';
     const productionRole = () => requestType() === ASSEMBLY_PACKAGING ? 'packaging' : 'assembly';
@@ -86,8 +87,40 @@ function validLookupForRole(lookup, role) {
             ? 'packaging'
             : 'assembly';
         const lookup = jobLookups[preferredRole];
+        const selectedRequestType = requestType();
 
-        return lookup?.models_by_request_type?.[requestType()] || '';
+        if (!validLookupForRole(lookup, preferredRole)) {
+            return {
+                ambiguous: false,
+                lookup,
+                model: '',
+            };
+        }
+
+        let relevantRequestTypes = selectedRequestType
+            ? [selectedRequestType]
+            : (lookup.production_context?.allowed_request_types || [])
+                .filter((type) => preferredRole === 'packaging'
+                    ? type === ASSEMBLY_PACKAGING
+                    : type !== ASSEMBLY_PACKAGING);
+
+        if (!selectedRequestType && relevantRequestTypes.length === 0) {
+            relevantRequestTypes = Object.keys(lookup.models_by_request_type || {})
+                .filter((type) => preferredRole === 'packaging'
+                    ? type === ASSEMBLY_PACKAGING
+                    : type !== ASSEMBLY_PACKAGING);
+        }
+
+        const candidateModels = relevantRequestTypes
+            .map((type) => lookup.models_by_request_type?.[type] || '')
+            .filter(Boolean);
+        const uniqueModels = [...new Set(candidateModels)];
+
+        return {
+            ambiguous: uniqueModels.length > 1,
+            lookup,
+            model: uniqueModels.length === 1 ? uniqueModels[0] : '',
+        };
     };
 
     const applySuggestions = () => {
@@ -113,15 +146,30 @@ function validLookupForRole(lookup, role) {
             );
         }
 
-        const model = resolveModel();
-        setIfEmpty(fields.modelDisplay, model);
+        const modelResolution = resolveModel();
 
-        const modelMissing = Boolean(requestType() && lookup?.found && !model && !fields.modelDisplay?.value.trim());
+        if (!modelWasManuallyEdited && fields.modelDisplay) {
+            fields.modelDisplay.value = modelResolution.model;
+        }
+
+        const modelMissing = Boolean(
+            requestType()
+            && modelResolution.lookup?.found
+            && !modelResolution.model
+            && !fields.modelDisplay?.value.trim(),
+        );
+        const modelAmbiguous = Boolean(
+            !requestType()
+            && modelResolution.ambiguous
+            && !fields.modelDisplay?.value.trim(),
+        );
         if (fields.modelMappingWarning) {
-            fields.modelMappingWarning.textContent = modelMissing
-                ? 'No hay un modelo sugerido en Master Model Mapping. Captúralo manualmente.'
-                : '';
-            fields.modelMappingWarning.classList.toggle('hidden', !modelMissing);
+            fields.modelMappingWarning.textContent = modelAmbiguous
+                ? 'Hay más de un modelo posible. Selecciona el Tipo de Master para determinarlo o captúralo manualmente.'
+                : (modelMissing
+                    ? 'No hay un modelo sugerido en Master Model Mapping. Captúralo manualmente.'
+                    : '');
+            fields.modelMappingWarning.classList.toggle('hidden', !modelMissing && !modelAmbiguous);
         }
 
         if (validLookupForRole(jobLookups.packaging, 'packaging')) {
@@ -221,6 +269,7 @@ function validLookupForRole(lookup, role) {
 
         if (affectsModel) {
             fields.modelDisplay.value = '';
+            modelWasManuallyEdited = false;
         }
     };
 
@@ -257,9 +306,14 @@ function validLookupForRole(lookup, role) {
     fields.requestType.addEventListener('change', () => {
         fields.oracleLine.value = '';
         fields.modelDisplay.value = '';
+        modelWasManuallyEdited = false;
         fields.localInput.value = '';
         fields.subinventoryInput.value = '';
         updatePage();
+    });
+
+    fields.modelDisplay.addEventListener('input', () => {
+        modelWasManuallyEdited = true;
     });
 
     form.addEventListener('input', (event) => {
