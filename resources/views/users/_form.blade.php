@@ -113,9 +113,38 @@
                         class="rounded border-slate-300"
                         @checked(in_array($permission, $selectedModulePermissions, true))
                     >
-                    <span class="text-sm capitalize">{{ $permission }}</span>
+                    <span class="text-sm">{{ \App\Models\User::permissionLabel($permission) }}</span>
                 </label>
             @endforeach
+        </div>
+
+        <div class="mt-5 border-t border-slate-200 pt-4">
+            <div class="text-sm font-semibold text-slate-800">Accesos especiales</div>
+            <p class="mt-1 text-xs text-slate-500">
+                Estos accesos nunca se habilitan automáticamente y requieren autorización explícita por usuario.
+            </p>
+
+            <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                @foreach($availableSpecialPermissions as $permission)
+                    <label class="inline-flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-3">
+                        <input
+                            type="checkbox"
+                            name="module_permissions[]"
+                            value="{{ $permission }}"
+                            class="mt-0.5 rounded border-amber-400"
+                            @checked(in_array($permission, $selectedModulePermissions, true))
+                        >
+                        <span>
+                            <span class="block text-sm font-semibold text-amber-950">
+                                Acceso a {{ \App\Models\User::permissionLabel($permission) }}
+                            </span>
+                            <span class="mt-0.5 block text-xs text-amber-800">
+                                Requiere también acceso efectivo al módulo Master.
+                            </span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
         </div>
         @error('module_permissions') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         @error('module_permissions.*') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror

@@ -16,6 +16,18 @@ class User extends Authenticatable
         'oracle',
     ];
 
+    public const AVAILABLE_SPECIAL_PERMISSIONS = [
+        'master_manual',
+    ];
+
+    public const PERMISSION_LABELS = [
+        'master' => 'Master',
+        'labels' => 'Seriales y etiquetas',
+        'dummy' => 'Dummy QR',
+        'oracle' => 'Oracle',
+        'master_manual' => 'Master Manual',
+    ];
+
     public const PRODUCTION_POSITIONS = [
         'operator' => 'Operador',
         'utility' => 'Utility',
@@ -73,11 +85,26 @@ class User extends Authenticatable
 
         $permissions = $this->module_permissions;
 
-        if (empty($permissions)) {
+        if (in_array($module, self::AVAILABLE_SPECIAL_PERMISSIONS, true)) {
+            return in_array($module, $permissions ?? [], true)
+                && $this->hasModuleAccess('master');
+        }
+
+        $configuredModulePermissions = array_intersect(
+            $permissions ?? [],
+            self::AVAILABLE_MODULE_PERMISSIONS,
+        );
+
+        if (empty($configuredModulePermissions)) {
             return true;
         }
 
-        return in_array($module, $permissions, true);
+        return in_array($module, $configuredModulePermissions, true);
+    }
+
+    public static function permissionLabel(string $permission): string
+    {
+        return self::PERMISSION_LABELS[$permission] ?? $permission;
     }
 
     public function shift(): BelongsTo

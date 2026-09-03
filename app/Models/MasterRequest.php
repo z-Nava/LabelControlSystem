@@ -35,6 +35,8 @@ class MasterRequest extends Model
         'shift_id',
         'leader_name',
         'request_source',
+        'is_manual',
+        'manual_reason',
         'requested_by_name',
         'requested_by_user_id',
         'po_number',
@@ -67,6 +69,7 @@ class MasterRequest extends Model
 
     protected $casts = [
         'request_date' => 'date',
+        'is_manual' => 'boolean',
         'revision_number' => 'integer',
         'reworked_at' => 'datetime',
         'rework_changes' => 'array',
@@ -134,6 +137,11 @@ class MasterRequest extends Model
         return $this->request_source === self::SOURCE_KIOSK;
     }
 
+    public function isManual(): bool
+    {
+        return (bool) $this->is_manual;
+    }
+
     public function isCancelled(): bool
     {
         return $this->status === self::STATUS_CANCELLED;
@@ -178,6 +186,10 @@ class MasterRequest extends Model
 
     public function getRequestSourceLabelAttribute(): string
     {
+        if ($this->isManual()) {
+            return 'Label Room · Manual';
+        }
+
         return $this->isFromKiosk() ? 'Kiosco' : 'Label Room';
     }
 }

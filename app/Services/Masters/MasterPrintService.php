@@ -222,7 +222,7 @@ class MasterPrintService
             return [
                 'leader' => '',
                 'shift' => '',
-                'line' => (string) ($masterRequest->line?->code ?? ''),
+                'line' => $oracleLine,
                 'model' => $resolvedModel,
                 'date' => '',
                 'folio_id' => $folio->id,
@@ -242,7 +242,7 @@ class MasterPrintService
                 // constantes del formato (si luego quieres configurarlas, las movemos a config/DB)
                 'subinventory' => $resolvedSubinventory,
                 'local' => $resolvedLocal,
-                'WIP-MOTORS' => ($isAssemblyPackaging ? (string) ($masterRequest->line?->code ?? '') : 'SMARKET-1'),
+                'WIP-MOTORS' => ($isAssemblyPackaging ? $oracleLine : 'SMARKET-1'),
                 'qty_pallet' => (string) ($folio->qty_for_folio ?? $masterRequest->std_pack_qty ?? ($isMotors ? 0 : '')),
             ];
         })->values();

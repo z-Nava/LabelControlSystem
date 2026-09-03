@@ -58,9 +58,14 @@
             <tbody class="divide-y">
                 @forelse($masterRequests as $mr)
                     <tr>
-                        <td class="py-3 pr-3 font-semibold">#{{ $mr->id }}</td>
+                        <td class="py-3 pr-3 font-semibold">
+                            #{{ $mr->id }}
+                            @if($mr->isManual())
+                                <span class="ml-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">Manual</span>
+                            @endif
+                        </td>
                         <td class="py-3 pr-3">{{ $mr->created_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? '-' }}</td>
-                        <td class="py-3 pr-3">{{ $mr->line?->code ?? '-' }}</td>
+                        <td class="py-3 pr-3">{{ $mr->oracle_line ?: $mr->line?->code ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->shift?->code ?? '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_assembly ?: '-' }}</td>
                         <td class="py-3 pr-3">{{ $mr->job_packaging ?: '-' }}</td>

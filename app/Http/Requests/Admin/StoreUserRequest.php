@@ -27,7 +27,11 @@ class StoreUserRequest extends FormRequest
             'roles.*' => ['required', 'exists:roles,id'],
             'password' => ['nullable', 'string', 'min:6', 'confirmed'],
             'module_permissions' => ['nullable', 'array'],
-            'module_permissions.*' => ['required', 'string', 'in:master,labels,dummy,oracle'],
+            'module_permissions.*' => [
+                'required',
+                'string',
+                Rule::in(array_merge(User::AVAILABLE_MODULE_PERMISSIONS, User::AVAILABLE_SPECIAL_PERMISSIONS)),
+            ],
         ];
     }
 

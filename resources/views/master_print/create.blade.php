@@ -6,8 +6,11 @@
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Imprimir Master</h1>
             <p class="text-slate-600 mt-1">
-                Requisición #{{ $mr->id }} · {{ $mr->line?->code }}@if($mr->shift) · Turno {{ $mr->shift->code }}@endif
+                Requisición #{{ $mr->id }} · {{ $mr->oracle_line ?: $mr->line?->code }}@if($mr->shift) · Turno {{ $mr->shift->code }}@endif
             </p>
+            @if($mr->isManual())
+                <span class="mt-2 inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">Master Manual</span>
+            @endif
         </div>
        <div class="flex items-center gap-2">
             <a href="{{ route('master_requests.reprints.index', $mr->id) }}"

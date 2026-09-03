@@ -2,8 +2,11 @@
 
 namespace App\Services\Masters;
 
+use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Models\MasterRequestFolio;
+use App\Models\OracleJob;
+use App\Models\ProductionLine;
 use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Kiosk\KioskMasterRequestValidationService;
 use App\Services\Oracle\OracleJobService;
@@ -110,6 +113,65 @@ class MasterRequestService
             }
 
             return $mr->load(['line', 'shift', 'folios']);
+        });
+    }
+
+    public function createManual(array $data): MasterRequest
+    {
+        return DB::transaction(function () use ($data): MasterRequest {
+            $validatedJobs = $this->validateManualJobs($data);
+
+            $foliosFrom = (int) ($data['folios_from'] ?? 0);
+            $foliosTo = (int) ($data['folios_to'] ?? 0);
+            $hasPartialData = ! empty($data['partial_folio']) && ! empty($data['partial_qty']);
+
+            if ($foliosFrom < 1 || $foliosTo < $foliosFrom) {
+                throw ValidationException::withMessages([
+                    'folios_from' => 'Rango de folios inválido.',
+                ]);
+            }
+
+            $data['request_date'] = null;
+            $data['week'] = now()->weekOfYear;
+            $data['shift_id'] = null;
+            $data['leader_name'] = null;
+            $data['request_source'] = MasterRequest::SOURCE_LABEL_ROOM;
+            $data['is_manual'] = true;
+            $officialLineJob = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING
+                ? ($validatedJobs['packaging'] ?? null)
+                : ($validatedJobs['assembly'] ?? null);
+            $data['line_id'] = $this->resolveManualProductionLineId($officialLineJob?->line);
+
+            if ($hasPartialData) {
+                $data['partial_folio'] = $foliosTo + 1;
+            } else {
+                $data['partial_folio'] = null;
+                $data['partial_qty'] = null;
+            }
+
+            $masterRequest = MasterRequest::create($data);
+
+            for ($folio = $foliosFrom; $folio <= $foliosTo; $folio++) {
+                MasterRequestFolio::create([
+                    'master_request_id' => $masterRequest->id,
+                    'folio_number' => $folio,
+                    'is_partial' => false,
+                    'qty_for_folio' => $data['std_pack_qty'],
+                    'status' => 'pending',
+                ]);
+            }
+
+            if ($hasPartialData) {
+                MasterRequestFolio::create([
+                    'master_request_id' => $masterRequest->id,
+                    'folio_number' => $data['partial_folio'],
+                    'is_partial' => true,
+                    'qty_for_folio' => $data['partial_qty'],
+                    'status' => 'pending',
+                ]);
+            }
+
+            return $masterRequest->load(['line', 'shift', 'folios']);
         });
     }
 
@@ -233,5 +295,89 @@ class MasterRequestService
             MasterRequest::SOURCE_KIOSK => $this->kioskValidationService,
             default => $this->labelRoomValidationService,
         };
+    }
+
+    /**
+     * @return array<string, OracleJob>
+     */
+    private function validateManualJobs(array $data): array
+    {
+        $isAssemblyPackaging = ($data['request_type'] ?? null) === MasterModelMapping::TYPE_ASSEMBLY_PACKAGING;
+        $validatedJobs = [];
+        $jobs = [
+            [
+                'number' => $data['job_assembly'] ?? null,
+                'field' => 'job_assembly',
+                'role' => 'assembly',
+                'label' => 'Ensamble',
+                'required' => ! $isAssemblyPackaging,
+            ],
+            [
+                'number' => $data['job_packaging'] ?? null,
+                'field' => 'job_packaging',
+                'role' => 'packaging',
+                'label' => 'Empaque',
+                'required' => $isAssemblyPackaging,
+            ],
+        ];
+
+        foreach ($jobs as $jobData) {
+            $jobNumber = $this->normalizeNullable($jobData['number']);
+
+            if ($jobNumber === null) {
+                if ($jobData['required']) {
+                    throw ValidationException::withMessages([
+                        $jobData['field'] => "El Job {$jobData['label']} es obligatorio.",
+                    ]);
+                }
+
+                continue;
+            }
+
+            $job = $this->oracleJobService->findByJobNumber($jobNumber);
+
+            if (! $job) {
+                throw ValidationException::withMessages([
+                    $jobData['field'] => "El Job {$jobData['label']} no existe en Oracle Jobs.",
+                ]);
+            }
+
+            $lockedJob = OracleJob::query()->whereKey($job->id)->lockForUpdate()->first();
+
+            if (! $lockedJob) {
+                throw ValidationException::withMessages([
+                    $jobData['field'] => "El Job {$jobData['label']} ya no está disponible en Oracle Jobs.",
+                ]);
+            }
+
+            $isValid = $jobData['role'] === 'packaging'
+                ? $this->oracleJobService->isPackagingJob($lockedJob)
+                : $this->oracleJobService->isAssemblyJob($lockedJob);
+
+            if (! $isValid) {
+                throw ValidationException::withMessages([
+                    $jobData['field'] => $this->oracleJobService
+                        ->classificationValidationMessage($jobData['role']),
+                ]);
+            }
+
+            $validatedJobs[$jobData['role']] = $lockedJob;
+        }
+
+        return $validatedJobs;
+    }
+
+    private function resolveManualProductionLineId(mixed $line): ?int
+    {
+        $normalizedLine = $this->normalizeNullable($line);
+
+        if ($normalizedLine === null) {
+            return null;
+        }
+
+        return ProductionLine::query()
+            ->where('active', true)
+            ->whereRaw('UPPER(TRIM(code)) = ?', [$normalizedLine])
+            ->value('id');
     }
 }

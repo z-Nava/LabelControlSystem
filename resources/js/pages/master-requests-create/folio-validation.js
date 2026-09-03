@@ -263,9 +263,11 @@ function element(tagName, className, text) {
     return node;
 }
 
-function renderJob(container, job) {
+function renderJob(container, job, { nonBlocking = false } = {}) {
     const classNames = {
-        invalid: 'rounded-xl border border-red-200 bg-red-50 p-4 text-red-950',
+        invalid: nonBlocking
+            ? 'rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950'
+            : 'rounded-xl border border-red-200 bg-red-50 p-4 text-red-950',
         valid: 'rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950',
         valid_with_notice: 'rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950',
         pending: 'rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-900',
@@ -313,7 +315,11 @@ function renderJob(container, job) {
     }
 
     job.errors.forEach((message) => {
-        card.appendChild(element('p', 'mt-2 text-sm font-semibold text-red-700', message));
+        card.appendChild(element(
+            'p',
+            nonBlocking ? 'mt-2 text-sm font-semibold text-amber-800' : 'mt-2 text-sm font-semibold text-red-700',
+            `${nonBlocking ? 'Advertencia: ' : ''}${message}`,
+        ));
     });
 
     job.notices.forEach((message) => {
@@ -331,7 +337,7 @@ function renderJob(container, job) {
     container.appendChild(card);
 }
 
-export function refreshFolioValidation(form, container, jobLookups = {}) {
+export function refreshFolioValidation(form, container, jobLookups = {}, options = {}) {
     const fieldValue = (name) => (form.elements.namedItem(name)?.value || '').trim();
     const result = evaluateFolioValidation({
         folios_from: fieldValue('folios_from'),
@@ -350,7 +356,7 @@ export function refreshFolioValidation(form, container, jobLookups = {}) {
 
     container.replaceChildren();
     container.classList.toggle('hidden', result.jobs.length === 0);
-    result.jobs.forEach((job) => renderJob(container, job));
+    result.jobs.forEach((job) => renderJob(container, job, options));
 
     return result;
 }

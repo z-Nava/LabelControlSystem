@@ -192,6 +192,8 @@ class MasterReworkService
                 'shift_id' => $baseRequest->shift_id,
                 'leader_name' => $baseRequest->leader_name,
                 'request_source' => $baseRequest->request_source,
+                'is_manual' => $baseRequest->is_manual,
+                'manual_reason' => $baseRequest->manual_reason,
                 'requested_by_name' => $baseRequest->requested_by_name,
                 'requested_by_user_id' => $baseRequest->requested_by_user_id,
                 'po_number' => $finalPoNumber,

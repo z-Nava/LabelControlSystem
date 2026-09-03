@@ -25,6 +25,7 @@ use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelReworkController;
+use App\Http\Controllers\Masters\ManualMasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Masters\MasterRequestController;
@@ -185,6 +186,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
             Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
             Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
+            Route::middleware('module_access:master_manual')->group(function () {
+                Route::get('/manual-master-requests/create', [ManualMasterRequestController::class, 'create'])->name('manual_master_requests.create');
+                Route::post('/manual-master-requests', [ManualMasterRequestController::class, 'store'])->name('manual_master_requests.store');
+            });
             Route::get('/master-requests/{id}', [MasterRequestController::class, 'show'])->name('master_requests.show');
             Route::post('/master-requests/{master_request}/cancel', [MasterRequestController::class, 'cancel'])->name('master_requests.cancel');
 

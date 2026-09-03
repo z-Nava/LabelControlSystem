@@ -46,6 +46,15 @@
                             <div class="text-lg font-semibold">Reimprimir / Retrabajo</div>
                             <div class="text-sm text-slate-600 mt-1">Vista general por job para hojas master</div>
                         </a>
+
+                        @if(auth()->user()->hasModuleAccess('master_manual'))
+                            <a href="{{ route('manual_master_requests.create') }}"
+                                class="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-950 transition hover:border-amber-400 hover:shadow">
+                                <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Flujo Master Manual</div>
+                                <div class="mt-1 text-lg font-semibold">Master Manual</div>
+                                <div class="mt-1 text-sm text-amber-800">Autocompleta desde Oracle y permite ajustar los datos operativos</div>
+                            </a>
+                        @endif
                     </div>
                 </section>
             @endif

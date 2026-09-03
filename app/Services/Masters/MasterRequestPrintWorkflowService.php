@@ -32,4 +32,24 @@ class MasterRequestPrintWorkflowService
             );
         });
     }
+
+    public function createAndStartManualPrint(
+        array $data,
+        ?int $userId,
+        string $userName,
+    ): MasterPrintBatch {
+        return DB::transaction(function () use ($data, $userId, $userName): MasterPrintBatch {
+            $masterRequest = $this->masterRequestService->createManual($data);
+
+            return $this->masterPrintService->createBatch(
+                masterRequest: $masterRequest,
+                folioIds: $masterRequest->folios->modelKeys(),
+                batchType: 'print',
+                copies: 1,
+                reason: null,
+                printedByUserId: $userId,
+                printedByName: $userName,
+            );
+        });
+    }
 }

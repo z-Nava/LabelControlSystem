@@ -24,11 +24,11 @@
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Requisición Master #{{ $mr->id }}</h1>
             <p class="text-slate-600 mt-1">
-                {{ $mr->line?->code }}
+                {{ $mr->oracle_line ?: $mr->line?->code }}
                 @if($mr->shift) · Turno {{ $mr->shift->code }} @endif
                 @if($mr->request_date) · {{ $mr->request_date->format('Y-m-d') }} @endif
             </p>
-            <span class="mt-2 inline-flex rounded-full px-2 py-1 text-xs {{ $mr->isFromKiosk() ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700' }}">
+            <span class="mt-2 inline-flex rounded-full px-2 py-1 text-xs {{ $mr->isManual() ? 'bg-amber-100 text-amber-800' : ($mr->isFromKiosk() ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700') }}">
                 Origen: {{ $mr->request_source_label }}
             </span>
             <span class="mt-2 inline-flex rounded-full px-2 py-1 text-xs {{ $mr->statusBadgeClasses() }}">
@@ -119,6 +119,25 @@
                     <div class="mt-1 whitespace-pre-line text-sm text-slate-800">{{ $mr->cancellation_reason ?: 'Dato histórico no disponible' }}</div>
                 </div>
             </div>
+        </div>
+    @endif
+
+    @if($mr->isManual())
+        <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Auditoría Master Manual</div>
+            <div class="mt-2 text-sm text-amber-950">
+                <span class="font-semibold">Motivo del Master Manual:</span>
+                <span class="whitespace-pre-line">{{ $mr->manual_reason }}</span>
+            </div>
+            <div class="mt-2 text-xs text-amber-800">
+                Creada por {{ $mr->requested_by_name ?: $mr->requestedBy?->name ?: '—' }}
+                el {{ $mr->created_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? '—' }}.
+            </div>
+            @if($mr->line && strtoupper((string) $mr->line->code) !== strtoupper((string) $mr->oracle_line))
+                <div class="mt-1 text-xs text-amber-800">
+                    Línea oficial del Job al crear la requisición: {{ $mr->line->code }} · Línea utilizada: {{ $mr->oracle_line }}.
+                </div>
+            @endif
         </div>
     @endif
 

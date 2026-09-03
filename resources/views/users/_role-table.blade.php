@@ -51,8 +51,7 @@
 
                         @if($role === 'admin')
                             <td class="py-3 pr-3">
-                                @php($otherRoles = $user->roles->where('name', '!=', 'admin'))
-                                @forelse($otherRoles as $otherRole)
+                                @forelse($user->roles->where('name', '!=', 'admin') as $otherRole)
                                     <span class="mr-1 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">
                                         {{ $otherRole->name }}
                                     </span>
@@ -62,17 +61,23 @@
                             </td>
                         @elseif($role === 'label_room')
                             <td class="py-3 pr-3">
-                                @if(empty($user->module_permissions))
-                                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Todos</span>
-                                @else
-                                    <div class="flex flex-wrap gap-1">
-                                        @foreach($user->module_permissions as $permission)
+                                <div class="flex flex-wrap gap-1">
+                                    @if(empty(array_intersect($user->module_permissions ?? [], \App\Models\User::AVAILABLE_MODULE_PERMISSIONS)))
+                                        <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Todos</span>
+                                    @else
+                                        @foreach(array_intersect($user->module_permissions ?? [], \App\Models\User::AVAILABLE_MODULE_PERMISSIONS) as $permission)
                                             <span class="inline-flex rounded-full bg-blue-100 px-3 py-1 text-blue-800">
-                                                {{ $permission }}
+                                                {{ \App\Models\User::permissionLabel($permission) }}
                                             </span>
                                         @endforeach
-                                    </div>
-                                @endif
+                                    @endif
+
+                                    @foreach(array_intersect($user->module_permissions ?? [], \App\Models\User::AVAILABLE_SPECIAL_PERMISSIONS) as $permission)
+                                        <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-900">
+                                            {{ \App\Models\User::permissionLabel($permission) }}
+                                        </span>
+                                    @endforeach
+                                </div>
                             </td>
                             <td class="py-3 pr-3">{{ $user->shift_label ?? 'Sin turno' }}</td>
                         @else

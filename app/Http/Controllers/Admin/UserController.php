@@ -56,6 +56,7 @@ class UserController extends Controller
             'productionLines' => ProductionLine::orderBy('line_type')->orderBy('code')->get(),
             'positions' => User::PRODUCTION_POSITIONS,
             'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
+            'availableSpecialPermissions' => User::AVAILABLE_SPECIAL_PERMISSIONS,
         ]);
     }
 
@@ -94,6 +95,7 @@ class UserController extends Controller
             'productionLines' => ProductionLine::orderBy('line_type')->orderBy('code')->get(),
             'positions' => User::PRODUCTION_POSITIONS,
             'availableModulePermissions' => User::AVAILABLE_MODULE_PERMISSIONS,
+            'availableSpecialPermissions' => User::AVAILABLE_SPECIAL_PERMISSIONS,
         ]);
     }
 
