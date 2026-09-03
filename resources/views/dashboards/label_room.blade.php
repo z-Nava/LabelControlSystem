@@ -49,6 +49,7 @@
 
                         @if(auth()->user()->hasModuleAccess('master_manual'))
                             <a href="{{ route('manual_master_requests.create') }}"
+                                data-manual-master-entry
                                 class="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-950 transition hover:border-amber-400 hover:shadow">
                                 <div class="text-xs font-semibold uppercase tracking-wide text-amber-700">Flujo Master Manual</div>
                                 <div class="mt-1 text-lg font-semibold">Master Manual</div>
