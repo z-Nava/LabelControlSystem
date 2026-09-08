@@ -262,22 +262,22 @@
         <div class="grid grid-cols-1 divide-y text-sm md:grid-cols-4 md:divide-x md:divide-y-0">
             <div class="p-4">
                 <div class="font-semibold text-slate-900">Registrada</div>
-                <div class="mt-1 text-slate-600">{{ $labelRequest->created_at?->format('Y-m-d H:i') }}</div>
+                <div class="mt-1 text-slate-600">{{ $labelRequest->created_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') }}</div>
                 <div class="text-slate-500">{{ $labelRequest->requested_by_name }}</div>
             </div>
             <div class="p-4">
                 <div class="font-semibold text-slate-900">Comprobante Kiosk</div>
-                <div class="mt-1 text-slate-600">{{ $labelRequest->requisition_printed_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
+                <div class="mt-1 text-slate-600">{{ $labelRequest->requisition_printed_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
                 <div class="text-slate-500">{{ $labelRequest->requisitionPrintedByUser?->name ?? '—' }}</div>
             </div>
             <div class="p-4">
                 <div class="font-semibold text-slate-900">Lista para entregar</div>
-                <div class="mt-1 text-slate-600">{{ $labelRequest->attended_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
+                <div class="mt-1 text-slate-600">{{ $labelRequest->attended_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
                 <div class="text-slate-500">{{ $labelRequest->readyForDeliveryByUser?->name ?? '—' }}</div>
             </div>
             <div class="p-4">
                 <div class="font-semibold text-slate-900">Entregada</div>
-                <div class="mt-1 text-slate-600">{{ $labelRequest->delivered_at?->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
+                <div class="mt-1 text-slate-600">{{ $labelRequest->delivered_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? 'Pendiente' }}</div>
                 <div class="text-slate-500">{{ $labelRequest->deliveredByUser?->name ?? '—' }}</div>
             </div>
         </div>
@@ -345,7 +345,7 @@
                 <tbody class="divide-y">
                     @forelse($printBatches as $batch)
                         <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            <td class="px-4 py-3">{{ $batch->printed_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $batch->batch_type }}</td>
                             <td class="px-4 py-3">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $batch->reason ?: '—' }}</td>
