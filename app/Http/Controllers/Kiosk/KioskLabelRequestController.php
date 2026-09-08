@@ -13,6 +13,7 @@ use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -24,9 +25,11 @@ class KioskLabelRequestController extends Controller
         private readonly KioskRequisitionPrintService $printService,
     ) {}
 
-    public function createStandard(): View
+    public function createStandard(Request $request): View
     {
-        return view('kiosk.label-requests.create', $this->readService->buildKioskCreateFormData());
+        return view('kiosk.label-requests.create', $this->readService->buildKioskStandardCreateFormData(
+            $request->session()->getOldInput(),
+        ));
     }
 
     public function createLpk(): View

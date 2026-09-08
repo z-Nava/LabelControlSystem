@@ -201,6 +201,44 @@ class LabelRequestReadService
         ];
     }
 
+    public function buildKioskStandardCreateFormData(array $oldInput = []): array
+    {
+        $formData = $this->buildKioskCreateFormData();
+
+        return [
+            ...$formData,
+            'lineTypes' => $formData['lines']->pluck('line_type')->filter()->unique()->sort()->values(),
+            'serialItems' => $this->normalizeKioskLabelItems($oldInput['serial_items'] ?? null),
+            'ratingItems' => $this->normalizeKioskLabelItems($oldInput['rating_items'] ?? null),
+            'labelTypes' => [
+                ['id' => 'includeSerial', 'name' => 'include_serial', 'label' => 'Serial', 'description' => 'Etiqueta normal con uno o varios NP; LabelRoom asignará los folios.'],
+                ['id' => 'includeRating', 'name' => 'include_rating', 'label' => 'Rating', 'description' => 'Nameplate con uno o varios NP para combos.'],
+                ['id' => 'includeInner', 'name' => 'include_inner', 'label' => 'Inner', 'description' => 'Etiqueta interior con la cantidad general.'],
+                ['id' => 'includeShipping', 'name' => 'include_shipping', 'label' => 'Shipping', 'description' => 'Etiqueta con cantidad independiente.'],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array{part_number: string, model: string}>
+     */
+    private function normalizeKioskLabelItems(mixed $items): array
+    {
+        if (! is_array($items) || $items === []) {
+            return [['part_number' => '', 'model' => '']];
+        }
+
+        return array_map(static function (mixed $item): array {
+            $partNumber = is_array($item) ? ($item['part_number'] ?? '') : $item;
+            $model = is_array($item) ? ($item['model'] ?? '') : '';
+
+            return [
+                'part_number' => is_scalar($partNumber) ? (string) $partNumber : '',
+                'model' => is_scalar($model) ? (string) $model : '',
+            ];
+        }, array_values($items));
+    }
+
     public function findForShow(int $id): LabelRequest
     {
         return LabelRequest::query()

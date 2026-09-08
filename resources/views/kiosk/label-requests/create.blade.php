@@ -1,16 +1,6 @@
 @extends('layouts.kiosk', ['title' => 'Nueva requisición de etiquetas'])
 
 @section('content')
-@php
-    $oldSerialItems = old('serial_items', [['part_number' => '', 'model' => '']]);
-    $oldSerialItems = is_array($oldSerialItems) && $oldSerialItems !== []
-        ? $oldSerialItems
-        : [['part_number' => '', 'model' => '']];
-    $oldRatingItems = old('rating_items', [['part_number' => '', 'model' => '']]);
-    $oldRatingItems = is_array($oldRatingItems) && $oldRatingItems !== []
-        ? $oldRatingItems
-        : [['part_number' => '', 'model' => '']];
-@endphp
 <div class="space-y-6">
     @include('kiosk.partials.request-guide', [
         'title' => 'Crear requisición de etiquetas',
@@ -65,7 +55,7 @@
                         <label for="lineTypeFilter" class="text-sm font-semibold text-slate-700">Tipo de línea <span class="font-normal text-slate-400">(filtro)</span></label>
                         <select id="lineTypeFilter" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
                             <option value="">Todos los tipos</option>
-                            @foreach($lines->pluck('line_type')->filter()->unique()->sort() as $lineType)
+                            @foreach($lineTypes as $lineType)
                                 <option value="{{ $lineType }}">{{ $lineType }}</option>
                             @endforeach
                         </select>
@@ -150,11 +140,6 @@
                             <p class="mt-1 text-xs text-slate-500">Se usa para Serial, Rating e Inner. Shipping conserva su propia cantidad.</p>
                         </div>
 
-                        <div>
-                            <label for="shippingQuantity" class="text-sm font-semibold text-slate-700">Cantidad Shipping <span class="font-normal text-slate-400">(solo si aplica)</span></label>
-                            <input id="shippingQuantity" type="number" name="shipping_quantity" min="1" max="100000" value="{{ old('shipping_quantity') }}" placeholder="No requerida" @disabled(!old('include_shipping')) class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                            <p class="mt-1 text-xs text-slate-500">Independiente de la cantidad general; déjala vacía si no solicitas Shipping.</p>
-                        </div>
                     </div>
 
                     <div id="jobCapacitySummary" class="hidden grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-3">
@@ -171,12 +156,7 @@
                         <p class="mt-1 text-sm text-slate-500">No selecciones un tipo si producción no necesita esa etiqueta.</p>
 
                         <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            @foreach([
-                                ['id' => 'includeSerial', 'name' => 'include_serial', 'label' => 'Serial', 'description' => 'Etiqueta normal con uno o varios NP; LabelRoom asignará los folios.'],
-                                ['id' => 'includeRating', 'name' => 'include_rating', 'label' => 'Rating', 'description' => 'Nameplate con uno o varios NP para combos.'],
-                                ['id' => 'includeInner', 'name' => 'include_inner', 'label' => 'Inner', 'description' => 'Etiqueta interior con la cantidad general.'],
-                                ['id' => 'includeShipping', 'name' => 'include_shipping', 'label' => 'Shipping', 'description' => 'Etiqueta con cantidad independiente.'],
-                            ] as $type)
+                            @foreach($labelTypes as $type)
                                 <label data-label-type-card class="relative flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 transition hover:border-red-300 hover:bg-red-50/40">
                                     <input id="{{ $type['id'] }}" type="checkbox" name="{{ $type['name'] }}" value="1" @checked(old($type['name'])) class="mt-0.5 h-6 w-6 rounded border-slate-300 text-red-600 focus:ring-red-600" />
                                     <span class="min-w-0 pr-16">
@@ -207,10 +187,10 @@
                         </div>
 
                         <div id="serialPartNumbers" class="space-y-2">
-                            @foreach($oldSerialItems as $index => $serialItem)
+                            @foreach($serialItems as $index => $serialItem)
                                 <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                                    <input type="text" name="serial_items[{{ $index }}][part_number]" value="{{ is_array($serialItem) ? ($serialItem['part_number'] ?? '') : $serialItem }}" maxlength="80" placeholder="NP de Serial" autocomplete="off" spellcheck="false" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                    <input type="text" name="serial_items[{{ $index }}][model]" value="{{ is_array($serialItem) ? ($serialItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="serial_items[{{ $index }}][part_number]" value="{{ $serialItem['part_number'] }}" maxlength="80" placeholder="NP de Serial" autocomplete="off" spellcheck="false" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="serial_items[{{ $index }}][model]" value="{{ $serialItem['model'] }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -238,10 +218,10 @@
                         </div>
 
                         <div id="ratingPartNumbers" class="space-y-2">
-                            @foreach($oldRatingItems as $index => $ratingItem)
+                            @foreach($ratingItems as $index => $ratingItem)
                                 <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                                    <input type="text" name="rating_items[{{ $index }}][part_number]" value="{{ is_array($ratingItem) ? ($ratingItem['part_number'] ?? '') : $ratingItem }}" maxlength="80" placeholder="NP de Rating" autocomplete="off" spellcheck="false" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                    <input type="text" name="rating_items[{{ $index }}][model]" value="{{ is_array($ratingItem) ? ($ratingItem['model'] ?? '') : '' }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="rating_items[{{ $index }}][part_number]" value="{{ $ratingItem['part_number'] }}" maxlength="80" placeholder="NP de Rating" autocomplete="off" spellcheck="false" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                    <input type="text" name="rating_items[{{ $index }}][model]" value="{{ $ratingItem['model'] }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
@@ -268,10 +248,21 @@
 
                     <div id="shippingFields" class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                         <div class="text-sm font-semibold text-slate-800">Shipping <span class="text-red-600" aria-hidden="true">*</span></div>
-                        <p class="mt-1 text-xs text-slate-500">Captura el NP; la cantidad de Shipping se indica por separado después de validar el Job.</p>
-                        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" autocomplete="off" spellcheck="false" class="rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
-                            <input id="shippingModel" type="text" name="shipping_model" value="{{ old('shipping_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                        <p class="mt-1 text-xs text-slate-500">Captura el NP y la cantidad de etiquetas Shipping que necesita producción.</p>
+                        <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div>
+                                <label for="shippingPartNumber" class="text-sm font-semibold text-slate-700">NP de Shipping <span class="text-red-600" aria-hidden="true">*</span></label>
+                                <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" autocomplete="off" spellcheck="false" class="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                            </div>
+                            <div>
+                                <label for="shippingModel" class="text-sm font-semibold text-slate-700">Modelo <span class="font-normal text-slate-400">(opcional)</span></label>
+                                <input id="shippingModel" type="text" name="shipping_model" value="{{ old('shipping_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                            </div>
+                            <div>
+                                <label for="shippingQuantity" class="text-sm font-semibold text-slate-700">Cantidad Shipping <span class="text-red-600" aria-hidden="true">*</span></label>
+                                <input id="shippingQuantity" type="number" name="shipping_quantity" min="1" max="100000" value="{{ old('shipping_quantity') }}" placeholder="Ej: 10" @disabled(!old('include_shipping')) aria-describedby="shippingQuantityHint" class="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                <p id="shippingQuantityHint" class="mt-1 text-xs text-slate-500">Independiente de la cantidad general; aplica únicamente a Shipping.</p>
+                            </div>
                         </div>
                     </div>
 
