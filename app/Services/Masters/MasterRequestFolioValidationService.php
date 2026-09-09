@@ -47,8 +47,9 @@ final class MasterRequestFolioValidationService
     }
 
     /**
-     * A revision replaces the effective folio set of its original requisition.
-     * The current root is therefore excluded before validating the final set.
+     * A revision updates only the folios included in its sparse patch. Exclude
+     * the current root while validating so its existing folios are not treated
+     * as reservations belonging to another requisition.
      *
      * @param  Collection<int, int|null>  $requestedFolios
      */

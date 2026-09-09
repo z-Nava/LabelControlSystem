@@ -238,20 +238,23 @@ class MasterRequestJobStateService
 
     private function effectiveFolioRows(?int $excludeRootRequestId): Builder
     {
-        $effectiveRequestIds = MasterRequest::query()
-            ->selectRaw('MAX(id)')
-            ->where('status', '!=', MasterRequest::STATUS_CANCELLED)
+        $effectiveFolioIds = MasterRequestFolio::query()
+            ->join('master_requests', 'master_requests.id', '=', 'master_request_folios.master_request_id')
+            ->selectRaw('MAX(master_request_folios.id)')
+            ->where('master_requests.status', '!=', MasterRequest::STATUS_CANCELLED)
             ->when($excludeRootRequestId !== null, function ($query) use ($excludeRootRequestId): void {
                 $query->whereRaw(
-                    'COALESCE(parent_master_request_id, id) <> ?',
+                    'COALESCE(master_requests.parent_master_request_id, master_requests.id) <> ?',
                     [$excludeRootRequestId],
                 );
             })
-            ->groupByRaw('COALESCE(parent_master_request_id, id)');
+            ->groupByRaw(
+                'COALESCE(master_requests.parent_master_request_id, master_requests.id), master_request_folios.folio_number'
+            );
 
         return MasterRequestFolio::query()
             ->join('master_requests', 'master_requests.id', '=', 'master_request_folios.master_request_id')
-            ->whereIn('master_requests.id', $effectiveRequestIds);
+            ->whereIn('master_request_folios.id', $effectiveFolioIds);
     }
 
     private function reservationKey(MasterRequestFolio $folio, string $role): string
