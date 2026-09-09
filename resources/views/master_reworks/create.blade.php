@@ -214,9 +214,19 @@
                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-red-600"
                       placeholder="Describe por qué se modifica la requisición...">{{ old('rework_reason') }}</textarea>
 
-            <label for="notes" class="mt-4 block text-sm text-slate-600">Notas</label>
+            @if(filled($masterRequest->notes))
+                <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <summary class="cursor-pointer text-sm font-medium text-slate-700">Consultar notas de la requisición base #{{ $masterRequest->id }}</summary>
+                    <div class="mt-2 whitespace-pre-line break-words text-sm text-slate-600">{{ $masterRequest->notes }}</div>
+                </details>
+            @endif
+
+            <label for="notes" class="mt-4 block text-sm text-slate-600">Notas de solicitud / entrega del retrabajo (opcional)</label>
             <textarea id="notes" name="notes" rows="2" maxlength="1000"
-                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">{{ old('notes', $masterRequest->notes) }}</textarea>
+                      aria-describedby="notesHelp"
+                      placeholder="Solicitó el retrabajo: nombre / número de empleado. Se entregó a: nombre / número de empleado. Fecha y hora de entrega."
+                      class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">{{ old('notes') }}</textarea>
+            <p id="notesHelp" class="mt-1 text-xs text-slate-500">Registra los datos de esta entrega. Quedarán visibles en el resumen del retrabajo; las notas de la requisición base se conservan por separado.</p>
         </section>
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

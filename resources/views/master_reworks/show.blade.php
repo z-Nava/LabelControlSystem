@@ -48,6 +48,8 @@
         </div>
     </section>
 
+    @include('master_requests._notes', ['notes' => $revision->notes, 'title' => 'Notas del retrabajo'])
+
     <section class="mt-6">
         <h2 class="font-semibold text-slate-900">Comparativo de información</h2>
         <p class="mt-1 text-sm text-slate-500">El valor final será el utilizado al generar los nuevos snapshots.</p>

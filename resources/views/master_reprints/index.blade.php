@@ -4,7 +4,7 @@
 <div class="bg-white rounded-2xl shadow p-6">
     <div class="flex items-start justify-between gap-3">
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900">Historial de impresión Master</h1>
+            <h1 class="text-2xl font-semibold text-slate-900">Historial de impresiones y retrabajos Master</h1>
             <p class="text-slate-600 mt-1">
                 Requisición #{{ $mr->id }} · {{ $mr->oracle_line ?: $mr->line?->code }}@if($mr->shift) · Turno {{ $mr->shift->code }}@endif
             </p>
@@ -14,23 +14,17 @@
         </div>
 
         <div class="flex items-center gap-2">
-            @if($mr->isCancelled())
-                <span class="inline-flex cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500" title="La requisición está cancelada.">
-                    Impresión bloqueada
-                </span>
-            @else
-                <a href="{{ route('master_requests.print.create', $mr->id) }}"
-                   class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">
-                    Nueva impresión
-                </a>
-            @endif
-
             <a href="{{ route('master_requests.show', $mr->id) }}"
                class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">
                 Volver
             </a>
         </div>
     </div>
+
+    @include('master_requests._notes', [
+        'notes' => $mr->notes,
+        'title' => $mr->isRework() ? 'Notas del retrabajo' : 'Notas de la requisición',
+    ])
 
     <div class="mt-6 overflow-x-auto">
         <table class="w-full text-sm">
@@ -39,22 +33,54 @@
                 <th class="py-3 pr-3">Batch</th>
                 <th class="py-3 pr-3">Tipo</th>
                 <th class="py-3 pr-3">Fecha</th>
-                <th class="py-3 pr-3">Usuario</th>
-                <th class="py-3 pr-3">Motivo</th>
+                <th class="py-3 pr-3">Registrado por</th>
+                <th class="py-3 pr-3">Motivo y notas de la impresión</th>
                 <th class="py-3 pr-3">Folios</th>
                 <th class="py-3 pr-3 text-right">Acciones</th>
             </tr>
             </thead>
             <tbody class="divide-y">
-            @forelse($mr->printBatches as $batch)
+            @forelse($printBatches as $batch)
+                @php
+                    $batchRequest = $batch->masterRequest;
+                    $batchReason = filled($batch->reason)
+                        ? $batch->reason
+                        : ($batch->batch_type === 'rework' ? $batchRequest->rework_reason : null);
+                    $batchTypeLabel = match ($batch->batch_type) {
+                        'print' => 'Impresión',
+                        'reprint' => 'Reimpresión',
+                        'rework' => 'Retrabajo',
+                        default => $batch->batch_type,
+                    };
+                @endphp
                 <tr class="align-top">
-                    <td class="py-3 pr-3 font-semibold">#{{ $batch->id }}</td>
+                    <td class="py-3 pr-3 font-semibold">
+                        #{{ $batch->id }}
+                        @if($batchRequest->isRework())
+                            <a href="{{ route('master_reworks.show', $batchRequest) }}" class="mt-1 block text-xs text-purple-700 hover:underline">
+                                R{{ $batchRequest->revision_number }} · Req. #{{ $batchRequest->id }}
+                            </a>
+                        @endif
+                    </td>
                     <td class="py-3 pr-3">
-                        <span class="rounded-full px-2 py-1 text-xs {{ $batch->batch_type === 'reprint' ? 'bg-amber-100 text-amber-800' : ($batch->batch_type === 'rework' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800') }}">{{ $batch->batch_type }}</span>
+                        <span class="rounded-full px-2 py-1 text-xs {{ $batch->batch_type === 'reprint' ? 'bg-amber-100 text-amber-800' : ($batch->batch_type === 'rework' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800') }}">{{ $batchTypeLabel }}</span>
                     </td>
                     <td class="py-3 pr-3">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '-' }}</td>
                     <td class="py-3 pr-3">{{ $batch->printed_by_name ?? $batch->printedBy?->name ?? '-' }}</td>
-                    <td class="py-3 pr-3">{{ $batch->reason ?: '-' }}</td>
+                    <td class="py-3 pr-3">
+                        @if(filled($batchReason))
+                            <div class="whitespace-pre-line break-words">{{ $batchReason }}</div>
+                        @elseif($batch->batch_type === 'print' && filled($batchRequest->notes))
+                            <div class="whitespace-pre-line break-words">{{ $batchRequest->notes }}</div>
+                            <div class="mt-1 text-xs text-slate-500">Nota registrada al crear la requisición.</div>
+                        @else
+                            <div>-</div>
+                        @endif
+                        @if($batch->batch_type === 'rework' && $batchRequest->isRework() && filled($batchRequest->notes))
+                            <div class="mt-2 text-xs text-slate-500">Notas de la revisión</div>
+                            <div class="whitespace-pre-line break-words">{{ $batchRequest->notes }}</div>
+                        @endif
+                    </td>
                     <td class="py-3 pr-3">
                         <div class="text-slate-700">
                             {{ $batch->items->count() }} folio(s)
@@ -68,22 +94,34 @@
                         </div>
                     </td>
                     <td class="py-3 pl-3 text-right whitespace-nowrap">
-                        @if($mr->isCancelled())
+                        @if($batchRequest->isCancelled())
                             <span class="inline-flex cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-500">
                                 Bloqueada
                             </span>
                         @else
-                            <a href="{{ route('master_print_batches.print', $batch) }}" target="_blank"
-                               class="rounded-lg border px-3 py-1.5 hover:bg-slate-50 ml-1">
-                                Imprimir
+                            <a href="{{ route('master_requests.print.create', $batchRequest->id) }}"
+                               class="inline-flex rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white transition hover:bg-red-500">
+                                Nueva impresión
                             </a>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="py-6 text-center text-slate-500">
+                    <td colspan="6" class="py-6 text-center text-slate-500">
                         Aún no hay historial de impresiones para esta requisición.
+                    </td>
+                    <td class="py-3 pl-3 text-right whitespace-nowrap">
+                        @if($mr->isCancelled())
+                            <span class="inline-flex cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-500">
+                                Bloqueada
+                            </span>
+                        @else
+                            <a href="{{ route('master_requests.print.create', $mr->id) }}"
+                               class="inline-flex rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white transition hover:bg-red-500">
+                                Nueva impresión
+                            </a>
+                        @endif
                     </td>
                 </tr>
             @endforelse

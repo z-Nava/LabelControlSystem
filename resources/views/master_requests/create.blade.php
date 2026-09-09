@@ -324,11 +324,14 @@
                      aria-live="polite"></div>
 
                 <div>
-                    <label class="text-sm text-slate-600">Notas (opcional)</label>
-                    <textarea name="notes"
+                    <label for="notes" class="text-sm text-slate-600">Notas de solicitud / entrega (opcional)</label>
+                    <textarea id="notes" name="notes"
                               rows="3"
                               maxlength="1000"
+                              aria-describedby="notesHelp"
+                              placeholder="Solicitó: nombre / número de empleado. Se entregó a: nombre / número de empleado. Fecha y hora de entrega."
                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">{{ old('notes') }}</textarea>
+                    <p id="notesHelp" class="mt-1 text-xs text-slate-500">Registra quién solicitó y quién recibió la hoja Master. Las notas se podrán consultar en el detalle de la requisición y en su historial de impresiones.</p>
                 </div>
             </div>
         </details>

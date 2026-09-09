@@ -16,9 +16,7 @@ class MasterReprintController extends Controller
 
     public function index(MasterRequest $master_request): View
     {
-        $mr = $this->service->loadRequestWithBatches($master_request);
-
-        return view('master_reprints.index', compact('mr'));
+        return view('master_reprints.index', $this->service->buildHistoryData($master_request));
     }
 
     public function search(Request $request): View

@@ -73,9 +73,12 @@
             </div>
 
             <div class="md:col-span-1">
-                <label class="text-sm text-slate-600">Motivo (obligatorio en reprint/rework)</label>
-                <input name="reason" value="{{ old('reason') }}"
-                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
+                <label for="reason" class="text-sm text-slate-600">Motivo y notas de solicitud / entrega</label>
+                <textarea id="reason" name="reason" rows="4" maxlength="500"
+                          aria-describedby="reasonHelp"
+                          placeholder="Motivo: ...&#10;Solicitó: nombre / número de empleado.&#10;Se entregó a: nombre / número de empleado.&#10;Fecha y hora de entrega."
+                          class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">{{ old('reason') }}</textarea>
+                <p id="reasonHelp" class="mt-1 text-xs text-slate-500">El motivo es obligatorio para reimpresión o retrabajo. Incluye quién solicitó y quién recibió las hojas; se guardará en el historial de esta impresión (máximo 500 caracteres).</p>
             </div>
         </div>
 

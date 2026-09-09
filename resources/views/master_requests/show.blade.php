@@ -201,6 +201,11 @@
         </div>
     </div>
 
+    @include('master_requests._notes', [
+        'notes' => $mr->notes,
+        'title' => $mr->isRework() ? 'Notas del retrabajo' : 'Notas de la requisición',
+    ])
+
     @if(!$mr->isRework() && $mr->revisions->isNotEmpty())
         <section class="mt-6 rounded-2xl border border-purple-200 bg-purple-50 p-4">
             <h2 class="font-semibold text-slate-900">Revisiones de retrabajo</h2>

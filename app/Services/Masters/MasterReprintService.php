@@ -2,20 +2,28 @@
 
 namespace App\Services\Masters;
 
+use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 
 class MasterReprintService
 {
-    public function loadRequestWithBatches(MasterRequest $masterRequest): MasterRequest
+    public function buildHistoryData(MasterRequest $masterRequest): array
     {
-        return $masterRequest->load([
-            'line',
-            'shift',
-            'printBatches' => fn ($query) => $query
-                ->with(['printedBy', 'items.folio'])
+        $requestIds = MasterRequest::query()
+            ->select('id')
+            ->whereKey($masterRequest->id)
+            ->when(! $masterRequest->isRework(), fn ($query) => $query
+                ->orWhere('parent_master_request_id', $masterRequest->id));
+
+        return [
+            'mr' => $masterRequest->load(['line', 'shift']),
+            'printBatches' => MasterPrintBatch::query()
+                ->whereIn('master_request_id', $requestIds)
+                ->with(['masterRequest', 'printedBy', 'items.folio'])
                 ->orderByDesc('printed_at')
-                ->orderByDesc('id'),
-        ]);
+                ->orderByDesc('id')
+                ->get(),
+        ];
     }
 
     public function searchByJob(string $job)
