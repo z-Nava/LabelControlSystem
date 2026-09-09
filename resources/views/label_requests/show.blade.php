@@ -33,11 +33,6 @@
         </div>
     @endif
 
-    <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-        <div class="font-semibold">Impresión automática de etiquetas no disponible temporalmente</div>
-        <p class="mt-1 text-sm">La preparación y entrega se controlan con el estatus general de la requisición. La impresión del comprobante en Kiosk se registra por separado.</p>
-    </div>
-
     <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
         <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Acciones de la requisición</div>
         <div class="mt-3">
@@ -289,81 +284,5 @@
             <p class="mt-2 whitespace-pre-line text-sm text-slate-700">{{ $labelRequest->notes }}</p>
         </div>
     @endif
-
-    @if($hasUnprintedPrintBatch)
-        <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Existe un batch del sistema anterior creado pero no confirmado como impreso.
-        </div>
-    @endif
-
-    <div id="rangos-serial" class="mt-6 rounded-xl border border-slate-200">
-        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <h2 class="font-semibold text-slate-900">Rangos de serial asignados por el sistema anterior</h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-slate-200 text-left text-slate-500">
-                        <th class="px-4 py-3">Semana/Año</th>
-                        <th class="px-4 py-3">Prefijo</th>
-                        <th class="px-4 py-3">Rango</th>
-                        <th class="px-4 py-3">Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    @forelse($labelRequest->serialRanges as $range)
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3">{{ $range->week?->week ?? '—' }} / {{ $range->week?->year ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ $range->week?->prefix ?? '—' }}</td>
-                            <td class="px-4 py-3 font-mono">{{ $range->range_start }} - {{ $range->range_end }}</td>
-                            <td class="px-4 py-3">{{ number_format($range->quantity) }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">No hay rangos generados por el sistema anterior.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="historial-impresiones" class="mt-6 rounded-xl border border-slate-200">
-        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <h2 class="font-semibold text-slate-900">Historial de impresiones automáticas (batches)</h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-slate-200 text-left text-slate-500">
-                        <th class="px-4 py-3">Fecha</th>
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Impreso por</th>
-                        <th class="px-4 py-3">Razón</th>
-                        <th class="px-4 py-3">Estado</th>
-                        <th class="px-4 py-3 text-right">Acción</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    @forelse($printBatches as $batch)
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3">{{ $batch->printed_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ $batch->batch_type }}</td>
-                            <td class="px-4 py-3">{{ $batch->printed_by_name ?? $batch->printedByUser?->name ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ $batch->reason ?: '—' }}</td>
-                            <td class="px-4 py-3">{{ $batch->printed_at ? 'Confirmada' : 'Pendiente' }}</td>
-                            <td class="px-4 py-3 text-right">
-                                @if($labelRequest->status === \App\Models\LabelRequest::STATUS_COMPLETED)
-                                    <span class="rounded-lg border bg-slate-100 px-3 py-1.5 text-xs text-slate-500">Cerrada</span>
-                                @else
-                                    <a href="{{ route('label_requests.print_batches.print', ['label_request' => $labelRequest, 'batch' => $batch]) }}" class="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">Centro de impresión</a>
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">No hay batches registrados.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 @endsection

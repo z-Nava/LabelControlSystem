@@ -10,7 +10,6 @@
 
         <div class="flex items-center gap-2">
             <a href="{{ route('dashboard') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Dashboard</a>
-            <a href="{{ route('label_requests.create') }}" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">Nueva requisición</a>
         </div>
     </div>
 

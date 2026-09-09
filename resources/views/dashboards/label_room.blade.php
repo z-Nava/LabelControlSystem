@@ -68,12 +68,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <a href="{{ route('label_requests.create') }}" class="rounded-2xl bg-red-600 text-white p-6 hover:bg-red-500 transition">
-                            <div class="text-xs font-semibold uppercase tracking-wide opacity-80">Paso 1</div>
-                            <div class="text-lg font-semibold mt-1">Nueva requisición de Etiquetas</div>
-                            <div class="text-sm opacity-90 mt-1">Captura inicial de Rating / Serial</div>
-                        </a>
-
                         <a href="{{ route('label_requests.index') }}" class="rounded-2xl border p-6 hover:shadow transition">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="text-lg font-semibold text-slate-800">Requisiciones de etiquetas pendientes</div>
@@ -83,16 +77,8 @@
                                     'label' => 'requisiciones de etiquetas pendientes',
                                 ])
                             </div>
-                            <div class="text-sm text-slate-600 mt-1">Retomar requsiciones de etiquetas guardadas</div>
+                            <div class="text-sm text-slate-600 mt-1">Consultar requisiciones y controlar su preparación y entrega</div>
                         </a>
-
-                        <a href="{{ route('label_reworks.search') }}" class="rounded-2xl border p-6 hover:shadow transition">
-                            <div class="text-lg font-semibold text-slate-800">Retrabajo etiquetas</div>
-                            <div class="text-sm text-slate-600 mt-1">Reimprime seriales y ratings por job</div>
-                        </a>
-
-                        
-
                     </div>
                 </section>
             @endif

@@ -132,16 +132,6 @@ class LabelRequest extends Model
         return $this->belongsTo(OracleJob::class, 'job_number', 'job_number');
     }
 
-    public function printBatches(): HasMany
-    {
-        return $this->hasMany(LabelPrintBatch::class, 'label_request_id');
-    }
-
-    public function serialRanges(): HasMany
-    {
-        return $this->hasMany(SerialRange::class, 'label_request_id');
-    }
-
     public function ratings(): HasMany
     {
         return $this->hasMany(LabelRequestRating::class)

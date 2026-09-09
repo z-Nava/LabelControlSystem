@@ -3,11 +3,8 @@
 namespace App\Services\Labels;
 
 use App\Models\LabelRequest;
-use App\Models\LabelSku;
 use App\Models\ProductionLine;
 use App\Models\Shift;
-use App\Models\SkuSerialFormat;
-use App\Support\SerialStandards;
 use Illuminate\Support\Collection;
 
 class LabelRequestReadService
@@ -46,7 +43,6 @@ class LabelRequestReadService
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
                 'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
             ])
-            ->withCount('printBatches')
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
             ->when($validated['line_id'], fn ($query, $value) => $query->where('line_id', $value))
@@ -154,37 +150,6 @@ class LabelRequestReadService
         ];
     }
 
-    public function buildCreateFormData(): array
-    {
-        return [
-            'defaultDate' => now()->toDateString(),
-            'defaultWeek' => (int) now()->isoWeek(),
-            'defaultStandard' => 'UL',
-            'serialStandards' => SerialStandards::requestFlow(),
-            'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
-            'shifts' => Shift::query()->orderBy('id')->get(['id', 'name', 'code']),
-            'labelSkus' => LabelSku::query()
-                ->active()
-                ->whereExists(function ($query) {
-                    $query->selectRaw('1')
-                        ->from((new SkuSerialFormat)->getTable())
-                        ->whereColumn('sku_serial_formats.sku', 'label_skus.sku')
-                        ->whereColumn('sku_serial_formats.serial_standard', 'label_skus.serial_standard')
-                        ->where('sku_serial_formats.is_active', true);
-                })
-                ->orderBy('sku')
-                ->orderBy('serial_standard')
-                ->get([
-                    'sku',
-                    'serial_standard',
-                    'label_part_number',
-                    'description',
-                    'assembly_part_number',
-                    'packaging_part_number',
-                ]),
-        ];
-    }
-
     public function buildKioskCreateFormData(): array
     {
         return [
@@ -258,8 +223,6 @@ class LabelRequestReadService
                 'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
                 'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
-                'printBatches' => fn ($query) => $query->with('printedByUser:id,name')->latest('printed_at')->latest('id'),
-                'serialRanges' => fn ($query) => $query->with('week:id,label_part_number,week,year,prefix,last_serial_number')->orderBy('range_start'),
             ])
             ->findOrFail($id);
     }
@@ -270,15 +233,10 @@ class LabelRequestReadService
     public function buildShowViewData(int $id): array
     {
         $labelRequest = $this->findForShow($id);
-        $printBatches = $labelRequest->printBatches;
         $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
 
         return [
             'labelRequest' => $labelRequest,
-            'printBatches' => $printBatches,
-            'hasUnprintedPrintBatch' => $printBatches->contains(
-                fn ($batch) => $batch->batch_type === 'print' && $batch->printed_at === null
-            ),
             'hasGroupedLpkDetails' => $hasGroupedLpkDetails,
             'lpkProductionJobs' => $hasGroupedLpkDetails
                 ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()

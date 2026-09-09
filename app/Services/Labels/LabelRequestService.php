@@ -2,12 +2,9 @@
 
 namespace App\Services\Labels;
 
-use App\Models\LabelPrintBatch;
 use App\Models\LabelRequest;
 use App\Models\LabelRequestLpkLabelGroup;
 use App\Models\OracleJob;
-use App\Models\SerialUnit;
-use App\Models\SerialWeek;
 use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Collection;
@@ -22,15 +19,6 @@ class LabelRequestService
         private readonly LpkJobReservationCalculator $lpkReservationCalculator,
         private readonly MasterModelMappingService $masterModelMappingService,
     ) {}
-
-    public function create(array $data): LabelRequest
-    {
-        return DB::transaction(function () use ($data): LabelRequest {
-            $payload = $this->buildCreatePayload($data);
-
-            return LabelRequest::query()->create($payload)->load(['line', 'shift']);
-        });
-    }
 
     public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
     {
@@ -361,62 +349,11 @@ class LabelRequestService
             ]);
         }
 
-        $hasPrintedPrintBatch = LabelPrintBatch::query()
-            ->where('label_request_id', $labelRequest->id)
-            ->where('batch_type', 'print')
-            ->whereNotNull('printed_at')
-            ->exists();
-
-        if ($hasPrintedPrintBatch) {
-            throw ValidationException::withMessages([
-                'status' => 'No se puede cancelar: ya existe un batch print confirmado como impreso.',
-            ]);
-        }
-
-        DB::transaction(function () use ($labelRequest, $userId): void {
-            $serialWeekIds = $labelRequest->serialRanges()
-                ->select('serial_week_id')
-                ->distinct()
-                ->pluck('serial_week_id')
-                ->filter()
-                ->map(fn ($id) => (int) $id)
-                ->values();
-
-            $unitIds = SerialUnit::query()
-                ->whereIn('serial_week_id', $serialWeekIds)
-                ->whereExists(function ($existsQuery) use ($labelRequest) {
-                    $existsQuery->selectRaw('1')
-                        ->from('serial_ranges as sr')
-                        ->whereColumn('sr.serial_week_id', 'serial_units.serial_week_id')
-                        ->whereColumn('serial_units.serial_number', '>=', 'sr.range_start')
-                        ->whereColumn('serial_units.serial_number', '<=', 'sr.range_end')
-                        ->where('sr.label_request_id', $labelRequest->id);
-                })
-                ->pluck('id');
-
-            if ($unitIds->isNotEmpty()) {
-                SerialUnit::query()->whereIn('id', $unitIds)->delete();
-            }
-
-            $labelRequest->printBatches()->delete();
-            $labelRequest->serialRanges()->delete();
-
-            foreach ($serialWeekIds as $serialWeekId) {
-                $lastSerialNumber = (int) SerialUnit::query()
-                    ->where('serial_week_id', $serialWeekId)
-                    ->max('serial_number');
-
-                SerialWeek::query()
-                    ->whereKey($serialWeekId)
-                    ->update(['last_serial_number' => $lastSerialNumber]);
-            }
-
-            $labelRequest->update([
-                'status' => LabelRequest::STATUS_CANCELLED,
-                'cancelled_at' => now(),
-                'cancelled_by_user_id' => $userId,
-            ]);
-        });
+        $labelRequest->update([
+            'status' => LabelRequest::STATUS_CANCELLED,
+            'cancelled_at' => now(),
+            'cancelled_by_user_id' => $userId,
+        ]);
 
         return $labelRequest->refresh();
     }

@@ -22,9 +22,7 @@ use App\Http\Controllers\Kiosk\KioskMasterRequestController;
 use App\Http\Controllers\Kiosk\KioskOracleJobController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
-use App\Http\Controllers\Labels\LabelPrintController;
 use App\Http\Controllers\Labels\LabelRequestController;
-use App\Http\Controllers\Labels\LabelReworkController;
 use App\Http\Controllers\Masters\ManualMasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
@@ -223,27 +221,13 @@ Route::middleware(['auth', 'active'])->group(function () {
         });
 
         Route::middleware('module_access:labels')->group(function () {
-            Route::get('/label-requests/lookup-job', [LabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
             Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
-            Route::get('/label-requests/create', [LabelRequestController::class, 'create'])->name('label_requests.create');
-            Route::post('/label-requests', [LabelRequestController::class, 'store'])->name('label_requests.store');
-            Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->name('label_requests.show');
+            Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->whereNumber('id')->name('label_requests.show');
             Route::get('/label-requests/{label_request}/requisition-sheet', [LabelRequestController::class, 'requisitionSheet'])->name('label_requests.requisition_sheet');
             Route::post('/label-requests/{label_request}/start-preparation', [LabelRequestController::class, 'startPreparation'])->name('label_requests.start_preparation');
             Route::post('/label-requests/{label_request}/ready-for-delivery', [LabelRequestController::class, 'readyForDelivery'])->name('label_requests.ready_for_delivery');
             Route::post('/label-requests/{label_request}/cancel', [LabelRequestController::class, 'cancel'])->name('label_requests.cancel');
             Route::post('/label-requests/{label_request}/deliver', [LabelRequestController::class, 'deliver'])->name('label_requests.deliver');
-
-            Route::get('/label-requests/{label_request}/print', [LabelPrintController::class, 'create'])->name('label_requests.print.create');
-            Route::post('/label-requests/{label_request}/print', [LabelPrintController::class, 'store'])->name('label_requests.print.store');
-            Route::get('/label-requests/{label_request}/print-batches/{batch}/print', [LabelPrintController::class, 'printCenter'])->name('label_requests.print_batches.print');
-            Route::post('/label-requests/{label_request}/print-batches/{batch}/preview', [LabelPrintController::class, 'preview'])->name('label_requests.print_batches.preview');
-            Route::post('/label-requests/{label_request}/print-batches/{batch}/confirm', [LabelPrintController::class, 'confirm'])->name('label_requests.print_batches.confirm');
-            Route::post('/label-requests/{label_request}/print-batches/{batch}/fail', [LabelPrintController::class, 'fail'])->name('label_requests.print_batches.fail');
-
-            Route::get('/label-reworks', [LabelReworkController::class, 'search'])->name('label_reworks.search');
-            Route::get('/label-reworks/{label_request}', [LabelReworkController::class, 'show'])->name('label_reworks.show');
-            Route::post('/label-reworks/{label_request}/reprint', [LabelReworkController::class, 'store'])->name('label_reworks.store');
         });
 
         Route::middleware('module_access:master')->group(function () {
