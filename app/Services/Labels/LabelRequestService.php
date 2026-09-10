@@ -67,14 +67,14 @@ class LabelRequestService
             $availability = $this->availabilityService->calculate($job);
             $requestedQuantity = (int) ($data['quantity_requested'] ?? 0);
 
-            if ($requestedQuantity > $availability['available_quantity']) {
+            if (($data['folio_mode'] ?? 'new') !== 'reprint_originals' && $requestedQuantity > $availability['available_quantity']) {
                 throw ValidationException::withMessages([
                     'quantity_requested' => "La cantidad solicitada supera la disponibilidad actual del Job ({$availability['available_quantity']}).",
                 ]);
             }
 
             $data['job_number'] = $jobNumber;
-            $data['serial_standard'] = 'UL';
+            $data['serial_standard'] = null;
             $data['serial_part_number'] = $data['include_serial']
                 ? data_get($serialItems->first(), 'part_number')
                 : null;
@@ -147,7 +147,7 @@ class LabelRequestService
             $shippingGroups = collect($data['lpk_shipping_groups'] ?? []);
             $reservedByJob = $this->lpkReservationCalculator->calculate($labelGroups);
             $jobNumbers = $this->lpkJobNumbers($labelGroups, $shippingGroups);
-            $jobs = $this->lockAndValidateLpkJobs($jobNumbers, $reservedByJob);
+            $jobs = $this->lockAndValidateLpkJobs($jobNumbers, ($data['folio_mode'] ?? 'new') === 'reprint_originals' ? collect() : $reservedByJob);
             $mappedModelsByAssembly = $this->masterModelMappingService
                 ->resolveAssemblyPackagingModels($jobs->pluck('assembly'));
             $labelGroups = $this->applyMappedModelsToLpkGroups(
@@ -192,6 +192,7 @@ class LabelRequestService
 
             $labelRequest = LabelRequest::query()->create([
                 'request_kind' => LabelRequest::KIND_LPK,
+                'folio_mode' => $data['folio_mode'] ?? 'new',
                 'request_date' => $data['request_date'],
                 'week' => $data['week'],
                 'line_id' => $data['line_id'],
@@ -203,7 +204,7 @@ class LabelRequestService
                 'model' => data_get($firstProductionItem, 'model'),
                 'quantity_requested' => $reservedByJob->sum(),
                 'shipping_quantity' => $shippingGroups->sum('quantity') ?: null,
-                'serial_standard' => 'UL',
+                'serial_standard' => null,
                 'serial_part_number' => data_get($serialGroup, 'part_number'),
                 'label_part_number' => data_get($ratingGroup, 'part_number'),
                 'inner_part_number' => data_get($innerGroup, 'part_number'),
@@ -300,11 +301,9 @@ class LabelRequestService
             ]);
         }
 
-        $labelRequest->update([
-            'status' => LabelRequest::STATUS_IN_PROGRESS,
+        throw ValidationException::withMessages([
+            'status' => 'Revisa la requisición, calcula los folios y libera el trabajo antes de iniciar preparación.',
         ]);
-
-        return $labelRequest->refresh();
     }
 
     public function markReadyForDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
@@ -315,13 +314,9 @@ class LabelRequestService
             ]);
         }
 
-        $labelRequest->update([
-            'status' => LabelRequest::STATUS_READY_FOR_DELIVERY,
-            'attended_at' => now(),
-            'attended_by_user_id' => $userId,
+        throw ValidationException::withMessages([
+            'status' => 'Confirma cada tarea de impresión. El cierre genera automáticamente el concentrado JOB.',
         ]);
-
-        return $labelRequest->refresh();
     }
 
     public function confirmDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
@@ -349,13 +344,23 @@ class LabelRequestService
             ]);
         }
 
-        $labelRequest->update([
-            'status' => LabelRequest::STATUS_CANCELLED,
-            'cancelled_at' => now(),
-            'cancelled_by_user_id' => $userId,
-        ]);
+        return DB::transaction(function () use ($labelRequest, $userId) {
+            $locked = LabelRequest::whereKey($labelRequest->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->canCancel()) {
+                throw ValidationException::withMessages(['status' => 'Esta requisición ya está cerrada.']);
+            }
+            $locked->update(['status' => LabelRequest::STATUS_CANCELLED, 'cancelled_at' => now(), 'cancelled_by_user_id' => $userId]);
+            if ($locked->released_at) {
+                $locked->workTasks()->where('status', 'pending')->update(['status' => 'cancelled']);
+                DB::table('serial_ranges')->where('label_request_id', $locked->id)->update(['status' => 'cancelled', 'updated_at' => now()]);
+                DB::table('label_administration_events')->insert([
+                    'label_request_id' => $locked->id, 'user_id' => $userId, 'action' => 'cancelled',
+                    'details' => json_encode(['folios_retained' => true]), 'created_at' => now(),
+                ]);
+            }
 
-        return $labelRequest->refresh();
+            return $locked;
+        }, 3);
     }
 
     private function buildCreatePayload(array $data): array

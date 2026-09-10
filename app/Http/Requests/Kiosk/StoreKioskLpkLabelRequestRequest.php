@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Kiosk;
 
+use App\Models\LabelRequest;
 use App\Models\LabelRequestLpkLabelGroup;
 use App\Services\Labels\LabelRequestJobAvailabilityService;
 use App\Services\Labels\LpkJobReservationCalculator;
@@ -25,6 +26,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
@@ -52,6 +54,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
+            'folio_mode' => $this->input('folio_mode', 'new'),
             'lpk_label_groups' => $this->normalizeLabelGroups($this->input('lpk_label_groups', [])),
             'lpk_shipping_groups' => $this->normalizeShippingGroups($this->input('lpk_shipping_groups', [])),
         ]);
@@ -226,7 +229,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
 
             $availability = app(LabelRequestJobAvailabilityService::class)->calculate($job);
 
-            if ($reservedByJob->get($jobNumber) > $availability['available_quantity']) {
+            if ($this->input('folio_mode') !== 'reprint_originals' && $reservedByJob->get($jobNumber) > $availability['available_quantity']) {
                 $validator->errors()->add(
                     $quantityPaths[$jobNumber],
                     "La cantidad solicitada para el Job {$jobNumber} supera su disponibilidad ({$availability['available_quantity']}).",

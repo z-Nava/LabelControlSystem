@@ -22,6 +22,7 @@
               method="POST"
               action="{{ route('kiosk.label_requests.store') }}">
             @csrf
+            @include('kiosk.partials.label-folio-mode')
 
             <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-start gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-4">

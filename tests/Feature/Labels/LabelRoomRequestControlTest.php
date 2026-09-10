@@ -2,11 +2,15 @@
 
 use App\Models\KioskRequisitionPrintJob;
 use App\Models\LabelRequest;
+use App\Models\MasterModelMapping;
 use App\Models\OracleJob;
 use App\Models\ProductionLine;
 use App\Models\Role;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\Labels\LabelFolioService;
+use App\Services\Labels\LabelRoomAdministrationService;
+use App\Services\Labels\LabelWorkDefinitionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -111,6 +115,7 @@ it('receives kiosk requests and controls their preparation and delivery without 
         'job_number' => 'JOB-TEST', 'assembly' => '018-TEST', 'line' => $this->line->code,
         'job_qty' => 100, 'quantity_remainder' => 100,
     ]);
+    MasterModelMapping::create(['np' => '018-TEST', 'sku' => 'MODEL-TEST', 'master_sheet_type' => 'assembly_packaging', 'active' => true]);
     $routePrefix = $kind === 'lpk' ? 'kiosk.lpk_label_requests' : 'kiosk.label_requests';
     $payload = [
         'request_date' => now()->toDateString(), 'week' => (int) now()->isoWeek(),
@@ -137,7 +142,8 @@ it('receives kiosk requests and controls their preparation and delivery without 
         ->assertRedirect(route('kiosk.dashboard'));
 
     $labelRequest = LabelRequest::query()->sole();
-    expect($labelRequest->request_kind)->toBe($kind);
+    expect($labelRequest->request_kind)->toBe($kind)
+        ->and($labelRequest->serial_standard)->toBeNull();
     $receipt = KioskRequisitionPrintJob::query()->sole();
     expect($receipt->label_request_id)->toBe($labelRequest->id)
         ->and($receipt->zpl)->toContain('^XA');
@@ -151,13 +157,40 @@ it('receives kiosk requests and controls their preparation and delivery without 
 
     $this->get(route('label_requests.index'))->assertOk()->assertSee('SERIAL-TEST')->assertSee('RATING-TEST');
     $this->get(route('label_requests.show', $labelRequest))->assertOk()
-        ->assertSee('Iniciar preparación')->assertDontSee('Centro de impresión')
+        ->assertSee('Revisar y liberar')->assertDontSee('Centro de impresión')
         ->assertDontSee('sistema anterior')->assertDontSee('Impresión automática');
     $this->get(route('label_requests.requisition_sheet', $labelRequest))->assertOk();
 
-    $this->post(route('label_requests.start_preparation', $labelRequest))->assertSessionHasNoErrors();
+    $this->post(route('label_requests.start_preparation', $labelRequest))->assertSessionHasErrors('status');
+    app(LabelFolioService::class)->initialize([
+        'label_part_number' => 'RATING-TEST', 'folio_family' => 'MODEL-TEST',
+        'year' => now()->isoWeekYear(), 'week' => now()->isoWeek(), 'last_serial_number' => 0,
+        'opening_notes' => 'Inicio verificado',
+    ], $this->operator);
+    $administration = app(LabelRoomAdministrationService::class);
+    $definitions = app(LabelWorkDefinitionService::class)->forRequest($labelRequest);
+    $review = [
+        'control_year' => now()->isoWeekYear(), 'control_week' => now()->isoWeek(),
+        'job_status' => 'C', 'plan_checked' => 1,
+        'tasks' => $definitions->map(fn ($line) => [
+            'rating_part_number' => 'RATING-TEST',
+            'evidence_position' => 'last', 'assigned_to_user_id' => $this->operator->id,
+        ])->all(),
+    ];
+    $proposal = $administration->proposal($labelRequest, $review);
+    foreach ($proposal['tasks'] as $key => $task) {
+        $review['tasks'][$key]['expected_start'] = $task['folio_start'];
+    }
+    $review['proposal_signature'] = $administration->proposalSignature($labelRequest, $proposal, $review);
+    $this->post(route('label_requests.release', $labelRequest), $review)->assertSessionHasNoErrors();
     expect($labelRequest->refresh()->status)->toBe(LabelRequest::STATUS_IN_PROGRESS);
-    $this->post(route('label_requests.ready_for_delivery', $labelRequest))->assertSessionHasNoErrors();
+    $this->post(route('label_requests.ready_for_delivery', $labelRequest))->assertSessionHasErrors('status');
+    foreach ($labelRequest->workTasks as $task) {
+        $this->post(route('label_requests.tasks.complete', [$labelRequest, $task]), [
+            'printed_by_user_id' => $this->operator->id, 'printed_shift_id' => $this->shift->id,
+            'work_date' => now()->toDateString(), 'work_confirmed' => 1,
+        ])->assertSessionHasNoErrors();
+    }
     expect($labelRequest->refresh()->status)->toBe(LabelRequest::STATUS_READY_FOR_DELIVERY)
         ->and($labelRequest->attended_by_user_id)->toBe($this->operator->id);
     $this->post(route('label_requests.deliver', $labelRequest))->assertSessionHasNoErrors();

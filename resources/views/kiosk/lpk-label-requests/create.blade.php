@@ -36,6 +36,7 @@
               method="POST"
               action="{{ route('kiosk.lpk_label_requests.store') }}">
             @csrf
+            @include('kiosk.partials.label-folio-mode')
 
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-200 px-5 py-4">

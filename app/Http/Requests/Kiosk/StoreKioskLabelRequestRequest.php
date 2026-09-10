@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Kiosk;
 
+use App\Models\LabelRequest;
 use App\Services\Labels\LabelRequestJobAvailabilityService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,6 +30,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
         $requiresShippingPartNumber = fn (): bool => $this->boolean('include_shipping');
 
         return [
+            'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
             'week' => ['required', 'integer', 'min:1', 'max:53'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
@@ -71,6 +73,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
         );
 
         $this->merge([
+            'folio_mode' => $this->input('folio_mode', 'new'),
             'include_serial' => $includeSerial,
             'include_rating' => $includeRating,
             'include_inner' => $this->boolean('include_inner'),
@@ -198,7 +201,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
         $availability = app(LabelRequestJobAvailabilityService::class)->calculate($job);
         $requestedQuantity = (int) $this->input('quantity_requested');
 
-        if ($requestedQuantity > $availability['available_quantity']) {
+        if ($this->input('folio_mode') !== 'reprint_originals' && $requestedQuantity > $availability['available_quantity']) {
             $validator->errors()->add(
                 'quantity_requested',
                 "La cantidad solicitada supera la disponibilidad del Job ({$availability['available_quantity']})."

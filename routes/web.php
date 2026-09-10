@@ -23,6 +23,7 @@ use App\Http\Controllers\Kiosk\KioskOracleJobController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\Labels\LabelRequestController;
+use App\Http\Controllers\Labels\LabelRoomAdministrationController;
 use App\Http\Controllers\Masters\ManualMasterRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
@@ -221,6 +222,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         });
 
         Route::middleware('module_access:labels')->group(function () {
+            Route::get('/label-requests/weeks', [LabelRoomAdministrationController::class, 'weeks'])->name('label_requests.weeks');
+            Route::post('/label-requests/weeks/initialize', [LabelRoomAdministrationController::class, 'initializeWeek'])->name('label_requests.weeks.initialize');
+            Route::get('/label-requests/jobs', [LabelRoomAdministrationController::class, 'jobs'])->name('label_requests.jobs');
+            Route::get('/label-requests/{label_request}/review', [LabelRoomAdministrationController::class, 'review'])->name('label_requests.review');
+            Route::get('/label-requests/{label_request}/preview', [LabelRoomAdministrationController::class, 'previewRedirect'])->name('label_requests.preview.redirect');
+            Route::post('/label-requests/{label_request}/preview', [LabelRoomAdministrationController::class, 'preview'])->name('label_requests.preview');
+            Route::post('/label-requests/{label_request}/release', [LabelRoomAdministrationController::class, 'release'])->name('label_requests.release');
+            Route::post('/label-requests/{label_request}/classification', [LabelRoomAdministrationController::class, 'classify'])->name('label_requests.classify');
+            Route::post('/label-requests/{label_request}/tasks/{task}/assign', [LabelRoomAdministrationController::class, 'assign'])->name('label_requests.tasks.assign');
+            Route::post('/label-requests/{label_request}/tasks/{task}/complete', [LabelRoomAdministrationController::class, 'complete'])->name('label_requests.tasks.complete');
             Route::get('/label-requests', [LabelRequestController::class, 'index'])->name('label_requests.index');
             Route::get('/label-requests/{id}', [LabelRequestController::class, 'show'])->whereNumber('id')->name('label_requests.show');
             Route::get('/label-requests/{label_request}/requisition-sheet', [LabelRequestController::class, 'requisitionSheet'])->name('label_requests.requisition_sheet');

@@ -6,6 +6,7 @@ use App\Models\LabelRequest;
 use App\Models\ProductionLine;
 use App\Models\Shift;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class LabelRequestReadService
 {
@@ -216,6 +217,10 @@ class LabelRequestReadService
                 'readyForDeliveryByUser:id,name',
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
+                'releasedBy:id,name',
+                'workTasks.assignee',
+                'workTasks.range.week',
+                'workTasks.printedShift',
                 'serials:id,label_request_id,part_number,model,position',
                 'ratings:id,label_request_id,part_number,model,position',
                 'shippingItems:id,label_request_id,item_reference,model,position',
@@ -242,6 +247,10 @@ class LabelRequestReadService
                 ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
                 : collect(),
             'workBlocks' => $this->buildWorkBlocks($labelRequest, $hasGroupedLpkDetails),
+            'administrationEvents' => DB::table('label_administration_events as events')
+                ->leftJoin('users', 'users.id', '=', 'events.user_id')
+                ->where('events.label_request_id', $id)->orderByDesc('events.id')->limit(50)
+                ->get(['events.*', 'users.name as user_name']),
         ];
     }
 

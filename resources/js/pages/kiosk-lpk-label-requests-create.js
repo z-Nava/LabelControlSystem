@@ -177,6 +177,7 @@ import Swal from 'sweetalert2';
         const quantityInput = field(item, 'quantity');
         const available = Number(jobInput.dataset.availableQuantity);
         quantityInput.setCustomValidity('');
+        if (document.getElementById('folioMode')?.value === 'reprint_originals') return;
 
         if (
             jobInput.dataset.validatedJob
@@ -252,8 +253,9 @@ import Swal from 'sweetalert2';
 
             const isShipping = Boolean(input.closest('.lpk-shipping-item'));
             const detail = data.assembly ? ` · ${data.assembly}` : '';
-            const availability = isShipping
-                ? 'Job válido (informativo)'
+            const availability = document.getElementById('folioMode')?.value === 'reprint_originals'
+                ? 'Job válido · reimpresión con originales físicos'
+                : isShipping ? 'Job válido (informativo)'
                 : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
             setStatus(input, `${availability}${detail}`, 'text-emerald-700');
             setJobModelState(input, data.mapped_model, { status: 'resolved' });
@@ -389,6 +391,10 @@ import Swal from 'sweetalert2';
     });
 
     document.getElementById('lineTypeFilter').addEventListener('change', filterLines);
+
+    document.getElementById('folioMode')?.addEventListener('change', () => {
+        form.querySelectorAll('[data-validated-job]').forEach(validateQuantityForRow);
+    });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();

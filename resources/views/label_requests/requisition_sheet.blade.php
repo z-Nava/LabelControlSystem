@@ -170,16 +170,16 @@
             html,
             body {
                 width: 100%;
-                height: 100%;
-                overflow: hidden;
+                min-height: 100%;
             }
 
             .sheet {
                 max-width: none;
-                height: 205mm;
+                min-height: 190mm;
+                height: auto;
+                break-inside: auto;
+                page-break-inside: auto;
                 box-shadow: none;
-                break-inside: avoid;
-                page-break-inside: avoid;
                 border-radius: 0;
             }
         }
@@ -270,15 +270,18 @@
             </div>
             <div class="col-span-2 border-r border-slate-300 p-4">
                 <div class="field-label">Folio inicial</div>
-                <div class="manual-line"></div>
+                <div class="field-value">{{ $labelRequest->folio_start ?? ($labelRequest->released_at ? 'Ver detalle' : 'Pendiente') }}</div>
             </div>
             <div class="col-span-2 p-4">
                 <div class="field-label">Folio final</div>
-                <div class="manual-line"></div>
+                <div class="field-value">{{ $labelRequest->folio_end ?? ($labelRequest->released_at ? 'Ver detalle' : 'Pendiente') }}</div>
             </div>
         </section>
 
         <section class="detail-section border-b border-slate-300">
+            @if($labelRequest->released_at)
+                @include('label_requests.partials.work-sheet')
+            @else
             <div class="detail-title border-b border-slate-300 bg-slate-50 px-4 py-2 field-label">Detalle solicitado</div>
             <table class="detail-table w-full border-collapse text-sm">
                 <colgroup>
@@ -312,6 +315,7 @@
                     @endforeach
                 </tbody>
             </table>
+            @endif
         </section>
 
         <section class="grid grid-cols-12 border-b border-slate-300">

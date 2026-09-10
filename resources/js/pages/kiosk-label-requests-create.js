@@ -252,6 +252,13 @@ import { debounce } from './utils/debounce';
 
     function validateQuantityAvailability() {
         inputs.quantity.setCustomValidity('');
+        const reprint = byId('folioMode')?.value === 'reprint_originals';
+        if (reprint) {
+            inputs.quantity.max = '100000';
+            setHint(quantityHint, 'Reimpresión: entrega los originales físicos a LabelRoom. No consume otra vez la disponibilidad del Job.');
+            return true;
+        }
+        if (availableQuantity !== null) inputs.quantity.max = String(availableQuantity);
 
         if (availableQuantity === null) {
             return true;
@@ -527,6 +534,8 @@ import { debounce } from './utils/debounce';
         lookupJob();
     });
     inputs.job.addEventListener('change', lookupJob);
+
+    byId('folioMode')?.addEventListener('change', validateQuantityAvailability);
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();

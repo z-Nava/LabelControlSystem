@@ -1,6 +1,7 @@
 @extends('layouts.app', ['title' => 'Detalle de requisición de etiquetas'])
 
 @section('content')
+<div class="mb-4">@include('label_requests.partials.admin-navigation')</div>
 <div class="rounded-2xl bg-white p-6 shadow">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -85,8 +86,8 @@
                     <div class="text-slate-700">NP Rating: No requerido</div>
                 @endforelse
             @endif
-            <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? 'No requerido' }}</div>
-            <div class="text-slate-700">Folio final: {{ $labelRequest->folio_end ?? 'No requerido' }}</div>
+            <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? ($labelRequest->released_at ? 'Ver por tarea' : 'Pendiente de asignar') }}</div>
+            <div class="text-slate-700">Folio final: {{ $labelRequest->folio_end ?? ($labelRequest->released_at ? 'Ver por tarea' : 'Pendiente de asignar') }}</div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -103,6 +104,9 @@
         </div>
     </div>
 
+    @if($labelRequest->released_at)
+        @include('label_requests.partials.work-tasks')
+    @else
     <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/60">
         <div class="border-b border-slate-200 bg-white px-5 py-4">
             <h2 class="text-lg font-semibold text-slate-900">Bloques de trabajo por etiqueta</h2>
@@ -137,7 +141,7 @@
                             </span>
                             <div>
                                 <h3 class="text-lg font-bold text-slate-950">Etiqueta {{ $workBlock['label'] }}</h3>
-                                <p class="text-xs text-slate-600">Bloque listo para asignar a una operadora.</p>
+                                <p class="text-xs text-slate-600">Pendiente de revisión y liberación administrativa.</p>
                             </div>
                         </div>
                         <span class="inline-flex w-fit rounded-full border border-white/80 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
@@ -250,6 +254,23 @@
         </div>
     </section>
 
+    @endif
+    <section class="mt-6 rounded-xl border border-slate-200 p-5">
+        <h2 class="font-bold">Clasificación administrativa</h2>
+        <form method="POST" action="{{ route('label_requests.classify', $labelRequest) }}" class="mt-3 flex flex-wrap items-end gap-3">
+            @csrf
+            <label class="text-sm">Status del trabajo
+                <select name="job_status" class="mt-1 block rounded-lg border border-slate-300 px-3 py-2">
+                    @foreach(\App\Models\LabelRequest::JOB_STATUSES as $code => $label)
+                        <option value="{{ $code }}" @selected($labelRequest->job_status === $code)>{{ $code }} · {{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label class="flex-1 text-sm">Motivo del cambio<input name="reason" maxlength="1000" required class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
+            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Guardar clasificación</button>
+        </form>
+        @if($labelRequest->review_notes)<p class="mt-3 whitespace-pre-line text-sm text-slate-600">{{ $labelRequest->review_notes }}</p>@endif
+    </section>
     <div class="mt-6 rounded-xl border border-slate-200">
         <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
             <h2 class="font-semibold text-slate-900">Trazabilidad del flujo físico</h2>
@@ -278,6 +299,25 @@
         </div>
     </div>
 
+    @if($administrationEvents->isNotEmpty())
+        <details class="mt-6 rounded-xl border border-slate-200 p-5">
+            <summary class="cursor-pointer font-bold">Historial administrativo</summary>
+            <ul class="mt-4 space-y-3 text-sm">
+                @foreach($administrationEvents as $event)
+                    @php
+                        $eventDetails = json_decode($event->details, true);
+                        $actionLabels = ['released'=>'Requisición liberada', 'assigned'=>'Asignación actualizada', 'task_completed'=>'Impresión confirmada', 'work_closed'=>'Trabajo terminado y registrado en JOB', 'classified'=>'Clasificación actualizada', 'cancelled'=>'Requisición cancelada; folios conservados'];
+                    @endphp
+                    <li class="border-l-2 border-slate-200 pl-3">
+                        <strong>{{ $actionLabels[$event->action] ?? $event->action }}</strong> · {{ $event->user_name ?? 'Usuario no disponible' }}
+                        <div class="text-slate-500">{{ \Illuminate\Support\Carbon::parse($event->created_at)->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</div>
+                        @if($event->action === 'classified')<div>{{ $eventDetails['before'] }} → {{ $eventDetails['after'] }} · {{ $eventDetails['reason'] }}</div>@endif
+                        @if($event->action === 'released' && !empty($eventDetails['notes']))<div>{{ $eventDetails['notes'] }}</div>@endif
+                    </li>
+                @endforeach
+            </ul>
+        </details>
+    @endif
     @if($labelRequest->notes)
         <div class="mt-6 rounded-xl border border-slate-200 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas</div>

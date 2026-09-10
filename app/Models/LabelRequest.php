@@ -11,6 +11,10 @@ class LabelRequest extends Model
 {
     public const KIND_STANDARD = 'standard';
 
+    public const FOLIO_MODES = ['new' => 'Folios nuevos', 'reprint_originals' => 'Reimpresión con originales físicos'];
+
+    public const JOB_STATUSES = ['P' => 'Pendiente', 'C' => 'Corriendo', 'RE' => 'Reetiquetado', 'OF' => 'Orden finalizada'];
+
     public const KIND_LPK = 'lpk';
 
     public const KIND_LABELS = [
@@ -49,6 +53,16 @@ class LabelRequest extends Model
 
     protected $fillable = [
         'request_kind',
+        'folio_mode',
+        'job_status',
+        'control_year',
+        'control_week',
+        'review_notes',
+        'released_at',
+        'released_by_user_id',
+        'originals_received_at',
+        'physical_signed_at',
+        'physical_signed_by_user_id',
         'request_date',
         'week',
         'line_id',
@@ -89,6 +103,11 @@ class LabelRequest extends Model
 
     protected $casts = [
         'request_date' => 'date:Y-m-d',
+        'released_at' => 'datetime',
+        'originals_received_at' => 'datetime',
+        'physical_signed_at' => 'datetime',
+        'control_year' => 'integer',
+        'control_week' => 'integer',
         'week' => 'integer',
         'line_id' => 'integer',
         'shift_id' => 'integer',
@@ -112,6 +131,21 @@ class LabelRequest extends Model
     ];
 
     // Relaciones
+    public function workTasks(): HasMany
+    {
+        return $this->hasMany(LabelWorkTask::class)->orderBy('id');
+    }
+
+    public function releasedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'released_by_user_id');
+    }
+
+    public function isOriginalReprint(): bool
+    {
+        return $this->folio_mode === 'reprint_originals';
+    }
+
     public function line(): BelongsTo
     {
         return $this->belongsTo(ProductionLine::class, 'line_id');
@@ -205,7 +239,10 @@ class LabelRequest extends Model
 
     public function canMarkReadyForDelivery(): bool
     {
-        return $this->status === self::STATUS_IN_PROGRESS;
+        return $this->status === self::STATUS_IN_PROGRESS
+            && $this->released_at !== null
+            && $this->workTasks()->exists()
+            && ! $this->workTasks()->where('status', '!=', 'completed')->exists();
     }
 
     public function canConfirmDelivery(): bool
