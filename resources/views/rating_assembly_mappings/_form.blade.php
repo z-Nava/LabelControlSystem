@@ -25,11 +25,22 @@
                 class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600">
             <option value="">Selecciona...</option>
             @foreach($markets as $market)
-                <option value="{{ $market }}" @selected(old('market', $mapping->market ?? '') === $market)>{{ $market }}</option>
+                <option value="{{ $market }}" @selected(old('market', $mapping->market ?? \App\Support\SerialStandards::UL) === $market)>{{ $market }}</option>
             @endforeach
         </select>
         @error('market') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
     </div>
+
+    @foreach(['serial_part_number' => ['Serial', '950410000'], 'shipping_part_number' => ['Shipping', '950143000'], 'inner_part_number' => ['Inner', '950405000']] as $field => [$label, $placeholder])
+        <div>
+            <label for="{{ $field }}" class="block text-sm font-medium text-slate-700">NP {{ $label }} <span class="font-normal text-slate-500">(opcional)</span></label>
+            <input id="{{ $field }}" name="{{ $field }}" maxlength="80"
+                   value="{{ old($field, $mapping->{$field} ?? '') }}"
+                   class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-600"
+                   placeholder="{{ $placeholder }}" />
+            @error($field) <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+        </div>
+    @endforeach
 
     <div class="md:col-span-3">
         <input type="hidden" name="active" value="0" />

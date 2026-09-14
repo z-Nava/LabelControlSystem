@@ -5,7 +5,7 @@
     <div class="flex items-center justify-between gap-3">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Nueva relación Rating y Ensamble</h1>
-            <p class="mt-1 text-sm text-slate-600">Asocia el NP Rating con el ensamble de empaque 018 y su mercado.</p>
+            <p class="mt-1 text-sm text-slate-600">Asocia el NP Rating con el ensamble de empaque 018 y su mercado. Agrega los NP Serial, Shipping e Inner cuando apliquen.</p>
         </div>
         <a href="{{ route('rating_assembly_mappings.index') }}" class="text-slate-600 hover:text-slate-900">Volver</a>
     </div>

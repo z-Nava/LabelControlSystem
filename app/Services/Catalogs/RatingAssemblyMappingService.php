@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
 class RatingAssemblyMappingService
@@ -18,7 +19,10 @@ class RatingAssemblyMappingService
             ->with('updatedByUser')
             ->when($search, fn ($query, $term) => $query->where(fn ($nested) => $nested
                 ->where('rating_part_number', 'like', "%{$term}%")
-                ->orWhere('assembly_part_number', 'like', "%{$term}%")))
+                ->orWhere('assembly_part_number', 'like', "%{$term}%")
+                ->orWhere('serial_part_number', 'like', "%{$term}%")
+                ->orWhere('shipping_part_number', 'like', "%{$term}%")
+                ->orWhere('inner_part_number', 'like', "%{$term}%")))
             ->when($market, fn ($query, $value) => $query->where('market', $value))
             ->when($active !== null, fn ($query) => $query->where('active', $active))
             ->orderByDesc('active')
@@ -149,7 +153,14 @@ class RatingAssemblyMappingService
         DB::transaction(function () use ($rows, $userId, &$result): void {
             foreach ($rows as $row) {
                 $data = RatingAssemblyMappingsImport::normalizeRow($row);
-                if (! $data['rating_part_number'] || ! $data['assembly_part_number'] || ! $data['market']) {
+                if (Validator::make($data, [
+                    'rating_part_number' => ['required', 'string', 'max:80'],
+                    'assembly_part_number' => ['required', 'string', 'max:80'],
+                    'market' => ['required'],
+                    'serial_part_number' => ['nullable', 'string', 'max:80'],
+                    'shipping_part_number' => ['nullable', 'string', 'max:80'],
+                    'inner_part_number' => ['nullable', 'string', 'max:80'],
+                ])->fails()) {
                     $result['skipped']++;
 
                     continue;
@@ -161,7 +172,7 @@ class RatingAssemblyMappingService
                     'market' => $data['market'],
                 ]);
                 $wasRecentlyCreated = ! $mapping->exists;
-                $mapping->fill(['active' => true, 'updated_by_user_id' => $userId])->save();
+                $mapping->fill([...$data, 'active' => true, 'updated_by_user_id' => $userId])->save();
                 $result[$wasRecentlyCreated ? 'inserted' : 'updated']++;
             }
         });
@@ -173,6 +184,9 @@ class RatingAssemblyMappingService
     {
         return [
             'rating_part_number' => $this->normalize($data['rating_part_number'] ?? null),
+            'serial_part_number' => $this->normalize($data['serial_part_number'] ?? null),
+            'shipping_part_number' => $this->normalize($data['shipping_part_number'] ?? null),
+            'inner_part_number' => $this->normalize($data['inner_part_number'] ?? null),
             'assembly_part_number' => $this->normalize($data['assembly_part_number'] ?? null),
             'market' => strtoupper(trim((string) ($data['market'] ?? ''))),
             'active' => (bool) ($data['active'] ?? $defaultActive),

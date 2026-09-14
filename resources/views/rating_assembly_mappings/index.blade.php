@@ -5,7 +5,7 @@
     <div class="flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
             <h1 class="text-2xl font-semibold text-slate-900">Catálogo Rating y Ensamble</h1>
-            <p class="mt-1 text-slate-600">Opciones de NP Rating por ensamble de empaque 018 y mercado para Kiosk y Label Room.</p>
+            <p class="mt-1 text-slate-600">Números de parte Rating, Serial, Shipping e Inner por ensamble de empaque 018 y mercado.</p>
         </div>
         <a href="{{ route('rating_assembly_mappings.create') }}"
            class="rounded-xl bg-red-600 px-4 py-2 text-center font-semibold text-white transition hover:bg-red-500">+ Nueva relación</a>
@@ -21,7 +21,7 @@
 
     <div class="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <form method="GET" action="{{ route('rating_assembly_mappings.index') }}" class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
-            <input name="q" maxlength="100" value="{{ $filters['q'] ?? '' }}" placeholder="Buscar NP Rating o ensamble..."
+            <input name="q" maxlength="100" value="{{ $filters['q'] ?? '' }}" placeholder="Buscar ensamble o NP de etiqueta..."
                    class="rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600" />
             <select name="market" class="rounded-xl border border-slate-300 px-3 py-2">
                 <option value="">Mercados</option>
@@ -42,18 +42,22 @@
             <button class="rounded-xl bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-600">Importar Excel</button>
         </form>
     </div>
-    <p class="mt-2 text-xs text-slate-500">Encabezados aceptados: NP_RATING, ENSAMBLE y MERCADO. También acepta MARKET, ASSEMBLY, EMPAQUE y SERIAL_STANDARD. Alias: UK/EU → EMEA; ASIA/JPN → APJ. Formatea las columnas de NP como texto en Excel para conservar ceros iniciales.</p>
+    <p class="mt-2 text-xs text-slate-500">Columnas requeridas: EMPAQUE, RATING_PN y MERCADO. Opcionales: SERIAL_NP, SHIPPING_NP e INNER_NP. También acepta ENSAMBLE/ASSEMBLY, NP_RATING y MARKET/SERIAL_STANDARD. Alias: UK/EU → EMEA; ASIA/JPN → APJ. Formatea los números de parte como texto en Excel para conservar ceros iniciales.</p>
+    <p class="mt-1 text-xs text-slate-500">Si omites una columna opcional, se conserva su valor actual. Si la incluyes vacía, se borra ese número de parte. Las filas incompletas, con mercado no reconocido o con números de parte de más de 80 caracteres se omiten.</p>
 
     <div class="mt-5 overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[1100px] text-sm">
             <thead><tr class="border-b text-left text-slate-500">
-                <th class="py-3 pr-3">NP Rating</th><th class="py-3 pr-3">Ensamble / Empaque 018</th><th class="py-3 pr-3">Mercado</th><th class="py-3 pr-3">Activo</th><th class="py-3 text-right">Acciones</th>
+                <th class="py-3 pr-3">Ensamble / Empaque 018</th><th class="py-3 pr-3">NP Rating</th><th class="py-3 pr-3">NP Serial</th><th class="py-3 pr-3">NP Shipping</th><th class="py-3 pr-3">NP Inner</th><th class="py-3 pr-3">Mercado</th><th class="py-3 pr-3">Activo</th><th class="py-3 text-right">Acciones</th>
             </tr></thead>
             <tbody class="divide-y">
                 @forelse($mappings as $mapping)
                     <tr>
-                        <td class="py-3 pr-3 font-semibold text-slate-900">{{ $mapping->rating_part_number }}</td>
                         <td class="py-3 pr-3">{{ $mapping->assembly_part_number }}</td>
+                        <td class="py-3 pr-3 font-semibold text-slate-900">{{ $mapping->rating_part_number }}</td>
+                        <td class="py-3 pr-3">{{ $mapping->serial_part_number ?? '—' }}</td>
+                        <td class="py-3 pr-3">{{ $mapping->shipping_part_number ?? '—' }}</td>
+                        <td class="py-3 pr-3">{{ $mapping->inner_part_number ?? '—' }}</td>
                         <td class="py-3 pr-3"><span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-sky-800">{{ $mapping->market }}</span></td>
                         <td class="py-3 pr-3">{{ $mapping->active ? 'Sí' : 'No' }}</td>
                         <td class="py-3 text-right">
@@ -66,7 +70,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-8 text-center text-slate-500">El catálogo está listo para capturar relaciones manualmente o importar un Excel.</td></tr>
+                    <tr><td colspan="8" class="py-8 text-center text-slate-500">El catálogo está listo para capturar relaciones manualmente o importar un Excel.</td></tr>
                 @endforelse
             </tbody>
         </table>

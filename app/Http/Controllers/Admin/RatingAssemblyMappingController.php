@@ -74,6 +74,6 @@ class RatingAssemblyMappingController extends Controller
     {
         $result = $this->service->importFromExcel($request->file('file'), $request->user()?->id);
 
-        return back()->with('success', "Importación finalizada. Insertados: {$result['inserted']}, reactivados: {$result['updated']}, omitidos: {$result['skipped']}.");
+        return back()->with('success', "Importación finalizada. Insertados: {$result['inserted']}, actualizados/reactivados: {$result['updated']}, omitidos: {$result['skipped']}.");
     }
 }

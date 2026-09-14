@@ -9,6 +9,9 @@ class RatingAssemblyMapping extends Model
 {
     protected $fillable = [
         'rating_part_number',
+        'serial_part_number',
+        'shipping_part_number',
+        'inner_part_number',
         'assembly_part_number',
         'market',
         'active',
