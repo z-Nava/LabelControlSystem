@@ -1,5 +1,6 @@
 import Swal from '../lib/sweetalert';
 import { debounce } from './utils/debounce';
+import { initializeUppercaseInput } from './utils/uppercase-input';
 import { confirmSubmit } from './master-requests-create/confirmation';
 import { getMasterRequestElements } from './master-requests-create/dom';
 import {
@@ -235,6 +236,8 @@ function initializeInventoryDestination(fields) {
         lookupUrl,
         requestSource,
     } = page;
+    [fields.jobAssembly, fields.jobPackaging].forEach(initializeUppercaseInput);
+
     const isLabelRoomRequest = requestSource === 'label_room';
     const jobLookupState = {
         assembly: null,

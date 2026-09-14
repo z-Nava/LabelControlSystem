@@ -120,6 +120,8 @@ class StoreKioskMasterRequestRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $jobAssembly = $this->cleanInput($this->input('job_assembly', ''));
+        $jobPackaging = $this->cleanInput($this->input('job_packaging', ''));
         $local = $this->cleanInput($this->input('local', ''));
         $subinventory = $this->cleanInput($this->input('subinventory', ''));
 
@@ -127,8 +129,8 @@ class StoreKioskMasterRequestRequest extends FormRequest
             'week' => now()->weekOfYear,
             'leader_name' => $this->cleanInput($this->input('leader_name', '')),
             'po_number' => $this->cleanInput($this->input('po_number', '')),
-            'job_assembly' => $this->cleanInput($this->input('job_assembly', '')),
-            'job_packaging' => $this->cleanInput($this->input('job_packaging', '')),
+            'job_assembly' => $jobAssembly !== null ? strtoupper($jobAssembly) : null,
+            'job_packaging' => $jobPackaging !== null ? strtoupper($jobPackaging) : null,
             'destination' => $this->cleanInput($this->input('destination', '')),
             'local' => $local !== null ? strtoupper($local) : null,
             'subinventory' => $subinventory !== null ? strtoupper($subinventory) : null,

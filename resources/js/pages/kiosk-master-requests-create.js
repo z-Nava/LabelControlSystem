@@ -1,5 +1,6 @@
 import Swal from '../lib/sweetalert';
 import { debounce } from './utils/debounce';
+import { initializeUppercaseInput } from './utils/uppercase-input';
 import { confirmSubmit } from './kiosk-master-requests-create/confirmation';
 import { getMasterRequestElements } from './kiosk-master-requests-create/dom';
 import {
@@ -237,6 +238,8 @@ function initializeInventoryDestination(fields) {
         validationFlow,
     } = page;
     const isLabelRoomRequest = requestSource === 'label_room';
+    [fields.jobAssembly, fields.jobPackaging].forEach(initializeUppercaseInput);
+
     const usesJobDrivenFlow = validationFlow === 'job-driven' || isLabelRoomRequest;
     const jobLookupState = {
         assembly: null,
@@ -430,4 +433,3 @@ function initializeInventoryDestination(fields) {
         packagingLookup();
     }
 })();
-

@@ -1,5 +1,6 @@
 import Swal from '../lib/sweetalert';
 import { debounce } from './utils/debounce';
+import { initializeUppercaseInput } from './utils/uppercase-input';
 import { createJobLookupHandler } from './master-requests-create/lookup';
 import {
     folioValidationAlertMessage,
@@ -60,6 +61,8 @@ function validLookupForRole(lookup, role) {
             folios: document.getElementById('summaryFolios'),
         },
     };
+    [fields.jobAssembly, fields.jobPackaging].forEach(initializeUppercaseInput);
+
     const lookupFields = {
         ...fields,
         poNumber: null,
