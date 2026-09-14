@@ -14,7 +14,12 @@ class SerialRange extends Model
 
     public function week(): BelongsTo
     {
-        return $this->belongsTo(SerialWeek::class, 'serial_week_id');
+        return $this->period();
+    }
+
+    public function period(): BelongsTo
+    {
+        return $this->belongsTo(SerialPeriod::class, 'serial_week_id');
     }
 
     public function labelRequest(): BelongsTo

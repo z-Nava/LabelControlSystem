@@ -20,11 +20,20 @@
         @if(isset($proposalSignature))<input type="hidden" name="proposal_signature" value="{{ $proposalSignature }}" />@endif
         <section class="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 class="text-lg font-bold">1. Validar la operación</h2>
-            <div class="mt-4 grid gap-4 md:grid-cols-3">
-                <label class="text-sm font-medium">Año de control
+            <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <label class="text-sm font-medium">Mercado de serialización
+                    <select name="serial_standard" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                        <option value="">Selecciona el mercado</option>
+                        @foreach($markets as $market)
+                            <option value="{{ $market }}" @selected(($values['serial_standard'] ?? $selectedMarket) === $market)>{{ $market }} · {{ $market === 'UL' ? 'Control semanal' : 'Control mensual' }}</option>
+                        @endforeach
+                    </select>
+                    <span class="mt-1 block text-xs text-slate-500">Si el catálogo no lo resolvió, confírmalo aquí antes de liberar.</span>
+                </label>
+                <label class="text-sm font-medium">Año operativo
                     <input type="number" name="control_year" min="2000" max="2100" value="{{ $values['control_year'] ?? $defaultYear }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
-                <label class="text-sm font-medium">Semana autorizada
+                <label class="text-sm font-medium">Semana operativa
                     <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $defaultWeek }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
                 <label class="text-sm font-medium">Clasificación del trabajo
@@ -35,8 +44,9 @@
                     </select>
                 </label>
             </div>
+            <p class="mt-3 text-sm text-slate-600">El periodo serial se toma al momento de liberar: semana ISO para UL y mes calendario para EMEA, ANZ y APJ. El año y semana capturados se conservan como control operativo.</p>
             @if($labelRequest->isOriginalReprint())
-                <p class="mt-3 text-sm text-amber-800">Cada rango reimpreso conservará su semana y año originales. No se reserva evidencia adicional.</p>
+                <p class="mt-3 text-sm text-amber-800">Cada rango conserva su periodo original y no avanza el consecutivo. Se imprime una copia adicional como evidencia.</p>
                 <label class="mt-3 flex items-center gap-2 text-sm font-semibold">
                     <input type="checkbox" name="originals_received" value="1" required @checked($values['originals_received'] ?? false) /> Recibí físicamente las etiquetas originales.
                 </label>
@@ -56,12 +66,12 @@
                 <a href="{{ route('label_requests.weeks') }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 underline">Inicializar o consultar el último folio del Excel</a>
             </div>
             <div class="rounded-xl border border-blue-200 bg-white p-4 text-sm">
-                <h3 class="font-bold">Controles registrados · {{ $controlsYear }} · Semana {{ $controlsWeek }}</h3>
-                <p class="mt-1 text-slate-600">El control debe coincidir en NP Rating, familia, año y semana. La familia es el SKU obtenido del ensamble de la Job en Master Model Mapping.</p>
+                <h3 class="font-bold">Controles registrados · {{ $selectedMarket ?: 'Mercado pendiente' }} · {{ \App\Support\SerialPeriods::describe($periodType, $periodNumber) }} {{ $periodYear }}</h3>
+                <p class="mt-1 text-slate-600">El consecutivo se controla por NP Rating, mercado y periodo. El ensamble y el SKU se conservan como referencia operativa.</p>
                 @forelse($availableControls as $control)
-                    <p class="mt-2">NP Rating <strong>{{ $control->label_part_number }}</strong> · Familia <strong>{{ $control->folio_family }}</strong> · Último reservado <strong>{{ number_format($control->last_serial_number) }}</strong></p>
+                    <p class="mt-2">NP Rating <strong>{{ $control->label_part_number }}</strong> · Mercado <strong>{{ $control->serial_standard }}</strong> · Último reservado <strong>{{ number_format($control->last_serial_number) }}</strong></p>
                 @empty
-                    <p class="mt-2 text-slate-600">No hay controles con familia registrada para estas etiquetas en este año y semana.</p>
+                    <p class="mt-2 text-slate-600">No hay un control registrado para estas etiquetas y este periodo.</p>
                 @endforelse
             </div>
             @foreach($lines as $key => $line)
@@ -74,7 +84,7 @@
                         <div><h3 class="text-lg font-bold">{{ ucfirst($line['label_type']) }} · {{ $line['part_number'] }}</h3>
                         <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p></div>
                         <div class="text-right text-sm">Producción <strong class="text-lg">{{ number_format($line['quantity']) }}</strong><br>
-                            Evidencia <strong>{{ $labelRequest->isOriginalReprint() ? 0 : 1 }}</strong> · Total <strong>{{ number_format($line['quantity'] + ($labelRequest->isOriginalReprint() ? 0 : 1)) }}</strong>
+                            Evidencia <strong>1</strong> · Total <strong>{{ number_format($line['quantity'] + 1) }}</strong>
                         </div>
                     </div>
                     <div class="mt-4 grid gap-4 md:grid-cols-3">
@@ -86,12 +96,16 @@
                         </label>
                         @if($line['requires_folios'])
                             <label class="text-sm font-medium">NP Rating de control
-                                <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating') class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
+                                <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating') list="rating-options-{{ md5($key) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
+                                <datalist id="rating-options-{{ md5($key) }}">
+                                    @foreach($line['rating_options'] as $option)<option value="{{ $option['rating_part_number'] }}">{{ $option['market'] }}</option>@endforeach
+                                </datalist>
+                                @if($line['rating_options'])<span class="mt-1 block text-xs text-slate-600">Alternativas del ensamble 018 disponibles en el catálogo.</span>@endif
                             </label>
-                            <label class="text-sm font-medium">Familia de folios (SKU)
-                                <input readonly value="{{ $line['folio_family'] }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
+                            <label class="text-sm font-medium">Ensamble / SKU (referencia)
+                                <input readonly value="{{ $line['assembly_number'] }}{{ $line['folio_family'] ? ' / '.$line['folio_family'] : '' }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
                                 @if(blank($line['folio_family']))
-                                    <span class="mt-1 block text-xs text-amber-800">No se encontró el SKU del ensamble {{ $line['assembly_number'] ?: 'sin identificar' }} en Master Model Mapping.</span>
+                                    <span class="mt-1 block text-xs text-slate-600">El SKU no está mapeado; esto no bloquea el control de etiquetas.</span>
                                 @else
                                     <span class="mt-1 block text-xs text-slate-600">Ensamble {{ $line['assembly_number'] }} → SKU {{ $line['folio_family'] }}.</span>
                                 @endif
@@ -106,8 +120,8 @@
                                 <label class="text-sm font-medium">Año de los folios originales
                                     <input type="number" name="tasks[{{ $key }}][original_year]" value="{{ $taskInput['original_year'] ?? $values['control_year'] ?? $defaultYear }}" min="2000" max="2100" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                                 </label>
-                                <label class="text-sm font-medium">Semana de los folios originales
-                                    <input type="number" name="tasks[{{ $key }}][original_week]" value="{{ $taskInput['original_week'] ?? $values['control_week'] ?? $defaultWeek }}" min="1" max="53" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                                <label class="text-sm font-medium">{{ \App\Support\SerialPeriods::label($periodType) }} de los folios originales
+                                    <input type="number" name="tasks[{{ $key }}][original_period_number]" value="{{ $taskInput['original_period_number'] ?? ($periodType === 'month' ? $periodNumber : ($values['control_week'] ?? $defaultWeek)) }}" min="1" max="{{ \App\Support\SerialPeriods::maximum($periodType) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                                 </label>
                                 <label class="text-sm font-medium">Reimprimir del folio
                                     <input type="number" name="tasks[{{ $key }}][folio_start]" value="{{ $taskInput['folio_start'] ?? '' }}" min="1" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
@@ -130,7 +144,7 @@
                             <label class="text-sm">Folios del<input readonly value="{{ $planned['folio_start'] }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-bold" /></label>
                             <label class="text-sm">Hasta<input readonly value="{{ $planned['folio_end'] }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-bold" /></label>
                             <div class="text-sm">Evidencia<div class="mt-2 font-bold">{{ $planned['evidence_folio'] ?? 'Sin pieza adicional' }}</div></div>
-                            <div class="text-sm">Control<div class="mt-2 font-bold">{{ $planned['control_year'] }} · Semana {{ $planned['control_week'] }}</div></div>
+                            <div class="text-sm">Periodo serial<div class="mt-2 font-bold">{{ \App\Support\SerialPeriods::describe($planned['serial_period_type'], $planned['serial_period_number']) }} {{ $planned['serial_period_year'] }}</div><div class="text-xs text-slate-500">Control operativo: {{ $planned['control_year'] }} / semana {{ $planned['control_week'] }}</div></div>
                         </div>
                         <input type="hidden" name="tasks[{{ $key }}][expected_start]" value="{{ $planned['folio_start'] }}" />
                     @endif
@@ -138,7 +152,7 @@
             @endforeach
         </section>
         <datalist id="originalRanges">
-            @foreach($sources as $source)<option value="{{ $source->id }}">Req #{{ $source->label_request_id }} · {{ $source->week->label_part_number }} / {{ $source->week->folio_family ?: 'Familia histórica sin identificar' }} · {{ $source->range_start }}–{{ $source->range_end }} · {{ $source->week->year }}/{{ $source->week->week }}</option>@endforeach
+            @foreach($sources as $source)<option value="{{ $source->id }}">Req #{{ $source->label_request_id }} · {{ $source->period->label_part_number }} / {{ $source->period->serial_standard ?: 'Mercado histórico' }} · {{ $source->range_start }}–{{ $source->range_end }} · {{ $source->period->period_label }} {{ $source->period->year }}</option>@endforeach
         </datalist>
         <footer class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5">
             @if(isset($proposal))

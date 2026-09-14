@@ -2,9 +2,10 @@
 
 namespace App\Services\Labels;
 
+use App\Models\SerialPeriod;
 use App\Models\SerialRange;
-use App\Models\SerialWeek;
 use App\Models\User;
+use App\Support\SerialPeriods;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -12,99 +13,199 @@ class LabelFolioService
 {
     public const MAX_FOLIO = 4294967295;
 
-    public function findWeek(string $part, string $family, int $year, int $week, bool $lock = false): ?SerialWeek
-    {
-        return SerialWeek::where('label_part_number', $part)->where('folio_family', $family)
-            ->where('year', $year)->where('week', $week)->when($lock, fn ($q) => $q->lockForUpdate())->first();
+    public function findPeriod(
+        string $part,
+        string $market,
+        string $periodType,
+        int $year,
+        int $periodNumber,
+        bool $lock = false,
+    ): ?SerialPeriod {
+        return SerialPeriod::query()
+            ->where('label_part_number', $this->normalize($part))
+            ->where('serial_standard', strtoupper(trim($market)))
+            ->where('period_type', $periodType)
+            ->where('year', $year)
+            ->where('period_number', $periodNumber)
+            ->when($lock, fn ($query) => $query->lockForUpdate())
+            ->first();
     }
 
-    public function nextNumber(string $part, string $family, int $year, int $week): int
+    public function nextNumber(string $part, string $market, string $periodType, int $year, int $periodNumber): int
     {
-        $record = $this->findWeek($part, $family, $year, $week);
+        $this->assertValidPeriodNumber($periodType, $periodNumber);
+        $record = $this->findPeriod($part, $market, $periodType, $year, $periodNumber);
         if ($record) {
             return $this->highWater($record) + 1;
         }
 
-        $this->assertCanOpenWeek($part, $family, $year, $week);
+        $this->assertCanOpenPeriod($part, $market, $periodType, $year, $periodNumber);
 
         return 1;
     }
 
-    public function lockWeek(string $part, string $family, int $year, int $week): SerialWeek
-    {
-        if (! $this->findWeek($part, $family, $year, $week)) {
-            $this->assertCanOpenWeek($part, $family, $year, $week);
-            DB::table('serial_weeks')->insertOrIgnore([
-                'label_part_number' => $part, 'folio_family' => $family, 'year' => $year, 'week' => $week,
-                'serial_standard' => null, 'last_serial_number' => 0, 'opening_serial_number' => 0,
-                'created_at' => now(), 'updated_at' => now(),
-            ]);
+    public function lockPeriod(
+        string $part,
+        string $market,
+        string $periodType,
+        int $year,
+        int $periodNumber,
+        int $operationalWeek,
+    ): SerialPeriod {
+        $this->assertValidPeriodNumber($periodType, $periodNumber);
+        if (! $this->findPeriod($part, $market, $periodType, $year, $periodNumber)) {
+            $this->assertCanOpenPeriod($part, $market, $periodType, $year, $periodNumber);
+            $this->insertPeriod($part, $market, $periodType, $year, $periodNumber, $operationalWeek);
         }
 
-        return $this->findWeek($part, $family, $year, $week, true);
+        return $this->findPeriod($part, $market, $periodType, $year, $periodNumber, true);
     }
 
-    private function assertCanOpenWeek(string $part, string $family, int $year, int $week): void
+    public function highWater(SerialPeriod $period): int
     {
-        $legacy = SerialWeek::where('label_part_number', $part)->whereNull('folio_family')
-            ->where('year', $year)->where('week', $week)->exists();
-        $knownEarlier = SerialWeek::where('label_part_number', $part)->where('folio_family', $family)
-            ->where(fn ($q) => $q->where('year', '<', $year)->orWhere(fn ($q) => $q->where('year', $year)->where('week', '<', $week)))->exists();
-
-        if ($legacy || ! $knownEarlier) {
-            $otherFamilies = SerialWeek::where('label_part_number', $part)->whereNotNull('folio_family')
-                ->where('year', $year)->where('week', $week)->orderBy('folio_family')->pluck('folio_family');
-            if ($otherFamilies->isNotEmpty()) {
-                throw ValidationException::withMessages(['tasks' => "No existe un control para NP Rating {$part}, familia {$family}, año {$year}, semana {$week}. Para ese NP, año y semana ya hay controles con familia: {$otherFamilies->implode(', ')}. La familia se obtiene del SKU del ensamble de la Job. Revisa el control semanal: debe estar registrado con ese SKU exacto. El número de parte por sí solo no identifica el consecutivo."]);
-            }
-
-            throw ValidationException::withMessages(['tasks' => "Inicializa el control de NP Rating {$part}, familia {$family}, año {$year}, semana {$week}, con el último folio verificado en Excel. Captura 0 en Último folio utilizado únicamente si la semana no tiene impresiones; Familia de folios es el SKU completo del ensamble de la Job."]);
-        }
+        return max(
+            (int) $period->last_serial_number,
+            (int) SerialRange::query()->where('serial_week_id', $period->id)->max('range_end'),
+            (int) DB::table('serial_units')->where('serial_week_id', $period->id)->max('serial_number'),
+        );
     }
 
-    public function highWater(SerialWeek $week): int
+    public function initialize(array $data, User $user): SerialPeriod
     {
-        return max((int) $week->last_serial_number,
-            (int) SerialRange::where('serial_week_id', $week->id)->max('range_end'),
-            (int) DB::table('serial_units')->where('serial_week_id', $week->id)->max('serial_number'));
-    }
-
-    public function initialize(array $data, User $user): SerialWeek
-    {
-        return DB::transaction(function () use ($data, $user) {
-            $part = strtoupper(trim($data['label_part_number']));
-            $family = strtoupper(trim($data['folio_family']));
+        return DB::transaction(function () use ($data, $user): SerialPeriod {
+            $part = $this->normalize($data['label_part_number']);
+            $market = strtoupper(trim((string) $data['serial_standard']));
+            $periodType = SerialPeriods::forMarket($market);
             $year = (int) $data['year'];
-            $week = (int) $data['week'];
-            // A unique insert followed by the row lock also serializes simultaneous initialization.
-            DB::table('serial_weeks')->insertOrIgnore([
-                'label_part_number' => $part, 'folio_family' => $family, 'year' => $year, 'week' => $week,
-                'serial_standard' => null, 'last_serial_number' => 0, 'opening_serial_number' => 0,
-                'created_at' => now(), 'updated_at' => now(),
-            ]);
-            $record = $this->findWeek($part, $family, $year, $week, true);
-            $legacyIds = SerialWeek::where('label_part_number', $part)->whereNull('folio_family')
-                ->where('year', $year)->where('week', $week)->pluck('id');
-            $minimum = max($this->highWater($record),
-                (int) SerialWeek::whereIn('id', $legacyIds)->max('last_serial_number'),
-                (int) SerialRange::whereIn('serial_week_id', $legacyIds)->max('range_end'),
-                (int) DB::table('serial_units')->whereIn('serial_week_id', $legacyIds)->max('serial_number'));
+            $periodNumber = (int) $data['period_number'];
+            $this->assertValidPeriodNumber($periodType, $periodNumber);
+            $operationalWeek = (int) ($data['control_week'] ?? now(config('app.display_timezone'))->isoWeek());
+
+            $this->insertPeriod($part, $market, $periodType, $year, $periodNumber, $operationalWeek);
+            $record = $this->findPeriod($part, $market, $periodType, $year, $periodNumber, true);
+            $minimum = $this->minimumVerifiedFolio($record);
+
             if ((int) $data['last_serial_number'] < $minimum) {
-                throw ValidationException::withMessages(['last_serial_number' => "El último folio no puede ser menor que el registrado ({$minimum})."]);
+                throw ValidationException::withMessages([
+                    'last_serial_number' => "El último folio no puede ser menor que el registrado ({$minimum}).",
+                ]);
             }
-            $before = $record->last_serial_number;
+
+            $before = (int) $record->last_serial_number;
             $record->update([
-                'last_serial_number' => $data['last_serial_number'],
-                'opening_serial_number' => $record->initialized_by_user_id ? $record->opening_serial_number : $data['last_serial_number'],
-                'opening_notes' => $data['opening_notes'], 'initialized_by_user_id' => $user->id,
+                'last_serial_number' => (int) $data['last_serial_number'],
+                'opening_serial_number' => $record->initialized_by_user_id
+                    ? $record->opening_serial_number
+                    : (int) $data['last_serial_number'],
+                'opening_notes' => $data['opening_notes'],
+                'initialized_by_user_id' => $user->id,
             ]);
+
             DB::table('label_administration_events')->insert([
-                'user_id' => $user->id, 'action' => 'initialize_week',
-                'details' => json_encode(['serial_week_id' => $record->id, 'before' => $before, 'after' => $record->last_serial_number, 'reason' => $data['opening_notes']]),
+                'user_id' => $user->id,
+                'action' => 'initialize_period',
+                'details' => json_encode([
+                    'serial_period_id' => $record->id,
+                    'market' => $market,
+                    'period_type' => $periodType,
+                    'year' => $year,
+                    'period_number' => $periodNumber,
+                    'before' => $before,
+                    'after' => $record->last_serial_number,
+                    'reason' => $data['opening_notes'],
+                ]),
                 'created_at' => now(),
             ]);
 
             return $record;
         }, 3);
+    }
+
+    private function assertCanOpenPeriod(string $part, string $market, string $periodType, int $year, int $periodNumber): void
+    {
+        $part = $this->normalize($part);
+        $market = strtoupper(trim($market));
+        $knownEarlier = SerialPeriod::query()
+            ->where('label_part_number', $part)
+            ->where('serial_standard', $market)
+            ->where('period_type', $periodType)
+            ->where(fn ($query) => $query
+                ->where('year', '<', $year)
+                ->orWhere(fn ($nested) => $nested->where('year', $year)->where('period_number', '<', $periodNumber)))
+            ->exists();
+
+        $hasLegacyControl = $periodType === SerialPeriods::WEEK && SerialPeriod::query()
+            ->where('label_part_number', $part)
+            ->whereNull('period_type')
+            ->where(fn ($query) => $query
+                ->where('serial_standard', $market)
+                ->orWhereNull('serial_standard'))
+            ->where('year', $year)
+            ->where('week', $periodNumber)
+            ->exists();
+
+        if (! $knownEarlier || $hasLegacyControl) {
+            $period = mb_strtolower(SerialPeriods::describe($periodType, $periodNumber));
+            throw ValidationException::withMessages([
+                'tasks' => "Inicializa el control de NP Rating {$part}, mercado {$market}, año {$year}, {$period}, con el último folio verificado. Captura 0 únicamente si ese periodo no tiene impresiones.",
+            ]);
+        }
+    }
+
+    private function insertPeriod(string $part, string $market, string $periodType, int $year, int $periodNumber, int $operationalWeek): void
+    {
+        DB::table('serial_weeks')->insertOrIgnore([
+            'label_part_number' => $this->normalize($part),
+            'folio_family' => null,
+            'serial_standard' => strtoupper(trim($market)),
+            'period_type' => $periodType,
+            'period_number' => $periodNumber,
+            'year' => $year,
+            'week' => $operationalWeek,
+            'last_serial_number' => 0,
+            'opening_serial_number' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function minimumVerifiedFolio(SerialPeriod $record): int
+    {
+        $minimum = $this->highWater($record);
+
+        if ($record->period_type !== SerialPeriods::WEEK) {
+            return $minimum;
+        }
+
+        $legacyIds = SerialPeriod::query()
+            ->where('label_part_number', $record->label_part_number)
+            ->whereNull('period_type')
+            ->where(fn ($query) => $query
+                ->where('serial_standard', $record->serial_standard)
+                ->orWhereNull('serial_standard'))
+            ->where('year', $record->year)
+            ->where('week', $record->period_number)
+            ->pluck('id');
+
+        return max(
+            $minimum,
+            (int) SerialPeriod::query()->whereIn('id', $legacyIds)->max('last_serial_number'),
+            (int) SerialRange::query()->whereIn('serial_week_id', $legacyIds)->max('range_end'),
+            (int) DB::table('serial_units')->whereIn('serial_week_id', $legacyIds)->max('serial_number'),
+        );
+    }
+
+    private function normalize(mixed $value): string
+    {
+        return strtoupper(trim((string) $value));
+    }
+
+    private function assertValidPeriodNumber(string $periodType, int $periodNumber): void
+    {
+        if ($periodNumber < 1 || $periodNumber > SerialPeriods::maximum($periodType)) {
+            throw ValidationException::withMessages([
+                'period_number' => 'El número de periodo no corresponde al tipo de control seleccionado.',
+            ]);
+        }
     }
 }

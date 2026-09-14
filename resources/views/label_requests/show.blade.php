@@ -48,15 +48,18 @@
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'Cantidad Shipping' }}: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
             <div class="text-slate-700">
-                Año / semana autorizada:
-                @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
-                    {{ $labelRequest->control_year }} / {{ $labelRequest->control_week }}
+                Mercado / periodo serial:
+                @if($labelRequest->serial_period_year !== null && $labelRequest->serial_period_number !== null)
+                    {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::describe($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
                 @elseif($labelRequest->released_at)
                     Ver detalle por etiqueta
                 @else
                     Pendiente de autorización
                 @endif
             </div>
+            @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
+                <div class="text-slate-700">Control operativo: {{ $labelRequest->control_year }} / Semana {{ $labelRequest->control_week }}</div>
+            @endif
             <div class="text-slate-700">Solicita: {{ $labelRequest->requested_by_name }}</div>
         </div>
 

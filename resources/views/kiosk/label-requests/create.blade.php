@@ -212,6 +212,14 @@
                             </button>
                         </div>
 
+                        <div id="ratingCatalogContainer" class="hidden rounded-xl border border-violet-200 bg-white p-3">
+                            <label for="ratingCatalogSelect" class="text-sm font-semibold text-slate-700">Opciones del catálogo para este ensamble</label>
+                            <select id="ratingCatalogSelect" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-600">
+                                <option value="">Selecciona un NP Rating...</option>
+                            </select>
+                            <p id="ratingCatalogHint" class="mt-1 text-xs text-slate-500">La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.</p>
+                        </div>
+
                         <div id="ratingPartNumbers" class="space-y-2">
                             @foreach($ratingItems as $index => $ratingItem)
                                 <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">

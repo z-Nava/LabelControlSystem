@@ -21,7 +21,7 @@
                 <div><dt class="text-slate-500">Total por imprimir</dt><dd class="mt-1 text-lg font-bold">{{ number_format($task->quantity + $task->evidence_quantity) }}</dd></div>
                 <div><dt class="text-slate-500">Folios del / hasta</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? $task->folio_start.' – '.$task->folio_end : 'No aplica' }}</dd></div>
                 <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}</dd></div>
-                <div><dt class="text-slate-500">Familia · Semana</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? $task->folio_family.' · '.$task->control_year.'/'.$task->control_week : '—' }}</dd></div>
+                <div><dt class="text-slate-500">Mercado · Periodo</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? ($labelRequest->serial_standard ?: 'Mercado histórico').' · '.\App\Support\SerialPeriods::describe($task->serial_period_type ?: 'week', $task->serial_period_number ?: $task->control_week).' '.($task->serial_period_year ?: $task->control_year) : '—' }}@if($task->folio_start !== null)<br><span class="text-xs font-normal text-slate-500">Control: {{ $task->control_year }}/Sem. {{ $task->control_week }}</span>@endif</dd></div>
             </dl>
             @if($task->status === 'completed')
                 <p class="mt-4 text-sm text-emerald-800">Imprimió <strong>{{ $task->printed_by_name }}</strong> · Turno {{ $task->printedShift?->code }} · Fecha de trabajo {{ $task->work_date?->format('d/m/Y') }}.</p>
@@ -66,4 +66,3 @@
     @endforeach
     @if($labelRequest->physical_signed_at)<p class="text-sm text-slate-600">Requisición física firmada: confirmado el {{ $labelRequest->physical_signed_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}.</p>@endif
 </section>
-

@@ -7,12 +7,15 @@ use App\Models\LabelJobEntry;
 use App\Models\LabelRequest;
 use App\Models\LabelWorkTask;
 use App\Models\ProductionLine;
+use App\Models\SerialPeriod;
 use App\Models\SerialRange;
-use App\Models\SerialWeek;
 use App\Models\Shift;
+use App\Services\Catalogs\RatingAssemblyMappingService;
 use App\Services\Labels\LabelFolioService;
 use App\Services\Labels\LabelRoomAdministrationService;
 use App\Services\Labels\LabelWorkDefinitionService;
+use App\Support\SerialPeriods;
+use App\Support\SerialStandards;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +25,7 @@ class LabelRoomAdministrationController extends Controller
     public function __construct(
         private readonly LabelRoomAdministrationService $service,
         private readonly LabelWorkDefinitionService $definitions,
+        private readonly RatingAssemblyMappingService $ratingMappings,
     ) {}
 
     public function review(Request $request, LabelRequest $label_request)
@@ -44,9 +48,24 @@ class LabelRoomAdministrationController extends Controller
         $lines = $this->definitions->forRequest($labelRequest);
         $jobNumbers = $lines->flatMap(fn ($line) => array_column($line['jobs'], 'job_number'))->unique();
         $values = $input ?: session()->getOldInput();
-        $today = now();
+        $today = now(config('app.display_timezone'));
         $controlYear = (int) ($values['control_year'] ?? $today->isoWeekYear());
         $controlWeek = (int) ($values['control_week'] ?? $today->isoWeek());
+        $market = strtoupper(trim((string) ($values['serial_standard'] ?? $labelRequest->serial_standard ?? '')));
+        if (! in_array($market, SerialStandards::all(), true)) {
+            $inferredMarkets = $lines
+                ->filter(fn ($line) => $line['requires_folios'])
+                ->map(fn ($line) => $this->ratingMappings->resolveMarket(
+                    $line['assembly_number'],
+                    [$line['rating_part_number']],
+                ))
+                ->filter()
+                ->unique();
+            $market = $inferredMarkets->count() === 1 ? $inferredMarkets->first() : '';
+        }
+        $periodType = $market ? SerialPeriods::forMarket($market) : SerialPeriods::WEEK;
+        $periodYear = $periodType === SerialPeriods::WEEK ? $today->isoWeekYear() : $today->year;
+        $periodNumber = $periodType === SerialPeriods::WEEK ? $today->isoWeek() : $today->month;
         $ratingParts = $lines->pluck('rating_part_number')
             ->merge(collect($values['tasks'] ?? [])->pluck('rating_part_number'))->filter()->unique();
 
@@ -54,11 +73,13 @@ class LabelRoomAdministrationController extends Controller
             'labelRequest' => $labelRequest->load(['line', 'shift', 'releasedBy']),
             'lines' => $lines, 'operators' => $this->service->operators(),
             'defaultYear' => $today->isoWeekYear(), 'defaultWeek' => $today->isoWeek(),
-            'availableControls' => SerialWeek::whereIn('label_part_number', $ratingParts)
-                ->where('year', $controlYear)->where('week', $controlWeek)->whereNotNull('folio_family')
-                ->orderBy('label_part_number')->orderBy('folio_family')->get(),
-            'controlsYear' => $controlYear, 'controlsWeek' => $controlWeek,
-            'sources' => SerialRange::with(['week', 'labelRequest'])
+            'markets' => SerialStandards::all(), 'selectedMarket' => $market,
+            'periodType' => $periodType, 'periodYear' => $periodYear, 'periodNumber' => $periodNumber,
+            'availableControls' => SerialPeriod::query()->whereIn('label_part_number', $ratingParts)
+                ->when($market, fn ($query) => $query->where('serial_standard', $market), fn ($query) => $query->whereRaw('1 = 0'))
+                ->where('period_type', $periodType)->where('year', $periodYear)->where('period_number', $periodNumber)
+                ->orderBy('label_part_number')->get(),
+            'sources' => SerialRange::with(['period', 'labelRequest'])
                 ->where('status', '!=', 'cancelled')->where('label_request_id', '!=', $labelRequest->id)
                 ->where(fn ($q) => $q->whereIn('job_number', $jobNumbers)
                     ->orWhereHas('labelRequest', fn ($q) => $q->whereIn('job_number', $jobNumbers)))
@@ -69,6 +90,7 @@ class LabelRoomAdministrationController extends Controller
     private function reviewInput(Request $request): array
     {
         return $request->validate([
+            'serial_standard' => ['required', Rule::in(SerialStandards::all())],
             'control_year' => ['required', 'integer', 'between:2000,2100'],
             'control_week' => ['required', 'integer', 'between:1,53'],
             'job_status' => ['required', Rule::in(array_keys(LabelRequest::JOB_STATUSES))],
@@ -82,7 +104,7 @@ class LabelRoomAdministrationController extends Controller
             'tasks.*.evidence_position' => ['nullable', Rule::in(['first', 'last'])],
             'tasks.*.original_reference' => ['nullable', 'string', 'max:255'],
             'tasks.*.original_year' => ['nullable', 'integer', 'between:2000,2100'],
-            'tasks.*.original_week' => ['nullable', 'integer', 'between:1,53'],
+            'tasks.*.original_period_number' => ['nullable', 'integer', 'between:1,53'],
             'tasks.*.source_range_id' => ['nullable', 'integer', 'exists:serial_ranges,id'],
             'tasks.*.folio_start' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
             'tasks.*.folio_end' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
@@ -161,25 +183,31 @@ class LabelRoomAdministrationController extends Controller
     {
         $filters = $request->validate([
             'year' => ['nullable', 'integer', 'between:2000,2100'],
-            'week' => ['nullable', 'integer', 'between:1,53'],
+            'serial_standard' => ['nullable', Rule::in(SerialStandards::all())],
+            'period_number' => ['nullable', 'integer', 'between:1,53'],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
-        $year = $filters['year'] ?? now()->isoWeekYear();
-        $query = SerialWeek::query()->where('year', $year)
-            ->when($filters['week'] ?? null, fn ($q, $week) => $q->where('week', $week))
-            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q->where('label_part_number', 'like', "%{$term}%")->orWhere('folio_family', 'like', "%{$term}%")));
-        $ranges = SerialRange::with(['week', 'labelRequest.line', 'labelRequest.shift', 'tasks.assignee', 'tasks.printedShift'])
+        $today = now(config('app.display_timezone'));
+        $year = $filters['year'] ?? $today->year;
+        $market = $filters['serial_standard'] ?? null;
+        $query = SerialPeriod::query()->where('year', $year)
+            ->when($market, fn ($q, $value) => $q->where('serial_standard', $value))
+            ->when($filters['period_number'] ?? null, fn ($q, $number) => $q->where('period_number', $number))
+            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where('label_part_number', 'like', "%{$term}%"));
+        $ranges = SerialRange::with(['period', 'labelRequest.line', 'labelRequest.shift', 'tasks.assignee', 'tasks.printedShift'])
             ->whereIn('serial_week_id', (clone $query)->select('id'))->orderByDesc('id')->paginate(30, ['*'], 'ranges_page')->withQueryString();
-        $reprints = LabelWorkTask::with(['range.week', 'labelRequest', 'printedShift'])
+        $reprints = LabelWorkTask::with(['range.period', 'labelRequest', 'printedShift'])
             ->whereHas('labelRequest', fn ($q) => $q->where('folio_mode', 'reprint_originals'))
-            ->whereNotNull('folio_start')->where('control_year', $year)
-            ->when($filters['week'] ?? null, fn ($q, $week) => $q->where('control_week', $week))
-            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q->where('rating_part_number', 'like', "%{$term}%")->orWhere('folio_family', 'like', "%{$term}%")))
+            ->whereNotNull('folio_start')->where('serial_period_year', $year)
+            ->when($market, fn ($q, $value) => $q->whereHas('labelRequest', fn ($nested) => $nested->where('serial_standard', $value)))
+            ->when($filters['period_number'] ?? null, fn ($q, $number) => $q->where('serial_period_number', $number))
+            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where('rating_part_number', 'like', "%{$term}%"))
             ->orderByDesc('id')->paginate(20, ['*'], 'reprints_page')->withQueryString();
 
         return view('label_requests.weeks', [
-            'weeks' => $query->orderByDesc('week')->orderBy('label_part_number')->paginate(20, ['*'], 'weeks_page')->withQueryString(),
+            'periods' => $query->orderByDesc('period_number')->orderBy('label_part_number')->paginate(20, ['*'], 'periods_page')->withQueryString(),
             'ranges' => $ranges, 'reprints' => $reprints, 'filters' => $filters, 'year' => $year,
+            'markets' => SerialStandards::all(),
         ]);
     }
 
@@ -187,16 +215,23 @@ class LabelRoomAdministrationController extends Controller
     {
         $data = $request->validate([
             'label_part_number' => ['required', 'string', 'max:80'],
-            'folio_family' => ['required', 'string', 'max:80'],
+            'serial_standard' => ['required', Rule::in(SerialStandards::all())],
             'year' => ['required', 'integer', 'between:2000,2100'],
-            'week' => ['required', 'integer', 'between:1,53'],
+            'period_number' => ['required', 'integer', 'between:1,53'],
+            'control_week' => ['nullable', 'integer', 'between:1,53'],
             'last_serial_number' => ['required', 'integer', 'min:0', 'max:4294967294'],
             'opening_notes' => ['required', 'string', 'max:2000'],
             'history_checked' => ['accepted'],
         ]);
+        $maximum = SerialPeriods::maximum(SerialPeriods::forMarket($data['serial_standard']));
+        if ((int) $data['period_number'] > $maximum) {
+            throw ValidationException::withMessages([
+                'period_number' => "El periodo máximo para {$data['serial_standard']} es {$maximum}.",
+            ]);
+        }
         $service->initialize($data, $request->user());
 
-        return back()->with('success', 'Control semanal actualizado con el último folio verificado.');
+        return back()->with('success', 'Control de periodo actualizado con el último folio verificado.');
     }
 
     public function jobs(Request $request)

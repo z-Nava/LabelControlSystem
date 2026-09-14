@@ -218,7 +218,7 @@ class LabelRequestReadService
                 'cancelledByUser:id,name',
                 'releasedBy:id,name',
                 'workTasks.assignee',
-                'workTasks.range.week',
+                'workTasks.range.period',
                 'workTasks.printedShift',
                 'serials:id,label_request_id,part_number,model,position',
                 'ratings:id,label_request_id,part_number,model,position',

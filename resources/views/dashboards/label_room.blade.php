@@ -81,8 +81,8 @@
                         </a>
 
                         <a href="{{ route('label_requests.weeks') }}" class="rounded-2xl border p-6 hover:shadow transition">
-                            <div class="text-lg font-semibold text-slate-800">Semanas y folios</div>
-                            <div class="text-sm text-slate-600 mt-1">Administrar consecutivos semanales y consultar el historial de folios</div>
+                            <div class="text-lg font-semibold text-slate-800">Periodos y folios</div>
+                            <div class="text-sm text-slate-600 mt-1">Administrar consecutivos semanales o mensuales y consultar su historial</div>
                         </a>
 
                         <a href="{{ route('label_requests.jobs') }}" class="rounded-2xl border p-6 hover:shadow transition">

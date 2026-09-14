@@ -61,6 +61,11 @@
                         <div class="text-sm text-slate-600 mt-1">Catálogo SKU ↔ Label PN y estado activo/inactivo.</div>
                     </a>
 
+                    <a href="{{ route('rating_assembly_mappings.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Rating y Ensamble 018</div>
+                        <div class="text-sm text-slate-600 mt-1">Catálogo de alternativas NP Rating por ensamble de empaque y mercado.</div>
+                    </a>
+
                     <a href="{{ route('sku_serial_formats.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                         <div class="font-semibold">SKU Serial Formats</div>
                         <div class="text-sm text-slate-600 mt-1">Definir segmentos UL/EMEA/ANZ y formatos serial.</div>

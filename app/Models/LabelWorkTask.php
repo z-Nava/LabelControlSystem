@@ -9,7 +9,17 @@ class LabelWorkTask extends Model
 {
     protected $guarded = ['id'];
 
-    protected $casts = ['jobs' => 'array', 'quantity' => 'integer', 'evidence_quantity' => 'integer', 'work_date' => 'date', 'completed_at' => 'datetime'];
+    protected $casts = [
+        'jobs' => 'array',
+        'quantity' => 'integer',
+        'evidence_quantity' => 'integer',
+        'control_year' => 'integer',
+        'control_week' => 'integer',
+        'serial_period_year' => 'integer',
+        'serial_period_number' => 'integer',
+        'work_date' => 'date',
+        'completed_at' => 'datetime',
+    ];
 
     public function labelRequest(): BelongsTo
     {

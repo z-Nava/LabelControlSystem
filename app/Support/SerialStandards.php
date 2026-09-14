@@ -5,8 +5,12 @@ namespace App\Support;
 final class SerialStandards
 {
     public const UL = 'UL';
+
     public const EMEA = 'EMEA';
+
     public const ANZ = 'ANZ';
+
+    public const APJ = 'APJ';
 
     /**
      * @return array<int, string>
@@ -17,6 +21,7 @@ final class SerialStandards
             self::UL,
             self::EMEA,
             self::ANZ,
+            self::APJ,
         ];
     }
 
@@ -39,6 +44,19 @@ final class SerialStandards
 
     public static function isInternational(string $standard): bool
     {
-        return in_array(strtoupper(trim($standard)), [self::EMEA, self::ANZ], true);
+        return in_array(strtoupper(trim($standard)), [self::EMEA, self::ANZ, self::APJ], true);
+    }
+
+    public static function fromAlias(?string $value): ?string
+    {
+        $normalized = strtoupper(trim((string) $value));
+
+        return match ($normalized) {
+            self::UL => self::UL,
+            self::EMEA, 'EU', 'UK' => self::EMEA,
+            self::ANZ => self::ANZ,
+            self::APJ, 'ASIA', 'JPN', 'JAPAN', 'JAPON', 'JAPÓN' => self::APJ,
+            default => null,
+        };
     }
 }

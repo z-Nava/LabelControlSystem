@@ -6,6 +6,7 @@ use App\Models\LabelRequest;
 use App\Models\LabelRequestLpkLabelGroup;
 use App\Models\OracleJob;
 use App\Services\Catalogs\MasterModelMappingService;
+use App\Services\Catalogs\RatingAssemblyMappingService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,7 @@ class LabelRequestService
         private readonly LabelRequestJobAvailabilityService $availabilityService,
         private readonly LpkJobReservationCalculator $lpkReservationCalculator,
         private readonly MasterModelMappingService $masterModelMappingService,
+        private readonly RatingAssemblyMappingService $ratingAssemblyMappingService,
     ) {}
 
     public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
@@ -77,7 +79,10 @@ class LabelRequestService
             }
 
             $data['job_number'] = $jobNumber;
-            $data['serial_standard'] = null;
+            $data['serial_standard'] = $this->ratingAssemblyMappingService->resolveMarket(
+                $job->assembly,
+                $ratingItems->pluck('part_number'),
+            );
             $data['serial_part_number'] = $data['include_serial']
                 ? data_get($serialItems->first(), 'part_number')
                 : null;
@@ -291,6 +296,10 @@ class LabelRequestService
             ...$payload,
             'mapped_model' => $this->masterModelMappingService
                 ->resolveAssemblyPackagingModel($job->assembly),
+            'rating_options' => $this->ratingAssemblyMappingService
+                ->activeOptionsForAssembly($job->assembly)
+                ->values()
+                ->all(),
             ...$this->availabilityService->calculate($job),
         ];
     }

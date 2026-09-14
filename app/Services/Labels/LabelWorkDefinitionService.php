@@ -5,11 +5,15 @@ namespace App\Services\Labels;
 use App\Models\LabelRequest;
 use App\Models\OracleJob;
 use App\Services\Catalogs\MasterModelMappingService;
+use App\Services\Catalogs\RatingAssemblyMappingService;
 use Illuminate\Support\Collection;
 
 class LabelWorkDefinitionService
 {
-    public function __construct(private readonly MasterModelMappingService $mappings) {}
+    public function __construct(
+        private readonly MasterModelMappingService $mappings,
+        private readonly RatingAssemblyMappingService $ratingMappings,
+    ) {}
 
     /** Each Shipping group is one physical task, even when several Jobs share it. */
     public function forRequest(LabelRequest $request): Collection
@@ -37,16 +41,21 @@ class LabelWorkDefinitionService
 
         $jobs = OracleJob::whereIn('job_number', $lines->flatMap(fn ($line) => array_column($line['jobs'], 'job_number'))->unique())->get()->keyBy('job_number');
         $models = $this->mappings->resolveAssemblyPackagingModels($jobs->pluck('assembly'));
+        $ratingOptions = $this->ratingMappings->activeOptionsForAssemblies($jobs->pluck('assembly'));
 
-        return $lines->map(function (array $line) use ($lines, $jobs, $models): array {
+        return $lines->map(function (array $line) use ($lines, $jobs, $models, $ratingOptions): array {
             $job = $jobs->get($line['job_number']);
             $assembly = strtoupper(trim((string) $job?->assembly));
             $family = $models[$assembly] ?? null;
             $line['assembly_number'] = $assembly;
             $ratings = $lines->where('label_type', 'rating')->where('job_number', $line['job_number'])->where('model', $line['model']);
             $line['folio_family'] = $family;
+            $line['rating_options'] = ($ratingOptions[$assembly] ?? collect())->all();
             $line['rating_part_number'] = $line['label_type'] === 'rating'
-                ? $line['part_number'] : ($ratings->count() === 1 ? $ratings->first()['part_number'] : null);
+                ? $line['part_number']
+                : ($ratings->count() === 1
+                    ? $ratings->first()['part_number']
+                    : (count($line['rating_options']) === 1 ? $line['rating_options'][0]['rating_part_number'] : null));
             $line['requires_folios'] = in_array($line['label_type'], ['serial', 'rating'], true);
 
             return $line;

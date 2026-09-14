@@ -39,6 +39,9 @@ import { debounce } from './utils/debounce';
     const ratingPartNumbersContainer = byId('ratingPartNumbers');
     const ratingPartNumberTemplate = byId('ratingPartNumberTemplate');
     const addRatingPartNumberButton = byId('addRatingPartNumber');
+    const ratingCatalogContainer = byId('ratingCatalogContainer');
+    const ratingCatalogSelect = byId('ratingCatalogSelect');
+    const ratingCatalogHint = byId('ratingCatalogHint');
     const innerFields = byId('innerFields');
     const shippingFields = byId('shippingFields');
     const typeCards = Array.from(form.querySelectorAll('[data-label-type-card]'));
@@ -59,6 +62,7 @@ import { debounce } from './utils/debounce';
     let validatedJobNumber = '';
     let availableQuantity = null;
     let mappedModel = '';
+    let ratingCatalogOptions = [];
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
     const setText = (element, value) => {
@@ -151,6 +155,51 @@ import { debounce } from './utils/debounce';
             );
         } else {
             setHint(modelMappingHint, 'Se consultará en Master Model Mapping.');
+        }
+    }
+
+    function clearRatingCatalog() {
+        ratingCatalogOptions = [];
+        ratingCatalogSelect.replaceChildren(new Option('Selecciona un NP Rating...', ''));
+        ratingCatalogContainer.classList.add('hidden');
+        setHint(ratingCatalogHint, 'La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.');
+    }
+
+    function applyRatingCatalog(options) {
+        clearRatingCatalog();
+        ratingCatalogOptions = Array.isArray(options) ? options : [];
+
+        ratingCatalogOptions.forEach((option) => {
+            const partNumber = normalize(option.rating_part_number);
+            const market = normalize(option.market);
+            if (!partNumber || !market) return;
+            ratingCatalogSelect.add(new Option(`${partNumber} · ${market}`, partNumber));
+        });
+
+        if (!ratingCatalogOptions.length) return;
+
+        ratingCatalogContainer.classList.remove('hidden');
+        const firstInput = ratingPartNumberInputs()[0];
+        if (ratingCatalogOptions.length === 1 && firstInput && !firstInput.value.trim()) {
+            firstInput.value = normalize(ratingCatalogOptions[0].rating_part_number);
+            ratingCatalogSelect.value = firstInput.value;
+        } else if (firstInput && ratingCatalogOptions.some((option) => normalize(option.rating_part_number) === normalize(firstInput.value))) {
+            ratingCatalogSelect.value = normalize(firstInput.value);
+        }
+        updateRatingCatalogHint();
+    }
+
+    function updateRatingCatalogHint() {
+        const selectedRatings = ratingItems().map((item) => normalize(item.partNumber));
+        const markets = ratingCatalogOptions
+            .filter((option) => selectedRatings.includes(normalize(option.rating_part_number)))
+            .map((option) => normalize(option.market));
+        const uniqueMarkets = [...new Set(markets)];
+
+        if (selectedRatings.length && uniqueMarkets.length === 1) {
+            setHint(ratingCatalogHint, `Mercado identificado: ${uniqueMarkets[0]}. Label Room lo confirmará al liberar.`, 'text-emerald-700');
+        } else {
+            setHint(ratingCatalogHint, 'La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.');
         }
     }
 
@@ -353,6 +402,7 @@ import { debounce } from './utils/debounce';
         if (clearModels) {
             applyMappedModel(null, { clearManual: true, status: 'pending' });
         }
+        clearRatingCatalog();
     }
 
     const lookupJob = debounce(async () => {
@@ -401,6 +451,7 @@ import { debounce } from './utils/debounce';
             inputs.destination.value = data.ship_code || inputs.destination.value;
             inputs.quantity.max = String(Math.max(availableQuantity, 0));
             applyMappedModel(data.mapped_model, { status: 'resolved' });
+            applyRatingCatalog(data.rating_options);
 
             setText(capacity.jobQty, Number(data.job_qty || 0).toLocaleString('es-MX'));
             setText(capacity.reserved, Number(data.reserved_quantity || 0).toLocaleString('es-MX'));
@@ -500,7 +551,10 @@ import { debounce } from './utils/debounce';
         updateFormGuidance();
     });
 
-    ratingPartNumbersContainer.addEventListener('input', updateFormGuidance);
+    ratingPartNumbersContainer.addEventListener('input', () => {
+        updateRatingCatalogHint();
+        updateFormGuidance();
+    });
     ratingPartNumbersContainer.addEventListener('click', (event) => {
         const removeButton = event.target.closest('.remove-rating-part-number');
 
@@ -508,7 +562,16 @@ import { debounce } from './utils/debounce';
 
         removeButton.closest('.rating-part-number-row')?.remove();
         updateRemoveRatingButtons();
+        updateRatingCatalogHint();
         updateFormGuidance();
+    });
+
+    ratingCatalogSelect.addEventListener('change', () => {
+        const firstInput = ratingPartNumberInputs()[0];
+        if (!firstInput || !ratingCatalogSelect.value) return;
+        firstInput.value = ratingCatalogSelect.value;
+        firstInput.dispatchEvent(new Event('input', { bubbles: true }));
+        firstInput.focus();
     });
 
     [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
@@ -594,6 +657,7 @@ import { debounce } from './utils/debounce';
     syncConditionalFields();
     initializeLineTypeFilter();
     applyMappedModel(null, { status: 'pending' });
+    clearRatingCatalog();
     updateFormGuidance();
 
     if (inputs.job.value.trim()) {

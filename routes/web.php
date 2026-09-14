@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Admin\MasterAssemblyClassificationRuleController;
 use App\Http\Controllers\Admin\MasterModelMappingController;
 use App\Http\Controllers\Admin\ProductionLineController;
+use App\Http\Controllers\Admin\RatingAssemblyMappingController;
 use App\Http\Controllers\Admin\SkuSerialFormatController;
 use App\Http\Controllers\Admin\SkuTemplateConfigurationController;
 use App\Http\Controllers\Admin\StockLocatorController;
@@ -169,6 +170,14 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('/{master_model_mapping}/toggle', [MasterModelMappingController::class, 'toggle'])->name('master_model_mappings.toggle');
             Route::post('/import', [MasterModelMappingController::class, 'import'])->name('master_model_mappings.import');
         });
+
+        Route::get('/rating-assembly-mappings', [RatingAssemblyMappingController::class, 'index'])->name('rating_assembly_mappings.index');
+        Route::get('/rating-assembly-mappings/create', [RatingAssemblyMappingController::class, 'create'])->name('rating_assembly_mappings.create');
+        Route::post('/rating-assembly-mappings', [RatingAssemblyMappingController::class, 'store'])->name('rating_assembly_mappings.store');
+        Route::get('/rating-assembly-mappings/{rating_assembly_mapping}/edit', [RatingAssemblyMappingController::class, 'edit'])->name('rating_assembly_mappings.edit');
+        Route::put('/rating-assembly-mappings/{rating_assembly_mapping}', [RatingAssemblyMappingController::class, 'update'])->name('rating_assembly_mappings.update');
+        Route::post('/rating-assembly-mappings/{rating_assembly_mapping}/toggle', [RatingAssemblyMappingController::class, 'toggle'])->name('rating_assembly_mappings.toggle');
+        Route::post('/rating-assembly-mappings/import', [RatingAssemblyMappingController::class, 'import'])->name('rating_assembly_mappings.import');
 
     });
 

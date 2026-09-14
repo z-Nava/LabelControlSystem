@@ -214,14 +214,17 @@
         <section class="general-grid">
             <div class="field"><div class="field-label">Fecha</div><div class="field-value">{{ $labelRequest->request_date?->format('d/m/Y') }}</div></div>
             <div class="field">
-                <div class="field-label">Año / semana autorizada</div>
+                <div class="field-label">Mercado / periodo serial</div>
                 <div class="field-value">
-                    @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
-                        {{ $labelRequest->control_year }} / {{ $labelRequest->control_week }}
+                    @if($labelRequest->serial_period_year !== null && $labelRequest->serial_period_number !== null)
+                        {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::describe($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
                     @elseif($labelRequest->released_at)
                         Ver detalle por etiqueta
                     @else
                         Pendiente de autorización
+                    @endif
+                    @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
+                        <div class="mt-1 text-xs font-semibold">Control: {{ $labelRequest->control_year }} / Sem. {{ $labelRequest->control_week }}</div>
                     @endif
                 </div>
             </div>

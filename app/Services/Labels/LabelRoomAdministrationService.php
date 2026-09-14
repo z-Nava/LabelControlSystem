@@ -8,6 +8,8 @@ use App\Models\LabelWorkTask;
 use App\Models\SerialRange;
 use App\Models\Shift;
 use App\Models\User;
+use App\Services\Catalogs\RatingAssemblyMappingService;
+use App\Support\SerialPeriods;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +19,7 @@ class LabelRoomAdministrationService
     public function __construct(
         private readonly LabelWorkDefinitionService $definitions,
         private readonly LabelFolioService $folios,
+        private readonly RatingAssemblyMappingService $ratingMappings,
     ) {}
 
     public function operators(): Collection
@@ -50,9 +53,19 @@ class LabelRoomAdministrationService
         if ($lines->isEmpty() || $lines->keys()->sort()->values()->all() !== collect(array_keys($data['tasks'] ?? []))->sort()->values()->all()) {
             throw ValidationException::withMessages(['tasks' => 'El detalle cambió. Abre nuevamente la revisión de la requisición.']);
         }
+
+        $market = strtoupper(trim((string) $data['serial_standard']));
+        $periodType = SerialPeriods::forMarket($market);
+        $releaseTime = now(config('app.display_timezone'));
+        $releasePeriodYear = $periodType === SerialPeriods::WEEK
+            ? $releaseTime->isoWeekYear()
+            : $releaseTime->year;
+        $releasePeriodNumber = $periodType === SerialPeriods::WEEK
+            ? $releaseTime->isoWeek()
+            : $releaseTime->month;
         $bundles = [];
         $tasks = [];
-        $nextByWeek = [];
+        $nextByPeriod = [];
 
         foreach ($lines as $key => $line) {
             $input = $data['tasks'][$key];
@@ -60,52 +73,67 @@ class LabelRoomAdministrationService
             if ($assigned) {
                 $this->assertOperator($assigned);
             }
+
             $task = array_merge($line, [
-                'assigned_to_user_id' => $assigned, 'evidence_quantity' => $request->isOriginalReprint() ? 0 : 1,
-                'bundle_key' => null, 'folio_start' => null, 'folio_end' => null, 'evidence_folio' => null,
+                'assigned_to_user_id' => $assigned,
+                'evidence_quantity' => 1,
+                'bundle_key' => null,
+                'folio_start' => null,
+                'folio_end' => null,
+                'evidence_folio' => null,
             ]);
 
             if ($line['requires_folios']) {
-                $family = trim((string) $line['folio_family']);
-                if ($family === '') {
-                    throw ValidationException::withMessages(['tasks' => "No se encontró un SKU activo en Master Model Mapping para el ensamble {$line['assembly_number']} de la Job {$line['job_number']}. Revisa Job → ensamble → SKU antes de liberar."]);
-                }
-                $rating = $line['label_type'] === 'rating' ? $line['part_number'] : strtoupper(trim((string) ($input['rating_part_number'] ?? '')));
+                $family = trim((string) $line['folio_family']) ?: null;
+                $rating = $line['label_type'] === 'rating'
+                    ? strtoupper(trim((string) $line['part_number']))
+                    : strtoupper(trim((string) ($input['rating_part_number'] ?? '')));
                 if ($rating === '') {
                     throw ValidationException::withMessages(['tasks' => 'Cada tarea Serial/Rating necesita NP Rating de control.']);
                 }
+
+                $mappedMarket = $this->ratingMappings->resolveMarket($line['assembly_number'], [$rating]);
+                if ($mappedMarket && $mappedMarket !== $market) {
+                    throw ValidationException::withMessages([
+                        'serial_standard' => "El catálogo relaciona el NP Rating {$rating} y ensamble {$line['assembly_number']} con el mercado {$mappedMarket}.",
+                    ]);
+                }
+
                 if ($line['label_type'] === 'serial') {
-                    $matchingRatings = $lines->where('label_type', 'rating')->where('job_number', $line['job_number'])->where('model', $line['model']);
-                    if ($matchingRatings->isNotEmpty()) {
-                        $matchingRating = $matchingRatings->firstWhere('part_number', $rating);
-                        if (! $matchingRating || trim((string) $matchingRating['folio_family']) !== $family) {
-                            throw ValidationException::withMessages(['tasks' => 'Serial debe usar el NP Rating y la familia de su contraparte en esta requisición.']);
-                        }
+                    $matchingRatings = $lines->where('label_type', 'rating')
+                        ->where('job_number', $line['job_number'])
+                        ->where('model', $line['model']);
+                    if ($matchingRatings->isNotEmpty() && ! $matchingRatings->contains('part_number', $rating)) {
+                        throw ValidationException::withMessages(['tasks' => 'Serial debe usar el NP Rating de su contraparte en esta requisición.']);
                     }
                 }
-                $bundleKey = json_encode([$line['job_number'], $line['model'], $rating, $family]);
+
+                $bundleKey = json_encode([$line['job_number'], $line['model'], $rating, $market]);
                 $task['bundle_key'] = $bundleKey;
                 $task['folio_family'] = $family;
                 $task['rating_part_number'] = $rating;
 
                 if ($request->isOriginalReprint()) {
-                    $range = SerialRange::with(['week', 'labelRequest'])->find($input['source_range_id'] ?? null);
+                    $sourceRangeId = $input['source_range_id'] ?? null;
+                    $range = filled($sourceRangeId)
+                        ? SerialRange::with(['period', 'labelRequest'])->find($sourceRangeId)
+                        : null;
                     $start = (int) ($input['folio_start'] ?? 0);
                     $end = (int) ($input['folio_end'] ?? 0);
-                    if (! $range && filled($input['source_range_id'] ?? null)) {
+                    if (! $range && filled($sourceRangeId)) {
                         throw ValidationException::withMessages(['tasks' => 'El rango original ya no está disponible.']);
                     }
                     if ($range && $lockSources) {
-                        $originalRequest = LabelRequest::whereKey($range->label_request_id)->lockForUpdate()->firstOrFail();
-                        $range->refresh()->setRelation('labelRequest', $originalRequest);
-                        $range->load('week');
+                        $originalRequest = LabelRequest::query()->whereKey($range->label_request_id)->lockForUpdate()->firstOrFail();
+                        $range->refresh()->setRelation('labelRequest', $originalRequest)->load('period');
                     }
                     if ($range && ($range->label_request_id === $request->id || $range->status === 'cancelled'
                         || $range->labelRequest->status === LabelRequest::STATUS_CANCELLED
-                        || $range->week->label_part_number !== $rating || $range->week->folio_family !== $family
+                        || $range->period->label_part_number !== $rating
+                        || ($range->period->serial_standard && $range->period->serial_standard !== $market)
                         || $start < $range->range_start || $end > $range->range_end || $end - $start + 1 !== $line['quantity']
                         || ($range->evidence_folio !== null && $range->evidence_folio >= $start && $range->evidence_folio <= $end))) {
-                        throw ValidationException::withMessages(['tasks' => 'El rango original debe pertenecer a la familia y NP Rating, contener la cantidad solicitada y excluir la evidencia.']);
+                        throw ValidationException::withMessages(['tasks' => 'El rango original debe pertenecer al NP Rating y mercado, contener la cantidad solicitada y excluir la evidencia original.']);
                     }
                     $matchingOriginal = ! $range || $this->definitions->forRequest($range->labelRequest)->contains(fn ($original) => $original['label_type'] === $line['label_type'] && $original['part_number'] === $line['part_number']
                         && $original['job_number'] === $line['job_number'] && $original['model'] === $line['model']);
@@ -117,32 +145,77 @@ class LabelRoomAdministrationService
                     if (! $range && ($reference === '' || $start < 1 || $end - $start + 1 !== $line['quantity'])) {
                         throw ValidationException::withMessages(['tasks' => 'Para originales sin registro digital, indica la referencia física y un rango que corresponda exactamente a la cantidad solicitada.']);
                     }
+
+                    $sourceHasVerifiedPeriod = filled($range?->period->serial_standard)
+                        && in_array($range?->period->period_type, SerialPeriods::all(), true)
+                        && filled($range?->period->period_number);
+                    $originalPeriodType = $sourceHasVerifiedPeriod ? $range->period->period_type : $periodType;
+                    $originalPeriodYear = $sourceHasVerifiedPeriod
+                        ? $range->period->year
+                        : (int) ($input['original_year'] ?? 0);
+                    $originalPeriodNumber = $sourceHasVerifiedPeriod
+                        ? $range->period->period_number
+                        : (int) ($input['original_period_number'] ?? 0);
+                    if (! $originalPeriodYear || $originalPeriodNumber < 1 || $originalPeriodNumber > SerialPeriods::maximum($originalPeriodType)) {
+                        throw ValidationException::withMessages(['tasks' => 'Indica el año y periodo originales de los seriales que se reimprimirán.']);
+                    }
+
                     $task['original_reference'] = $range ? 'Requisición #'.$range->label_request_id : $reference;
-                    $bundle = ['source_range_id' => $range?->id, 'range_start' => $start, 'range_end' => $end,
-                        'production_quantity' => $line['quantity'], 'evidence_quantity' => 0, 'evidence_folio' => null,
-                        'year' => $range ? $range->week->year : (int) ($input['original_year'] ?? $data['control_year']),
-                        'week' => $range ? $range->week->week : (int) ($input['original_week'] ?? $data['control_week']),
-                        'family' => $family, 'rating' => $rating,
-                        'job_number' => $line['job_number'], 'model' => $line['model']];
+                    $bundle = [
+                        'source_range_id' => $range?->id,
+                        'range_start' => $start,
+                        'range_end' => $end,
+                        'production_quantity' => $line['quantity'],
+                        'evidence_quantity' => 1,
+                        'evidence_folio' => $start,
+                        'period_type' => $originalPeriodType,
+                        'period_year' => $originalPeriodYear,
+                        'period_number' => $originalPeriodNumber,
+                        'operational_year' => (int) $data['control_year'],
+                        'operational_week' => (int) $data['control_week'],
+                        'family' => $family,
+                        'market' => $market,
+                        'rating' => $rating,
+                        'job_number' => $line['job_number'],
+                        'model' => $line['model'],
+                    ];
                     if (isset($bundles[$bundleKey]) && $bundles[$bundleKey] !== $bundle) {
                         throw ValidationException::withMessages(['tasks' => 'Serial y Rating del mismo producto deben reutilizar exactamente el mismo rango.']);
                     }
                     $bundles[$bundleKey] = $bundle;
                 } elseif (! isset($bundles[$bundleKey])) {
-                    $year = (int) $data['control_year'];
-                    $week = (int) $data['control_week'];
-                    $weekKey = json_encode([$rating, $family, $year, $week]);
-                    $start = $nextByWeek[$weekKey] ?? $this->folios->nextNumber($rating, $family, $year, $week);
+                    $periodKey = json_encode([$rating, $market, $periodType, $releasePeriodYear, $releasePeriodNumber]);
+                    $start = $nextByPeriod[$periodKey] ?? $this->folios->nextNumber(
+                        $rating,
+                        $market,
+                        $periodType,
+                        $releasePeriodYear,
+                        $releasePeriodNumber,
+                    );
                     $end = $start + $line['quantity'];
                     if ($end > LabelFolioService::MAX_FOLIO) {
                         throw ValidationException::withMessages(['tasks' => 'El rango excede el límite del consecutivo.']);
                     }
                     $evidence = ($input['evidence_position'] ?? 'last') === 'first' ? $start : $end;
-                    $bundles[$bundleKey] = ['source_range_id' => null, 'range_start' => $start, 'range_end' => $end,
-                        'production_quantity' => $line['quantity'], 'evidence_quantity' => 1, 'evidence_folio' => $evidence,
-                        'year' => $year, 'week' => $week, 'family' => $family, 'rating' => $rating,
-                        'job_number' => $line['job_number'], 'model' => $line['model']];
-                    $nextByWeek[$weekKey] = $end + 1;
+                    $bundles[$bundleKey] = [
+                        'source_range_id' => null,
+                        'range_start' => $start,
+                        'range_end' => $end,
+                        'production_quantity' => $line['quantity'],
+                        'evidence_quantity' => 1,
+                        'evidence_folio' => $evidence,
+                        'period_type' => $periodType,
+                        'period_year' => $releasePeriodYear,
+                        'period_number' => $releasePeriodNumber,
+                        'operational_year' => (int) $data['control_year'],
+                        'operational_week' => (int) $data['control_week'],
+                        'family' => $family,
+                        'market' => $market,
+                        'rating' => $rating,
+                        'job_number' => $line['job_number'],
+                        'model' => $line['model'],
+                    ];
+                    $nextByPeriod[$periodKey] = $end + 1;
                 } else {
                     $bundle = $bundles[$bundleKey];
                     $evidence = ($input['evidence_position'] ?? 'last') === 'first' ? $bundle['range_start'] : $bundle['range_end'];
@@ -150,12 +223,16 @@ class LabelRoomAdministrationService
                         throw ValidationException::withMessages(['tasks' => 'Serial y Rating del mismo producto deben tener la misma cantidad y posición de evidencia.']);
                     }
                 }
+
                 $bundle = $bundles[$bundleKey];
                 $task['folio_start'] = $bundle['range_start'];
                 $task['folio_end'] = $bundle['range_end'];
                 $task['evidence_folio'] = $bundle['evidence_folio'];
-                $task['control_year'] = $bundle['year'];
-                $task['control_week'] = $bundle['week'];
+                $task['control_year'] = $bundle['operational_year'];
+                $task['control_week'] = $bundle['operational_week'];
+                $task['serial_period_type'] = $bundle['period_type'];
+                $task['serial_period_year'] = $bundle['period_year'];
+                $task['serial_period_number'] = $bundle['period_number'];
             }
             $tasks[$key] = $task;
         }
@@ -165,42 +242,58 @@ class LabelRoomAdministrationService
 
     public function proposalSignature(LabelRequest $request, array $proposal, array $data): string
     {
-        return hash_hmac('sha256', json_encode([$request->id, $proposal,
-            (int) $data['control_year'], (int) $data['control_week'], $data['job_status'],
-            $data['review_notes'] ?? null]), (string) config('app.key'));
+        return hash_hmac('sha256', json_encode([
+            $request->id,
+            $proposal,
+            $data['serial_standard'],
+            (int) $data['control_year'],
+            (int) $data['control_week'],
+            $data['job_status'],
+            $data['review_notes'] ?? null,
+        ]), (string) config('app.key'));
     }
 
     public function release(LabelRequest $request, array $data, User $user): LabelRequest
     {
-        return DB::transaction(function () use ($request, $data, $user) {
-            $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
+        return DB::transaction(function () use ($request, $data, $user): LabelRequest {
+            $locked = LabelRequest::query()->whereKey($request->id)->lockForUpdate()->firstOrFail();
             if ($locked->released_at && $locked->status !== LabelRequest::STATUS_CANCELLED) {
-                return $locked; // Retrying the same release cannot allocate a second range.
+                return $locked;
             }
-            if (! empty($data['plan_checked'])) {
-                $proposal = $this->proposal($locked, $data, true);
-            } else {
+            if (empty($data['plan_checked'])) {
                 throw ValidationException::withMessages(['plan_checked' => 'Confirma la revisión contra la información disponible de producción.']);
             }
+
+            $proposal = $this->proposal($locked, $data, true);
             if (! hash_equals($this->proposalSignature($locked, $proposal, $data), (string) ($data['proposal_signature'] ?? ''))) {
                 throw ValidationException::withMessages(['tasks' => 'Recalcula la propuesta: los datos o los folios cambiaron desde la revisión.']);
             }
-            if (SerialRange::where('label_request_id', $locked->id)->exists()) {
+            if (SerialRange::query()->where('label_request_id', $locked->id)->exists()) {
                 throw ValidationException::withMessages(['tasks' => 'Esta requisición tiene rangos históricos. Revisa su historial antes de crear otra reserva.']);
             }
 
             $rangeIds = [];
-            $bundles = collect($proposal['bundles'])->sortBy(fn ($b) => json_encode([$b['rating'], $b['family'], $b['year'], $b['week'], str_pad((string) $b['range_start'], 10, '0', STR_PAD_LEFT)]));
+            $bundles = collect($proposal['bundles'])->sortBy(fn ($bundle) => json_encode([
+                $bundle['rating'], $bundle['market'], $bundle['period_type'], $bundle['period_year'],
+                $bundle['period_number'], str_pad((string) $bundle['range_start'], 10, '0', STR_PAD_LEFT),
+            ]));
             foreach ($bundles as $key => $bundle) {
                 if ($locked->isOriginalReprint()) {
                     $rangeIds[$key] = $bundle['source_range_id'];
 
                     continue;
                 }
-                $week = $this->folios->lockWeek($bundle['rating'], $bundle['family'], $bundle['year'], $bundle['week']);
-                $next = $this->folios->highWater($week) + 1;
-                $relatedTasks = collect($proposal['tasks'])->where('bundle_key', $key);
-                foreach ($relatedTasks as $taskKey => $task) {
+
+                $period = $this->folios->lockPeriod(
+                    $bundle['rating'],
+                    $bundle['market'],
+                    $bundle['period_type'],
+                    $bundle['period_year'],
+                    $bundle['period_number'],
+                    $bundle['operational_week'],
+                );
+                $next = $this->folios->highWater($period) + 1;
+                foreach (collect($proposal['tasks'])->where('bundle_key', $key) as $taskKey => $task) {
                     if ((int) ($data['tasks'][$taskKey]['expected_start'] ?? 0) !== $next) {
                         throw ValidationException::withMessages(['tasks' => 'El consecutivo cambió o falta la propuesta. Recalcula los folios antes de liberar.']);
                     }
@@ -208,39 +301,62 @@ class LabelRoomAdministrationService
                 if ($next !== $bundle['range_start']) {
                     throw ValidationException::withMessages(['tasks' => 'Otra requisición reservó folios. Recalcula la propuesta.']);
                 }
-                $range = SerialRange::create([
-                    'serial_week_id' => $week->id, 'label_request_id' => $locked->id,
-                    'range_start' => $next, 'range_end' => $bundle['range_end'],
-                    'quantity' => $bundle['production_quantity'] + 1, 'production_quantity' => $bundle['production_quantity'],
-                    'evidence_quantity' => 1, 'evidence_folio' => $bundle['evidence_folio'],
-                    'job_number' => $bundle['job_number'], 'model' => $bundle['model'],
-                    'created_by_user_id' => $user->id, 'status' => 'reserved',
+
+                $range = SerialRange::query()->create([
+                    'serial_week_id' => $period->id,
+                    'label_request_id' => $locked->id,
+                    'range_start' => $next,
+                    'range_end' => $bundle['range_end'],
+                    'quantity' => $bundle['production_quantity'] + 1,
+                    'production_quantity' => $bundle['production_quantity'],
+                    'evidence_quantity' => 1,
+                    'evidence_folio' => $bundle['evidence_folio'],
+                    'job_number' => $bundle['job_number'],
+                    'model' => $bundle['model'],
+                    'created_by_user_id' => $user->id,
+                    'status' => 'reserved',
                 ]);
                 $rangeIds[$key] = $range->id;
-                $week->update(['last_serial_number' => $range->range_end]);
+                $period->update(['last_serial_number' => $range->range_end]);
             }
 
             foreach ($proposal['tasks'] as $task) {
                 $locked->workTasks()->create([
-                    ...collect($task)->only(['source_key', 'label_type', 'part_number', 'model', 'job_number', 'jobs',
+                    ...collect($task)->only([
+                        'source_key', 'label_type', 'part_number', 'model', 'job_number', 'jobs',
                         'po_number', 'destination', 'quantity', 'evidence_quantity', 'assigned_to_user_id',
                         'folio_start', 'folio_end', 'evidence_folio', 'rating_part_number', 'folio_family',
-                        'control_year', 'control_week', 'original_reference'])->all(),
+                        'control_year', 'control_week', 'serial_period_type', 'serial_period_year',
+                        'serial_period_number', 'original_reference',
+                    ])->all(),
                     'serial_range_id' => $task['bundle_key'] ? $rangeIds[$task['bundle_key']] : null,
                 ]);
             }
+
             $onlyBundle = count($proposal['bundles']) === 1 ? reset($proposal['bundles']) : null;
             $locked->update([
-                'job_status' => $data['job_status'], 'review_notes' => $data['review_notes'] ?? null,
-                'control_year' => $locked->isOriginalReprint() ? ($onlyBundle['year'] ?? null) : $data['control_year'],
-                'control_week' => $locked->isOriginalReprint() ? ($onlyBundle['week'] ?? null) : $data['control_week'],
-                'folio_start' => $onlyBundle['range_start'] ?? null, 'folio_end' => $onlyBundle['range_end'] ?? null,
-                'released_at' => now(), 'released_by_user_id' => $user->id,
+                'serial_standard' => $data['serial_standard'],
+                'job_status' => $data['job_status'],
+                'review_notes' => $data['review_notes'] ?? null,
+                'control_year' => $data['control_year'],
+                'control_week' => $data['control_week'],
+                'serial_period_type' => $onlyBundle['period_type'] ?? null,
+                'serial_period_year' => $onlyBundle['period_year'] ?? null,
+                'serial_period_number' => $onlyBundle['period_number'] ?? null,
+                'folio_start' => $onlyBundle['range_start'] ?? null,
+                'folio_end' => $onlyBundle['range_end'] ?? null,
+                'released_at' => now(),
+                'released_by_user_id' => $user->id,
                 'originals_received_at' => $locked->isOriginalReprint() ? now() : null,
                 'status' => LabelRequest::STATUS_IN_PROGRESS,
             ]);
-            $this->event($locked, $user, 'released', ['folio_mode' => $locked->folio_mode, 'job_status' => $locked->job_status,
-                'notes' => $locked->review_notes, 'ranges' => $rangeIds]);
+            $this->event($locked, $user, 'released', [
+                'folio_mode' => $locked->folio_mode,
+                'market' => $locked->serial_standard,
+                'job_status' => $locked->job_status,
+                'notes' => $locked->review_notes,
+                'ranges' => $rangeIds,
+            ]);
 
             return $locked;
         }, 3);
