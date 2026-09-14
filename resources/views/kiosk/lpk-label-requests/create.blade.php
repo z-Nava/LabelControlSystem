@@ -15,7 +15,7 @@
         'title' => 'Crear requisición de etiquetas LPK',
         'description' => 'Agrupa cada etiqueta física por tipo y NP, y agrega debajo todos sus modelos y Jobs.',
         'steps' => [
-            ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, semana, línea, turno y líder.'],
+            ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, línea, turno y líder.'],
             ['title' => 'Agrupa las etiquetas', 'description' => 'Crea un grupo por tipo y NP; no repitas el NP para agregar otro modelo.'],
             ['title' => 'Revisa y envía', 'description' => 'Valida todos los Jobs en Oracle antes de enviar a Label Room.'],
         ],
@@ -41,18 +41,13 @@
             <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-200 px-5 py-4">
                     <div class="text-base font-semibold text-slate-900">1) Datos generales</div>
-                    <div class="mt-1 text-sm text-slate-500">Identifica la requisición y la operación que la solicita.</div>
+                    <div class="mt-1 text-sm text-slate-500">Identifica la requisición y la operación que la solicita. Label Room autorizará la semana de impresión.</div>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
                     <div>
                         <label for="requestDate" class="text-sm font-medium text-slate-700">Fecha</label>
                         <input id="requestDate" type="date" name="request_date" value="{{ old('request_date', $defaultDate) }}" max="{{ $defaultDate }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                    </div>
-
-                    <div>
-                        <label for="requestWeek" class="text-sm font-medium text-slate-700">Semana</label>
-                        <input id="requestWeek" type="number" name="week" min="1" max="53" value="{{ old('week', $defaultWeek) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                     </div>
 
                     <div>

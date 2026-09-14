@@ -25,7 +25,7 @@
                     <input type="number" name="control_year" min="2000" max="2100" value="{{ $values['control_year'] ?? $defaultYear }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
                 <label class="text-sm font-medium">Semana autorizada
-                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $labelRequest->week }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $defaultWeek }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
                 <label class="text-sm font-medium">Clasificación del trabajo
                     <select name="job_status" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
@@ -107,7 +107,7 @@
                                     <input type="number" name="tasks[{{ $key }}][original_year]" value="{{ $taskInput['original_year'] ?? $values['control_year'] ?? $defaultYear }}" min="2000" max="2100" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                                 </label>
                                 <label class="text-sm font-medium">Semana de los folios originales
-                                    <input type="number" name="tasks[{{ $key }}][original_week]" value="{{ $taskInput['original_week'] ?? $values['control_week'] ?? $labelRequest->week }}" min="1" max="53" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                                    <input type="number" name="tasks[{{ $key }}][original_week]" value="{{ $taskInput['original_week'] ?? $values['control_week'] ?? $defaultWeek }}" min="1" max="53" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                                 </label>
                                 <label class="text-sm font-medium">Reimprimir del folio
                                     <input type="number" name="tasks[{{ $key }}][folio_start]" value="{{ $taskInput['folio_start'] ?? '' }}" min="1" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />

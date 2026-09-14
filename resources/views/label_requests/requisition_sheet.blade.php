@@ -213,7 +213,18 @@
 
         <section class="general-grid">
             <div class="field"><div class="field-label">Fecha</div><div class="field-value">{{ $labelRequest->request_date?->format('d/m/Y') }}</div></div>
-            <div class="field"><div class="field-label">Semana</div><div class="field-value">{{ $labelRequest->week }}</div></div>
+            <div class="field">
+                <div class="field-label">Año / semana autorizada</div>
+                <div class="field-value">
+                    @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
+                        {{ $labelRequest->control_year }} / {{ $labelRequest->control_week }}
+                    @elseif($labelRequest->released_at)
+                        Ver detalle por etiqueta
+                    @else
+                        Pendiente de autorización
+                    @endif
+                </div>
+            </div>
             <div class="field"><div class="field-label">Línea</div><div class="field-value">{{ $labelRequest->line?->code }} · {{ $labelRequest->line?->name }}</div></div>
             <div class="field !border-r-0"><div class="field-label">Turno de producción</div><div class="field-value">{{ $labelRequest->shift?->code }} · {{ $labelRequest->shift?->name }}</div></div>
 

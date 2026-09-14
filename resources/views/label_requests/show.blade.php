@@ -47,7 +47,16 @@
             <div class="mt-1 font-semibold">{{ implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'Sin tipo' }}</div>
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'Cantidad Shipping' }}: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
-            <div class="text-slate-700">Semana: {{ $labelRequest->week }}</div>
+            <div class="text-slate-700">
+                Año / semana autorizada:
+                @if($labelRequest->control_year !== null && $labelRequest->control_week !== null)
+                    {{ $labelRequest->control_year }} / {{ $labelRequest->control_week }}
+                @elseif($labelRequest->released_at)
+                    Ver detalle por etiqueta
+                @else
+                    Pendiente de autorización
+                @endif
+            </div>
             <div class="text-slate-700">Solicita: {{ $labelRequest->requested_by_name }}</div>
         </div>
 

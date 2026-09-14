@@ -44,15 +44,16 @@ class LabelRoomAdministrationController extends Controller
         $lines = $this->definitions->forRequest($labelRequest);
         $jobNumbers = $lines->flatMap(fn ($line) => array_column($line['jobs'], 'job_number'))->unique();
         $values = $input ?: session()->getOldInput();
-        $controlYear = (int) ($values['control_year'] ?? $labelRequest->request_date->isoWeekYear());
-        $controlWeek = (int) ($values['control_week'] ?? $labelRequest->week);
+        $today = now();
+        $controlYear = (int) ($values['control_year'] ?? $today->isoWeekYear());
+        $controlWeek = (int) ($values['control_week'] ?? $today->isoWeek());
         $ratingParts = $lines->pluck('rating_part_number')
             ->merge(collect($values['tasks'] ?? [])->pluck('rating_part_number'))->filter()->unique();
 
         return [
             'labelRequest' => $labelRequest->load(['line', 'shift', 'releasedBy']),
             'lines' => $lines, 'operators' => $this->service->operators(),
-            'defaultYear' => $labelRequest->request_date->isoWeekYear(),
+            'defaultYear' => $today->isoWeekYear(), 'defaultWeek' => $today->isoWeek(),
             'availableControls' => SerialWeek::whereIn('label_part_number', $ratingParts)
                 ->where('year', $controlYear)->where('week', $controlWeek)->whereNotNull('folio_family')
                 ->orderBy('label_part_number')->orderBy('folio_family')->get(),

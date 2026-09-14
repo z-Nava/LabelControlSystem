@@ -28,7 +28,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
         return [
             'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
-            'week' => ['required', 'integer', 'min:1', 'max:53'],
+            'week' => ['exclude'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
             'shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'leader_name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[\pL\s\-.\x27"]+$/u'],

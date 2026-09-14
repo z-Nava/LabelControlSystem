@@ -11,7 +11,6 @@ import { debounce } from './utils/debounce';
     const byId = (id) => document.getElementById(id);
     const inputs = {
         date: byId('requestDate'),
-        week: byId('requestWeek'),
         lineType: byId('lineTypeFilter'),
         line: byId('lineSelect'),
         shift: byId('shiftSelect'),
@@ -423,7 +422,6 @@ import { debounce } from './utils/debounce';
 
     [
         inputs.date,
-        inputs.week,
         inputs.line,
         inputs.shift,
         inputs.leader,
@@ -561,7 +559,7 @@ import { debounce } from './utils/debounce';
         const html = `
             <div class="text-left text-sm">
                 <ul style="margin:0;padding-left:1rem;display:grid;gap:0.25rem;">
-                    <li><strong>Fecha / Semana:</strong> ${escapeHtml(inputs.date.value)} · ${escapeHtml(inputs.week.value)}</li>
+                    <li><strong>Fecha:</strong> ${escapeHtml(inputs.date.value)}</li>
                     <li><strong>Línea / Turno:</strong> ${escapeHtml(inputs.line.selectedOptions[0]?.textContent?.trim() || '')} / ${escapeHtml(inputs.shift.selectedOptions[0]?.textContent?.trim() || '')}</li>
                     <li><strong>Líder:</strong> ${escapeHtml(inputs.leader.value)}</li>
                     <li><strong>Job / Assembly:</strong> ${escapeHtml(inputs.job.value)} / ${escapeHtml(inputs.assembly.value)}</li>

@@ -155,7 +155,6 @@ class LabelRequestReadService
     {
         return [
             'defaultDate' => now()->toDateString(),
-            'defaultWeek' => (int) now()->isoWeek(),
             'lines' => ProductionLine::query()
                 ->where('active', true)
                 ->orderBy('name')

@@ -32,6 +32,9 @@ class LabelRequestService
             $shippingItems = $this->normalizeRequestItems($data['shipping_items'] ?? []);
 
             unset(
+                $data['week'],
+                $data['control_year'],
+                $data['control_week'],
                 $data['serial_items'],
                 $data['serial_part_numbers'],
                 $data['rating_items'],
@@ -194,7 +197,6 @@ class LabelRequestService
                 'request_kind' => LabelRequest::KIND_LPK,
                 'folio_mode' => $data['folio_mode'] ?? 'new',
                 'request_date' => $data['request_date'],
-                'week' => $data['week'],
                 'line_id' => $data['line_id'],
                 'shift_id' => $data['shift_id'],
                 'leader_name' => $data['leader_name'],

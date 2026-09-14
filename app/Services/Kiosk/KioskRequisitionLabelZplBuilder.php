@@ -59,7 +59,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             ? $this->groupedLpkFields($labelRequest, $lineName, $createdAt, $qrPayload, $scale)
             : ($labelRequest->isLpk()
             ? [
-                $this->field(38, 137, 720, 16, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
+                $this->field(38, 137, 720, 16, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, alignment: 'C'),
                 $this->field(38, 168, 720, 32, 'JOB: '.(string) $labelRequest->job_number, $scale),
                 $this->field(38, 208, 720, 22, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
                 $this->field(38, 259, 720, 17, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
@@ -102,7 +102,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
                 $this->qr(650, 650, $qrPayload, $scale),
             ]
             : [
-                $this->field(38, 140, 720, 16, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
+                $this->field(38, 140, 720, 16, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, alignment: 'C'),
                 $this->field(38, 176, 720, 36, 'JOB: '.(string) $labelRequest->job_number, $scale),
                 $this->field(38, 220, 720, 27, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
                 $this->field(38, 286, 720, 23, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
@@ -205,7 +205,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             ->all();
 
         return [
-            $this->field(38, 137, 720, 18, "REGISTRADA: {$createdAt} | SEMANA: {$labelRequest->week} | LINEA: {$lineName}", $scale, maxLines: 2, alignment: 'C'),
+            $this->field(38, 137, 720, 18, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, maxLines: 2, alignment: 'C'),
             $this->field(38, 183, 720, 22, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 1),
             $this->field(38, 222, 720, 22, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 1),
             $this->field(

@@ -6,7 +6,7 @@
         'title' => 'Crear requisición de etiquetas',
         'description' => 'Captura únicamente las etiquetas que necesita producción. La vista te indicará qué datos completar y validará el Job antes del envío.',
         'steps' => [
-            ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, semana, línea, turno y líder.'],
+            ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, línea, turno y líder.'],
             ['title' => 'Valida el Job', 'description' => 'Espera la confirmación de Oracle y revisa la disponibilidad.'],
             ['title' => 'Indica las etiquetas', 'description' => 'Selecciona los tipos y captura solamente sus NP.'],
             ['title' => 'Confirma y envía', 'description' => 'Revisa la confirmación final antes de crear la requisición.'],
@@ -29,7 +29,7 @@
                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white">1</span>
                     <div>
                         <div class="text-base font-semibold text-slate-900">Identifica la operación</div>
-                        <div class="mt-1 text-sm text-slate-500">Confirma los datos prellenados y completa quién solicita las etiquetas.</div>
+                        <div class="mt-1 text-sm text-slate-500">Confirma los datos prellenados y completa quién solicita las etiquetas. Label Room autorizará la semana de impresión.</div>
                     </div>
                 </div>
 
@@ -38,12 +38,6 @@
                         <label for="requestDate" class="text-sm font-semibold text-slate-700">Fecha <span class="text-red-600" aria-hidden="true">*</span></label>
                         <input id="requestDate" type="date" name="request_date" value="{{ old('request_date', $defaultDate) }}" max="{{ $defaultDate }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                         <p class="mt-2 text-xs text-slate-500">No puede ser posterior al día de hoy.</p>
-                    </div>
-
-                    <div>
-                        <label for="requestWeek" class="text-sm font-semibold text-slate-700">Semana <span class="text-red-600" aria-hidden="true">*</span></label>
-                        <input id="requestWeek" type="number" name="week" min="1" max="53" value="{{ old('week', $defaultWeek) }}" required class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                        <p class="mt-2 text-xs text-slate-500">Verifica que corresponda a la fecha seleccionada.</p>
                     </div>
 
                     <div>
