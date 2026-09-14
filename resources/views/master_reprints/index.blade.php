@@ -56,6 +56,9 @@
                 <tr class="align-top">
                     <td class="py-3 pr-3 font-semibold">
                         #{{ $batch->id }}
+                        <div class="mt-1 text-xs font-medium {{ $batch->isConfirmed() ? 'text-green-700' : 'text-amber-700' }}">
+                            {{ $batch->isConfirmed() ? 'Impresión registrada' : ($batchRequest->isCancelled() ? 'Sin confirmar · requisición cancelada' : 'Pendiente de confirmar') }}
+                        </div>
                         @if($batchRequest->isRework())
                             <a href="{{ route('master_reworks.show', $batchRequest) }}" class="mt-1 block text-xs text-purple-700 hover:underline">
                                 R{{ $batchRequest->revision_number }} · Req. #{{ $batchRequest->id }}
@@ -65,7 +68,7 @@
                     <td class="py-3 pr-3">
                         <span class="rounded-full px-2 py-1 text-xs {{ $batch->batch_type === 'reprint' ? 'bg-amber-100 text-amber-800' : ($batch->batch_type === 'rework' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800') }}">{{ $batchTypeLabel }}</span>
                     </td>
-                    <td class="py-3 pr-3">{{ $batch->printed_at?->format('Y-m-d H:i') ?? '-' }}</td>
+                    <td class="py-3 pr-3">{{ $batch->printed_at?->format('Y-m-d H:i') ?? 'Sin confirmar' }}</td>
                     <td class="py-3 pr-3">{{ $batch->printed_by_name ?? $batch->printedBy?->name ?? '-' }}</td>
                     <td class="py-3 pr-3">
                         @if(filled($batchReason))
@@ -98,6 +101,11 @@
                             <span class="inline-flex cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-1.5 text-slate-500">
                                 Bloqueada
                             </span>
+                        @elseif($batch->isPending())
+                            <a href="{{ route('master_print_batches.print', $batch) }}" target="_blank"
+                               class="inline-flex rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-500">
+                                Continuar impresión
+                            </a>
                         @else
                             <a href="{{ route('master_requests.print.create', $batchRequest->id) }}"
                                class="inline-flex rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white transition hover:bg-red-500">

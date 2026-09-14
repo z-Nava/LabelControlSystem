@@ -10,7 +10,8 @@ class MasterRequestStatusService
     /**
      * Reglas:
      * - cancelled: no tocar (estado terminal)
-     * - Si NO hay folios impresos -> requested (si no hay batches, lo dejamos así)
+     * - Los folios pasan a printed al confirmar la impresión del lote.
+     * - Si NO hay folios impresos -> requested (aunque haya lotes pendientes)
      * - Si hay al menos 1 folio printed -> in_progress
      * - Si TODOS los folios están printed -> completed  (Opción A)
      *

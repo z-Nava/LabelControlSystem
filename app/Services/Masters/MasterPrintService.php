@@ -69,6 +69,17 @@ class MasterPrintService
                 }
             }
 
+            $pendingBatch = $masterRequest->printBatches()
+                ->pending()
+                ->whereHas('items', fn ($query) => $query->whereIn('master_request_folio_id', $folioIds))
+                ->first();
+
+            if ($pendingBatch) {
+                throw ValidationException::withMessages([
+                    'folio_ids' => "Estos folios tienen una impresión pendiente en el lote #{$pendingBatch->id}. Abre ese lote para confirmar o reintentar.",
+                ]);
+            }
+
             $batch = MasterPrintBatch::create([
                 'master_request_id' => $masterRequest->id,
                 'shift_id' => $masterRequest->shift_id,
@@ -76,7 +87,7 @@ class MasterPrintService
                 'reason' => $reason,
                 'printed_by_user_id' => $printedByUserId,
                 'printed_by_name' => $printedByName,
-                'printed_at' => now(),
+                'printed_at' => null,
             ]);
 
             $sheetSnapshotsByFolioId = $this->buildSheetsForRequest($masterRequest, $folios)
@@ -91,12 +102,44 @@ class MasterPrintService
                 ]);
             }
 
-            // Marcar como printed (solo los del batch)
+            return $batch;
+        });
+    }
+
+    public function confirmPrinted(MasterPrintBatch $batch, ?int $userId, string $userName): MasterPrintBatch
+    {
+        return DB::transaction(function () use ($batch, $userId, $userName): MasterPrintBatch {
+            // Match the lock order used by batch creation and request cancellation.
+            $masterRequest = MasterRequest::query()
+                ->whereKey($batch->master_request_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $batch = MasterPrintBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+
+            if ($masterRequest->isCancelled()) {
+                throw ValidationException::withMessages([
+                    'status' => 'No se puede confirmar: la requisición está cancelada.',
+                ]);
+            }
+
+            // Retries (including a lost HTTP response) must not rewrite the audit.
+            if ($batch->isConfirmed()) {
+                return $batch;
+            }
+
+            $folioIds = $batch->items()->pluck('master_request_folio_id');
+
             MasterRequestFolio::query()
-                ->whereIn('id', $folios->pluck('id'))
+                ->where('master_request_id', $masterRequest->id)
+                ->whereIn('id', $folioIds)
                 ->update(['status' => 'printed']);
 
-            // ✅ Recalcular status del master_request
+            $batch->update([
+                'printed_at' => now(),
+                'printed_by_user_id' => $userId,
+                'printed_by_name' => $userName,
+            ]);
+
             $this->statusService->recalculate($masterRequest);
 
             return $batch;

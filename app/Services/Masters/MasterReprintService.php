@@ -20,7 +20,7 @@ class MasterReprintService
             'printBatches' => MasterPrintBatch::query()
                 ->whereIn('master_request_id', $requestIds)
                 ->with(['masterRequest', 'printedBy', 'items.folio'])
-                ->orderByDesc('printed_at')
+                ->orderByDesc('created_at')
                 ->orderByDesc('id')
                 ->get(),
         ];

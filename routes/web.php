@@ -201,6 +201,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('/master-reworks/{master_request}', [MasterReworkController::class, 'show'])->name('master_reworks.show');
             Route::post('/master-reworks/{master_request}/print', [MasterReworkController::class, 'print'])->name('master_reworks.print');
             Route::get('/master-print-batches/{batch}/print', [MasterPrintController::class, 'print'])->name('master_print_batches.print');
+            Route::post('/master-print-batches/{batch}/confirm', [MasterPrintController::class, 'confirm'])->name('master_print_batches.confirm');
         });
         Route::middleware('module_access:dummy')->group(function () {
             Route::get('/dummy-requests/lookup-job', [DummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');

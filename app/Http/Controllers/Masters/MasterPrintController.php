@@ -7,7 +7,9 @@ use App\Http\Requests\Masters\StoreMasterPrintBatchRequest;
 use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 use App\Services\Masters\MasterPrintService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MasterPrintController extends Controller
@@ -32,7 +34,9 @@ class MasterPrintController extends Controller
             'folios' => fn ($q) => $q->orderBy('folio_number'),
         ]);
 
-        return view('master_print.create', compact('mr'));
+        $pendingBatches = $mr->printBatches()->pending()->withCount('items')->latest('id')->get();
+
+        return view('master_print.create', compact('mr', 'pendingBatches'));
     }
 
     public function store(StoreMasterPrintBatchRequest $request, MasterRequest $master_request): RedirectResponse
@@ -82,5 +86,20 @@ class MasterPrintController extends Controller
         }
 
         return $this->service->renderPrintable($batch);
+    }
+
+    public function confirm(Request $request, MasterPrintBatch $batch): JsonResponse
+    {
+        $batch = $this->service->confirmPrinted(
+            $batch,
+            $request->user()?->id,
+            (string) $request->user()?->name,
+        );
+
+        return response()->json([
+            'status' => 'printed',
+            'request_status' => $batch->masterRequest->status,
+            'message' => 'Impresión confirmada. Los folios fueron actualizados.',
+        ]);
     }
 }

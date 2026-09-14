@@ -255,7 +255,7 @@ class MasterReworkService
             'shift',
             'folios' => fn ($query) => $query->orderBy('folio_number'),
             'reworkedBy:id,name',
-            'printBatches' => fn ($query) => $query->latest('printed_at')->latest('id'),
+            'printBatches' => fn ($query) => $query->latest('id'),
         ]);
     }
 
@@ -311,7 +311,7 @@ class MasterReworkService
 
     private function firstPrintedSnapshot(MasterRequest $masterRequest): array
     {
-        foreach ($masterRequest->printBatches->sortBy([['printed_at', 'asc'], ['id', 'asc']]) as $batch) {
+        foreach ($masterRequest->printBatches->filter->isConfirmed()->sortBy([['printed_at', 'asc'], ['id', 'asc']]) as $batch) {
             foreach ($batch->items->sortBy('id') as $item) {
                 if (is_array($item->sheet_snapshot) && $item->sheet_snapshot !== []) {
                     return $item->sheet_snapshot;

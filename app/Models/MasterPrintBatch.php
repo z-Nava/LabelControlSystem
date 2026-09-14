@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -40,5 +41,25 @@ class MasterPrintBatch extends Model
     public function items(): HasMany
     {
         return $this->hasMany(MasterRequestBatchItem::class, 'master_print_batch_id');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->printed_at === null;
+    }
+
+    public function isConfirmed(): bool
+    {
+        return $this->printed_at !== null;
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->whereNull('printed_at');
+    }
+
+    public function scopeConfirmed(Builder $query): Builder
+    {
+        return $query->whereNotNull('printed_at');
     }
 }

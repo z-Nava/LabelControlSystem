@@ -212,9 +212,9 @@ class MasterRequestService
                 ]);
             }
 
-            if ($lockedRequest->printBatches()->exists()) {
+            if ($lockedRequest->printBatches()->confirmed()->exists()) {
                 throw ValidationException::withMessages([
-                    'status' => 'No se puede cancelar: la requisición ya tiene batches de impresión.',
+                    'status' => 'No se puede cancelar: la requisición ya tiene impresiones registradas.',
                 ]);
             }
 

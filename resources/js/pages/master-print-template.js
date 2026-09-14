@@ -1,7 +1,12 @@
+import Swal from '../lib/sweetalert';
+import { initializeMasterPrintConfirmation } from './master-print-template/confirmation';
+
 (function () {
     const { dataset } = document.body;
     const shouldRenderQrs = dataset.renderQrs === '1';
     const shouldAutoPrint = dataset.autoPrint === '1';
+
+    initializeMasterPrintConfirmation({ Swal });
 
     function renderEmptyState(element) {
         element.innerHTML = '<div class="text-[9px] text-slate-500 flex items-center justify-center h-full w-full">Sin código</div>';

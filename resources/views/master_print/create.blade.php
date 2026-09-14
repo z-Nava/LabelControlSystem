@@ -36,7 +36,7 @@
             <div class="text-xs font-semibold uppercase tracking-wide text-green-700">Paso completado</div>
             <h2 class="mt-1 text-base font-semibold text-slate-900">Batch #{{ session('batch_id') }} generado correctamente</h2>
             <p class="mt-1 text-sm text-slate-700">
-                Ya puedes abrir la impresión. Si necesitas otro lote, usa el formulario de abajo.
+                Abre la impresión y confirma después si salieron correctamente las hojas.
             </p>
 
             <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -49,6 +49,21 @@
                     class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100">
                     Ver resumen requisición
                 </a>
+            </div>
+        </div>
+    @endif
+
+    @if($pendingBatches->isNotEmpty())
+        <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <h2 class="font-semibold text-slate-900">Impresiones pendientes de confirmar</h2>
+            <p class="mt-1 text-sm text-slate-600">Si cancelaste o hubo una falla, reintenta el mismo lote.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @foreach($pendingBatches as $pendingBatch)
+                    <a href="{{ route('master_print_batches.print', $pendingBatch) }}" target="_blank"
+                       class="rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">
+                        Abrir lote #{{ $pendingBatch->id }} · {{ $pendingBatch->items_count }} folio(s)
+                    </a>
+                @endforeach
             </div>
         </div>
     @endif

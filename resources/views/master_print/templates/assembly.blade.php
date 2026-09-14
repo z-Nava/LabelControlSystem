@@ -332,6 +332,8 @@
     </section>
 @endforeach
 
+@include('master_print._confirmation')
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>
