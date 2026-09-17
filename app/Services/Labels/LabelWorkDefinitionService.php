@@ -43,7 +43,7 @@ class LabelWorkDefinitionService
         $models = $this->mappings->resolveAssemblyPackagingModels($jobs->pluck('assembly'));
         $ratingOptions = $this->ratingMappings->activeOptionsForAssemblies($jobs->pluck('assembly'));
 
-        return $lines->map(function (array $line) use ($lines, $jobs, $models, $ratingOptions): array {
+        return $lines->map(function (array $line) use ($lines, $jobs, $models, $ratingOptions, $request): array {
             $job = $jobs->get($line['job_number']);
             $assembly = strtoupper(trim((string) $job?->assembly));
             $family = $models[$assembly] ?? null;
@@ -56,6 +56,14 @@ class LabelWorkDefinitionService
                 : ($ratings->count() === 1
                     ? $ratings->first()['part_number']
                     : (count($line['rating_options']) === 1 ? $line['rating_options'][0]['rating_part_number'] : null));
+            $snapshot = $request->catalog_context[$line['source_key']] ?? null;
+            $line['catalog_market'] = $snapshot['market'] ?? null;
+            $line['catalog_rating'] = $snapshot['rating_part_number'] ?? null;
+            if ($line['catalog_rating']) {
+                $line['rating_part_number'] = $line['catalog_rating'];
+                $line['rating_options'] = [$snapshot];
+                $line['assembly_number'] = $snapshot['assembly_part_number'];
+            }
             $line['requires_folios'] = in_array($line['label_type'], ['serial', 'rating'], true);
 
             return $line;

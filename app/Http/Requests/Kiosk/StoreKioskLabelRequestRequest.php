@@ -41,7 +41,11 @@ class StoreKioskLabelRequestRequest extends FormRequest
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
             'model' => ['nullable', 'string', 'max:80'],
             'serial_items' => [Rule::requiredIf($requiresSerialPartNumber), 'array'],
-            'serial_items.*.part_number' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
+            'serial_items.*.part_number' => ['required', 'string', 'max:80'],
+            'serial_items.*.catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
+            'rating_items.*.catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
+            'inner_catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
+            'shipping_catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
             'serial_items.*.model' => ['nullable', 'string', 'max:80'],
             'rating_items' => [Rule::requiredIf($requiresRatingPartNumber), 'array'],
             'rating_items.*.part_number' => ['required', 'string', 'max:80', 'distinct:ignore_case'],
@@ -122,6 +126,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
 
                 return [
                     'part_number' => strtoupper(trim((string) ($value['part_number'] ?? ''))),
+                    'catalog_mapping_id' => $value['catalog_mapping_id'] ?? null,
                     'model' => $this->nullableUppercase($value['model'] ?? null),
                 ];
             })

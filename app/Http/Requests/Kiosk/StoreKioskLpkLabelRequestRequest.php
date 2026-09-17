@@ -37,6 +37,8 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             'lpk_label_groups.*.part_number' => ['required', 'string', 'max:80'],
             'lpk_label_groups.*.items' => ['required', 'array', 'min:1', 'max:100'],
             'lpk_label_groups.*.items.*.job_number' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z\-]+$/'],
+            'lpk_label_groups.*.items.*.catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
+            'lpk_shipping_groups.*.items.*.catalog_mapping_id' => ['nullable', 'integer', 'min:1'],
             'lpk_label_groups.*.items.*.model' => ['nullable', 'string', 'max:80'],
             'lpk_label_groups.*.items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'lpk_shipping_groups' => ['present', 'array', 'max:50'],
@@ -144,7 +146,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
         $seenItems = [];
 
         foreach ($items as $itemIndex => $item) {
-            $itemKey = ($item['job_number'] ?? '').'|'.($item['model'] ?? '');
+            $itemKey = ($item['job_number'] ?? '').'|'.($item['model'] ?? '').'|'.($item['catalog_mapping_id'] ?? '');
 
             if (isset($seenItems[$itemKey])) {
                 $validator->errors()->add(
@@ -294,6 +296,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             ->map(function (array $item) use ($includeQuantity): array {
                 $normalized = [
                     'job_number' => strtoupper(trim((string) ($item['job_number'] ?? ''))),
+                    'catalog_mapping_id' => $item['catalog_mapping_id'] ?? null,
                     'model' => $this->nullableUppercase($item['model'] ?? null),
                 ];
 

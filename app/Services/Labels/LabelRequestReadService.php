@@ -199,6 +199,7 @@ class LabelRequestReadService
 
             return [
                 'part_number' => is_scalar($partNumber) ? (string) $partNumber : '',
+                'catalog_mapping_id' => is_array($item) ? ($item['catalog_mapping_id'] ?? null) : null,
                 'model' => is_scalar($model) ? (string) $model : '',
             ];
         }, array_values($items));

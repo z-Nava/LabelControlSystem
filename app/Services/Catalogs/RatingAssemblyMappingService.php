@@ -55,7 +55,7 @@ class RatingAssemblyMappingService
         return $mapping->refresh();
     }
 
-    /** @return Collection<int, array{rating_part_number: string, market: string}> */
+    /** @return Collection<int, array<string, mixed>> */
     public function activeOptionsForAssembly(?string $assemblyPartNumber): Collection
     {
         $assemblyPartNumber = $this->normalize($assemblyPartNumber);
@@ -69,16 +69,13 @@ class RatingAssemblyMappingService
             ->where('assembly_part_number', $assemblyPartNumber)
             ->orderBy('rating_part_number')
             ->orderBy('market')
-            ->get(['rating_part_number', 'market'])
-            ->map(fn (RatingAssemblyMapping $mapping): array => [
-                'rating_part_number' => $mapping->rating_part_number,
-                'market' => $mapping->market,
-            ]);
+            ->get($this->optionColumns())
+            ->map(fn (RatingAssemblyMapping $mapping): array => $mapping->only($this->optionColumns()));
     }
 
     /**
      * @param  iterable<mixed>  $assemblyPartNumbers
-     * @return array<string, Collection<int, array{rating_part_number: string, market: string}>>
+     * @return array<string, Collection<int, array<string, mixed>>>
      */
     public function activeOptionsForAssemblies(iterable $assemblyPartNumbers): array
     {
@@ -97,13 +94,15 @@ class RatingAssemblyMappingService
             ->whereIn('assembly_part_number', $assemblies)
             ->orderBy('rating_part_number')
             ->orderBy('market')
-            ->get(['assembly_part_number', 'rating_part_number', 'market'])
+            ->get($this->optionColumns())
             ->groupBy('assembly_part_number')
-            ->map(fn (Collection $mappings): Collection => $mappings->map(fn (RatingAssemblyMapping $mapping): array => [
-                'rating_part_number' => $mapping->rating_part_number,
-                'market' => $mapping->market,
-            ])->values())
+            ->map(fn (Collection $mappings): Collection => $mappings->map(fn (RatingAssemblyMapping $mapping): array => $mapping->only($this->optionColumns()))->values())
             ->all();
+    }
+
+    private function optionColumns(): array
+    {
+        return ['id', 'assembly_part_number', 'rating_part_number', 'serial_part_number', 'shipping_part_number', 'inner_part_number', 'market'];
     }
 
     /**

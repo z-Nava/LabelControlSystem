@@ -92,7 +92,10 @@ class LabelRoomAdministrationService
                     throw ValidationException::withMessages(['tasks' => 'Cada tarea Serial/Rating necesita NP Rating de control.']);
                 }
 
-                $mappedMarket = $this->ratingMappings->resolveMarket($line['assembly_number'], [$rating]);
+                if ($line['catalog_rating'] && $rating !== $line['catalog_rating']) {
+                    throw ValidationException::withMessages(['tasks' => 'El Rating de control debe coincidir con la relación seleccionada en Kiosk.']);
+                }
+                $mappedMarket = $line['catalog_market'] ?? $this->ratingMappings->resolveMarket($line['assembly_number'], [$rating]);
                 if ($mappedMarket && $mappedMarket !== $market) {
                     throw ValidationException::withMessages([
                         'serial_standard' => "El catálogo relaciona el NP Rating {$rating} y ensamble {$line['assembly_number']} con el mercado {$mappedMarket}.",

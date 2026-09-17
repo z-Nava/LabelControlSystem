@@ -166,7 +166,7 @@
                     </div>
 
                     <div class="border-t border-slate-200 pt-5">
-                        <div class="text-sm font-semibold text-slate-800">C. Captura el NP de cada etiqueta seleccionada</div>
+                        <div class="text-sm font-semibold text-slate-800">C. Completa las etiquetas desde el catálogo</div>
                         <p class="mt-1 text-sm text-slate-500">Usaremos el modelo encontrado para completar los campos; si no existe un mapeo, podrás capturarlo manualmente.</p>
                     </div>
 
@@ -174,7 +174,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-semibold text-slate-800">Serial <span class="text-red-600" aria-hidden="true">*</span></div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega una fila por cada NP Serial distinto.</p>
+                                <p class="mt-1 text-xs text-slate-500">Agrega una fila por cada Serial y Rating de control del producto.</p>
                             </div>
                             <button id="addSerialPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar Serial
@@ -184,13 +184,14 @@
                         <div id="serialPartNumbers" class="space-y-2">
                             @foreach($serialItems as $index => $serialItem)
                                 <div class="serial-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                                    <input type="hidden" class="catalog-id" value="{{ $serialItem['catalog_mapping_id'] ?? '' }}" />
                                     <input type="text" name="serial_items[{{ $index }}][part_number]" value="{{ $serialItem['part_number'] }}" maxlength="80" placeholder="NP de Serial" autocomplete="off" spellcheck="false" class="serial-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <input type="text" name="serial_items[{{ $index }}][model]" value="{{ $serialItem['model'] }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-serial-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
                                 </div>
                             @endforeach
                         </div>
-                        <p id="serialItemsHint" class="text-xs text-slate-500">No repitas el mismo NP Serial.</p>
+                        <p id="serialItemsHint" class="text-xs text-slate-500">El mismo NP Serial puede usarse con distintos Ratings de control.</p>
                     </div>
 
                     <template id="serialPartNumberTemplate">
@@ -212,17 +213,10 @@
                             </button>
                         </div>
 
-                        <div id="ratingCatalogContainer" class="hidden rounded-xl border border-violet-200 bg-white p-3">
-                            <label for="ratingCatalogSelect" class="text-sm font-semibold text-slate-700">Opciones del catálogo para este ensamble</label>
-                            <select id="ratingCatalogSelect" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-600">
-                                <option value="">Selecciona un NP Rating...</option>
-                            </select>
-                            <p id="ratingCatalogHint" class="mt-1 text-xs text-slate-500">La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.</p>
-                        </div>
-
                         <div id="ratingPartNumbers" class="space-y-2">
                             @foreach($ratingItems as $index => $ratingItem)
                                 <div class="rating-part-number-row grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                                    <input type="hidden" class="catalog-id" value="{{ $ratingItem['catalog_mapping_id'] ?? '' }}" />
                                     <input type="text" name="rating_items[{{ $index }}][part_number]" value="{{ $ratingItem['part_number'] }}" maxlength="80" placeholder="NP de Rating" autocomplete="off" spellcheck="false" class="rating-part-number-input min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <input type="text" name="rating_items[{{ $index }}][model]" value="{{ $ratingItem['model'] }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input part-model-input min-w-0 rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                                     <button type="button" class="remove-rating-part-number inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm font-medium text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
@@ -244,6 +238,7 @@
                         <div class="text-sm font-semibold text-slate-800">Inner <span class="text-red-600" aria-hidden="true">*</span></div>
                         <p class="mt-1 text-xs text-slate-500">Captura el NP; el modelo es opcional y puede completarse al validar el Job.</p>
                         <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <input type="hidden" id="innerCatalogId" name="inner_catalog_mapping_id" value="{{ old('inner_catalog_mapping_id') }}" />
                             <input id="innerPartNumber" type="text" name="inner_part_number" value="{{ old('inner_part_number') }}" maxlength="80" placeholder="NP de Inner" autocomplete="off" spellcheck="false" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                             <input id="innerModel" type="text" name="inner_model" value="{{ old('inner_model') }}" maxlength="80" placeholder="Modelo (opcional)" class="mapped-model-input rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
                         </div>
@@ -255,7 +250,8 @@
                         <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div>
                                 <label for="shippingPartNumber" class="text-sm font-semibold text-slate-700">NP de Shipping <span class="text-red-600" aria-hidden="true">*</span></label>
-                                <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" autocomplete="off" spellcheck="false" class="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                <input type="hidden" id="shippingCatalogId" name="shipping_catalog_mapping_id" value="{{ old('shipping_catalog_mapping_id') }}" />
+                            <input id="shippingPartNumber" type="text" name="shipping_part_number" value="{{ old('shipping_part_number') }}" maxlength="80" placeholder="NP de Shipping" autocomplete="off" spellcheck="false" class="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
                             </div>
                             <div>
                                 <label for="shippingModel" class="text-sm font-semibold text-slate-700">Modelo <span class="font-normal text-slate-400">(opcional)</span></label>

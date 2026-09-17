@@ -55,7 +55,7 @@ class LabelRoomAdministrationController extends Controller
         if (! in_array($market, SerialStandards::all(), true)) {
             $inferredMarkets = $lines
                 ->filter(fn ($line) => $line['requires_folios'])
-                ->map(fn ($line) => $this->ratingMappings->resolveMarket(
+                ->map(fn ($line) => $line['catalog_market'] ?? $this->ratingMappings->resolveMarket(
                     $line['assembly_number'],
                     [$line['rating_part_number']],
                 ))

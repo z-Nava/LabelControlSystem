@@ -52,6 +52,7 @@ class LabelRequest extends Model
     protected $table = 'label_requests';
 
     protected $fillable = [
+        'catalog_context',
         'request_kind',
         'folio_mode',
         'job_status',
@@ -105,6 +106,7 @@ class LabelRequest extends Model
     ];
 
     protected $casts = [
+        'catalog_context' => 'array',
         'request_date' => 'date:Y-m-d',
         'released_at' => 'datetime',
         'originals_received_at' => 'datetime',

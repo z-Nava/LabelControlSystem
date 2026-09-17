@@ -1,4 +1,5 @@
 import Swal from '../lib/sweetalert';
+import { mountCatalogPicker } from './utils/label-catalog';
 import { debounce } from './utils/debounce';
 
 (function initializeKioskLabelRequestCreateForm() {
@@ -39,9 +40,6 @@ import { debounce } from './utils/debounce';
     const ratingPartNumbersContainer = byId('ratingPartNumbers');
     const ratingPartNumberTemplate = byId('ratingPartNumberTemplate');
     const addRatingPartNumberButton = byId('addRatingPartNumber');
-    const ratingCatalogContainer = byId('ratingCatalogContainer');
-    const ratingCatalogSelect = byId('ratingCatalogSelect');
-    const ratingCatalogHint = byId('ratingCatalogHint');
     const innerFields = byId('innerFields');
     const shippingFields = byId('shippingFields');
     const typeCards = Array.from(form.querySelectorAll('[data-label-type-card]'));
@@ -59,6 +57,8 @@ import { debounce } from './utils/debounce';
         available: byId('availableQuantityValue'),
     };
 
+    const catalogPickers = new Map();
+    let jobLookupVersion = 0;
     let validatedJobNumber = '';
     let availableQuantity = null;
     let mappedModel = '';
@@ -158,52 +158,68 @@ import { debounce } from './utils/debounce';
         }
     }
 
-    function clearRatingCatalog() {
+    function configureCatalogFields() {
+        ['serial', 'rating'].forEach((type) => {
+            const container = type === 'serial' ? serialPartNumbersContainer : ratingPartNumbersContainer;
+            container.querySelectorAll('.' + type + '-part-number-row').forEach((row, index) => {
+                const partInput = row.querySelector('.' + type + '-part-number-input');
+                let idInput = row.querySelector('.catalog-id');
+                if (!idInput) {
+                    idInput = document.createElement('input');
+                    idInput.type = 'hidden';
+                    idInput.className = 'catalog-id';
+                    row.append(idInput);
+                }
+                idInput.name = type + '_items[' + index + '][catalog_mapping_id]';
+                if (!catalogPickers.has(partInput)) {
+                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, allowManual: () => byId('folioMode')?.value === 'reprint_originals', onSelect: (option, previousId) => {
+                        if (option) {
+                            const counterpart = type === 'rating' ? 'serial' : 'rating';
+                            if (inputs[counterpart].checked) {
+                                const candidates = counterpart === 'serial' ? serialPartNumberInputs() : ratingPartNumberInputs();
+                                const target = candidates.find((input) => previousId && catalogPickers.get(input)?.idInput.value === previousId)
+                                    || candidates.find((input) => !input.value);
+                                if (target) catalogPickers.get(target)?.choose(option.id);
+                            }
+                            ['inner', 'shipping'].forEach((other) => {
+                                const picker = catalogPickers.get(inputs[other + 'PartNumber']);
+                                if (inputs[other].checked && (!picker.partInput.value || (previousId && picker.idInput.value === previousId))) picker.choose(option.id);
+                            });
+                        }
+                        updateFormGuidance();
+                    } });
+                    catalogPickers.set(partInput, picker);
+                    if (ratingCatalogOptions.length) picker.setOptions(ratingCatalogOptions);
+                }
+            });
+        });
+        ['inner', 'shipping'].forEach((type) => {
+            const partInput = inputs[type + 'PartNumber'];
+            if (!catalogPickers.has(partInput)) {
+                catalogPickers.set(partInput, mountCatalogPicker({ container: type === 'inner' ? innerFields : shippingFields, partInput, idInput: byId(type + 'CatalogId'), type, allowManual: () => byId('folioMode')?.value === 'reprint_originals' }));
+            }
+        });
+        for (const [input] of catalogPickers) if (!input.isConnected) catalogPickers.delete(input);
+    }
+
+    function clearRatingCatalog({ clearParts = false } = {}) {
         ratingCatalogOptions = [];
-        ratingCatalogSelect.replaceChildren(new Option('Selecciona un NP Rating...', ''));
-        ratingCatalogContainer.classList.add('hidden');
-        setHint(ratingCatalogHint, 'La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.');
+        if (clearParts) for (const picker of catalogPickers.values()) picker.clear({ clearPart: true });
     }
 
     function applyRatingCatalog(options) {
-        clearRatingCatalog();
         ratingCatalogOptions = Array.isArray(options) ? options : [];
-
-        ratingCatalogOptions.forEach((option) => {
-            const partNumber = normalize(option.rating_part_number);
-            const market = normalize(option.market);
-            if (!partNumber || !market) return;
-            ratingCatalogSelect.add(new Option(`${partNumber} · ${market}`, partNumber));
-        });
-
-        if (!ratingCatalogOptions.length) return;
-
-        ratingCatalogContainer.classList.remove('hidden');
-        const firstInput = ratingPartNumberInputs()[0];
-        if (ratingCatalogOptions.length === 1 && firstInput && !firstInput.value.trim()) {
-            firstInput.value = normalize(ratingCatalogOptions[0].rating_part_number);
-            ratingCatalogSelect.value = firstInput.value;
-        } else if (firstInput && ratingCatalogOptions.some((option) => normalize(option.rating_part_number) === normalize(firstInput.value))) {
-            ratingCatalogSelect.value = normalize(firstInput.value);
-        }
-        updateRatingCatalogHint();
+        configureCatalogFields();
+        for (const picker of catalogPickers.values()) picker.setOptions(ratingCatalogOptions);
+        syncConditionalFields();
     }
 
     function updateRatingCatalogHint() {
-        const selectedRatings = ratingItems().map((item) => normalize(item.partNumber));
-        const markets = ratingCatalogOptions
-            .filter((option) => selectedRatings.includes(normalize(option.rating_part_number)))
-            .map((option) => normalize(option.market));
-        const uniqueMarkets = [...new Set(markets)];
-
-        if (selectedRatings.length && uniqueMarkets.length === 1) {
-            setHint(ratingCatalogHint, `Mercado identificado: ${uniqueMarkets[0]}. Label Room lo confirmará al liberar.`, 'text-emerald-700');
-        } else {
-            setHint(ratingCatalogHint, 'La selección copiará el NP a la primera fila. También puedes escribirlo manualmente.');
-        }
+        for (const picker of catalogPickers.values()) picker.refresh({ autofill: false });
     }
 
     function syncConditionalFields() {
+        configureCatalogFields();
         const hasSerial = inputs.serial.checked;
         const hasRating = inputs.rating.checked;
         const hasInner = inputs.inner.checked;
@@ -213,21 +229,21 @@ import { debounce } from './utils/debounce';
         serialPartNumberInputs().forEach((input) => {
             input.required = hasSerial;
         });
-        serialFields.querySelectorAll('input').forEach((input) => { input.disabled = !hasSerial; });
+        serialFields.querySelectorAll('input, select').forEach((input) => { input.disabled = !hasSerial; });
 
         ratingFields.classList.toggle('hidden', !hasRating);
         ratingPartNumberInputs().forEach((input) => {
             input.required = hasRating;
         });
-        ratingFields.querySelectorAll('input').forEach((input) => { input.disabled = !hasRating; });
+        ratingFields.querySelectorAll('input, select').forEach((input) => { input.disabled = !hasRating; });
 
         innerFields.classList.toggle('hidden', !hasInner);
         inputs.innerPartNumber.required = hasInner;
-        innerFields.querySelectorAll('input').forEach((input) => { input.disabled = !hasInner; });
+        innerFields.querySelectorAll('input, select').forEach((input) => { input.disabled = !hasInner; });
 
         shippingFields.classList.toggle('hidden', !hasShipping);
         inputs.shippingPartNumber.required = hasShipping;
-        shippingFields.querySelectorAll('input').forEach((input) => { input.disabled = !hasShipping; });
+        shippingFields.querySelectorAll('input, select').forEach((input) => { input.disabled = !hasShipping; });
 
         inputs.shippingQuantity.required = hasShipping;
         inputs.shippingQuantity.disabled = !hasShipping;
@@ -241,6 +257,7 @@ import { debounce } from './utils/debounce';
             selectedTypes().length ? 'text-emerald-700' : 'text-slate-500',
         );
 
+        updateRatingCatalogHint();
         updateTypeCards();
     }
 
@@ -383,8 +400,16 @@ import { debounce } from './utils/debounce';
     }
 
     function updateFormGuidance() {
+        configureCatalogFields();
+        updateRatingCatalogHint();
         updateTypeCards();
-        validateDistinctPartNumbers(serialPartNumberInputs(), serialItemsHint, 'Serial', inputs.serial.checked);
+        const serialKeys = new Set();
+        serialPartNumberInputs().forEach((input) => {
+            const id = catalogPickers.get(input)?.idInput.value || '';
+            const key = normalize(input.value) + '|' + id;
+            input.setCustomValidity(inputs.serial.checked && input.value && serialKeys.has(key) ? 'Este Serial y su Rating de control están repetidos.' : '');
+            serialKeys.add(key);
+        });
         validateDistinctPartNumbers(ratingPartNumberInputs(), ratingItemsHint, 'Rating', inputs.rating.checked);
     }
 
@@ -402,11 +427,12 @@ import { debounce } from './utils/debounce';
         if (clearModels) {
             applyMappedModel(null, { clearManual: true, status: 'pending' });
         }
-        clearRatingCatalog();
+        clearRatingCatalog({ clearParts: clearModels });
     }
 
     const lookupJob = debounce(async () => {
         const jobNumber = normalize(inputs.job.value);
+        const version = ++jobLookupVersion;
 
         if (!jobNumber) {
             inputs.job.setCustomValidity('');
@@ -426,6 +452,7 @@ import { debounce } from './utils/debounce';
             if (!response.ok) throw new Error(`Lookup failed with HTTP ${response.status}`);
 
             const data = await response.json();
+            if (version !== jobLookupVersion || normalize(inputs.job.value) !== jobNumber) return;
 
             if (!data.found) {
                 clearJobResult('No encontrado en Oracle Jobs.');
@@ -464,6 +491,7 @@ import { debounce } from './utils/debounce';
             validateQuantityAvailability();
             updateFormGuidance();
         } catch (error) {
+            if (version !== jobLookupVersion || normalize(inputs.job.value) !== jobNumber) return;
             clearJobResult('No fue posible consultar Oracle. Intenta nuevamente.');
             inputs.job.setCustomValidity('No fue posible validar el Job en este momento.');
             setHint(jobHint, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
@@ -566,17 +594,10 @@ import { debounce } from './utils/debounce';
         updateFormGuidance();
     });
 
-    ratingCatalogSelect.addEventListener('change', () => {
-        const firstInput = ratingPartNumberInputs()[0];
-        if (!firstInput || !ratingCatalogSelect.value) return;
-        firstInput.value = ratingCatalogSelect.value;
-        firstInput.dispatchEvent(new Event('input', { bubbles: true }));
-        firstInput.focus();
-    });
-
     [inputs.serial, inputs.rating, inputs.inner, inputs.shipping].forEach((input) => {
         input.addEventListener('change', () => {
             syncConditionalFields();
+            for (const picker of catalogPickers.values()) picker.refresh();
             updateFormGuidance();
         });
     });
@@ -587,6 +608,7 @@ import { debounce } from './utils/debounce';
     });
 
     inputs.job.addEventListener('input', () => {
+        jobLookupVersion += 1;
         inputs.po.value = '';
         inputs.destination.value = '';
         clearJobResult('Esperando validación de Oracle…', { clearModels: true });
@@ -596,7 +618,7 @@ import { debounce } from './utils/debounce';
     });
     inputs.job.addEventListener('change', lookupJob);
 
-    byId('folioMode')?.addEventListener('change', validateQuantityAvailability);
+    byId('folioMode')?.addEventListener('change', () => { validateQuantityAvailability(); updateFormGuidance(); });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();

@@ -7,6 +7,7 @@ use App\Models\LabelRequestLpkLabelGroup;
 use App\Models\OracleJob;
 use App\Services\Catalogs\MasterModelMappingService;
 use App\Services\Catalogs\RatingAssemblyMappingService;
+use App\Services\Kiosk\KioskLabelCatalogService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,7 @@ class LabelRequestService
 {
     public function __construct(
         private readonly OracleJobService $oracleJobService,
+        private readonly KioskLabelCatalogService $labelCatalog,
         private readonly LabelRequestJobAvailabilityService $availabilityService,
         private readonly LpkJobReservationCalculator $lpkReservationCalculator,
         private readonly MasterModelMappingService $masterModelMappingService,
@@ -79,10 +81,31 @@ class LabelRequestService
             }
 
             $data['job_number'] = $jobNumber;
-            $data['serial_standard'] = $this->ratingAssemblyMappingService->resolveMarket(
-                $job->assembly,
-                $ratingItems->pluck('part_number'),
-            );
+            $context = collect();
+            foreach (['serial', 'rating'] as $type) {
+                $items = $type === 'serial' ? $serialItems : $ratingItems;
+                $items = $data['include_'.$type] ? $items->map(function (array $item, int $index) use ($job, $type, $data): array {
+                    $item['catalog_snapshot'] = $this->labelCatalog->resolve($job->assembly, $type, $item['part_number'], $item['catalog_mapping_id'] ?? null, $type.'_items.'.$index.'.catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals');
+
+                    return $item;
+                }) : collect();
+                $this->labelCatalog->assertDistinct($items, $type.'_items');
+                $context = $context->concat($items->pluck('catalog_snapshot'));
+                if ($type === 'serial') {
+                    $serialItems = $items;
+                } else {
+                    $ratingItems = $items;
+                }
+            }
+            $folioContext = collect($context->all());
+            foreach (['inner', 'shipping'] as $type) {
+                if ($data['include_'.$type]) {
+                    $context->push($this->labelCatalog->resolve($job->assembly, $type, (string) $data[$type.'_part_number'], $data[$type.'_catalog_mapping_id'] ?? null, $type.'_catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals'));
+                }
+                unset($data[$type.'_catalog_mapping_id']);
+            }
+            $data['catalog_context'] = $context->mapWithKeys(fn ($snapshot, $index) => ['line_'.$index => $snapshot])->all();
+            $data['serial_standard'] = $this->labelCatalog->market($folioContext->isNotEmpty() ? $folioContext : $context, 'job_number');
             $data['serial_part_number'] = $data['include_serial']
                 ? data_get($serialItems->first(), 'part_number')
                 : null;
@@ -188,6 +211,41 @@ class LabelRequestService
                 return $group;
             });
 
+            $folioSnapshots = collect();
+            foreach (['label' => $labelGroups, 'shipping' => $shippingGroups] as $kind => $groups) {
+                $groups = $groups->map(function (array $group, int $groupIndex) use ($jobs, $kind, $folioSnapshots, $data): array {
+                    $type = $kind === 'shipping' ? 'shipping' : $group['label_type'];
+                    $items = collect($group['items'])->map(function (array $item, int $index) use ($jobs, $kind, $group, $groupIndex, $type, $data): array {
+                        $item['catalog_snapshot'] = $this->labelCatalog->resolve($jobs->get($item['job_number'])?->assembly, $type, $group['part_number'], $item['catalog_mapping_id'] ?? null, 'lpk_'.$kind.'_groups.'.$groupIndex.'.items.'.$index.'.catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals');
+
+                        return $item;
+                    });
+                    foreach ($items->groupBy('job_number') as $jobItems) {
+                        $this->labelCatalog->assertDistinct($jobItems->values()->map(fn ($item) => [...$item, 'part_number' => $group['part_number']]), 'lpk_'.$kind.'_groups.'.$groupIndex.'.items', includeModel: true, includeControl: in_array($type, ['serial', 'rating'], true));
+                    }
+                    if (in_array($type, ['serial', 'rating'], true)) {
+                        foreach ($items as $item) {
+                            $folioSnapshots->push($item['catalog_snapshot']);
+                        }
+                    }
+                    $group['items'] = $items->all();
+
+                    return $group;
+                });
+                if ($kind === 'label') {
+                    $labelGroups = $groups;
+                } else {
+                    $shippingGroups = $groups;
+                }
+            }
+            $market = $this->labelCatalog->market($folioSnapshots, 'lpk_label_groups');
+            if ($folioSnapshots->isEmpty()) {
+                $otherSnapshots = $labelGroups->concat($shippingGroups)->flatMap(fn ($group) => array_column($group['items'], 'catalog_snapshot'));
+                if ($otherSnapshots->pluck('market')->filter()->unique()->count() === 1) {
+                    $market = $this->labelCatalog->market($otherSnapshots, 'lpk_label_groups');
+                }
+            }
+            $context = [];
             $firstLabelGroup = $labelGroups->first();
             $firstShippingGroup = $shippingGroups->first();
             $firstProductionItem = data_get($firstLabelGroup, 'items.0');
@@ -211,7 +269,7 @@ class LabelRequestService
                 'model' => data_get($firstProductionItem, 'model'),
                 'quantity_requested' => $reservedByJob->sum(),
                 'shipping_quantity' => $shippingGroups->sum('quantity') ?: null,
-                'serial_standard' => null,
+                'serial_standard' => $market,
                 'serial_part_number' => data_get($serialGroup, 'part_number'),
                 'label_part_number' => data_get($ratingGroup, 'part_number'),
                 'inner_part_number' => data_get($innerGroup, 'part_number'),
@@ -237,7 +295,7 @@ class LabelRequestService
                     'position' => $groupPosition + 1,
                 ]);
 
-                $group->items()->createMany(
+                $createdItems = $group->items()->createMany(
                     collect($groupData['items'])
                         ->map(fn (array $item, int $itemPosition): array => [
                             'job_number' => $item['job_number'],
@@ -247,6 +305,9 @@ class LabelRequestService
                         ])
                         ->all(),
                 );
+                foreach ($createdItems as $index => $item) {
+                    $context['item_'.$item->id] = $groupData['items'][$index]['catalog_snapshot'];
+                }
             }
 
             foreach ($shippingGroups as $groupPosition => $groupData) {
@@ -267,7 +328,10 @@ class LabelRequestService
                         ])
                         ->all(),
                 );
+                $context['shipping_'.$group->id] = ['items' => array_column($groupData['items'], 'catalog_snapshot')];
             }
+
+            $labelRequest->update(['catalog_context' => $context]);
 
             return $labelRequest->load([
                 'line',
@@ -498,6 +562,7 @@ class LabelRequestService
             ->map(fn ($item) => is_array($item)
                 ? [
                     'part_number' => strtoupper(trim((string) ($item['part_number'] ?? ''))),
+                    'catalog_mapping_id' => $item['catalog_mapping_id'] ?? null,
                     'model' => $this->nullableUppercase($item['model'] ?? null),
                 ]
                 : [
@@ -505,7 +570,6 @@ class LabelRequestService
                     'model' => null,
                 ])
             ->filter(fn (array $item) => $item['part_number'] !== '')
-            ->unique('part_number')
             ->values();
     }
 

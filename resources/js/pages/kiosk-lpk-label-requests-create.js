@@ -1,4 +1,5 @@
 import Swal from 'sweetalert2';
+import { mountCatalogPicker } from './utils/label-catalog';
 
 (() => {
     const form = document.getElementById('kioskLpkLabelRequestCreate');
@@ -13,6 +14,9 @@ import Swal from 'sweetalert2';
     const shippingItemTemplate = document.getElementById('lpkShippingItemTemplate');
     const lookupTimers = new WeakMap();
     const lookupCache = new Map();
+    const jobCatalogs = new WeakMap();
+    const catalogPickers = new Map();
+    let lookupSequence = 0;
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
     const field = (container, name) => container.querySelector(`[data-field="${name}"]`);
@@ -98,6 +102,49 @@ import Swal from 'sweetalert2';
         }
     }
 
+    function catalogPicker(jobInput) {
+        if (!catalogPickers.has(jobInput)) {
+            const item = jobInput.closest('.lpk-label-item, .lpk-shipping-item');
+            const group = jobInput.closest('.lpk-label-group, .lpk-shipping-group');
+            catalogPickers.set(jobInput, mountCatalogPicker({
+                container: item,
+                partInput: field(group, 'part_number'),
+                idInput: field(item, 'catalog_mapping_id'),
+                type: group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value,
+                limitToPart: true,
+                allowManual: () => document.getElementById('folioMode')?.value === 'reprint_originals',
+                onSelect: () => { refreshGroupCatalog(group, false); validateGroupUniqueness(); },
+            }));
+        }
+        return catalogPickers.get(jobInput);
+    }
+
+    function refreshGroupCatalog(group, autofill = true) {
+        const type = group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value;
+        group.querySelectorAll('.lpk-job-input').forEach((input) => {
+            if (jobCatalogs.has(input)) catalogPicker(input).setOptions(jobCatalogs.get(input), type, { autofill });
+            else catalogPicker(input).refresh({ autofill: false });
+        });
+        const markets = new Set();
+        for (const [input, picker] of catalogPickers) {
+            if (!input.isConnected) { catalogPickers.delete(input); continue; }
+            const selected = picker.selected();
+            if (selected) markets.add(selected.market);
+        }
+        document.getElementById('lpkCatalogMarketHint').textContent = markets.size === 1
+            ? 'Mercado identificado: ' + [...markets][0] + '. Cada fila conserva su relación de etiquetas para Label Room.'
+            : markets.size > 1 ? 'Hay distintos mercados. Separa los Jobs que requieren folios de mercados diferentes.'
+            : 'Selecciona las relaciones disponibles para identificar el Rating y mercado de cada etiqueta.';
+    }
+
+    function clearJobCatalog(input) {
+        const group = input.closest('.lpk-label-group, .lpk-shipping-group');
+        const others = [...group.querySelectorAll('.lpk-job-input')].filter((other) => other !== input && other.dataset.validatedJob);
+        catalogPicker(input).clear({ clearPart: others.length === 0 });
+        jobCatalogs.delete(input);
+        refreshGroupCatalog(group, false);
+    }
+
     function reindexForm() {
         const labelGroups = Array.from(labelGroupsContainer.querySelectorAll('.lpk-label-group'));
         const shippingGroups = Array.from(shippingGroupsContainer.querySelectorAll('.lpk-shipping-group'));
@@ -111,6 +158,8 @@ import Swal from 'sweetalert2';
             items.forEach((item, itemIndex) => {
                 field(item, 'job_number').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][job_number]`;
                 field(item, 'model').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][model]`;
+                field(item, 'catalog_mapping_id').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][catalog_mapping_id]`;
+                catalogPicker(field(item, 'job_number'));
                 field(item, 'quantity').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][quantity]`;
                 item.querySelector('.remove-lpk-label-item')?.classList.toggle('hidden', items.length === 1);
             });
@@ -127,6 +176,8 @@ import Swal from 'sweetalert2';
             items.forEach((item, itemIndex) => {
                 field(item, 'job_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][job_number]`;
                 field(item, 'model').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][model]`;
+                field(item, 'catalog_mapping_id').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][catalog_mapping_id]`;
+                catalogPicker(field(item, 'job_number'));
                 item.querySelector('.remove-lpk-shipping-item')?.classList.toggle('hidden', items.length === 1);
             });
         });
@@ -218,22 +269,25 @@ import Swal from 'sweetalert2';
         delete input.dataset.availableQuantity;
 
         if (!jobNumber) {
+            clearJobCatalog(input);
             input.setCustomValidity('');
             setStatus(input, 'Pendiente de validar.');
             setJobModelState(input, null, { clearManual: true, status: 'pending' });
             return;
         }
 
-        input.dataset.lookupToken = jobNumber;
+        const token = String(++lookupSequence);
+        input.dataset.lookupToken = token;
         input.setCustomValidity('Espera a que termine la validación de Oracle.');
         setStatus(input, 'Validando en Oracle…', 'text-blue-700');
 
         try {
             const data = await fetchJob(jobNumber);
 
-            if (input.dataset.lookupToken !== jobNumber || normalize(input.value) !== jobNumber) return;
+            if (input.dataset.lookupToken !== token || normalize(input.value) !== jobNumber) return;
 
             if (!data.found) {
+                clearJobCatalog(input);
                 input.setCustomValidity('El Job no existe en Oracle Jobs.');
                 setStatus(input, 'No encontrado en Oracle Jobs.', 'text-red-700');
                 setJobModelState(input, null, { status: 'pending' });
@@ -241,6 +295,7 @@ import Swal from 'sweetalert2';
             }
 
             if (!data.valid_for_packaging) {
+                clearJobCatalog(input);
                 input.setCustomValidity(data.classification_messages?.packaging || 'El Job no pertenece a Empaque.');
                 setStatus(input, 'El Job no pertenece a Empaque.', 'text-red-700');
                 setJobModelState(input, null, { status: 'pending' });
@@ -259,6 +314,8 @@ import Swal from 'sweetalert2';
                 : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
             setStatus(input, `${availability}${detail}`, 'text-emerald-700');
             setJobModelState(input, data.mapped_model, { status: 'resolved' });
+            jobCatalogs.set(input, data.rating_options || []);
+            refreshGroupCatalog(input.closest('.lpk-label-group, .lpk-shipping-group'));
 
             if (isShipping) {
                 const group = input.closest('.lpk-shipping-group');
@@ -271,6 +328,8 @@ import Swal from 'sweetalert2';
             validateQuantityForRow(input);
             updatePreview();
         } catch (error) {
+            if (input.dataset.lookupToken !== token || normalize(input.value) !== jobNumber) return;
+            clearJobCatalog(input);
             input.setCustomValidity('No fue posible validar el Job en este momento.');
             setStatus(input, 'No fue posible consultar Oracle. Intenta nuevamente.', 'text-red-700');
             setJobModelState(input, null, { status: 'pending' });
@@ -279,6 +338,8 @@ import Swal from 'sweetalert2';
 
     function scheduleJobValidation(input, { clearModel = true } = {}) {
         clearTimeout(lookupTimers.get(input));
+        input.dataset.lookupToken = String(++lookupSequence);
+        if (clearModel) clearJobCatalog(input);
         input.setCustomValidity(input.value.trim() ? 'Espera a que termine la validación de Oracle.' : '');
         delete input.dataset.validatedJob;
         delete input.dataset.availableQuantity;
@@ -380,12 +441,24 @@ import Swal from 'sweetalert2';
         if (event.target.matches('.lpk-item-quantity')) {
             validateQuantityForRow(event.target.closest('.lpk-label-item').querySelector('.lpk-job-input'));
         }
-        if (event.target.matches('[data-field="part_number"], [data-field="label_type"]')) validateGroupUniqueness();
+        if (event.target.matches('[data-field="part_number"]')) {
+            const group = event.target.closest('.lpk-label-group, .lpk-shipping-group');
+            delete event.target.dataset.catalogAuto;
+            refreshGroupCatalog(group, false);
+            validateGroupUniqueness();
+        }
         updatePreview();
     });
 
     form.addEventListener('change', (event) => {
         if (event.target.matches('.lpk-job-input')) validateJob(event.target);
+        if (event.target.matches('[data-field="label_type"]')) {
+            const group = event.target.closest('.lpk-label-group');
+            const partInput = field(group, 'part_number');
+            if (partInput.dataset.catalogAuto === partInput.value) partInput.value = '';
+            group.querySelectorAll('[data-field="catalog_mapping_id"]').forEach((input) => { input.value = ''; });
+            refreshGroupCatalog(group);
+        }
         validateGroupUniqueness();
         updatePreview();
     });
@@ -394,6 +467,7 @@ import Swal from 'sweetalert2';
 
     document.getElementById('folioMode')?.addEventListener('change', () => {
         form.querySelectorAll('[data-validated-job]').forEach(validateQuantityForRow);
+        form.querySelectorAll('.lpk-label-group, .lpk-shipping-group').forEach((group) => refreshGroupCatalog(group, false));
     });
 
     form.addEventListener('submit', async (event) => {
@@ -418,6 +492,7 @@ import Swal from 'sweetalert2';
             return;
         }
 
+        form.querySelectorAll('.lpk-label-group, .lpk-shipping-group').forEach((group) => refreshGroupCatalog(group, false));
         if (!form.reportValidity()) return;
 
         const reservations = Array.from(productionReservations(), ([job, quantity]) => `${job}: ${quantity}`).join(', ');

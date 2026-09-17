@@ -96,7 +96,7 @@
                         </label>
                         @if($line['requires_folios'])
                             <label class="text-sm font-medium">NP Rating de control
-                                <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating') list="rating-options-{{ md5($key) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
+                                <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating' || $line['catalog_rating']) list="rating-options-{{ md5($key) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
                                 <datalist id="rating-options-{{ md5($key) }}">
                                     @foreach($line['rating_options'] as $option)<option value="{{ $option['rating_part_number'] }}">{{ $option['market'] }}</option>@endforeach
                                 </datalist>
