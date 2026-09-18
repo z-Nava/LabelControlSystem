@@ -7,6 +7,7 @@ use App\Models\LabelJobEntry;
 use App\Models\LabelRequest;
 use App\Models\LabelWorkTask;
 use App\Models\ProductionLine;
+use App\Models\RatingAssemblyMapping;
 use App\Models\SerialPeriod;
 use App\Models\SerialRange;
 use App\Models\Shift;
@@ -208,6 +209,15 @@ class LabelRoomAdministrationController extends Controller
             'periods' => $query->orderByDesc('period_number')->orderBy('label_part_number')->paginate(20, ['*'], 'periods_page')->withQueryString(),
             'ranges' => $ranges, 'reprints' => $reprints, 'filters' => $filters, 'year' => $year,
             'markets' => SerialStandards::all(),
+            'ratingOptions' => RatingAssemblyMapping::query()->active()
+                ->whereNotNull('rating_part_number')->where('rating_part_number', '!=', '')
+                ->select('rating_part_number', 'market')->distinct()
+                ->orderBy('rating_part_number')->orderBy('market')->get()
+                ->groupBy('rating_part_number')
+                ->map(fn ($mappings) => [
+                    'part' => $mappings->first()->rating_part_number,
+                    'markets' => $mappings->pluck('market')->unique()->values()->all(),
+                ])->values(),
         ]);
     }
 
