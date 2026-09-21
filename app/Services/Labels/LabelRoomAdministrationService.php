@@ -10,6 +10,7 @@ use App\Models\Shift;
 use App\Models\User;
 use App\Services\Catalogs\RatingAssemblyMappingService;
 use App\Support\SerialPeriods;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +30,20 @@ class LabelRoomAdministrationService
             ->orderBy('name')->get()->filter(fn (User $user) => $user->hasModuleAccess('labels'));
     }
 
+    public function canAssignTasks(User $actor): bool
+    {
+        return $actor->isLabelRoomLeader() && $actor->hasModuleAccess('labels');
+    }
+
+    public function canCompleteTask(User $actor, LabelWorkTask $task): bool
+    {
+        return $task->assigned_to_user_id !== null
+            && $actor->is_active
+            && $actor->hasRole('label_room')
+            && $actor->hasModuleAccess('labels')
+            && ($this->canAssignTasks($actor) || (int) $task->assigned_to_user_id === $actor->id);
+    }
+
     private function assertOperator(int $id): User
     {
         $user = User::with('roles')->find($id);
@@ -40,8 +55,12 @@ class LabelRoomAdministrationService
     }
 
     /** Build a proposal without consuming any folios. All task identities and quantities come from the request. */
-    public function proposal(LabelRequest $request, array $data, bool $lockSources = false): array
+    public function proposal(LabelRequest $request, array $data, User $actor, bool $lockSources = false): array
     {
+        if (! $this->canAssignTasks($actor) && collect($data['tasks'] ?? [])->contains(fn ($task) => filled($task['assigned_to_user_id'] ?? null))) {
+            throw new AuthorizationException('Solo la líder puede asignar tareas de impresión.');
+        }
+
         if ($request->released_at || ! in_array($request->status, [LabelRequest::STATUS_REQUESTED, LabelRequest::STATUS_IN_PROGRESS], true)) {
             throw ValidationException::withMessages(['status' => 'Esta requisición ya fue liberada o está cerrada.']);
         }
@@ -267,7 +286,7 @@ class LabelRoomAdministrationService
                 throw ValidationException::withMessages(['plan_checked' => 'Confirma la revisión contra la información disponible de producción.']);
             }
 
-            $proposal = $this->proposal($locked, $data, true);
+            $proposal = $this->proposal($locked, $data, $user, true);
             if (! hash_equals($this->proposalSignature($locked, $proposal, $data), (string) ($data['proposal_signature'] ?? ''))) {
                 throw ValidationException::withMessages(['tasks' => 'Recalcula la propuesta: los datos o los folios cambiaron desde la revisión.']);
             }
@@ -370,6 +389,9 @@ class LabelRoomAdministrationService
         DB::transaction(function () use ($request, $task, $operatorId, $actor) {
             $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             $task = $locked->workTasks()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if (! $this->canAssignTasks($actor)) {
+                throw new AuthorizationException('Solo la líder puede asignar tareas de impresión.');
+            }
             if ($locked->status !== LabelRequest::STATUS_IN_PROGRESS || $task->status !== 'pending') {
                 throw ValidationException::withMessages(['task' => 'Solo puedes asignar tareas pendientes de una requisición en preparación.']);
             }
@@ -387,13 +409,16 @@ class LabelRoomAdministrationService
         return DB::transaction(function () use ($request, $task, $data, $actor) {
             $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             $task = $locked->workTasks()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if (! $this->canCompleteTask($actor, $task)) {
+                throw new AuthorizationException('Solo la operadora asignada o la líder puede confirmar esta impresión.');
+            }
             if ($task->status === 'completed' && $locked->status !== LabelRequest::STATUS_CANCELLED) {
                 return $locked;
             }
             if (! $locked->released_at || $locked->status !== LabelRequest::STATUS_IN_PROGRESS) {
                 throw ValidationException::withMessages(['status' => 'La requisición debe estar liberada y en preparación.']);
             }
-            $operator = $this->assertOperator((int) $data['printed_by_user_id']);
+            $operator = $this->assertOperator((int) $task->assigned_to_user_id);
             if (! Shift::whereKey($data['printed_shift_id'])->where('active', true)->exists()) {
                 throw ValidationException::withMessages(['printed_shift_id' => 'Selecciona un turno activo.']);
             }
@@ -413,6 +438,9 @@ class LabelRoomAdministrationService
                 'printed_shift_id' => $data['printed_shift_id'], 'work_date' => $data['work_date'], 'completed_at' => now(),
             ]);
             $this->event($locked, $actor, 'task_completed', ['task_id' => $task->id, 'operator' => $operator->id,
+                'confirmed_by_user_id' => $actor->id,
+                'label_type' => $task->label_type, 'part_number' => $task->part_number,
+                'printed_by_name' => $operator->name,
                 'shift_id' => $data['printed_shift_id'], 'work_date' => $data['work_date'],
                 'physical_signed' => (bool) $locked->physical_signed_at]);
 

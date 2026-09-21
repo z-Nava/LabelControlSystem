@@ -51,7 +51,24 @@ class UpdateUserRequest extends FormRequest
             if ($this->requiresPassword() && empty($this->input('password')) && ! $this->route('user')->hasRole('admin')) {
                 $validator->errors()->add('password', 'La contraseña es obligatoria para usuarios con rol admin.');
             }
+
+            if ($this->hasLeaderRoleWithoutLabelRoom()) {
+                $validator->errors()->add('roles', 'El rol Líder de cuarto de etiquetas requiere también el rol Label Room.');
+            }
         });
+    }
+
+    private function hasLeaderRoleWithoutLabelRoom(): bool
+    {
+        $roleIds = $this->input('roles', []);
+
+        if (! is_array($roleIds)) {
+            return false;
+        }
+
+        $roleNames = Role::query()->whereIn('id', $roleIds)->pluck('name');
+
+        return $roleNames->contains('label_room_leader') && ! $roleNames->contains('label_room');
     }
 
     private function requiresPassword(): bool

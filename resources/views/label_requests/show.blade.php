@@ -323,6 +323,9 @@
                     <li class="border-l-2 border-slate-200 pl-3">
                         <strong>{{ $actionLabels[$event->action] ?? $event->action }}</strong> · {{ $event->user_name ?? 'Usuario no disponible' }}
                         <div class="text-slate-500">{{ \Illuminate\Support\Carbon::parse($event->created_at)->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</div>
+                        @if($event->action === 'task_completed' && !empty($eventDetails['label_type']))
+                            <div>{{ ucfirst($eventDetails['label_type']) }} · {{ $eventDetails['part_number'] ?? 'NP no disponible' }} · Imprimió {{ $eventDetails['printed_by_name'] ?? 'Operadora no disponible' }}</div>
+                        @endif
                         @if($event->action === 'classified')<div>{{ $eventDetails['before'] }} → {{ $eventDetails['after'] }} · {{ $eventDetails['reason'] }}</div>@endif
                         @if($event->action === 'released' && !empty($eventDetails['notes']))<div>{{ $eventDetails['notes'] }}</div>@endif
                     </li>

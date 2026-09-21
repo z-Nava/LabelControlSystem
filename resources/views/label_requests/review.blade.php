@@ -2,6 +2,7 @@
 @section('content')
 @php
     $values = $input ?? old();
+    $canAssignTasks = app(\App\Services\Labels\LabelRoomAdministrationService::class)->canAssignTasks(auth()->user());
 @endphp
 <div class="space-y-5">
     @include('label_requests.partials.admin-navigation')
@@ -88,12 +89,16 @@
                         </div>
                     </div>
                     <div class="mt-4 grid gap-4 md:grid-cols-3">
-                        <label class="text-sm font-medium">Asignar a
-                            <select name="tasks[{{ $key }}][assigned_to_user_id]" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-                                <option value="">Asignar después de liberar</option>
-                                @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected(($taskInput['assigned_to_user_id'] ?? '') == $operator->id)>{{ $operator->name }}</option>@endforeach
-                            </select>
-                        </label>
+                        @if($canAssignTasks)
+                            <label class="text-sm font-medium">Asignar a
+                                <select name="tasks[{{ $key }}][assigned_to_user_id]" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                                    <option value="">Asignar después de liberar</option>
+                                    @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected(($taskInput['assigned_to_user_id'] ?? '') == $operator->id)>{{ $operator->name }}</option>@endforeach
+                                </select>
+                            </label>
+                        @else
+                            <div class="text-sm text-slate-600">La líder asignará la tarea antes de confirmar la impresión.</div>
+                        @endif
                         @if($line['requires_folios'])
                             <label class="text-sm font-medium">NP Rating de control
                                 <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating' || $line['catalog_rating']) list="rating-options-{{ md5($key) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />

@@ -20,6 +20,11 @@ class RoleSeeder extends Seeder
         );
 
         Role::updateOrCreate(
+            ['name' => 'label_room_leader'],
+            ['description' => 'Líder de cuarto de etiquetas; requiere también el rol label_room']
+        );
+
+        Role::updateOrCreate(
             ['name' => 'kiosk'],
             ['description' => 'Personal de Producción con acceso al kiosko de requisiciones']
         );

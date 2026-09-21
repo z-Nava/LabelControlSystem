@@ -98,7 +98,7 @@
                 <div>
                     <label for="destination" class="text-sm text-slate-600">Destino</label>
                     <input id="destination" name="destination" value="{{ old('destination', $masterRequest->destination) }}"
-                           maxlength="80" pattern="[A-Za-z0-9\-\/_\s]+" autocomplete="off"
+                           maxlength="80" pattern="[A-Za-z0-9,\-\/_\s]+" autocomplete="off"
                            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 focus:ring-2 focus:ring-red-600">
                 </div>
                 <p class="text-xs text-slate-500 md:col-span-2">Oracle propone estos valores desde el Job Empaque; puedes ajustarlos para esta revisión.</p>

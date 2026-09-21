@@ -1,5 +1,6 @@
 @php
-    $operators = app(\App\Services\Labels\LabelRoomAdministrationService::class)->operators();
+    $administration = app(\App\Services\Labels\LabelRoomAdministrationService::class);
+    $operators = $administration->operators();
     $workShifts = \App\Models\Shift::where('active', true)->orderBy('code')->get();
 @endphp
 <section class="mt-6 space-y-4">
@@ -23,44 +24,46 @@
                 <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}</dd></div>
                 <div><dt class="text-slate-500">Mercado · Periodo</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? ($labelRequest->serial_standard ?: 'Mercado histórico').' · '.\App\Support\SerialPeriods::describe($task->serial_period_type ?: 'week', $task->serial_period_number ?: $task->control_week).' '.($task->serial_period_year ?: $task->control_year) : '—' }}@if($task->folio_start !== null)<br><span class="text-xs font-normal text-slate-500">Control: {{ $task->control_year }}/Sem. {{ $task->control_week }}</span>@endif</dd></div>
             </dl>
+            <p class="mt-4 text-sm text-slate-700">Operadora asignada: <strong>{{ $task->assignee?->name ?? 'Pendiente de asignar' }}</strong></p>
             @if($task->status === 'completed')
                 <p class="mt-4 text-sm text-emerald-800">Imprimió <strong>{{ $task->printed_by_name }}</strong> · Turno {{ $task->printedShift?->code }} · Fecha de trabajo {{ $task->work_date?->format('d/m/Y') }}.</p>
             @elseif($task->status === 'pending' && $labelRequest->status === 'in_progress')
-                <form method="POST" action="{{ route('label_requests.tasks.assign', [$labelRequest, $task]) }}" class="mt-4 flex flex-wrap items-end gap-2">
-                    @csrf
-                    <label class="min-w-64 text-sm">Operadora asignada
-                        <select name="assigned_to_user_id" class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2">
-                            <option value="">Sin asignar</option>
-                            @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected($task->assigned_to_user_id == $operator->id)>{{ $operator->name }}</option>@endforeach
-                        </select>
-                    </label>
-                    <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Guardar asignación</button>
-                </form>
-                <form method="POST" action="{{ route('label_requests.tasks.complete', [$labelRequest, $task]) }}" class="mt-4 rounded-xl border border-slate-200 p-4">
-                    @csrf
-                    <div class="grid gap-3 md:grid-cols-3">
-                        <label class="text-sm">Imprimió
-                            <select name="printed_by_user_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-                                <option value="">Selecciona una operadora</option>
-                                @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected(($task->assigned_to_user_id ?? auth()->id()) == $operator->id)>{{ $operator->name }}</option>@endforeach
+                @if($administration->canAssignTasks(auth()->user()))
+                    <form method="POST" action="{{ route('label_requests.tasks.assign', [$labelRequest, $task]) }}" class="mt-4 flex flex-wrap items-end gap-2">
+                        @csrf
+                        <label class="min-w-64 text-sm">Asignar o reasignar
+                            <select name="assigned_to_user_id" class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2">
+                                <option value="">Sin asignar</option>
+                                @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected($task->assigned_to_user_id == $operator->id)>{{ $operator->name }}</option>@endforeach
                             </select>
                         </label>
-                        <label class="text-sm">Turno de impresión
-                            <select name="printed_shift_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-                                <option value="">Selecciona un turno</option>
-                                @foreach($workShifts as $shift)<option value="{{ $shift->id }}" @selected(auth()->user()->shift_id == $shift->id)>{{ $shift->code }} · {{ $shift->name }}</option>@endforeach
-                            </select>
-                        </label>
-                        <label class="text-sm">Fecha operativa del turno
-                            <input type="date" name="work_date" value="{{ now()->toDateString() }}" min="{{ $labelRequest->request_date->toDateString() }}" max="{{ now()->toDateString() }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                        </label>
-                    </div>
-                    @if($labelRequest->isOriginalReprint() && !$labelRequest->physical_signed_at)
-                        <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="physical_signed" value="1" /> La requisición física quedó firmada (obligatorio para cerrar la última tarea).</label>
-                    @endif
-                    <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="work_confirmed" value="1" required /> Confirmo que se imprimieron las {{ number_format($task->quantity + $task->evidence_quantity) }} etiquetas de esta tarea.</label>
-                    <button class="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Confirmar impresión {{ ucfirst($task->label_type) }}</button>
-                </form>
+                        <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Guardar asignación</button>
+                    </form>
+                @endif
+                @if($administration->canCompleteTask(auth()->user(), $task))
+                    <form method="POST" action="{{ route('label_requests.tasks.complete', [$labelRequest, $task]) }}" class="mt-4 rounded-xl border border-slate-200 p-4">
+                        @csrf
+                        <p class="mb-3 text-sm text-slate-700">Se registrará a <strong>{{ $task->assignee?->name }}</strong> como quien imprimió. @if(auth()->user()->isLabelRoomLeader()) Si imprimió otra persona, reasigna la tarea antes de confirmar. @endif</p>
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <label class="text-sm">Turno de impresión
+                                <select name="printed_shift_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                                    <option value="">Selecciona un turno</option>
+                                    @foreach($workShifts as $shift)<option value="{{ $shift->id }}" @selected(auth()->user()->shift_id == $shift->id)>{{ $shift->code }} · {{ $shift->name }}</option>@endforeach
+                                </select>
+                            </label>
+                            <label class="text-sm">Fecha operativa del turno
+                                <input type="date" name="work_date" value="{{ now()->toDateString() }}" min="{{ $labelRequest->request_date->toDateString() }}" max="{{ now()->toDateString() }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                            </label>
+                        </div>
+                        @if($labelRequest->isOriginalReprint() && !$labelRequest->physical_signed_at)
+                            <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="physical_signed" value="1" /> La requisición física quedó firmada (obligatorio para cerrar la última tarea).</label>
+                        @endif
+                        <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="work_confirmed" value="1" required /> Confirmo que se imprimieron las {{ number_format($task->quantity + $task->evidence_quantity) }} etiquetas de esta tarea.</label>
+                        <button class="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Confirmar impresión {{ ucfirst($task->label_type) }}</button>
+                    </form>
+                @else
+                    <p class="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">{{ $task->assigned_to_user_id ? 'Solo la operadora asignada o la líder pueden confirmar esta impresión.' : 'La líder debe asignar esta tarea antes de confirmar la impresión.' }}</p>
+                @endif
             @endif
         </article>
     @endforeach

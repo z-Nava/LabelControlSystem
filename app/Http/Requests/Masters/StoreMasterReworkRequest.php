@@ -44,7 +44,7 @@ class StoreMasterReworkRequest extends FormRequest
             ],
             'request_type' => ['required', Rule::in(MasterModelMapping::REQUEST_TYPES)],
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
-            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
+            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9,\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'line_id' => [
                 'required',
                 'integer',

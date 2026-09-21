@@ -102,6 +102,13 @@ class User extends Authenticatable
         return in_array($module, $configuredModulePermissions, true);
     }
 
+    public function isLabelRoomLeader(): bool
+    {
+        return $this->is_active
+            && $this->hasRole('label_room')
+            && $this->hasRole('label_room_leader');
+    }
+
     public static function permissionLabel(string $permission): string
     {
         return self::PERMISSION_LABELS[$permission] ?? $permission;

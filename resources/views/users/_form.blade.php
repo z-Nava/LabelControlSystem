@@ -79,15 +79,18 @@
             @php
                 $selectedRoles = old('roles', isset($user) ? $user->roles->pluck('id')->all() : []);
                 $selectedModulePermissions = old('module_permissions', $user->module_permissions ?? []);
+                $labelRoomRole = $roles->firstWhere('name', 'label_room');
+                $leaderRole = $roles->firstWhere('name', 'label_room_leader');
+                $hasSelectedLabelRoomRole = $labelRoomRole && in_array($labelRoomRole->id, $selectedRoles);
             @endphp
 
-            @foreach($roles as $role)
-                <label class="inline-flex items-center gap-2 rounded-xl border px-3 py-2">
+            @foreach($roles->where('name', '!=', 'label_room_leader') as $role)
+                <label class="inline-flex items-start gap-2 rounded-xl border px-3 py-2">
                     <input
                         type="checkbox"
                         name="roles[]"
                         value="{{ $role->id }}"
-                        class="rounded border-slate-300 js-role-checkbox"
+                        class="mt-1 rounded border-slate-300 js-role-checkbox"
                         data-role-name="{{ $role->name }}"
                         @checked(in_array($role->id, $selectedRoles))
                     >
@@ -95,6 +98,23 @@
                 </label>
             @endforeach
         </div>
+        @if($leaderRole)
+            <div id="label-room-leader-role-option" class="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 {{ $hasSelectedLabelRoomRole ? '' : 'hidden' }}">
+                <label class="flex items-start gap-2">
+                    <input
+                        type="checkbox"
+                        name="roles[]"
+                        value="{{ $leaderRole->id }}"
+                        class="mt-1 rounded border-violet-300"
+                        @checked(in_array($leaderRole->id, $selectedRoles))
+                    >
+                    <span>
+                        <span class="block text-sm font-semibold text-violet-950">Líder de cuarto de etiquetas</span>
+                        <span class="block text-xs text-violet-800">Rol general de Label Room. El acceso a cada módulo se configura por separado.</span>
+                    </span>
+                </label>
+            </div>
+        @endif
         @error('roles') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
         @error('roles.*') <div class="text-sm text-red-600 mt-1">{{ $message }}</div> @enderror
     </div>
@@ -170,25 +190,27 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const roleCheckboxes = Array.from(document.querySelectorAll('.js-role-checkbox'));
+        const labelRoomCheckbox = document.querySelector('.js-role-checkbox[data-role-name="label_room"]');
         const moduleSection = document.getElementById('module-permissions-section');
+        const leaderOption = document.getElementById('label-room-leader-role-option');
+        const leaderCheckbox = leaderOption?.querySelector('input[type="checkbox"]');
 
-        if (!moduleSection || roleCheckboxes.length === 0) {
+        if (!labelRoomCheckbox) {
             return;
         }
 
-        const toggleModuleSection = () => {
-            const hasLabelRoomRole = roleCheckboxes.some((checkbox) => {
-                return checkbox.checked && checkbox.dataset.roleName === 'label_room';
-            });
+        const toggleLabelRoomOptions = () => {
+            const hasLabelRoomRole = labelRoomCheckbox.checked;
+            moduleSection?.classList.toggle('hidden', !hasLabelRoomRole);
+            leaderOption?.classList.toggle('hidden', !hasLabelRoomRole);
 
-            moduleSection.classList.toggle('hidden', !hasLabelRoomRole);
+            if (!hasLabelRoomRole && leaderCheckbox) {
+                leaderCheckbox.checked = false;
+            }
         };
 
-        roleCheckboxes.forEach((checkbox) => {
-            checkbox.addEventListener('change', toggleModuleSection);
-        });
+        labelRoomCheckbox.addEventListener('change', toggleLabelRoomOptions);
 
-        toggleModuleSection();
+        toggleLabelRoomOptions();
     });
 </script>

@@ -62,6 +62,9 @@
                         @elseif($role === 'label_room')
                             <td class="py-3 pr-3">
                                 <div class="flex flex-wrap gap-1">
+                                    @if($user->isLabelRoomLeader())
+                                        <span class="inline-flex rounded-full bg-violet-100 px-3 py-1 font-semibold text-violet-800">Líder de cuarto de etiquetas</span>
+                                    @endif
                                     @if(empty(array_intersect($user->module_permissions ?? [], \App\Models\User::AVAILABLE_MODULE_PERMISSIONS)))
                                         <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Todos</span>
                                     @else

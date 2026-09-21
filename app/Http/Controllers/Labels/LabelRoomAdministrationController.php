@@ -120,7 +120,7 @@ class LabelRoomAdministrationController extends Controller
 
         try {
             $data = $this->reviewInput($request);
-            $proposal = $this->service->proposal($label_request, $data);
+            $proposal = $this->service->proposal($label_request, $data, $request->user());
         } catch (ValidationException $exception) {
             throw $exception->redirectTo(route('label_requests.review', $label_request));
         }
@@ -156,7 +156,6 @@ class LabelRoomAdministrationController extends Controller
     public function complete(Request $request, LabelRequest $label_request, LabelWorkTask $task)
     {
         $data = $request->validate([
-            'printed_by_user_id' => ['required', 'integer', 'exists:users,id'],
             'printed_shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'work_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'physical_signed' => ['nullable', 'boolean'],
