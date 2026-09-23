@@ -24,21 +24,21 @@ class OracleJobService
 
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {
-        $q = $filters['q'] ?? null;
-        $line = $filters['line'] ?? null;
-        $status = $filters['job_status'] ?? null;
+        $query = OracleJob::query();
 
-        return OracleJob::query()
-            ->when($q, function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                    $qq->where('job_number', 'like', "%{$q}%")
-                        ->orWhere('assembly', 'like', "%{$q}%")
-                        ->orWhere('part_description', 'like', "%{$q}%")
-                        ->orWhere('ttl_cust_po', 'like', "%{$q}%");
-                });
-            })
-            ->when($line, fn ($query) => $query->where('line', $line))
-            ->when($status, fn ($query) => $query->where('job_status', $status))
+        foreach (['job_number', 'line', 'job_status', 'assembly', 'ship_to', 'ship_code', 'ttl_cust_po'] as $column) {
+            $value = $filters[$column] ?? null;
+
+            if ($value !== null && $value !== '') {
+                $query->where($column, 'like', "%{$value}%");
+            }
+        }
+
+        if (isset($filters['job_qty']) && $filters['job_qty'] !== '') {
+            $query->where('job_qty', $filters['job_qty']);
+        }
+
+        return $query
             ->orderByDesc('last_update_date')
             ->paginate($perPage)
             ->withQueryString();
