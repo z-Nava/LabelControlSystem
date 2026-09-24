@@ -50,8 +50,6 @@ class LabelRoomAdministrationController extends Controller
         $jobNumbers = $lines->flatMap(fn ($line) => array_column($line['jobs'], 'job_number'))->unique();
         $values = $input ?: session()->getOldInput();
         $today = now(config('app.display_timezone'));
-        $controlYear = (int) ($values['control_year'] ?? $today->isoWeekYear());
-        $controlWeek = (int) ($values['control_week'] ?? $today->isoWeek());
         $market = strtoupper(trim((string) ($values['serial_standard'] ?? $labelRequest->serial_standard ?? '')));
         if (! in_array($market, SerialStandards::all(), true)) {
             $inferredMarkets = $lines
@@ -65,15 +63,18 @@ class LabelRoomAdministrationController extends Controller
             $market = $inferredMarkets->count() === 1 ? $inferredMarkets->first() : '';
         }
         $periodType = $market ? SerialPeriods::forMarket($market) : SerialPeriods::WEEK;
-        $periodYear = $periodType === SerialPeriods::WEEK ? $today->isoWeekYear() : $today->year;
-        $periodNumber = $periodType === SerialPeriods::WEEK ? $today->isoWeek() : $today->month;
+        $defaultYear = $periodType === SerialPeriods::WEEK ? $today->isoWeekYear() : $today->year;
+        $controlYear = (int) ($values['control_year'] ?? $defaultYear);
+        $controlWeek = (int) ($values['control_week'] ?? $today->isoWeek());
+        $periodYear = $controlYear;
+        $periodNumber = $periodType === SerialPeriods::WEEK ? $controlWeek : (int) ($values['serial_month'] ?? $today->month);
         $ratingParts = $lines->pluck('rating_part_number')
             ->merge(collect($values['tasks'] ?? [])->pluck('rating_part_number'))->filter()->unique();
 
         return [
             'labelRequest' => $labelRequest->load(['line', 'shift', 'releasedBy']),
             'lines' => $lines, 'operators' => $this->service->operators(),
-            'defaultYear' => $today->isoWeekYear(), 'defaultWeek' => $today->isoWeek(),
+            'defaultYear' => $defaultYear, 'defaultWeek' => $today->isoWeek(), 'defaultMonth' => $today->month,
             'markets' => SerialStandards::all(), 'selectedMarket' => $market,
             'periodType' => $periodType, 'periodYear' => $periodYear, 'periodNumber' => $periodNumber,
             'availableControls' => SerialPeriod::query()->whereIn('label_part_number', $ratingParts)
@@ -94,6 +95,7 @@ class LabelRoomAdministrationController extends Controller
             'serial_standard' => ['required', Rule::in(SerialStandards::all())],
             'control_year' => ['required', 'integer', 'between:2000,2100'],
             'control_week' => ['required', 'integer', 'between:1,53'],
+            'serial_month' => [Rule::requiredIf(fn () => $request->input('serial_standard') !== SerialStandards::UL), 'nullable', 'integer', 'between:1,12'],
             'job_status' => ['required', Rule::in(array_keys(LabelRequest::JOB_STATUSES))],
             'review_notes' => ['nullable', 'string', 'max:2000'],
             'plan_checked' => ['accepted'],

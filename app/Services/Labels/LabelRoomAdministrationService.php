@@ -75,13 +75,10 @@ class LabelRoomAdministrationService
 
         $market = strtoupper(trim((string) $data['serial_standard']));
         $periodType = SerialPeriods::forMarket($market);
-        $releaseTime = now(config('app.display_timezone'));
-        $releasePeriodYear = $periodType === SerialPeriods::WEEK
-            ? $releaseTime->isoWeekYear()
-            : $releaseTime->year;
+        $releasePeriodYear = (int) $data['control_year'];
         $releasePeriodNumber = $periodType === SerialPeriods::WEEK
-            ? $releaseTime->isoWeek()
-            : $releaseTime->month;
+            ? (int) $data['control_week']
+            : (int) $data['serial_month'];
         $bundles = [];
         $tasks = [];
         $nextByPeriod = [];
@@ -270,6 +267,7 @@ class LabelRoomAdministrationService
             $data['serial_standard'],
             (int) $data['control_year'],
             (int) $data['control_week'],
+            $data['serial_month'] ?? null,
             $data['job_status'],
             $data['review_notes'] ?? null,
         ]), (string) config('app.key'));
