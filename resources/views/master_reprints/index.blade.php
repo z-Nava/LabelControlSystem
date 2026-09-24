@@ -68,7 +68,7 @@
                     <td class="py-3 pr-3">
                         <span class="rounded-full px-2 py-1 text-xs {{ $batch->batch_type === 'reprint' ? 'bg-amber-100 text-amber-800' : ($batch->batch_type === 'rework' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800') }}">{{ $batchTypeLabel }}</span>
                     </td>
-                    <td class="py-3 pr-3">{{ $batch->printed_at?->format('Y-m-d H:i') ?? 'Sin confirmar' }}</td>
+                    <td class="py-3 pr-3">{{ $batch->printed_at?->timezone(config('app.display_timezone'))->format('Y-m-d H:i') ?? 'Sin confirmar' }}</td>
                     <td class="py-3 pr-3">{{ $batch->printed_by_name ?? $batch->printedBy?->name ?? '-' }}</td>
                     <td class="py-3 pr-3">
                         @if(filled($batchReason))
