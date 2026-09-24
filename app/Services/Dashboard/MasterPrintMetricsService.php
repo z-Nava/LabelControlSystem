@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 class MasterPrintMetricsService
 {
     /**
-     * @return array{since: Carbon, group_by: string, reprint_requests: int, rework_requests: int, lines_with_reprints: int, lines_with_reworks: int, reprint_lines: array<int, array{code: string, area: string, requests: int}>, rework_lines: array<int, array{code: string, area: string, requests: int}>}
+     * @return array{since: Carbon, group_by: string, selected_area: ?string, selected_line_id: ?int, filter_areas: array<int, string>, filter_lines: array<int, array{id: int, code: string, area: string}>, reprint_requests: int, rework_requests: int, lines_with_reprints: int, lines_with_reworks: int, reprint_lines: array<int, array{code: string, area: string, requests: int}>, rework_lines: array<int, array{code: string, area: string, requests: int}>}
      */
-    public function forLastDays(int $days = 90, string $groupBy = 'line'): array
+    public function forLastDays(int $days = 90, string $groupBy = 'line', ?string $area = null, ?int $lineId = null): array
     {
         $since = now()->startOfDay()->subDays($days);
         $groupBy = $groupBy === 'area' ? 'area' : 'line';
@@ -51,18 +51,39 @@ class MasterPrintMetricsService
             ->select('id', 'code', 'line_type')
             ->get()
             ->keyBy('id');
-        $reprintLines = $this->rankedGroups($reprintCounts, $catalog, $groupBy);
-        $reworkLines = $this->rankedGroups($reworkCounts, $catalog, $groupBy);
+        $selectedArea = in_array($area, $catalog->pluck('line_type')->all(), true)
+            ? $area
+            : null;
+        $selectedLine = $lineId === null ? null : $catalog->get($lineId);
+        $selectedLineId = $selectedLine === null ? null : (int) $selectedLine->id;
+
+        $matchesFilters = function ($row) use ($catalog, $selectedArea, $selectedLineId): bool {
+            if ($selectedLineId !== null && (int) $row->line_id !== $selectedLineId) {
+                return false;
+            }
+
+            return $selectedArea === null || $catalog->get($row->line_id)?->line_type === $selectedArea;
+        };
+        $reprintLines = $this->rankedGroups($reprintCounts->filter($matchesFilters), $catalog, $groupBy);
+        $reworkLines = $this->rankedGroups($reworkCounts->filter($matchesFilters), $catalog, $groupBy);
 
         return [
             'since' => $since,
             'group_by' => $groupBy,
+            'selected_area' => $selectedArea,
+            'selected_line_id' => $selectedLineId,
+            'filter_areas' => $catalog->pluck('line_type')->unique()->sort()->values()->all(),
+            'filter_lines' => $catalog->sortBy('code')->map(fn ($line) => [
+                'id' => (int) $line->id,
+                'code' => (string) $line->code,
+                'area' => (string) $line->line_type,
+            ])->values()->all(),
             'reprint_requests' => (int) $reprintLines->sum('requests'),
             'rework_requests' => (int) $reworkLines->sum('requests'),
             'lines_with_reprints' => $reprintLines->count(),
             'lines_with_reworks' => $reworkLines->count(),
-            'reprint_lines' => $reprintLines->take(10)->all(),
-            'rework_lines' => $reworkLines->take(10)->all(),
+            'reprint_lines' => $reprintLines->all(),
+            'rework_lines' => $reworkLines->all(),
         ];
     }
 
