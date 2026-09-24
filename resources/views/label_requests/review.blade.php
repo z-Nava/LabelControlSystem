@@ -20,10 +20,10 @@
         @csrf
         @if(isset($proposalSignature))<input type="hidden" name="proposal_signature" value="{{ $proposalSignature }}" />@endif
         <section class="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 class="text-lg font-bold">1. Validar la operación</h2>
+            <h2 class="text-lg font-bold">1. Elegir el periodo de folios y validar la requisición</h2>
             <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <label class="text-sm font-medium">Mercado de serialización
-                    <select name="serial_standard" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                    <select id="release-market" name="serial_standard" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
                         <option value="">Selecciona el mercado</option>
                         @foreach($markets as $market)
                             <option value="{{ $market }}" @selected(($values['serial_standard'] ?? $selectedMarket) === $market)>{{ $market }} · {{ $market === 'UL' ? 'Control semanal' : 'Control mensual' }}</option>
@@ -31,11 +31,19 @@
                     </select>
                     <span class="mt-1 block text-xs text-slate-500">Si el catálogo no lo resolvió, confírmalo aquí antes de liberar.</span>
                 </label>
-                <label class="text-sm font-medium">Año operativo
+                <label class="text-sm font-medium">Año del periodo de folios
                     <input type="number" name="control_year" min="2000" max="2100" value="{{ $values['control_year'] ?? $defaultYear }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
-                <label class="text-sm font-medium">Semana operativa
+                <label class="text-sm font-medium"><span id="release-week-label">Semana UL para estos folios</span>
                     <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $defaultWeek }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <span id="release-week-help" class="mt-1 block text-xs font-normal text-slate-500">El consecutivo continúa dentro de la semana que elijas.</span>
+                </label>
+                <label id="release-month-field" class="text-sm font-medium">Mes de folios EMEA / ANZ / APJ
+                    <select id="release-month" name="serial_month" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                        @for($month = 1; $month <= 12; $month++)
+                            <option value="{{ $month }}" @selected((int) ($values['serial_month'] ?? $defaultMonth) === $month)>{{ \App\Support\SerialPeriods::describe('month', $month) }}</option>
+                        @endfor
+                    </select>
                 </label>
                 <label class="text-sm font-medium">Clasificación del trabajo
                     <select name="job_status" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
@@ -45,7 +53,8 @@
                     </select>
                 </label>
             </div>
-            <p class="mt-3 text-sm text-slate-600">El periodo serial se toma al momento de liberar: semana ISO para UL y mes calendario para EMEA, ANZ y APJ. El año y semana capturados se conservan como control operativo.</p>
+            <p class="mt-3 text-sm text-slate-600">El año y periodo que elijas determinan el rango de esta requisición. El sistema busca el último folio del NP Rating en ese mismo periodo y suma las etiquetas solicitadas. Al abrir un periodo nuevo de un NP ya registrado, comienza en 1. La fecha de la requisición no cambia el periodo elegido.</p>
+            <p class="mt-1 text-sm font-medium text-slate-700">Esta sección solo define el periodo: «Revisar propuesta» calcula el rango y «Liberar requisición» reserva los folios.</p>
             @if($labelRequest->isOriginalReprint())
                 <p class="mt-3 text-sm text-amber-800">Cada rango conserva su periodo original y no avanza el consecutivo. Se imprime una copia adicional como evidencia.</p>
                 <label class="mt-3 flex items-center gap-2 text-sm font-semibold">
@@ -173,3 +182,28 @@
     @endif
 </div>
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const market = document.getElementById('release-market');
+    const monthField = document.getElementById('release-month-field');
+    const month = document.getElementById('release-month');
+    const weekLabel = document.getElementById('release-week-label');
+    const weekHelp = document.getElementById('release-week-help');
+
+    function updatePeriodFields() {
+        const monthly = market.value !== '' && market.value !== 'UL';
+        monthField.hidden = !monthly;
+        month.disabled = !monthly;
+        month.required = monthly;
+        weekLabel.textContent = monthly ? 'Semana operativa (solo referencia)' : 'Semana UL para estos folios';
+        weekHelp.textContent = monthly
+            ? 'Para este mercado, el consecutivo se controla por el mes elegido.'
+            : 'El consecutivo continúa dentro de la semana que elijas.';
+    }
+
+    market.addEventListener('change', updatePeriodFields);
+    updatePeriodFields();
+});
+</script>
+@endpush

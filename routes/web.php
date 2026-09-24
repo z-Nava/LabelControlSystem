@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\StockLocatorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Dashboard\MasterMetricsController;
 use App\Http\Controllers\Dashboard\PendingRequestCountController;
 use App\Http\Controllers\Dummies\DummyPrintController;
 use App\Http\Controllers\Dummies\DummyReprintController;
@@ -92,6 +93,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Admin-only
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/master-metrics', MasterMetricsController::class)->name('admin.master_metrics.index');
+
         Route::get('/admin', function () {
             return 'Admin Area';
         })->name('admin.home');

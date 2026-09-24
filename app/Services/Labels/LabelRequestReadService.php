@@ -212,7 +212,7 @@ class LabelRequestReadService
                 'line:id,name,code',
                 'shift:id,name,code',
                 'requestedByUser:id,name',
-                'oracleJob:id,job_number,assembly,part_description,job_qty,quantity_remainder',
+                'oracleJob:id,job_number,assembly,part_description,job_qty',
                 'requisitionPrintedByUser:id,name',
                 'readyForDeliveryByUser:id,name',
                 'deliveredByUser:id,name',

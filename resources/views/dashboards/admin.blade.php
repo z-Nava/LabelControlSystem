@@ -37,6 +37,16 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 
+                
+                    <a href="{{ route('admin.master_metrics.index') }}" class="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-950 transition hover:border-red-300 hover:bg-red-100 hover:shadow">
+                        <div class="font-semibold">Métricas Hojas Master</div>
+                        <div class="mt-1 text-sm text-red-800">Solicitudes registradas en los últimos 90 días, por línea o área.</div>
+                        <div class="mt-3 flex flex-wrap gap-2 text-xs text-red-900">
+                            <span class="rounded-full border border-red-200 bg-white px-2.5 py-1">Reimpresiones: <strong>{{ number_format($masterPrintMetrics['reprint_requests']) }}</strong></span>
+                            <span class="rounded-full border border-red-200 bg-white px-2.5 py-1">Retrabajos: <strong>{{ number_format($masterPrintMetrics['rework_requests']) }}</strong></span>
+                        </div>
+                    </a>
+
                     <a href="{{ route('stock_locators.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                         <div class="font-semibold">Locals by Oracle Line</div>
                         <div class="text-sm text-slate-600 mt-1">Mapeo de STOCK_LOCATOR → SUBINVENTORY para masters.</div>
@@ -46,6 +56,7 @@
                         <div class="font-semibold">NP -> SKU Mapping</div>
                         <div class="text-sm text-slate-600 mt-1">Acceso general para configurar NP con su SKU. (Mostrar SKU en Hojas Master)</div>
                     </a>
+
                 </div>
             </section>
 

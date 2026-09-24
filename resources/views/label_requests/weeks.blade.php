@@ -46,7 +46,7 @@
             </div>
             <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
                 <div class="text-xs font-bold uppercase tracking-wide text-emerald-700">3 · Liberar la requisición</div>
-                <p class="mt-2 text-sm text-slate-700">La nueva semana o mes se abre desde <strong>1</strong> al liberar, si no hay folios previos de ese periodo. El 361 no se traslada.</p>
+                <p class="mt-2 text-sm text-slate-700">Al liberar, selecciona el mismo periodo para continuar desde el siguiente folio. Si Cuarto de Etiquetas cambia a una semana o mes nuevo, ese periodo inicia desde <strong>1</strong>.</p>
             </div>
         </div>
 

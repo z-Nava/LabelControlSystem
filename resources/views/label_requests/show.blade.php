@@ -97,6 +97,16 @@
                 @empty
                     <div class="text-slate-700">NP Rating: No requerido</div>
                 @endforelse
+                @if($labelRequest->include_inner)
+                    <div class="text-slate-700">NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }} · Modelo: {{ $labelRequest->inner_model ?: '—' }}</div>
+                @endif
+                @if($labelRequest->include_shipping)
+                    @forelse($labelRequest->requestedShippingItems() as $item)
+                        <div class="text-slate-700">NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                    @empty
+                        <div class="text-slate-700">NP Shipping: Sin NP capturado</div>
+                    @endforelse
+                @endif
             @endif
             <div class="text-slate-700">Folio inicial: {{ $labelRequest->folio_start ?? ($labelRequest->released_at ? 'Ver por tarea' : 'Pendiente de asignar') }}</div>
             <div class="text-slate-700">Folio final: {{ $labelRequest->folio_end ?? ($labelRequest->released_at ? 'Ver por tarea' : 'Pendiente de asignar') }}</div>
@@ -111,7 +121,6 @@
                 <div class="mt-1 font-semibold">PO: {{ $labelRequest->po_number ?: '—' }}</div>
                 <div class="text-slate-700">Destino: {{ $labelRequest->destination ?: '—' }}</div>
                 <div class="text-slate-700">Job Qty: {{ $labelRequest->oracleJob?->job_qty !== null ? number_format($labelRequest->oracleJob->job_qty) : '—' }}</div>
-                <div class="text-slate-700">Restante: {{ $labelRequest->oracleJob?->quantity_remainder !== null ? number_format($labelRequest->oracleJob->quantity_remainder) : '—' }}</div>
             @endif
         </div>
     </div>
