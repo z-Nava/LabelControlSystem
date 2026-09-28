@@ -35,7 +35,7 @@
                     <input type="number" name="control_year" min="2000" max="2100" value="{{ $values['control_year'] ?? $defaultYear }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
                 <label class="text-sm font-medium"><span id="release-week-label">Semana UL para estos folios</span>
-                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $defaultWeek }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? '' }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                     <span id="release-week-help" class="mt-1 block text-xs font-normal text-slate-500">El consecutivo continúa dentro de la semana que elijas.</span>
                 </label>
                 <label id="release-month-field" class="text-sm font-medium">Mes de folios EMEA / ANZ / APJ
@@ -76,7 +76,7 @@
                 <a href="{{ route('label_requests.weeks') }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 underline">Inicializar o consultar el último folio del Excel</a>
             </div>
             <div class="rounded-xl border border-blue-200 bg-white p-4 text-sm">
-                <h3 class="font-bold">Controles registrados · {{ $selectedMarket ?: 'Mercado pendiente' }} · {{ \App\Support\SerialPeriods::describe($periodType, $periodNumber) }} {{ $periodYear }}</h3>
+                <h3 class="font-bold">Controles registrados · {{ $selectedMarket ?: 'Mercado pendiente' }} · {{ $periodNumber ? \App\Support\SerialPeriods::describe($periodType, $periodNumber) : 'Semana pendiente' }} {{ $periodYear }}</h3>
                 <p class="mt-1 text-slate-600">El consecutivo se controla por NP Rating, mercado y periodo. El ensamble y el SKU se conservan como referencia operativa.</p>
                 @forelse($availableControls as $control)
                     <p class="mt-2">NP Rating <strong>{{ $control->label_part_number }}</strong> · Mercado <strong>{{ $control->serial_standard }}</strong> · Último reservado <strong>{{ number_format($control->last_serial_number) }}</strong></p>
@@ -106,16 +106,10 @@
                                 </select>
                             </label>
                         @else
+                            <input type="hidden" name="tasks[{{ $key }}][assigned_to_user_id]" value="" />
                             <div class="text-sm text-slate-600">La líder asignará la tarea antes de confirmar la impresión.</div>
                         @endif
                         @if($line['requires_folios'])
-                            <label class="text-sm font-medium">NP Rating de control
-                                <input name="tasks[{{ $key }}][rating_part_number]" value="{{ $taskInput['rating_part_number'] ?? $line['rating_part_number'] }}" maxlength="80" required @readonly($line['label_type'] === 'rating' || $line['catalog_rating']) list="rating-options-{{ md5($key) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
-                                <datalist id="rating-options-{{ md5($key) }}">
-                                    @foreach($line['rating_options'] as $option)<option value="{{ $option['rating_part_number'] }}">{{ $option['market'] }}</option>@endforeach
-                                </datalist>
-                                @if($line['rating_options'])<span class="mt-1 block text-xs text-slate-600">Alternativas del ensamble 018 disponibles en el catálogo.</span>@endif
-                            </label>
                             <label class="text-sm font-medium">Ensamble / SKU (referencia)
                                 <input readonly value="{{ $line['assembly_number'] }}{{ $line['folio_family'] ? ' / '.$line['folio_family'] : '' }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 uppercase" />
                                 @if(blank($line['folio_family']))
@@ -143,14 +137,10 @@
                                 <label class="text-sm font-medium">Hasta el folio
                                     <input type="number" name="tasks[{{ $key }}][folio_end]" value="{{ $taskInput['folio_end'] ?? '' }}" min="1" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                                 </label>
-                            @else
-                                <label class="text-sm font-medium">Folio que se conserva como evidencia
-                                    <select name="tasks[{{ $key }}][evidence_position]" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-                                        <option value="last" @selected(($taskInput['evidence_position'] ?? 'last') === 'last')>Último del rango</option>
-                                        <option value="first" @selected(($taskInput['evidence_position'] ?? 'last') === 'first')>Primero del rango</option>
-                                    </select>
-                                </label>
                             @endif
+                            <div class="text-sm font-medium">Folio que se conserva como evidencia
+                                <div class="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">Primero del rango</div>
+                            </div>
                         @endif
                     </div>
                     @if($planned && $line['requires_folios'])

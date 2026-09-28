@@ -80,22 +80,29 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Números de parte y folios</div>
             @if($hasGroupedLpkDetails)
-                @foreach($labelRequest->lpkLabelGroups as $group)
-                    <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">{{ $group->type_label }}: {{ $group->part_number }} · {{ $group->items->count() }} modelo(s)/Job(s)</div>
+                @foreach($labelRequest->lpkLabelGroups->sortBy(fn ($group) => $group->label_type === 'rating' ? 0 : 1) as $group)
+                    <div class="{{ $loop->first ? 'mt-1' : '' }} text-slate-700">
+                        @if($group->label_type === 'rating')
+                            <strong>NP Rating: {{ $group->part_number }}</strong>
+                        @else
+                            <span>{{ $group->type_label }}: {{ $group->part_number }}</span>
+                        @endif
+                        · {{ $group->items->count() }} modelo(s)/Job(s)
+                    </div>
                 @endforeach
                 @foreach($labelRequest->lpkShippingGroups as $group)
                     <div class="text-amber-800">Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)</div>
                 @endforeach
             @else
-                @forelse($labelRequest->requestedSerialItems() as $item)
-                    <div class="{{ $loop->first ? 'mt-1 font-semibold' : 'text-slate-700' }}">NP Serial: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
-                @empty
-                    <div class="mt-1 font-semibold">NP Serial: No requerido</div>
-                @endforelse
                 @forelse($labelRequest->requestedRatingItems() as $item)
-                    <div class="text-slate-700">NP Rating: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                    <div class="text-slate-700 {{ $loop->first ? 'mt-1' : '' }}"><strong>NP Rating: {{ $item['part_number'] }}</strong> · Modelo: {{ $item['model'] ?: '—' }}</div>
                 @empty
-                    <div class="text-slate-700">NP Rating: No requerido</div>
+                    <div class="mt-1 text-slate-700">NP Rating: No requerido</div>
+                @endforelse
+                @forelse($labelRequest->requestedSerialItems() as $item)
+                    <div class="text-slate-700">NP Serial: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                @empty
+                    <div class="text-slate-700">NP Serial: No requerido</div>
                 @endforelse
                 @if($labelRequest->include_inner)
                     <div class="text-slate-700">NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }} · Modelo: {{ $labelRequest->inner_model ?: '—' }}</div>
