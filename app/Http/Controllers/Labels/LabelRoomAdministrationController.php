@@ -65,11 +65,10 @@ class LabelRoomAdministrationController extends Controller
         $periodType = $market ? SerialPeriods::forMarket($market) : SerialPeriods::WEEK;
         $defaultYear = $periodType === SerialPeriods::WEEK ? $today->isoWeekYear() : $today->year;
         $controlYear = (int) ($values['control_year'] ?? $defaultYear);
-        $controlWeek = (int) ($values['control_week'] ?? $today->isoWeek());
+        $controlWeek = filled($values['control_week'] ?? null) ? (int) $values['control_week'] : null;
         $periodYear = $controlYear;
         $periodNumber = $periodType === SerialPeriods::WEEK ? $controlWeek : (int) ($values['serial_month'] ?? $today->month);
-        $ratingParts = $lines->pluck('rating_part_number')
-            ->merge(collect($values['tasks'] ?? [])->pluck('rating_part_number'))->filter()->unique();
+        $ratingParts = $lines->pluck('rating_part_number')->filter()->unique();
 
         return [
             'labelRequest' => $labelRequest->load(['line', 'shift', 'releasedBy']),
@@ -103,8 +102,6 @@ class LabelRoomAdministrationController extends Controller
             'proposal_signature' => ['nullable', 'string', 'size:64'],
             'tasks' => ['required', 'array', 'max:5000'],
             'tasks.*.assigned_to_user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'tasks.*.rating_part_number' => ['nullable', 'string', 'max:80'],
-            'tasks.*.evidence_position' => ['nullable', Rule::in(['first', 'last'])],
             'tasks.*.original_reference' => ['nullable', 'string', 'max:255'],
             'tasks.*.original_year' => ['nullable', 'integer', 'between:2000,2100'],
             'tasks.*.original_period_number' => ['nullable', 'integer', 'between:1,53'],

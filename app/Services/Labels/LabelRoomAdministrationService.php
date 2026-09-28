@@ -103,9 +103,9 @@ class LabelRoomAdministrationService
                 $family = trim((string) $line['folio_family']) ?: null;
                 $rating = $line['label_type'] === 'rating'
                     ? strtoupper(trim((string) $line['part_number']))
-                    : strtoupper(trim((string) ($input['rating_part_number'] ?? '')));
+                    : strtoupper(trim((string) ($line['rating_part_number'] ?? '')));
                 if ($rating === '') {
-                    throw ValidationException::withMessages(['tasks' => 'Cada tarea Serial/Rating necesita NP Rating de control.']);
+                    throw ValidationException::withMessages(['tasks' => 'No se pudo determinar el NP Rating para Serial. Verifica el Rating de la requisición o la relación Rating/Ensamble 018 del catálogo.']);
                 }
 
                 if ($line['catalog_rating'] && $rating !== $line['catalog_rating']) {
@@ -215,7 +215,7 @@ class LabelRoomAdministrationService
                     if ($end > LabelFolioService::MAX_FOLIO) {
                         throw ValidationException::withMessages(['tasks' => 'El rango excede el límite del consecutivo.']);
                     }
-                    $evidence = ($input['evidence_position'] ?? 'last') === 'first' ? $start : $end;
+                    $evidence = $start;
                     $bundles[$bundleKey] = [
                         'source_range_id' => null,
                         'range_start' => $start,
@@ -237,9 +237,8 @@ class LabelRoomAdministrationService
                     $nextByPeriod[$periodKey] = $end + 1;
                 } else {
                     $bundle = $bundles[$bundleKey];
-                    $evidence = ($input['evidence_position'] ?? 'last') === 'first' ? $bundle['range_start'] : $bundle['range_end'];
-                    if ($bundle['production_quantity'] !== $line['quantity'] || $bundle['evidence_folio'] !== $evidence) {
-                        throw ValidationException::withMessages(['tasks' => 'Serial y Rating del mismo producto deben tener la misma cantidad y posición de evidencia.']);
+                    if ($bundle['production_quantity'] !== $line['quantity']) {
+                        throw ValidationException::withMessages(['tasks' => 'Serial y Rating del mismo producto deben tener la misma cantidad.']);
                     }
                 }
 
