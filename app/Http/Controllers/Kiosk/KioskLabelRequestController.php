@@ -64,6 +64,35 @@ class KioskLabelRequestController extends Controller
         );
     }
 
+    public function lookupReworkSource(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'source_label_request_id' => ['required', 'integer', 'min:1'],
+            'request_kind' => ['required', 'in:standard,lpk'],
+        ]);
+
+        $source = LabelRequest::query()->find($data['source_label_request_id']);
+        if (! $source || $source->request_kind !== $data['request_kind']
+            || ! $source->released_at || $source->status === LabelRequest::STATUS_CANCELLED
+            || $source->isOriginalReprint()) {
+            return response()->json(['found' => false]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'market' => $source->serial_standard,
+            'lines' => collect($source->requestedLabelLines())
+                ->filter(fn (array $line) => in_array(strtolower((string) $line['type']), ['serial', 'rating'], true))
+                ->map(fn (array $line) => [
+                    'type' => $line['type'],
+                    'part_number' => $line['part_number'],
+                    'job_number' => $line['job_number'] ?? $source->job_number,
+                    'model' => $line['model'],
+                    'quantity' => $line['quantity'],
+                ])->values()->all(),
+        ]);
+    }
+
     private function storeForKind(
         StoreKioskLabelRequestRequest|StoreKioskLpkLabelRequestRequest $request,
         string $kind,

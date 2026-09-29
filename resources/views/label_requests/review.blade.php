@@ -11,6 +11,9 @@
         <h1 class="mt-1 text-2xl font-bold text-slate-950">Revisar requisición #{{ $labelRequest->id }}</h1>
         <p class="mt-2 text-slate-600">{{ $labelRequest->line?->code }} · {{ $labelRequest->request_date->format('d/m/Y') }} · {{ \App\Models\LabelRequest::FOLIO_MODES[$labelRequest->folio_mode] }}</p>
         <a href="{{ route('label_requests.show', $labelRequest) }}" class="mt-3 inline-block text-sm font-semibold text-blue-700 underline">Ver solicitud y datos de Oracle</a>
+        @if($labelRequest->isLostLabelRework())
+            <p class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Reposición por faltantes de la requisición #{{ $labelRequest->source_label_request_id }}. Motivo: {{ $labelRequest->rework_reason }}. Verifica el periodo actual antes de liberar; el sistema emitirá folios nuevos y conservará los rangos anteriores.</p>
+        @endif
     </header>
     @include('label_requests.partials.messages')
     @if($labelRequest->released_at || !in_array($labelRequest->status, ['requested', 'in_progress']))

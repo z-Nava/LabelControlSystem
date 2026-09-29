@@ -192,7 +192,8 @@
                         </td>
                         <td class="px-4 py-3 text-slate-700">{{ implode(' + ', $row['labelRequest']->requestedLabelTypes()) ?: '—' }}</td>
                         <td class="px-4 py-3">
-                            <div class="font-semibold">{{ $row['hasGroupedLpkDetails'] ? 'Reserva Jobs' : 'General' }}: {{ number_format($row['labelRequest']->quantity_requested) }}</div>
+                            <div class="font-semibold">{{ $row['labelRequest']->isLostLabelRework() ? 'Juegos faltantes' : ($row['hasGroupedLpkDetails'] ? 'Reserva Jobs' : 'General') }}: {{ number_format($row['labelRequest']->quantity_requested) }}</div>
+                            @if($row['labelRequest']->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $row['labelRequest']->source_label_request_id }}</div>@endif
                             @if($row['hasGroupedLpkDetails'])
                                 <div class="text-xs text-slate-500">Shipping: {{ $row['labelRequest']->lpkShippingGroups->count() }} grupo(s)</div>
                             @elseif($row['labelRequest']->include_shipping)

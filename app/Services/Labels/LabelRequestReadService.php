@@ -218,6 +218,8 @@ class LabelRequestReadService
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
                 'releasedBy:id,name',
+                'sourceLabelRequest:id,request_kind,job_number,status',
+                'lostLabelReworks:id,source_label_request_id,status,folio_mode',
                 'workTasks.assignee',
                 'workTasks.range.period',
                 'workTasks.printedShift',

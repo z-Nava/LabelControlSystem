@@ -10,6 +10,9 @@
                 @if($labelRequest->isLpk())
                     <span class="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">LPK</span>
                 @endif
+                @if($labelRequest->isLostLabelRework())
+                    <span class="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Reposición por faltantes</span>
+                @endif
                 <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold {{ $labelRequest->status_badge_classes }}">{{ $labelRequest->status_label }}</span>
             </div>
             <p class="mt-1 text-slate-600">{{ $labelRequest->line?->code }} · Turno {{ $labelRequest->shift?->code }} · {{ $labelRequest->request_date?->format('Y-m-d') }}</p>
@@ -20,6 +23,21 @@
 
     @if(session('success'))
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+
+    @if($labelRequest->isLostLabelRework())
+        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <div class="font-semibold">Retrabajo con folios nuevos · origen <a class="underline" href="{{ route('label_requests.show', $labelRequest->source_label_request_id) }}">requisición #{{ $labelRequest->source_label_request_id }}</a></div>
+            <div class="mt-1">Turno que reporta: {{ $labelRequest->shift?->code ?: '—' }}. Motivo: {{ $labelRequest->rework_reason }}</div>
+            <div class="mt-1">Los folios anteriores siguen registrados. Esta reposición usa el periodo autorizado al liberar la solicitud.</div>
+        </div>
+    @elseif($labelRequest->lostLabelReworks->isNotEmpty())
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <span class="font-semibold">Reposiciones vinculadas:</span>
+            @foreach($labelRequest->lostLabelReworks as $rework)
+                <a class="ml-2 text-blue-700 underline" href="{{ route('label_requests.show', $rework) }}">#{{ $rework->id }}</a>
+            @endforeach
+        </div>
     @endif
     @if(session('error'))
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
@@ -45,7 +63,7 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Solicitud</div>
             <div class="mt-1 font-semibold">{{ implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'Sin tipo' }}</div>
-            <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">{{ $labelRequest->isLostLabelRework() ? 'Juegos faltantes' : ($hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general') }}: {{ number_format($labelRequest->quantity_requested) }}</div>
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'Cantidad Shipping' }}: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
             <div class="text-slate-700">
                 Mercado / periodo serial:

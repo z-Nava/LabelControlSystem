@@ -27,6 +27,8 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     {
         return [
             'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
+            'source_label_request_id' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'integer', 'exists:label_requests,id'],
+            'rework_reason' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'string', 'min:10', 'max:2000'],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
             'week' => ['exclude'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
@@ -57,6 +59,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     {
         $this->merge([
             'folio_mode' => $this->input('folio_mode', 'new'),
+            'rework_reason' => trim((string) $this->input('rework_reason')),
             'lpk_label_groups' => $this->normalizeLabelGroups($this->input('lpk_label_groups', [])),
             'lpk_shipping_groups' => $this->normalizeShippingGroups($this->input('lpk_shipping_groups', [])),
         ]);
@@ -231,7 +234,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
 
             $availability = app(LabelRequestJobAvailabilityService::class)->calculate($job);
 
-            if ($this->input('folio_mode') !== 'reprint_originals' && $reservedByJob->get($jobNumber) > $availability['available_quantity']) {
+            if (! in_array($this->input('folio_mode'), LabelRequest::NON_RESERVING_FOLIO_MODES, true) && $reservedByJob->get($jobNumber) > $availability['available_quantity']) {
                 $validator->errors()->add(
                     $quantityPaths[$jobNumber],
                     "La cantidad solicitada para el Job {$jobNumber} supera su disponibilidad ({$availability['available_quantity']}).",

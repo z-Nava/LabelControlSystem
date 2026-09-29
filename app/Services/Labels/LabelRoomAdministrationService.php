@@ -21,6 +21,7 @@ class LabelRoomAdministrationService
         private readonly LabelWorkDefinitionService $definitions,
         private readonly LabelFolioService $folios,
         private readonly RatingAssemblyMappingService $ratingMappings,
+        private readonly LostLabelReworkService $lostLabelReworks,
     ) {}
 
     public function operators(): Collection
@@ -66,6 +67,14 @@ class LabelRoomAdministrationService
         }
         if ($request->isOriginalReprint() && empty($data['originals_received'])) {
             throw ValidationException::withMessages(['originals_received' => 'Confirma la recepción de las etiquetas originales físicas.']);
+        }
+        if ($request->isLostLabelRework()) {
+            $source = LabelRequest::query()->whereKey($request->source_label_request_id)
+                ->when($lockSources, fn ($query) => $query->lockForUpdate())->first();
+            if (! $source) {
+                throw ValidationException::withMessages(['source_label_request_id' => 'La requisición original no está disponible.']);
+            }
+            $this->lostLabelReworks->assertValid($request, $source);
         }
 
         $lines = $this->definitions->forRequest($request);

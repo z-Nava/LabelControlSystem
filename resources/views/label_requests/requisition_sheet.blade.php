@@ -211,6 +211,13 @@
             </div>
         </header>
 
+        @if($labelRequest->isLostLabelRework())
+            <div class="border-b border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-950">
+                Reposición por faltantes · requisición original #{{ $labelRequest->source_label_request_id }} · turno que reporta: {{ $labelRequest->shift?->code ?: '—' }}<br>
+                Motivo: {{ $labelRequest->rework_reason }}. Los folios originales permanecen registrados.
+            </div>
+        @endif
+
         <section class="general-grid">
             <div class="field"><div class="field-label">Fecha</div><div class="field-value">{{ $labelRequest->request_date?->format('d/m/Y') }}</div></div>
             <div class="field">

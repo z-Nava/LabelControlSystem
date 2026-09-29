@@ -65,6 +65,7 @@ Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(funct
     Route::post('/master-requests/{master_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMaster'])->name('master_requests.requisition_label.fail');
 
     Route::get('/label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+    Route::get('/label-requests/lookup-rework-source', [KioskLabelRequestController::class, 'lookupReworkSource'])->name('label_requests.lookup_rework_source');
     Route::get('/label-requests/create', [KioskLabelRequestController::class, 'createStandard'])->name('label_requests.create');
     Route::post('/label-requests', [KioskLabelRequestController::class, 'storeStandard'])->name('label_requests.store');
     Route::post('/label-requests/{label_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claim'])->name('label_requests.requisition_label.claim');
