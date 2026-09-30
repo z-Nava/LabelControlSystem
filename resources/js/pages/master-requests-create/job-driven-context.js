@@ -289,6 +289,13 @@ function renderStatus(elements, result) {
         return;
     }
 
+    if (result.suppressInlineStatus) {
+        container.className = 'hidden';
+        elements.title.textContent = '';
+        elements.message.textContent = '';
+        return;
+    }
+
     const styles = {
         pending: {
             classes: 'rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900',
@@ -330,6 +337,20 @@ function evaluateContext(fields, jobLookups, availableRequestTypes) {
         return {
             status: 'pending',
             message: 'Espera a que el sistema termine de consultar los Jobs capturados.',
+        };
+    }
+
+    const packagingLookup = lookupForRole(jobLookups, 'packaging');
+
+    if (
+        packagingNumber
+        && isValidRoleLookup(packagingLookup, 'packaging')
+        && !normalize(packagingLookup.ship_code)
+    ) {
+        return {
+            status: 'invalid',
+            message: `El Job Empaque ${packagingLookup.job_number || packagingNumber} no tiene Destino (Ship Code) registrado en Oracle. No se puede enviar la requisición.`,
+            suppressInlineStatus: true,
         };
     }
 
