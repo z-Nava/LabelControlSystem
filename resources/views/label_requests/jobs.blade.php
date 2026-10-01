@@ -17,7 +17,7 @@
         <div class="overflow-x-auto"><table class="w-full min-w-[1100px] text-left text-sm">
             <thead class="bg-slate-900 text-white"><tr>@foreach(['Req.', 'JOB', 'PO', 'Cantidad', 'Etiquetas Shipping', 'Modelo', 'Fecha', 'Status', 'Línea', 'Turno'] as $heading)<th class="px-3 py-4">{{ $heading }}</th>@endforeach</tr></thead>
             <tbody class="divide-y">@forelse($entries as $entry)<tr>
-                <td class="px-3 py-3"><a href="{{ route('label_requests.show', $entry->label_request_id) }}" class="font-semibold text-blue-700 underline">#{{ $entry->label_request_id }}</a>@if($entry->labelRequest->isOriginalReprint())<div class="text-xs text-amber-800">Reimpresión</div>@elseif($entry->labelRequest->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $entry->labelRequest->source_label_request_id }}</div>@endif</td>
+                <td class="px-3 py-3"><a href="{{ route('label_requests.show', $entry->label_request_id) }}" class="font-semibold text-blue-700 underline">#{{ $entry->label_request_id }}</a>@if($entry->labelRequest->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $entry->labelRequest->source_label_request_id }}</div>@endif</td>
                 <td class="px-3 py-3 font-mono">{{ $entry->job_number }}</td><td class="px-3 py-3">{{ $entry->po_number ?? '—' }}</td>
                 <td class="px-3 py-3">{{ $entry->quantity !== null ? number_format($entry->quantity) : 'No aplica' }}@if($entry->labelRequest->isLostLabelRework())<div class="text-xs text-amber-800">Juegos repuestos</div>@endif</td>
                 <td class="px-3 py-3">{{ $entry->shipping_quantity !== null ? number_format($entry->shipping_quantity) : '—' }}

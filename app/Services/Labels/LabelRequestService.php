@@ -27,6 +27,8 @@ class LabelRequestService
 
     public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
     {
+        $this->assertSupportedFolioMode($data);
+
         return DB::transaction(function () use ($data, $requestKind): LabelRequest {
             $source = $this->sourceForRework($data);
             $serialItems = $this->normalizeRequestItems(
@@ -105,7 +107,7 @@ class LabelRequestService
             $folioContext = collect($context->all());
             foreach (['inner', 'shipping'] as $type) {
                 if ($data['include_'.$type]) {
-                    $context->push($this->labelCatalog->resolve($job->assembly, $type, (string) $data[$type.'_part_number'], $data[$type.'_catalog_mapping_id'] ?? null, $type.'_catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals'));
+                    $context->push($this->labelCatalog->resolve($job->assembly, $type, (string) $data[$type.'_part_number'], $data[$type.'_catalog_mapping_id'] ?? null, $type.'_catalog_mapping_id'));
                 }
                 unset($data[$type.'_catalog_mapping_id']);
             }
@@ -182,6 +184,8 @@ class LabelRequestService
 
     public function createKioskLpk(array $data): LabelRequest
     {
+        $this->assertSupportedFolioMode($data);
+
         return DB::transaction(function () use ($data): LabelRequest {
             $source = $this->sourceForRework($data);
             $labelGroups = collect($data['lpk_label_groups'] ?? []);
@@ -414,6 +418,10 @@ class LabelRequestService
 
     public function confirmDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
+        if (! in_array($labelRequest->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+            throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede procesar desde la aplicación.']);
+        }
+
         if (! $labelRequest->canConfirmDelivery()) {
             throw ValidationException::withMessages([
                 'status' => 'Solo una requisición lista para entregar puede confirmarse como entregada.',
@@ -482,6 +490,13 @@ class LabelRequestService
         }
 
         return $payload;
+    }
+
+    private function assertSupportedFolioMode(array $data): void
+    {
+        if (! in_array($data['folio_mode'] ?? 'new', array_keys(LabelRequest::FOLIO_MODES), true)) {
+            throw ValidationException::withMessages(['folio_mode' => 'Selecciona folios nuevos o retrabajo por faltantes con folios nuevos.']);
+        }
     }
 
     private function sourceForRework(array &$data): ?LabelRequest

@@ -47,7 +47,6 @@ class LabelRoomAdministrationController extends Controller
     private function reviewData(LabelRequest $labelRequest, array $input = []): array
     {
         $lines = $this->definitions->forRequest($labelRequest);
-        $jobNumbers = $lines->flatMap(fn ($line) => array_column($line['jobs'], 'job_number'))->unique();
         $values = $input ?: session()->getOldInput();
         $today = now(config('app.display_timezone'));
         $market = strtoupper(trim((string) ($values['serial_standard'] ?? $labelRequest->serial_standard ?? '')));
@@ -80,11 +79,6 @@ class LabelRoomAdministrationController extends Controller
                 ->when($market, fn ($query) => $query->where('serial_standard', $market), fn ($query) => $query->whereRaw('1 = 0'))
                 ->where('period_type', $periodType)->where('year', $periodYear)->where('period_number', $periodNumber)
                 ->orderBy('label_part_number')->get(),
-            'sources' => SerialRange::with(['period', 'labelRequest'])
-                ->where('status', '!=', 'cancelled')->where('label_request_id', '!=', $labelRequest->id)
-                ->where(fn ($q) => $q->whereIn('job_number', $jobNumbers)
-                    ->orWhereHas('labelRequest', fn ($q) => $q->whereIn('job_number', $jobNumbers)))
-                ->orderByDesc('id')->limit(200)->get(),
         ];
     }
 
@@ -98,16 +92,9 @@ class LabelRoomAdministrationController extends Controller
             'job_status' => ['required', Rule::in(array_keys(LabelRequest::JOB_STATUSES))],
             'review_notes' => ['nullable', 'string', 'max:2000'],
             'plan_checked' => ['accepted'],
-            'originals_received' => ['nullable', 'boolean'],
             'proposal_signature' => ['nullable', 'string', 'size:64'],
             'tasks' => ['required', 'array', 'max:5000'],
             'tasks.*.assigned_to_user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'tasks.*.original_reference' => ['nullable', 'string', 'max:255'],
-            'tasks.*.original_year' => ['nullable', 'integer', 'between:2000,2100'],
-            'tasks.*.original_period_number' => ['nullable', 'integer', 'between:1,53'],
-            'tasks.*.source_range_id' => ['nullable', 'integer', 'exists:serial_ranges,id'],
-            'tasks.*.folio_start' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
-            'tasks.*.folio_end' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
             'tasks.*.expected_start' => ['nullable', 'integer', 'min:1', 'max:4294967295'],
         ]);
     }
@@ -157,7 +144,6 @@ class LabelRoomAdministrationController extends Controller
         $data = $request->validate([
             'printed_shift_id' => ['required', 'integer', 'exists:shifts,id'],
             'work_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
-            'physical_signed' => ['nullable', 'boolean'],
             'work_confirmed' => ['accepted'],
         ]);
         $result = $this->service->completeTask($label_request, $task, $data, $request->user());
@@ -195,17 +181,10 @@ class LabelRoomAdministrationController extends Controller
             ->when($filters['search'] ?? null, fn ($q, $term) => $q->where('label_part_number', 'like', "%{$term}%"));
         $ranges = SerialRange::with(['period', 'labelRequest.line', 'labelRequest.shift', 'tasks.assignee', 'tasks.printedShift'])
             ->whereIn('serial_week_id', (clone $query)->select('id'))->orderByDesc('id')->paginate(30, ['*'], 'ranges_page')->withQueryString();
-        $reprints = LabelWorkTask::with(['range.period', 'labelRequest', 'printedShift'])
-            ->whereHas('labelRequest', fn ($q) => $q->where('folio_mode', 'reprint_originals'))
-            ->whereNotNull('folio_start')->where('serial_period_year', $year)
-            ->when($market, fn ($q, $value) => $q->whereHas('labelRequest', fn ($nested) => $nested->where('serial_standard', $value)))
-            ->when($filters['period_number'] ?? null, fn ($q, $number) => $q->where('serial_period_number', $number))
-            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where('rating_part_number', 'like', "%{$term}%"))
-            ->orderByDesc('id')->paginate(20, ['*'], 'reprints_page')->withQueryString();
 
         return view('label_requests.weeks', [
             'periods' => $query->orderByDesc('period_number')->orderBy('label_part_number')->paginate(20, ['*'], 'periods_page')->withQueryString(),
-            'ranges' => $ranges, 'reprints' => $reprints, 'filters' => $filters, 'year' => $year,
+            'ranges' => $ranges, 'filters' => $filters, 'year' => $year,
             'markets' => SerialStandards::all(),
             'ratingOptions' => RatingAssemblyMapping::query()->active()
                 ->whereNotNull('rating_part_number')->where('rating_part_number', '!=', '')

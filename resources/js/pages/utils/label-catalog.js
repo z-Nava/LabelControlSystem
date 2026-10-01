@@ -17,10 +17,9 @@ export function commonPart(options, type) {
 }
 
 // The hidden ID is only a selection hint. The server validates the Job, active mapping and NP.
-export function mountCatalogPicker({ container, partInput, idInput, type, limitToPart = false, allowManual = () => false, onSelect = () => {} }) {
+export function mountCatalogPicker({ container, partInput, idInput, type, limitToPart = false, onSelect = () => {} }) {
     let options = [];
     let optionsLoaded = false;
-    let automaticId = null;
     let currentType = type;
     const wrapper = document.createElement('label');
     wrapper.className = 'catalog-picker block min-w-0 sm:col-span-full md:col-span-full';
@@ -52,16 +51,13 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
             hint.textContent = 'Valida el Job para consultar el catálogo.';
             return;
         }
-        const manualReprint = allowManual();
-        if (manualReprint && automaticId === idInput.value) idInput.value = '';
-        autofill = autofill && !partInput.disabled && !manualReprint;
+        autofill = autofill && !partInput.disabled;
         if (selected() && partInput.value && !compatible(selected())) idInput.value = '';
         if (!selected()) {
             idInput.value = '';
             const candidate = automaticSelection(options, currentType, normalizePart(partInput.value));
-            if (!manualReprint && candidate && (partInput.value || autofill)) {
+            if (candidate && (partInput.value || autofill)) {
                 idInput.value = String(candidate.id);
-                automaticId = idInput.value;
                 if (!partInput.value && autofill) setPart(candidate[column()]);
             } else if (!partInput.value && autofill && !['serial', 'rating'].includes(currentType)) {
                 setPart(commonPart(options, currentType));
@@ -79,23 +75,22 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
         select.required = false;
         select.setCustomValidity('');
         const matches = matchingOptions(options, currentType, partInput.value);
-        if (!manualReprint && !selected() && matches.length > 1 && ['serial', 'rating'].includes(currentType)) {
+        if (!selected() && matches.length > 1 && ['serial', 'rating'].includes(currentType)) {
             select.required = !partInput.disabled;
             hint.textContent = 'Este NP se comparte: selecciona su Rating de control y mercado.';
         } else if (selected()) {
             const row = selected();
             hint.textContent = 'Rating ' + row.rating_part_number + ' · ' + row.market + ' · Serial ' + (row.serial_part_number || 'pendiente') + ' · Shipping ' + (row.shipping_part_number || 'pendiente') + ' · Inner ' + (row.inner_part_number || 'pendiente');
-        } else if (!allowManual() && options.length && partInput.value && !matches.length && options.every((row) => row[column()])) {
+        } else if (options.length && partInput.value && !matches.length && options.every((row) => row[column()])) {
             select.setCustomValidity(partInput.disabled ? '' : 'El NP no corresponde al empaque de este Job. Selecciona una relación compatible o usa otro grupo.');
             hint.textContent = 'El NP capturado no corresponde al catálogo de este Job.';
         } else {
-            hint.textContent = manualReprint ? 'Selecciona el catálogo solo si corresponde a los originales. Label Room verificará su Rating y periodo original.' : options.length ? 'Elige la relación para completar el NP. Los campos sin NP en el catálogo se capturan manualmente.' : 'Sin datos de catálogo para este Job. Puedes capturar el NP manualmente.';
+            hint.textContent = options.length ? 'Elige la relación para completar el NP. Los campos sin NP en el catálogo se capturan manualmente.' : 'Sin datos de catálogo para este Job. Puedes capturar el NP manualmente.';
         }
     };
     const choose = (id) => {
         const row = options.find((option) => String(option.id) === String(id));
         idInput.value = row ? String(row.id) : '';
-        automaticId = null;
         if (row) {
             if (!row[column()] && partInput.dataset.catalogAuto === partInput.value) {
                 partInput.value = '';
@@ -124,7 +119,6 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
         clear({ clearPart = false } = {}) {
             if (clearPart && (idInput.value || partInput.dataset.catalogAuto === partInput.value)) partInput.value = '';
             delete partInput.dataset.catalogAuto;
-            automaticId = null;
             idInput.value = '';
             options = [];
             optionsLoaded = false;

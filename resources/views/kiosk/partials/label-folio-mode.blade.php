@@ -5,7 +5,7 @@
             <option value="{{ $value }}" @selected(old('folio_mode', 'new') === $value)>{{ $label }}</option>
         @endforeach
     </select>
-    <p class="mt-2 text-sm text-slate-600">Para reimprimir, entrega las etiquetas originales físicas a LabelRoom. En un retrabajo por faltantes, indica la requisición anterior y la cantidad faltante: sus folios permanecen registrados y la nueva solicitud recibirá folios del periodo que libere Label Room.</p>
+    <p class="mt-2 text-sm text-slate-600">En un retrabajo por faltantes, indica la requisición anterior y la cantidad faltante: sus folios permanecen registrados y la nueva solicitud recibirá folios del periodo que libere Label Room.</p>
     <div id="lostReworkFields" class="mt-4 hidden rounded-xl border border-amber-200 bg-amber-50 p-4">
         <p class="text-sm font-semibold text-amber-950">Reposición por faltantes · tipos de la requisición original</p>
         <p class="mt-1 text-sm text-amber-900">Usa la misma Job y los mismos NP de la requisición original. Captura sólo las piezas faltantes. El turno de arriba identifica quién reporta el faltante.</p>

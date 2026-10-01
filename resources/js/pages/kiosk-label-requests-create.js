@@ -173,7 +173,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 }
                 idInput.name = type + '_items[' + index + '][catalog_mapping_id]';
                 if (!catalogPickers.has(partInput)) {
-                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, allowManual: () => byId('folioMode')?.value === 'reprint_originals', onSelect: (option, previousId) => {
+                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, onSelect: (option, previousId) => {
                         if (option) {
                             const counterpart = type === 'rating' ? 'serial' : 'rating';
                             if (inputs[counterpart].checked) {
@@ -197,7 +197,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         ['inner', 'shipping'].forEach((type) => {
             const partInput = inputs[type + 'PartNumber'];
             if (!catalogPickers.has(partInput)) {
-                catalogPickers.set(partInput, mountCatalogPicker({ container: type === 'inner' ? innerFields : shippingFields, partInput, idInput: byId(type + 'CatalogId'), type, allowManual: () => byId('folioMode')?.value === 'reprint_originals' }));
+                catalogPickers.set(partInput, mountCatalogPicker({ container: type === 'inner' ? innerFields : shippingFields, partInput, idInput: byId(type + 'CatalogId'), type }));
             }
         });
         for (const [input] of catalogPickers) if (!input.isConnected) catalogPickers.delete(input);
@@ -319,11 +319,9 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     function validateQuantityAvailability() {
         inputs.quantity.setCustomValidity('');
         const mode = byId('folioMode')?.value;
-        if (mode === 'reprint_originals' || mode === 'lost_rework') {
+        if (mode === 'lost_rework') {
             inputs.quantity.max = '100000';
-            setHint(quantityHint, mode === 'lost_rework'
-                ? 'Captura sólo las etiquetas faltantes de los tipos indicados por la requisición original. Se emitirán folios nuevos sin descontar otra vez la Job.'
-                : 'Reimpresión: entrega los originales físicos a LabelRoom. No consume otra vez la disponibilidad del Job.');
+            setHint(quantityHint, 'Captura sólo las etiquetas faltantes de los tipos indicados por la requisición original. Se emitirán folios nuevos sin descontar otra vez la Job.');
             return true;
         }
         if (availableQuantity !== null) inputs.quantity.max = String(availableQuantity);

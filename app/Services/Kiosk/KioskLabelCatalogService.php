@@ -24,7 +24,7 @@ class KioskLabelCatalogService
             return $selected;
         }
 
-        // Reprints can refer to a retired Rating that used the same physical label NP.
+        // Reworks may use a label from the original request whose catalog mapping was retired.
         if ($allowManual) {
             return null;
         }

@@ -114,7 +114,6 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 idInput: field(item, 'catalog_mapping_id'),
                 type: group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value,
                 limitToPart: true,
-                allowManual: () => document.getElementById('folioMode')?.value === 'reprint_originals',
                 onSelect: () => { refreshGroupCatalog(group, false); validateGroupUniqueness(); },
             }));
         }
@@ -230,7 +229,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         const quantityInput = field(item, 'quantity');
         const available = Number(jobInput.dataset.availableQuantity);
         quantityInput.setCustomValidity('');
-        if (['reprint_originals', 'lost_rework'].includes(document.getElementById('folioMode')?.value)) return;
+        if (document.getElementById('folioMode')?.value === 'lost_rework') return;
 
         if (
             jobInput.dataset.validatedJob
@@ -339,9 +338,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
             const isShipping = Boolean(input.closest('.lpk-shipping-item'));
             const detail = data.assembly ? ` · ${data.assembly}` : '';
-            const availability = document.getElementById('folioMode')?.value === 'reprint_originals'
-                ? 'Job válido · reimpresión con originales físicos'
-                : document.getElementById('folioMode')?.value === 'lost_rework' ? 'Job válido · reposición con folios nuevos'
+            const availability = document.getElementById('folioMode')?.value === 'lost_rework' ? 'Job válido · reposición con folios nuevos'
                 : isShipping ? 'Job válido (informativo)'
                 : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
             setStatus(input, `${availability}${detail}`, 'text-emerald-700');

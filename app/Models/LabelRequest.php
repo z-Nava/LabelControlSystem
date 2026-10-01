@@ -15,11 +15,11 @@ class LabelRequest extends Model
 
     public const FOLIO_MODE_LOST_REWORK = 'lost_rework';
 
+    // Keep the retired mode here so historical requests never consume Job availability.
     public const NON_RESERVING_FOLIO_MODES = [self::FOLIO_MODE_REPRINT_ORIGINALS, self::FOLIO_MODE_LOST_REWORK];
 
     public const FOLIO_MODES = [
         'new' => 'Folios nuevos',
-        self::FOLIO_MODE_REPRINT_ORIGINALS => 'Reimpresión con originales físicos',
         self::FOLIO_MODE_LOST_REWORK => 'Retrabajo por faltantes · folios nuevos',
     ];
 
@@ -76,9 +76,6 @@ class LabelRequest extends Model
         'review_notes',
         'released_at',
         'released_by_user_id',
-        'originals_received_at',
-        'physical_signed_at',
-        'physical_signed_by_user_id',
         'request_date',
         'week',
         'line_id',
@@ -164,6 +161,12 @@ class LabelRequest extends Model
     public function isOriginalReprint(): bool
     {
         return $this->folio_mode === self::FOLIO_MODE_REPRINT_ORIGINALS;
+    }
+
+    public function folioModeLabel(): string
+    {
+        return self::FOLIO_MODES[$this->folio_mode]
+            ?? ($this->isOriginalReprint() ? 'Reimpresión con originales físicos (histórica)' : 'Modo desconocido');
     }
 
     public function isLostLabelRework(): bool

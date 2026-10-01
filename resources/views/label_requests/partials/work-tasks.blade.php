@@ -6,7 +6,7 @@
 <section class="mt-6 space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div><h2 class="text-xl font-bold">Trabajo liberado</h2><p class="mt-1 text-sm text-slate-600">Liberó {{ $labelRequest->releasedBy?->name ?? 'LabelRoom' }} · {{ $labelRequest->released_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</p></div>
-        <span class="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">{{ \App\Models\LabelRequest::FOLIO_MODES[$labelRequest->folio_mode] }}</span>
+        <span class="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">{{ $labelRequest->folioModeLabel() }}</span>
     </div>
     @foreach($labelRequest->workTasks as $task)
         <article class="rounded-2xl border {{ $task->status === 'completed' ? 'border-emerald-300' : 'border-slate-200' }} bg-white p-5">
@@ -30,7 +30,7 @@
             <p class="mt-4 text-sm text-slate-700">Operadora asignada: <strong>{{ $task->assignee?->name ?? 'Pendiente de asignar' }}</strong></p>
             @if($task->status === 'completed')
                 <p class="mt-4 text-sm text-emerald-800">Imprimió <strong>{{ $task->printed_by_name }}</strong> · Turno {{ $task->printedShift?->code }} · Fecha de trabajo {{ $task->work_date?->format('d/m/Y') }}.</p>
-            @elseif($task->status === 'pending' && $labelRequest->status === 'in_progress')
+            @elseif($task->status === 'pending' && $labelRequest->status === 'in_progress' && array_key_exists($labelRequest->folio_mode, \App\Models\LabelRequest::FOLIO_MODES))
                 @if($administration->canAssignTasks(auth()->user()))
                     <form method="POST" action="{{ route('label_requests.tasks.assign', [$labelRequest, $task]) }}" class="mt-4 flex flex-wrap items-end gap-2">
                         @csrf
@@ -58,9 +58,6 @@
                                 <input type="date" name="work_date" value="{{ now()->toDateString() }}" min="{{ $labelRequest->request_date->toDateString() }}" max="{{ now()->toDateString() }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                             </label>
                         </div>
-                        @if($labelRequest->isOriginalReprint() && !$labelRequest->physical_signed_at)
-                            <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="physical_signed" value="1" /> La requisición física quedó firmada (obligatorio para cerrar la última tarea).</label>
-                        @endif
                         <label class="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" name="work_confirmed" value="1" required /> Confirmo que se imprimieron las {{ number_format($task->quantity + $task->evidence_quantity) }} etiquetas de esta tarea.</label>
                         <button class="mt-4 rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Confirmar impresión {{ ucfirst($task->label_type) }}</button>
                     </form>
@@ -70,5 +67,4 @@
             @endif
         </article>
     @endforeach
-    @if($labelRequest->physical_signed_at)<p class="text-sm text-slate-600">Requisición física firmada: confirmado el {{ $labelRequest->physical_signed_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}.</p>@endif
 </section>

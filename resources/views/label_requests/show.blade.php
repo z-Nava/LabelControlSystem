@@ -313,6 +313,7 @@
     @endif
     <section class="mt-6 rounded-xl border border-slate-200 p-5">
         <h2 class="font-bold">Clasificación administrativa</h2>
+        @if(array_key_exists($labelRequest->folio_mode, \App\Models\LabelRequest::FOLIO_MODES))
         <form method="POST" action="{{ route('label_requests.classify', $labelRequest) }}" class="mt-3 flex flex-wrap items-end gap-3">
             @csrf
             <label class="text-sm">Status del trabajo
@@ -325,6 +326,7 @@
             <label class="flex-1 text-sm">Motivo del cambio<input name="reason" maxlength="1000" required class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
             <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Guardar clasificación</button>
         </form>
+        @endif
         @if($labelRequest->review_notes)<p class="mt-3 whitespace-pre-line text-sm text-slate-600">{{ $labelRequest->review_notes }}</p>@endif
     </section>
     <div class="mt-6 rounded-xl border border-slate-200">
