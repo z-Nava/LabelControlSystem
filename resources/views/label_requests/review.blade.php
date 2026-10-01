@@ -95,7 +95,11 @@
                 <article class="rounded-2xl border {{ $line['label_type'] === 'serial' ? 'border-blue-200' : ($line['label_type'] === 'rating' ? 'border-violet-200' : 'border-amber-200') }} bg-white p-5">
                     <div class="flex flex-wrap justify-between gap-3">
                         <div><h3 class="text-lg font-bold">{{ ucfirst($line['label_type']) }} · {{ $line['part_number'] }}</h3>
-                        <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p></div>
+                        <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p>
+                        @if($line['label_type'] === 'shipping' && filled($line['po_number']))
+                            <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">PO:</span> {{ $line['po_number'] }}</p>
+                        @endif
+                        </div>
                         <div class="text-right text-sm">Producción <strong class="text-lg">{{ number_format($line['quantity']) }}</strong><br>
                             Evidencia <strong>1</strong> · Total <strong>{{ number_format($line['quantity'] + 1) }}</strong>
                         </div>

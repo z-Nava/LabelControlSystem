@@ -109,7 +109,12 @@
                     </div>
                 @endforeach
                 @foreach($labelRequest->lpkShippingGroups as $group)
-                    <div class="text-amber-800">Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)</div>
+                    <div class="text-amber-800">
+                        Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)
+                        @if(filled($group->po_number))
+                            · PO: {{ $group->po_number }}
+                        @endif
+                    </div>
                 @endforeach
             @else
                 @forelse($labelRequest->requestedRatingItems() as $item)
@@ -127,7 +132,12 @@
                 @endif
                 @if($labelRequest->include_shipping)
                     @forelse($labelRequest->requestedShippingItems() as $item)
-                        <div class="text-slate-700">NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                        <div class="text-slate-700">
+                            NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}
+                            @if(filled($labelRequest->po_number))
+                                · PO: {{ $labelRequest->po_number }}
+                            @endif
+                        </div>
                     @empty
                         <div class="text-slate-700">NP Shipping: Sin NP capturado</div>
                     @endforelse
