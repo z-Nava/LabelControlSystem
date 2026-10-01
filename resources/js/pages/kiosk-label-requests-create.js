@@ -173,7 +173,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 }
                 idInput.name = type + '_items[' + index + '][catalog_mapping_id]';
                 if (!catalogPickers.has(partInput)) {
-                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, allowManual: () => ['reprint_originals', 'lost_rework'].includes(byId('folioMode')?.value), onSelect: (option, previousId) => {
+                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, allowManual: () => byId('folioMode')?.value === 'reprint_originals', onSelect: (option, previousId) => {
                         if (option) {
                             const counterpart = type === 'rating' ? 'serial' : 'rating';
                             if (inputs[counterpart].checked) {
@@ -322,7 +322,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         if (mode === 'reprint_originals' || mode === 'lost_rework') {
             inputs.quantity.max = '100000';
             setHint(quantityHint, mode === 'lost_rework'
-                ? 'Captura sólo los juegos Serial + Rating faltantes. Se emitirán folios nuevos sin descontar otra vez la Job.'
+                ? 'Captura sólo las etiquetas faltantes de los tipos indicados por la requisición original. Se emitirán folios nuevos sin descontar otra vez la Job.'
                 : 'Reimpresión: entrega los originales físicos a LabelRoom. No consume otra vez la disponibilidad del Job.');
             return true;
         }

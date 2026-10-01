@@ -7,11 +7,12 @@
     </select>
     <p class="mt-2 text-sm text-slate-600">Para reimprimir, entrega las etiquetas originales físicas a LabelRoom. En un retrabajo por faltantes, indica la requisición anterior y la cantidad faltante: sus folios permanecen registrados y la nueva solicitud recibirá folios del periodo que libere Label Room.</p>
     <div id="lostReworkFields" class="mt-4 hidden rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p class="text-sm font-semibold text-amber-950">Reposición por faltantes · Serial y Rating juntos</p>
+        <p class="text-sm font-semibold text-amber-950">Reposición por faltantes · tipos de la requisición original</p>
         <p class="mt-1 text-sm text-amber-900">Usa la misma Job y los mismos NP de la requisición original. Captura sólo las piezas faltantes. El turno de arriba identifica quién reporta el faltante.</p>
         <div class="mt-3 grid gap-3 md:grid-cols-2">
-            <label class="text-sm font-medium text-slate-800">Número de requisición original
-                <input id="sourceLabelRequestId" type="number" name="source_label_request_id" min="1" value="{{ old('source_label_request_id') }}" data-lookup-url="{{ route('kiosk.label_requests.lookup_rework_source') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5" />
+            <label class="text-sm font-medium text-slate-800">Requisición original o Job
+                <input id="sourceLabelRequestReference" type="text" name="source_label_request_reference" maxlength="40" pattern="[0-9A-Za-z\-]+" value="{{ old('source_label_request_reference', old('source_label_request_id')) }}" placeholder="Ej: 125 o 393383" autocomplete="off" spellcheck="false" data-lookup-url="{{ route('kiosk.label_requests.lookup_rework_source') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase" />
+                <input id="sourceLabelRequestId" type="hidden" name="source_label_request_id" value="{{ old('source_label_request_id') }}" />
             </label>
             <label class="text-sm font-medium text-slate-800">Motivo del faltante y seguimiento
                 <textarea id="reworkReason" name="rework_reason" rows="3" minlength="10" maxlength="2000" placeholder="Ejemplo: al cerrar la Job se detectaron 4 juegos faltantes; se solicita reposición." class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5">{{ old('rework_reason') }}</textarea>

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Kiosk\KioskRequisitionPrintService;
 use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
+use App\Services\Labels\LostLabelReworkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class KioskLabelRequestController extends Controller
     public function __construct(
         private readonly LabelRequestReadService $readService,
         private readonly LabelRequestService $service,
+        private readonly LostLabelReworkService $lostLabelReworks,
         private readonly KioskRequisitionPrintService $printService,
     ) {}
 
@@ -67,20 +69,29 @@ class KioskLabelRequestController extends Controller
     public function lookupReworkSource(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'source_label_request_id' => ['required', 'integer', 'min:1'],
+            'source_label_request_reference' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z\-]+$/'],
             'request_kind' => ['required', 'in:standard,lpk'],
         ]);
 
-        $source = LabelRequest::query()->find($data['source_label_request_id']);
-        if (! $source || $source->request_kind !== $data['request_kind']
-            || ! $source->released_at || $source->status === LabelRequest::STATUS_CANCELLED
-            || $source->isOriginalReprint()) {
+        $source = $this->lostLabelReworks->resolveSourceReference(
+            $data['source_label_request_reference'],
+            $data['request_kind'],
+        );
+        if (! $source) {
             return response()->json(['found' => false]);
         }
 
+        $labelTypes = collect([
+            $source->include_serial ? 'serial' : null,
+            $source->include_rating ? 'rating' : null,
+        ])->filter()->values()->all();
+
         return response()->json([
             'found' => true,
+            'source_label_request_id' => $source->id,
+            'job_number' => $source->job_number,
             'market' => $source->serial_standard,
+            'label_types' => $labelTypes,
             'lines' => collect($source->requestedLabelLines())
                 ->filter(fn (array $line) => in_array(strtolower((string) $line['type']), ['serial', 'rating'], true))
                 ->map(fn (array $line) => [

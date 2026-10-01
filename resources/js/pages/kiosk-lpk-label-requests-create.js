@@ -18,6 +18,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     const jobCatalogs = new WeakMap();
     const catalogPickers = new Map();
     let lookupSequence = 0;
+    let reworkSourceTypes = null;
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
     const field = (container, name) => container.querySelector(`[data-field="${name}"]`);
@@ -113,7 +114,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 idInput: field(item, 'catalog_mapping_id'),
                 type: group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value,
                 limitToPart: true,
-                allowManual: () => ['reprint_originals', 'lost_rework'].includes(document.getElementById('folioMode')?.value),
+                allowManual: () => document.getElementById('folioMode')?.value === 'reprint_originals',
                 onSelect: () => { refreshGroupCatalog(group, false); validateGroupUniqueness(); },
             }));
         }
@@ -238,6 +239,35 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         ) {
             quantityInput.setCustomValidity(`La cantidad no puede superar la disponibilidad del Job (${available}).`);
         }
+    }
+
+    function applyReworkTypeConstraints(sourceData = null) {
+        const active = document.getElementById('folioMode')?.value === 'lost_rework';
+
+        reworkSourceTypes = active && Array.isArray(sourceData?.label_types)
+            ? [...new Set(sourceData.label_types.map((type) => String(type).toLowerCase()))].sort()
+            : null;
+
+        const allowed = new Set(reworkSourceTypes || []);
+        form.querySelectorAll('[data-field="label_type"]').forEach((select) => {
+            Array.from(select.options).forEach((option) => {
+                option.disabled = active && !allowed.has(option.value);
+            });
+
+            if (active && allowed.size && !allowed.has(select.value)) {
+                select.value = reworkSourceTypes[0];
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
+        const addLabelButton = document.getElementById('addLpkLabelGroup');
+        const addShippingButton = document.getElementById('addLpkShippingGroup');
+        addLabelButton.disabled = active && !allowed.size;
+        addShippingButton.disabled = active;
+        [addLabelButton, addShippingButton].forEach((button) => {
+            button.classList.toggle('cursor-not-allowed', button.disabled);
+            button.classList.toggle('opacity-50', button.disabled);
+        });
     }
 
     async function fetchJob(jobNumber) {
@@ -392,6 +422,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     document.getElementById('addLpkLabelGroup').addEventListener('click', () => {
         const group = appendTemplate(labelGroupTemplate, labelGroupsContainer);
         ensureGroupHasItem(group, false);
+        applyReworkTypeConstraints(reworkSourceTypes ? { label_types: reworkSourceTypes } : null);
         reindexForm();
         field(group, 'part_number').focus();
     });
@@ -495,12 +526,22 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         }
 
         if (document.getElementById('folioMode').value === 'lost_rework') {
-            const types = [...labelGroupsContainer.querySelectorAll('[data-field="label_type"]')].map((input) => input.value);
-            if (shippingGroupsContainer.children.length || types.includes('inner') || !types.includes('serial') || !types.includes('rating')) {
+            const types = [...new Set([...labelGroupsContainer.querySelectorAll('[data-field="label_type"]')]
+                .map((input) => input.value))].sort();
+            if (shippingGroupsContainer.children.length || types.includes('inner') || !types.some((type) => ['serial', 'rating'].includes(type))) {
                 await Swal.fire({
                     icon: 'warning',
-                    title: 'Captura Serial y Rating juntos',
-                    text: 'La reposición LPK debe tener grupos Serial y Rating de la misma Job, sin Inner ni Shipping.',
+                    title: 'Captura las etiquetas con folio',
+                    text: 'La reposición LPK sólo puede incluir grupos Serial o Rating, sin Inner ni Shipping.',
+                    confirmButtonColor: '#dc2626',
+                });
+                return;
+            }
+            if (reworkSourceTypes && types.join('|') !== reworkSourceTypes.join('|')) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Revisa los tipos de etiqueta',
+                    text: 'El retrabajo debe conservar los tipos Serial y/o Rating de la requisición original.',
                     confirmButtonColor: '#dc2626',
                 });
                 return;
@@ -527,7 +568,8 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         if (result.isConfirmed) form.submit();
     });
 
-    mountLostLabelReworkFields(form, () => {
+    mountLostLabelReworkFields(form, (sourceData) => {
+        applyReworkTypeConstraints(sourceData);
         form.querySelectorAll('[data-validated-job]').forEach(validateQuantityForRow);
     });
     const selectedLineType = document.getElementById('lineSelect').selectedOptions[0]?.dataset?.lineType || '';

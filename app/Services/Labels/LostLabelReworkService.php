@@ -3,11 +3,36 @@
 namespace App\Services\Labels;
 
 use App\Models\LabelRequest;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class LostLabelReworkService
 {
+    public function resolveSourceReference(string $reference, string $requestKind): ?LabelRequest
+    {
+        $reference = strtoupper(trim($reference));
+
+        if ($reference === '' || ! array_key_exists($requestKind, LabelRequest::KIND_LABELS)) {
+            return null;
+        }
+
+        $eligible = $this->eligibleSources($requestKind);
+
+        if (ctype_digit($reference)) {
+            $sourceById = (clone $eligible)->whereKey((int) $reference)->first();
+
+            if ($sourceById) {
+                return $sourceById;
+            }
+        }
+
+        return $eligible
+            ->whereRaw('UPPER(TRIM(job_number)) = ?', [$reference])
+            ->orderByDesc('id')
+            ->first();
+    }
+
     public function assertValid(LabelRequest $request, LabelRequest $source): void
     {
         if ($source->id === $request->id || $source->request_kind !== $request->request_kind
@@ -18,10 +43,9 @@ class LostLabelReworkService
             ]);
         }
 
-        if (! $request->include_serial || ! $request->include_rating
-            || $request->include_inner || $request->include_shipping) {
+        if ($request->include_inner || $request->include_shipping) {
             throw ValidationException::withMessages([
-                'folio_mode' => 'La reposición por faltantes debe contener únicamente Serial y Rating juntos.',
+                'folio_mode' => 'La reposición con folios nuevos sólo puede contener etiquetas Serial o Rating.',
             ]);
         }
 
@@ -34,8 +58,25 @@ class LostLabelReworkService
 
         $requested = $this->folioLines($request);
         $original = $this->folioLines($source);
-        if ($requested->isEmpty() || $requested->pluck('type')->unique()->count() !== 2) {
-            throw ValidationException::withMessages(['folio_mode' => 'Captura Serial y Rating para la reposición.']);
+        $requestedTypes = $this->folioTypes($request);
+        $originalTypes = $this->folioTypes($source);
+
+        if ($originalTypes->isEmpty()) {
+            throw ValidationException::withMessages([
+                'source_label_request_id' => 'La requisición original no contiene etiquetas Serial ni Rating para reponer.',
+            ]);
+        }
+
+        if ($requestedTypes->all() !== $originalTypes->all()) {
+            throw ValidationException::withMessages([
+                'folio_mode' => 'El retrabajo debe conservar los tipos Serial y/o Rating de la requisición original.',
+            ]);
+        }
+
+        if ($requested->isEmpty() || $requested->pluck('type')->unique()->sort()->values()->all() !== $requestedTypes->all()) {
+            throw ValidationException::withMessages([
+                'folio_mode' => 'Captura las etiquetas Serial y/o Rating indicadas por la requisición original.',
+            ]);
         }
 
         foreach ($requested as $line) {
@@ -52,29 +93,14 @@ class LostLabelReworkService
             }
         }
 
-        foreach ($requested->groupBy(fn (array $line) => $line['job'].'|'.$line['model']) as $jobLines) {
-            $serial = $jobLines->where('type', 'serial');
-            $rating = $jobLines->where('type', 'rating');
-            if ($serial->isEmpty() || $rating->isEmpty()
-                || $jobLines->pluck('quantity')->unique()->count() !== 1
-                || $rating->count() !== 1) {
-                throw ValidationException::withMessages([
-                    'lpk_label_groups' => 'Cada Job y modelo del retrabajo requiere Serial y un Rating con la misma cantidad de faltantes.',
-                ]);
-            }
-        }
-
         $source->loadMissing('workTasks');
         foreach ($requested as $line) {
-            $rating = $requested->first(fn (array $item) => $item['type'] === 'rating'
-                && $item['job'] === $line['job'] && $item['model'] === $line['model']);
             if (! $source->workTasks->contains(fn ($task) => $task->status === 'completed'
                 && strtolower((string) $task->label_type) === $line['type']
                 && strtoupper((string) $task->part_number) === $line['part']
-                && ($line['type'] !== 'serial' || strtoupper((string) $task->rating_part_number) === $rating['part'])
                 && collect($task->jobs ?? [])->contains(fn ($job) => strtoupper((string) ($job['job_number'] ?? '')) === $line['job']))) {
                 throw ValidationException::withMessages([
-                    'source_label_request_id' => 'La pareja Serial y Rating debe corresponder a las etiquetas impresas de la requisición original.',
+                    'source_label_request_id' => 'Cada etiqueta del retrabajo debe corresponder a una etiqueta impresa de la requisición original.',
                 ]);
             }
         }
@@ -97,5 +123,30 @@ class LostLabelReworkService
     private function identity(array $line): string
     {
         return implode('|', [$line['type'], $line['part'], $line['job'], $line['model']]);
+    }
+
+    /** @return Collection<int, string> */
+    private function folioTypes(LabelRequest $request): Collection
+    {
+        return collect([
+            $request->include_rating ? 'rating' : null,
+            $request->include_serial ? 'serial' : null,
+        ])->filter()->sort()->values();
+    }
+
+    private function eligibleSources(string $requestKind): Builder
+    {
+        return LabelRequest::query()
+            ->where('request_kind', $requestKind)
+            ->whereNotNull('released_at')
+            ->where('status', '!=', LabelRequest::STATUS_CANCELLED)
+            ->where(function (Builder $query): void {
+                $query->whereNull('folio_mode')
+                    ->orWhere('folio_mode', '!=', LabelRequest::FOLIO_MODE_REPRINT_ORIGINALS);
+            })
+            ->where(function (Builder $query): void {
+                $query->where('include_serial', true)
+                    ->orWhere('include_rating', true);
+            });
     }
 }

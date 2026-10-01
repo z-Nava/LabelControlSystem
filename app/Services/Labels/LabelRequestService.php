@@ -487,7 +487,7 @@ class LabelRequestService
     private function sourceForRework(array &$data): ?LabelRequest
     {
         if (($data['folio_mode'] ?? 'new') !== LabelRequest::FOLIO_MODE_LOST_REWORK) {
-            unset($data['source_label_request_id'], $data['rework_reason']);
+            unset($data['source_label_request_id'], $data['source_label_request_reference'], $data['rework_reason']);
 
             return null;
         }
@@ -498,6 +498,8 @@ class LabelRequestService
                 'source_label_request_id' => 'Indica la requisición original y el motivo del faltante.',
             ]);
         }
+
+        unset($data['source_label_request_reference']);
 
         return $source;
     }

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Kiosk;
 
 use App\Models\LabelRequest;
 use App\Services\Labels\LabelRequestJobAvailabilityService;
+use App\Services\Labels\LostLabelReworkService;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,7 @@ class StoreKioskLabelRequestRequest extends FormRequest
 
         return [
             'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
+            'source_label_request_reference' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'string', 'max:40', 'regex:/^[0-9A-Z\-]+$/'],
             'source_label_request_id' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'integer', 'exists:label_requests,id'],
             'rework_reason' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'string', 'min:10', 'max:2000'],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
@@ -71,6 +73,11 @@ class StoreKioskLabelRequestRequest extends FormRequest
         $includeSerial = $this->boolean('include_serial');
         $includeRating = $this->boolean('include_rating');
         $includeShipping = $this->boolean('include_shipping');
+        $folioMode = $this->input('folio_mode', 'new');
+        $sourceReference = strtoupper(trim((string) $this->input('source_label_request_reference')));
+        $source = $folioMode === LabelRequest::FOLIO_MODE_LOST_REWORK && $sourceReference !== ''
+            ? app(LostLabelReworkService::class)->resolveSourceReference($sourceReference, LabelRequest::KIND_STANDARD)
+            : null;
         $serialItems = $this->normalizePartNumberItems(
             $this->input('serial_items', $this->input('serial_part_numbers', [])),
         );
@@ -79,7 +86,9 @@ class StoreKioskLabelRequestRequest extends FormRequest
         );
 
         $this->merge([
-            'folio_mode' => $this->input('folio_mode', 'new'),
+            'folio_mode' => $folioMode,
+            'source_label_request_reference' => $sourceReference,
+            'source_label_request_id' => $source?->id,
             'rework_reason' => trim((string) $this->input('rework_reason')),
             'include_serial' => $includeSerial,
             'include_rating' => $includeRating,
@@ -149,6 +158,8 @@ class StoreKioskLabelRequestRequest extends FormRequest
     {
         return [
             'serial_items' => 'etiquetas Serial',
+            'source_label_request_reference' => 'requisición original o Job',
+            'source_label_request_id' => 'requisición original o Job',
             'serial_items.*.part_number' => 'NP de Serial',
             'serial_items.*.model' => 'modelo de Serial',
             'rating_items' => 'etiquetas Rating',
@@ -158,6 +169,14 @@ class StoreKioskLabelRequestRequest extends FormRequest
             'inner_model' => 'modelo de Inner',
             'shipping_part_number' => 'NP de Shipping',
             'shipping_model' => 'modelo de Shipping',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'source_label_request_id.required' => 'No se encontró una requisición original liberada para esa referencia o Job.',
+            'source_label_request_id.exists' => 'La requisición original seleccionada ya no está disponible.',
         ];
     }
 
