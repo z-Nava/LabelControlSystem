@@ -9,6 +9,15 @@
         <span class="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">{{ $labelRequest->folioModeLabel() }}</span>
     </div>
     @foreach($labelRequest->workTasks as $task)
+        @php
+            $monthLetter = in_array($task->label_type, ['serial', 'rating'], true) && $task->evidence_folio !== null
+                ? \App\Support\SerialPeriods::monthLetterFor(
+                    $labelRequest->serial_standard ?? '',
+                    $task->serial_period_type,
+                    $task->serial_period_number,
+                )
+                : null;
+        @endphp
         <article class="rounded-2xl border {{ $task->status === 'completed' ? 'border-emerald-300' : 'border-slate-200' }} bg-white p-5">
             <div class="flex flex-wrap justify-between gap-3">
                 <div><h3 class="text-lg font-bold">{{ ucfirst($task->label_type) }} · {{ $task->part_number }}</h3>
@@ -24,7 +33,7 @@
                 <div><dt class="text-slate-500">Evidencia</dt><dd class="mt-1 text-lg font-bold">{{ $task->evidence_quantity }}</dd></div>
                 <div><dt class="text-slate-500">Total por imprimir</dt><dd class="mt-1 text-lg font-bold">{{ number_format($task->quantity + $task->evidence_quantity) }}</dd></div>
                 <div><dt class="text-slate-500">Folios del / hasta</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? $task->folio_start.' – '.$task->folio_end : 'No aplica' }}</dd></div>
-                <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}</dd></div>
+                <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 flex flex-wrap items-center gap-2 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}@if($monthLetter)<span class="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Letra del mes: {{ $monthLetter }}</span>@endif</dd></div>
                 <div><dt class="text-slate-500">Mercado · Periodo</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? ($labelRequest->serial_standard ?: 'Mercado histórico').' · '.\App\Support\SerialPeriods::describe($task->serial_period_type ?: 'week', $task->serial_period_number ?: $task->control_week).' '.($task->serial_period_year ?: $task->control_year) : '—' }}@if($task->folio_start !== null)<br><span class="text-xs font-normal text-slate-500">Control: {{ $task->control_year }}/Sem. {{ $task->control_week }}</span>@endif</dd></div>
             </dl>
             <p class="mt-4 text-sm text-slate-700">Operadora asignada: <strong>{{ $task->assignee?->name ?? 'Pendiente de asignar' }}</strong></p>
