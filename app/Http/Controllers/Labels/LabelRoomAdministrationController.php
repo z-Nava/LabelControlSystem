@@ -23,6 +23,13 @@ use Illuminate\Validation\ValidationException;
 
 class LabelRoomAdministrationController extends Controller
 {
+    private const JOB_LABEL_TYPE_CODES = [
+        'shipping' => 'SH',
+        'serial' => 'SE',
+        'rating' => 'RA',
+        'inner' => 'INN',
+    ];
+
     public function __construct(
         private readonly LabelRoomAdministrationService $service,
         private readonly LabelWorkDefinitionService $definitions,
@@ -229,7 +236,7 @@ class LabelRoomAdministrationController extends Controller
             'job_status' => ['nullable', Rule::in(array_keys(LabelRequest::JOB_STATUSES))],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
-        $entries = LabelJobEntry::with(['labelRequest', 'line', 'shift'])
+        $entries = LabelJobEntry::with(['labelRequest.workTasks', 'line', 'shift'])
             ->when($filters['date_from'] ?? null, fn ($q, $date) => $q->whereDate('work_date', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($q, $date) => $q->whereDate('work_date', '<=', $date))
             ->when($filters['line_id'] ?? null, fn ($q, $id) => $q->where('line_id', $id))
@@ -238,9 +245,52 @@ class LabelRoomAdministrationController extends Controller
             ->when($filters['search'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q->where('job_number', 'like', "%{$term}%")->orWhere('po_number', 'like', "%{$term}%")->orWhere('model', 'like', "%{$term}%")))
             ->orderByDesc('work_date')->orderByDesc('id')->paginate(40)->withQueryString();
 
+        $entrySummaries = $entries->getCollection()
+            ->mapWithKeys(fn (LabelJobEntry $entry) => [$entry->id => $this->summarizeJobEntry($entry)])
+            ->all();
+
         return view('label_requests.jobs', [
             'entries' => $entries, 'filters' => $filters, 'shifts' => Shift::orderBy('code')->get(),
             'lines' => ProductionLine::orderBy('code')->get(),
+            'entrySummaries' => $entrySummaries,
+            'jobStatusOptions' => LabelRequest::JOB_STATUSES,
         ]);
+    }
+
+    private function summarizeJobEntry(LabelJobEntry $entry): array
+    {
+        $tasks = $entry->labelRequest->workTasks->filter(static function (LabelWorkTask $task) use ($entry): bool {
+            if ($task->status !== 'completed') {
+                return false;
+            }
+
+            foreach ($task->jobs ?? [] as $job) {
+                if ((string) ($job['job_number'] ?? '') === $entry->job_number
+                    && (string) ($job['model'] ?? '') === $entry->model) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        $ranges = $tasks
+            ->filter(fn (LabelWorkTask $task) => $task->folio_start !== null && $task->folio_end !== null)
+            ->unique(fn (LabelWorkTask $task) => $task->serial_range_id
+                ?? implode('|', [$task->rating_part_number, $task->folio_start, $task->folio_end]))
+            ->map(fn (LabelWorkTask $task) => [
+                'start' => $task->folio_start,
+                'end' => $task->folio_end,
+                'rating_part_number' => $task->rating_part_number,
+            ])
+            ->values()
+            ->all();
+
+        $types = collect(self::JOB_LABEL_TYPE_CODES)
+            ->filter(fn (string $code, string $type) => $tasks->contains('label_type', $type))
+            ->values()
+            ->all();
+
+        return ['ranges' => $ranges, 'types' => $types];
     }
 }
