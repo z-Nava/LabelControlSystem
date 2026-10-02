@@ -94,8 +94,8 @@ class LabelRequestReadService
                         });
                 });
             })
-            ->orderByDesc('request_date')
-            ->orderByDesc('id')
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->paginate($perPage)
             ->withQueryString();
 
