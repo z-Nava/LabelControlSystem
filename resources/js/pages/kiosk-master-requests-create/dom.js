@@ -22,6 +22,7 @@ export function getMasterRequestElements() {
             jobPackaging: document.getElementById('jobPackaging'),
             poNumber: document.getElementById('poNumber'),
             destination: document.getElementById('destination'),
+            destinationWarning: document.getElementById('destinationWarning'),
             modelDisplay: document.getElementById('modelDisplay'),
             modelMappingWarning: document.getElementById('modelMappingWarning'),
             qtyAssembly: document.getElementById('jobAssemblyQty'),
@@ -87,4 +88,3 @@ export function getFieldValue(form, fieldName) {
 export function clearCustomValidity(form, fieldName) {
     form.elements.namedItem(fieldName)?.setCustomValidity('');
 }
-

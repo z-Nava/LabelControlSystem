@@ -1,4 +1,4 @@
-<div class="detail-title border-b border-slate-300 bg-slate-50 px-4 py-2 field-label">Trabajo autorizado · {{ \App\Models\LabelRequest::FOLIO_MODES[$labelRequest->folio_mode] }}</div>
+<div class="detail-title border-b border-slate-300 bg-slate-50 px-4 py-2 field-label">Trabajo autorizado · {{ $labelRequest->folioModeLabel() }}</div>
 <table class="detail-table w-full border-collapse text-sm">
     <thead><tr class="border-b border-slate-300 text-left">
         @foreach(['Tipo / NP', 'Job / Modelo', 'Producción', 'Evidencia', 'Total', 'Folios del / hasta', 'Mercado / Periodo', 'Imprimió / Turno'] as $heading)<th class="border-r border-slate-300">{{ $heading }}</th>@endforeach

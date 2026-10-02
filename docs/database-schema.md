@@ -276,6 +276,8 @@ erDiagram
 
 `label_requests.request_kind` distingue `standard` de `lpk`; **LPK no tiene una tabla de solicitudes independiente**.
 
+Los modos activos de `label_requests.folio_mode` son `new` y `lost_rework`. El valor histórico `reprint_originals` ya no admite solicitudes ni trabajo nuevo desde la aplicación. Sus columnas de recepción, firma y referencia física permanecen para conservar datos de instalaciones que hayan usado ese flujo.
+
 ```mermaid
 erDiagram
     PRODUCTION_LINES {

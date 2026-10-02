@@ -35,9 +35,28 @@ async function lookupJob(lookupUrl, jobNumber, role, counterpartJobNumber = '') 
     return response.json();
 }
 
-function updatePackagingFields(fields, data = null) {
+function updatePackagingFields(fields, data = null, destinationWarning = '') {
     if (fields.destination) {
         fields.destination.value = data?.ship_code || '';
+        fields.destination.classList.toggle('border-slate-300', !destinationWarning);
+        fields.destination.classList.toggle('bg-slate-100', !destinationWarning);
+        fields.destination.classList.toggle('text-slate-700', !destinationWarning);
+        fields.destination.classList.toggle('border-red-500', Boolean(destinationWarning));
+        fields.destination.classList.toggle('bg-red-50', Boolean(destinationWarning));
+        fields.destination.classList.toggle('text-red-900', Boolean(destinationWarning));
+        fields.destination.classList.toggle('ring-1', Boolean(destinationWarning));
+        fields.destination.classList.toggle('ring-red-500', Boolean(destinationWarning));
+
+        if (destinationWarning) {
+            fields.destination.setAttribute('aria-invalid', 'true');
+        } else {
+            fields.destination.removeAttribute('aria-invalid');
+        }
+    }
+
+    if (fields.destinationWarning) {
+        fields.destinationWarning.textContent = destinationWarning;
+        fields.destinationWarning.classList.toggle('hidden', !destinationWarning);
     }
 
     if (fields.poNumber) {
@@ -178,6 +197,14 @@ function validateLookupByRole(inputElement, data, role) {
         };
     }
 
+    if (role === 'packaging' && !String(data.ship_code || '').trim()) {
+        return {
+            type: 'ok',
+            message: `NP: ${data.assembly || '-'} | ${data.part_description || ''}`,
+            destinationWarning: `El Job Empaque ${data.job_number || ''} no tiene Destino (Ship Code) registrado en Oracle.`,
+        };
+    }
+
     return {
         type: 'ok',
         message: `NP: ${data.assembly || '-'} | ${data.part_description || ''}`,
@@ -257,7 +284,11 @@ export function createJobLookupHandler({
         onResolved?.(data);
 
         if (role === 'packaging') {
-            updatePackagingFields(fields, validation.type === 'ok' ? data : null);
+            updatePackagingFields(
+                fields,
+                validation.type === 'ok' ? data : null,
+                validation.destinationWarning || '',
+            );
         }
         refreshPreview();
     };

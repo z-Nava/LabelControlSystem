@@ -3,8 +3,11 @@
 namespace App\Services\Labels;
 
 use App\Models\LabelRequest;
+use App\Models\LabelWorkTask;
 use App\Models\ProductionLine;
 use App\Models\Shift;
+use App\Models\User;
+use App\Support\SerialPeriods;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +22,8 @@ class LabelRequestReadService
         LabelRequest::STATUS_CANCELLED => 'Cancelada',
         'all' => 'Todas',
     ];
+
+    public function __construct(private readonly LabelRoomAdministrationService $administration) {}
 
     public function paginateForIndex(array $filters, int $perPage = 15): array
     {
@@ -94,8 +99,8 @@ class LabelRequestReadService
                         });
                 });
             })
-            ->orderByDesc('request_date')
-            ->orderByDesc('id')
+            ->orderBy('created_at')
+            ->orderBy('id')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -218,6 +223,8 @@ class LabelRequestReadService
                 'deliveredByUser:id,name',
                 'cancelledByUser:id,name',
                 'releasedBy:id,name',
+                'sourceLabelRequest:id,request_kind,job_number,status',
+                'lostLabelReworks:id,source_label_request_id,status,folio_mode',
                 'workTasks.assignee',
                 'workTasks.range.period',
                 'workTasks.printedShift',
@@ -235,10 +242,11 @@ class LabelRequestReadService
     /**
      * @return array<string, mixed>
      */
-    public function buildShowViewData(int $id): array
+    public function buildShowViewData(int $id, User $actor): array
     {
         $labelRequest = $this->findForShow($id);
         $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
+        $workTasks = $labelRequest->workTasks;
 
         return [
             'labelRequest' => $labelRequest,
@@ -247,6 +255,35 @@ class LabelRequestReadService
                 ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()
                 : collect(),
             'workBlocks' => $this->buildWorkBlocks($labelRequest, $hasGroupedLpkDetails),
+            'workTaskMonthLetters' => $workTasks->mapWithKeys(fn (LabelWorkTask $task) => [
+                $task->id => in_array($task->label_type, ['serial', 'rating'], true) && $task->evidence_folio !== null
+                    ? SerialPeriods::monthLetterFor(
+                        $labelRequest->serial_standard ?? '',
+                        $task->serial_period_type,
+                        $task->serial_period_number,
+                    )
+                    : null,
+            ])->all(),
+            'workTaskPeriodLabels' => $workTasks->mapWithKeys(fn (LabelWorkTask $task) => [
+                $task->id => $task->folio_start === null
+                    ? '—'
+                    : ($labelRequest->serial_standard ?: 'Mercado histórico').' · '
+                        .SerialPeriods::describe(
+                            $task->serial_period_type ?: 'week',
+                            (int) ($task->serial_period_number ?: $task->control_week),
+                        ).' '.($task->serial_period_year ?: $task->control_year),
+            ])->all(),
+            'canProcessWorkTasks' => array_key_exists($labelRequest->folio_mode, LabelRequest::FOLIO_MODES),
+            'canAssignWorkTasks' => $this->administration->canAssignTasks($actor),
+            'canCompleteWorkTasks' => $workTasks->mapWithKeys(fn (LabelWorkTask $task) => [
+                $task->id => $this->administration->canCompleteTask($actor, $task),
+            ])->all(),
+            'workOperators' => $labelRequest->released_at ? $this->administration->operators() : collect(),
+            'workShifts' => $labelRequest->released_at
+                ? Shift::query()->where('active', true)->orderBy('code')->get()
+                : collect(),
+            'isLabelRoomLeader' => $actor->isLabelRoomLeader(),
+            'selectedWorkShiftId' => $actor->shift_id,
             'administrationEvents' => DB::table('label_administration_events as events')
                 ->leftJoin('users', 'users.id', '=', 'events.user_id')
                 ->where('events.label_request_id', $id)->orderByDesc('events.id')->limit(50)

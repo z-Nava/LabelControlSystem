@@ -1,5 +1,6 @@
 import Swal from 'sweetalert2';
 import { mountCatalogPicker } from './utils/label-catalog';
+import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
 (() => {
     const form = document.getElementById('kioskLpkLabelRequestCreate');
@@ -17,6 +18,7 @@ import { mountCatalogPicker } from './utils/label-catalog';
     const jobCatalogs = new WeakMap();
     const catalogPickers = new Map();
     let lookupSequence = 0;
+    let reworkSourceTypes = null;
 
     const normalize = (value) => String(value || '').trim().toUpperCase();
     const field = (container, name) => container.querySelector(`[data-field="${name}"]`);
@@ -112,7 +114,6 @@ import { mountCatalogPicker } from './utils/label-catalog';
                 idInput: field(item, 'catalog_mapping_id'),
                 type: group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value,
                 limitToPart: true,
-                allowManual: () => document.getElementById('folioMode')?.value === 'reprint_originals',
                 onSelect: () => { refreshGroupCatalog(group, false); validateGroupUniqueness(); },
             }));
         }
@@ -228,7 +229,7 @@ import { mountCatalogPicker } from './utils/label-catalog';
         const quantityInput = field(item, 'quantity');
         const available = Number(jobInput.dataset.availableQuantity);
         quantityInput.setCustomValidity('');
-        if (document.getElementById('folioMode')?.value === 'reprint_originals') return;
+        if (document.getElementById('folioMode')?.value === 'lost_rework') return;
 
         if (
             jobInput.dataset.validatedJob
@@ -237,6 +238,35 @@ import { mountCatalogPicker } from './utils/label-catalog';
         ) {
             quantityInput.setCustomValidity(`La cantidad no puede superar la disponibilidad del Job (${available}).`);
         }
+    }
+
+    function applyReworkTypeConstraints(sourceData = null) {
+        const active = document.getElementById('folioMode')?.value === 'lost_rework';
+
+        reworkSourceTypes = active && Array.isArray(sourceData?.label_types)
+            ? [...new Set(sourceData.label_types.map((type) => String(type).toLowerCase()))].sort()
+            : null;
+
+        const allowed = new Set(reworkSourceTypes || []);
+        form.querySelectorAll('[data-field="label_type"]').forEach((select) => {
+            Array.from(select.options).forEach((option) => {
+                option.disabled = active && !allowed.has(option.value);
+            });
+
+            if (active && allowed.size && !allowed.has(select.value)) {
+                select.value = reworkSourceTypes[0];
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
+        const addLabelButton = document.getElementById('addLpkLabelGroup');
+        const addShippingButton = document.getElementById('addLpkShippingGroup');
+        addLabelButton.disabled = active && !allowed.size;
+        addShippingButton.disabled = active;
+        [addLabelButton, addShippingButton].forEach((button) => {
+            button.classList.toggle('cursor-not-allowed', button.disabled);
+            button.classList.toggle('opacity-50', button.disabled);
+        });
     }
 
     async function fetchJob(jobNumber) {
@@ -308,8 +338,7 @@ import { mountCatalogPicker } from './utils/label-catalog';
 
             const isShipping = Boolean(input.closest('.lpk-shipping-item'));
             const detail = data.assembly ? ` · ${data.assembly}` : '';
-            const availability = document.getElementById('folioMode')?.value === 'reprint_originals'
-                ? 'Job válido · reimpresión con originales físicos'
+            const availability = document.getElementById('folioMode')?.value === 'lost_rework' ? 'Job válido · reposición con folios nuevos'
                 : isShipping ? 'Job válido (informativo)'
                 : `Job válido · disponible ${Number(data.available_quantity || 0).toLocaleString('es-MX')}`;
             setStatus(input, `${availability}${detail}`, 'text-emerald-700');
@@ -390,6 +419,7 @@ import { mountCatalogPicker } from './utils/label-catalog';
     document.getElementById('addLpkLabelGroup').addEventListener('click', () => {
         const group = appendTemplate(labelGroupTemplate, labelGroupsContainer);
         ensureGroupHasItem(group, false);
+        applyReworkTypeConstraints(reworkSourceTypes ? { label_types: reworkSourceTypes } : null);
         reindexForm();
         field(group, 'part_number').focus();
     });
@@ -492,14 +522,39 @@ import { mountCatalogPicker } from './utils/label-catalog';
             return;
         }
 
+        if (document.getElementById('folioMode').value === 'lost_rework') {
+            const types = [...new Set([...labelGroupsContainer.querySelectorAll('[data-field="label_type"]')]
+                .map((input) => input.value))].sort();
+            if (shippingGroupsContainer.children.length || types.includes('inner') || !types.some((type) => ['serial', 'rating'].includes(type))) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Captura las etiquetas con folio',
+                    text: 'La reposición LPK sólo puede incluir grupos Serial o Rating, sin Inner ni Shipping.',
+                    confirmButtonColor: '#dc2626',
+                });
+                return;
+            }
+            if (reworkSourceTypes && types.join('|') !== reworkSourceTypes.join('|')) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Revisa los tipos de etiqueta',
+                    text: 'El retrabajo debe conservar los tipos Serial y/o Rating de la requisición original.',
+                    confirmButtonColor: '#dc2626',
+                });
+                return;
+            }
+        }
+
         form.querySelectorAll('.lpk-label-group, .lpk-shipping-group').forEach((group) => refreshGroupCatalog(group, false));
         if (!form.reportValidity()) return;
 
         const reservations = Array.from(productionReservations(), ([job, quantity]) => `${job}: ${quantity}`).join(', ');
+        const escapeHtml = (value) => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+        const rework = document.getElementById('folioMode').value === 'lost_rework';
         const result = await Swal.fire({
             icon: 'question',
             title: '¿Confirmas crear la requisición LPK?',
-            html: `<div class="text-left text-sm"><p><strong>Grupos de producción:</strong> ${labelGroupsContainer.children.length}</p><p><strong>Grupos Shipping:</strong> ${shippingGroupsContainer.children.length}</p><p><strong>Reserva única por Job:</strong> ${reservations || 'No aplica (sólo Shipping)'}</p></div>`,
+            html: `<div class="text-left text-sm"><p><strong>Trabajo:</strong> ${escapeHtml(document.getElementById('folioMode').selectedOptions[0]?.textContent?.trim() || '')}</p>${rework ? `<p><strong>Origen:</strong> #${escapeHtml(document.getElementById('sourceLabelRequestId').value)}</p><p><strong>Motivo:</strong> ${escapeHtml(document.getElementById('reworkReason').value)}</p>` : ''}<p><strong>Grupos de producción:</strong> ${labelGroupsContainer.children.length}</p><p><strong>Grupos Shipping:</strong> ${shippingGroupsContainer.children.length}</p><p><strong>Cantidad por Job:</strong> ${escapeHtml(reservations || 'No aplica (sólo Shipping)')}</p></div>`,
             showCancelButton: true,
             confirmButtonText: 'Sí, crear requisición',
             cancelButtonText: 'Revisar datos',
@@ -510,6 +565,10 @@ import { mountCatalogPicker } from './utils/label-catalog';
         if (result.isConfirmed) form.submit();
     });
 
+    mountLostLabelReworkFields(form, (sourceData) => {
+        applyReworkTypeConstraints(sourceData);
+        form.querySelectorAll('[data-validated-job]').forEach(validateQuantityForRow);
+    });
     const selectedLineType = document.getElementById('lineSelect').selectedOptions[0]?.dataset?.lineType || '';
     if (selectedLineType) document.getElementById('lineTypeFilter').value = selectedLineType;
     reindexForm();

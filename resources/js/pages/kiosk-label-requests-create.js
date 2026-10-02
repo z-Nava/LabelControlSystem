@@ -1,6 +1,7 @@
 import Swal from '../lib/sweetalert';
 import { mountCatalogPicker } from './utils/label-catalog';
 import { debounce } from './utils/debounce';
+import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
 (function initializeKioskLabelRequestCreateForm() {
     const form = document.getElementById('kioskLabelRequestCreate');
@@ -172,7 +173,7 @@ import { debounce } from './utils/debounce';
                 }
                 idInput.name = type + '_items[' + index + '][catalog_mapping_id]';
                 if (!catalogPickers.has(partInput)) {
-                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, allowManual: () => byId('folioMode')?.value === 'reprint_originals', onSelect: (option, previousId) => {
+                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, onSelect: (option, previousId) => {
                         if (option) {
                             const counterpart = type === 'rating' ? 'serial' : 'rating';
                             if (inputs[counterpart].checked) {
@@ -196,7 +197,7 @@ import { debounce } from './utils/debounce';
         ['inner', 'shipping'].forEach((type) => {
             const partInput = inputs[type + 'PartNumber'];
             if (!catalogPickers.has(partInput)) {
-                catalogPickers.set(partInput, mountCatalogPicker({ container: type === 'inner' ? innerFields : shippingFields, partInput, idInput: byId(type + 'CatalogId'), type, allowManual: () => byId('folioMode')?.value === 'reprint_originals' }));
+                catalogPickers.set(partInput, mountCatalogPicker({ container: type === 'inner' ? innerFields : shippingFields, partInput, idInput: byId(type + 'CatalogId'), type }));
             }
         });
         for (const [input] of catalogPickers) if (!input.isConnected) catalogPickers.delete(input);
@@ -317,10 +318,10 @@ import { debounce } from './utils/debounce';
 
     function validateQuantityAvailability() {
         inputs.quantity.setCustomValidity('');
-        const reprint = byId('folioMode')?.value === 'reprint_originals';
-        if (reprint) {
+        const mode = byId('folioMode')?.value;
+        if (mode === 'lost_rework') {
             inputs.quantity.max = '100000';
-            setHint(quantityHint, 'Reimpresión: entrega los originales físicos a LabelRoom. No consume otra vez la disponibilidad del Job.');
+            setHint(quantityHint, 'Captura sólo las etiquetas faltantes de los tipos indicados por la requisición original. Se emitirán folios nuevos sin descontar otra vez la Job.');
             return true;
         }
         if (availableQuantity !== null) inputs.quantity.max = String(availableQuantity);
@@ -647,6 +648,8 @@ import { debounce } from './utils/debounce';
                     <li><strong>Fecha:</strong> ${escapeHtml(inputs.date.value)}</li>
                     <li><strong>Línea / Turno:</strong> ${escapeHtml(inputs.line.selectedOptions[0]?.textContent?.trim() || '')} / ${escapeHtml(inputs.shift.selectedOptions[0]?.textContent?.trim() || '')}</li>
                     <li><strong>Líder:</strong> ${escapeHtml(inputs.leader.value)}</li>
+                    <li><strong>Trabajo:</strong> ${escapeHtml(byId('folioMode').selectedOptions[0]?.textContent?.trim() || '')}</li>
+                    ${byId('folioMode').value === 'lost_rework' ? `<li><strong>Origen:</strong> #${escapeHtml(byId('sourceLabelRequestId').value)} · <strong>Motivo:</strong> ${escapeHtml(byId('reworkReason').value)}</li>` : ''}
                     <li><strong>Job / Assembly:</strong> ${escapeHtml(inputs.job.value)} / ${escapeHtml(inputs.assembly.value)}</li>
                     <li><strong>Modelo general:</strong> ${escapeHtml(inputs.model.value || 'Sin dato')}</li>
                     <li><strong>PO / Destino:</strong> ${escapeHtml(inputs.po.value || 'Sin dato')} / ${escapeHtml(inputs.destination.value || 'Sin dato')}</li>
@@ -674,6 +677,7 @@ import { debounce } from './utils/debounce';
         if (result.isConfirmed) form.submit();
     });
 
+    mountLostLabelReworkFields(form, () => { validateQuantityAvailability(); updateFormGuidance(); });
     updateRemoveSerialButtons();
     updateRemoveRatingButtons();
     syncConditionalFields();

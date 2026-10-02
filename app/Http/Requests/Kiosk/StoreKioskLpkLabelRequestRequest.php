@@ -5,6 +5,7 @@ namespace App\Http\Requests\Kiosk;
 use App\Models\LabelRequest;
 use App\Models\LabelRequestLpkLabelGroup;
 use App\Services\Labels\LabelRequestJobAvailabilityService;
+use App\Services\Labels\LostLabelReworkService;
 use App\Services\Labels\LpkJobReservationCalculator;
 use App\Services\Oracle\OracleJobService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -27,6 +28,9 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     {
         return [
             'folio_mode' => ['required', Rule::in(array_keys(LabelRequest::FOLIO_MODES))],
+            'source_label_request_reference' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'string', 'max:40', 'regex:/^[0-9A-Z\-]+$/'],
+            'source_label_request_id' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'integer', 'exists:label_requests,id'],
+            'rework_reason' => [Rule::requiredIf($this->input('folio_mode') === LabelRequest::FOLIO_MODE_LOST_REWORK), 'nullable', 'string', 'min:10', 'max:2000'],
             'request_date' => ['required', 'date', 'before_or_equal:today'],
             'week' => ['exclude'],
             'line_id' => ['required', 'integer', 'exists:production_lines,id'],
@@ -55,8 +59,17 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $folioMode = $this->input('folio_mode', 'new');
+        $sourceReference = strtoupper(trim((string) $this->input('source_label_request_reference')));
+        $source = $folioMode === LabelRequest::FOLIO_MODE_LOST_REWORK && $sourceReference !== ''
+            ? app(LostLabelReworkService::class)->resolveSourceReference($sourceReference, LabelRequest::KIND_LPK)
+            : null;
+
         $this->merge([
-            'folio_mode' => $this->input('folio_mode', 'new'),
+            'folio_mode' => $folioMode,
+            'source_label_request_reference' => $sourceReference,
+            'source_label_request_id' => $source?->id,
+            'rework_reason' => trim((string) $this->input('rework_reason')),
             'lpk_label_groups' => $this->normalizeLabelGroups($this->input('lpk_label_groups', [])),
             'lpk_shipping_groups' => $this->normalizeShippingGroups($this->input('lpk_shipping_groups', [])),
         ]);
@@ -65,6 +78,8 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'source_label_request_reference' => 'requisición original o Job',
+            'source_label_request_id' => 'requisición original o Job',
             'lpk_label_groups' => 'grupos Serial, Rating o Inner',
             'lpk_label_groups.*.label_type' => 'tipo de etiqueta',
             'lpk_label_groups.*.part_number' => 'NP de etiqueta',
@@ -80,6 +95,14 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             'lpk_shipping_groups.*.items' => 'modelos y Jobs de Shipping',
             'lpk_shipping_groups.*.items.*.job_number' => 'Job de Shipping',
             'lpk_shipping_groups.*.items.*.model' => 'modelo de Shipping',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'source_label_request_id.required' => 'No se encontró una requisición original LPK liberada para esa referencia o Job.',
+            'source_label_request_id.exists' => 'La requisición original seleccionada ya no está disponible.',
         ];
     }
 
@@ -231,7 +254,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
 
             $availability = app(LabelRequestJobAvailabilityService::class)->calculate($job);
 
-            if ($this->input('folio_mode') !== 'reprint_originals' && $reservedByJob->get($jobNumber) > $availability['available_quantity']) {
+            if (! in_array($this->input('folio_mode'), LabelRequest::NON_RESERVING_FOLIO_MODES, true) && $reservedByJob->get($jobNumber) > $availability['available_quantity']) {
                 $validator->errors()->add(
                     $quantityPaths[$jobNumber],
                     "La cantidad solicitada para el Job {$jobNumber} supera su disponibilidad ({$availability['available_quantity']}).",

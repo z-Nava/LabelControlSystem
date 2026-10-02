@@ -65,6 +65,15 @@ class MasterRequestService
                 ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
                 : null;
 
+            if ($packagingOracleJob && $this->normalizeNullable($packagingOracleJob->ship_code) === null) {
+                throw ValidationException::withMessages([
+                    'destination' => sprintf(
+                        'El Job Empaque %s no tiene Destino (Ship Code) registrado en Oracle. No se puede enviar la requisición.',
+                        $this->normalize($packagingOracleJob->job_number),
+                    ),
+                ]);
+            }
+
             $validationService->validate(
                 $data,
                 $oracleJob,

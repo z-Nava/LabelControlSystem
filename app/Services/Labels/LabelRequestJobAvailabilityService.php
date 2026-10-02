@@ -18,7 +18,7 @@ class LabelRequestJobAvailabilityService
         $legacyReservedQuantity = (int) LabelRequest::query()
             ->whereRaw('UPPER(TRIM(job_number)) = ?', [$jobNumber])
             ->where('status', '!=', LabelRequest::STATUS_CANCELLED)
-            ->where('folio_mode', '!=', 'reprint_originals')
+            ->whereNotIn('folio_mode', LabelRequest::NON_RESERVING_FOLIO_MODES)
             ->where(function ($query) {
                 $query->where('request_kind', '!=', LabelRequest::KIND_LPK)
                     ->orWhere(function ($legacyLpkQuery) {
@@ -40,7 +40,7 @@ class LabelRequestJobAvailabilityService
             ->join('label_requests as requests', 'requests.id', '=', 'groups.label_request_id')
             ->whereRaw('UPPER(TRIM(items.job_number)) = ?', [$jobNumber])
             ->where('requests.status', '!=', LabelRequest::STATUS_CANCELLED)
-            ->where('requests.folio_mode', '!=', 'reprint_originals')
+            ->whereNotIn('requests.folio_mode', LabelRequest::NON_RESERVING_FOLIO_MODES)
             ->groupBy('requests.id')
             ->selectRaw('MAX(items.quantity) as reserved_quantity')
             ->get()

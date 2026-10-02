@@ -21,6 +21,7 @@ class LabelRoomAdministrationService
         private readonly LabelWorkDefinitionService $definitions,
         private readonly LabelFolioService $folios,
         private readonly RatingAssemblyMappingService $ratingMappings,
+        private readonly LostLabelReworkService $lostLabelReworks,
     ) {}
 
     public function operators(): Collection
@@ -64,8 +65,16 @@ class LabelRoomAdministrationService
         if ($request->released_at || ! in_array($request->status, [LabelRequest::STATUS_REQUESTED, LabelRequest::STATUS_IN_PROGRESS], true)) {
             throw ValidationException::withMessages(['status' => 'Esta requisición ya fue liberada o está cerrada.']);
         }
-        if ($request->isOriginalReprint() && empty($data['originals_received'])) {
-            throw ValidationException::withMessages(['originals_received' => 'Confirma la recepción de las etiquetas originales físicas.']);
+        if (! in_array($request->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+            throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede liberar desde la aplicación.']);
+        }
+        if ($request->isLostLabelRework()) {
+            $source = LabelRequest::query()->whereKey($request->source_label_request_id)
+                ->when($lockSources, fn ($query) => $query->lockForUpdate())->first();
+            if (! $source) {
+                throw ValidationException::withMessages(['source_label_request_id' => 'La requisición original no está disponible.']);
+            }
+            $this->lostLabelReworks->assertValid($request, $source);
         }
 
         $lines = $this->definitions->forRequest($request);
@@ -132,77 +141,7 @@ class LabelRoomAdministrationService
                 $task['folio_family'] = $family;
                 $task['rating_part_number'] = $rating;
 
-                if ($request->isOriginalReprint()) {
-                    $sourceRangeId = $input['source_range_id'] ?? null;
-                    $range = filled($sourceRangeId)
-                        ? SerialRange::with(['period', 'labelRequest'])->find($sourceRangeId)
-                        : null;
-                    $start = (int) ($input['folio_start'] ?? 0);
-                    $end = (int) ($input['folio_end'] ?? 0);
-                    if (! $range && filled($sourceRangeId)) {
-                        throw ValidationException::withMessages(['tasks' => 'El rango original ya no está disponible.']);
-                    }
-                    if ($range && $lockSources) {
-                        $originalRequest = LabelRequest::query()->whereKey($range->label_request_id)->lockForUpdate()->firstOrFail();
-                        $range->refresh()->setRelation('labelRequest', $originalRequest)->load('period');
-                    }
-                    if ($range && ($range->label_request_id === $request->id || $range->status === 'cancelled'
-                        || $range->labelRequest->status === LabelRequest::STATUS_CANCELLED
-                        || $range->period->label_part_number !== $rating
-                        || ($range->period->serial_standard && $range->period->serial_standard !== $market)
-                        || $start < $range->range_start || $end > $range->range_end || $end - $start + 1 !== $line['quantity']
-                        || ($range->evidence_folio !== null && $range->evidence_folio >= $start && $range->evidence_folio <= $end))) {
-                        throw ValidationException::withMessages(['tasks' => 'El rango original debe pertenecer al NP Rating y mercado, contener la cantidad solicitada y excluir la evidencia original.']);
-                    }
-                    $matchingOriginal = ! $range || $this->definitions->forRequest($range->labelRequest)->contains(fn ($original) => $original['label_type'] === $line['label_type'] && $original['part_number'] === $line['part_number']
-                        && $original['job_number'] === $line['job_number'] && $original['model'] === $line['model']);
-                    if (! $matchingOriginal || ($range?->job_number && $range->job_number !== $line['job_number'])
-                        || ($range?->model && $range->model !== $line['model'])) {
-                        throw ValidationException::withMessages(['tasks' => 'La requisición original no contiene ese tipo de etiqueta, NP, Job y modelo.']);
-                    }
-                    $reference = trim((string) ($input['original_reference'] ?? ''));
-                    if (! $range && ($reference === '' || $start < 1 || $end - $start + 1 !== $line['quantity'])) {
-                        throw ValidationException::withMessages(['tasks' => 'Para originales sin registro digital, indica la referencia física y un rango que corresponda exactamente a la cantidad solicitada.']);
-                    }
-
-                    $sourceHasVerifiedPeriod = filled($range?->period->serial_standard)
-                        && in_array($range?->period->period_type, SerialPeriods::all(), true)
-                        && filled($range?->period->period_number);
-                    $originalPeriodType = $sourceHasVerifiedPeriod ? $range->period->period_type : $periodType;
-                    $originalPeriodYear = $sourceHasVerifiedPeriod
-                        ? $range->period->year
-                        : (int) ($input['original_year'] ?? 0);
-                    $originalPeriodNumber = $sourceHasVerifiedPeriod
-                        ? $range->period->period_number
-                        : (int) ($input['original_period_number'] ?? 0);
-                    if (! $originalPeriodYear || $originalPeriodNumber < 1 || $originalPeriodNumber > SerialPeriods::maximum($originalPeriodType)) {
-                        throw ValidationException::withMessages(['tasks' => 'Indica el año y periodo originales de los seriales que se reimprimirán.']);
-                    }
-
-                    $task['original_reference'] = $range ? 'Requisición #'.$range->label_request_id : $reference;
-                    $bundle = [
-                        'source_range_id' => $range?->id,
-                        'range_start' => $start,
-                        'range_end' => $end,
-                        'production_quantity' => $line['quantity'],
-                        'evidence_quantity' => 1,
-                        'evidence_folio' => $start,
-                        'period_type' => $originalPeriodType,
-                        'period_year' => $originalPeriodYear,
-                        'period_number' => $originalPeriodNumber,
-                        'operational_year' => (int) $data['control_year'],
-                        'operational_week' => (int) $data['control_week'],
-                        'family' => $family,
-                        'market' => $market,
-                        'rating' => $rating,
-                        'job_number' => $line['job_number'],
-                        'model' => $line['model'],
-                    ];
-                    if (isset($bundles[$bundleKey]) && $bundles[$bundleKey] !== $bundle) {
-                        throw ValidationException::withMessages(['tasks' => 'Serial y Rating del mismo producto deben reutilizar exactamente el mismo rango.']);
-                    }
-                    $bundles[$bundleKey] = $bundle;
-                } elseif (! isset($bundles[$bundleKey])) {
+                if (! isset($bundles[$bundleKey])) {
                     $periodKey = json_encode([$rating, $market, $periodType, $releasePeriodYear, $releasePeriodNumber]);
                     $start = $nextByPeriod[$periodKey] ?? $this->folios->nextNumber(
                         $rating,
@@ -217,7 +156,6 @@ class LabelRoomAdministrationService
                     }
                     $evidence = $start;
                     $bundles[$bundleKey] = [
-                        'source_range_id' => null,
                         'range_start' => $start,
                         'range_end' => $end,
                         'production_quantity' => $line['quantity'],
@@ -297,12 +235,6 @@ class LabelRoomAdministrationService
                 $bundle['period_number'], str_pad((string) $bundle['range_start'], 10, '0', STR_PAD_LEFT),
             ]));
             foreach ($bundles as $key => $bundle) {
-                if ($locked->isOriginalReprint()) {
-                    $rangeIds[$key] = $bundle['source_range_id'];
-
-                    continue;
-                }
-
                 $period = $this->folios->lockPeriod(
                     $bundle['rating'],
                     $bundle['market'],
@@ -346,7 +278,7 @@ class LabelRoomAdministrationService
                         'po_number', 'destination', 'quantity', 'evidence_quantity', 'assigned_to_user_id',
                         'folio_start', 'folio_end', 'evidence_folio', 'rating_part_number', 'folio_family',
                         'control_year', 'control_week', 'serial_period_type', 'serial_period_year',
-                        'serial_period_number', 'original_reference',
+                        'serial_period_number',
                     ])->all(),
                     'serial_range_id' => $task['bundle_key'] ? $rangeIds[$task['bundle_key']] : null,
                 ]);
@@ -366,7 +298,6 @@ class LabelRoomAdministrationService
                 'folio_end' => $onlyBundle['range_end'] ?? null,
                 'released_at' => now(),
                 'released_by_user_id' => $user->id,
-                'originals_received_at' => $locked->isOriginalReprint() ? now() : null,
                 'status' => LabelRequest::STATUS_IN_PROGRESS,
             ]);
             $this->event($locked, $user, 'released', [
@@ -386,6 +317,9 @@ class LabelRoomAdministrationService
         DB::transaction(function () use ($request, $task, $operatorId, $actor) {
             $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             $task = $locked->workTasks()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if (! in_array($locked->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+                throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede procesar desde la aplicación.']);
+            }
             if (! $this->canAssignTasks($actor)) {
                 throw new AuthorizationException('Solo la líder puede asignar tareas de impresión.');
             }
@@ -406,6 +340,9 @@ class LabelRoomAdministrationService
         return DB::transaction(function () use ($request, $task, $data, $actor) {
             $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
             $task = $locked->workTasks()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if (! in_array($locked->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+                throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede procesar desde la aplicación.']);
+            }
             if (! $this->canCompleteTask($actor, $task)) {
                 throw new AuthorizationException('Solo la operadora asignada o la líder puede confirmar esta impresión.');
             }
@@ -424,12 +361,6 @@ class LabelRoomAdministrationService
                 throw ValidationException::withMessages(['work_date' => 'La fecha de trabajo no puede ser anterior a la requisición ni al trabajo ya confirmado.']);
             }
             $lastTask = $locked->workTasks()->where('status', 'pending')->count() === 1;
-            if ($lastTask && $locked->isOriginalReprint() && ! $locked->physical_signed_at && empty($data['physical_signed'])) {
-                throw ValidationException::withMessages(['physical_signed' => 'Confirma la firma de la requisición física antes de completar la reimpresión.']);
-            }
-            if ($locked->isOriginalReprint() && ! empty($data['physical_signed']) && ! $locked->physical_signed_at) {
-                $locked->update(['physical_signed_at' => now(), 'physical_signed_by_user_id' => $actor->id]);
-            }
             $task->update([
                 'status' => 'completed', 'printed_by_user_id' => $operator->id, 'printed_by_name' => $operator->name,
                 'printed_shift_id' => $data['printed_shift_id'], 'work_date' => $data['work_date'], 'completed_at' => now(),
@@ -438,8 +369,7 @@ class LabelRoomAdministrationService
                 'confirmed_by_user_id' => $actor->id,
                 'label_type' => $task->label_type, 'part_number' => $task->part_number,
                 'printed_by_name' => $operator->name,
-                'shift_id' => $data['printed_shift_id'], 'work_date' => $data['work_date'],
-                'physical_signed' => (bool) $locked->physical_signed_at]);
+                'shift_id' => $data['printed_shift_id'], 'work_date' => $data['work_date']]);
 
             if ($lastTask) {
                 $this->closeWork($locked, $data, $actor);
@@ -487,6 +417,9 @@ class LabelRoomAdministrationService
     {
         DB::transaction(function () use ($request, $status, $reason, $actor) {
             $locked = LabelRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
+            if (! in_array($locked->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+                throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede procesar desde la aplicación.']);
+            }
             $before = $locked->job_status;
             $locked->update(['job_status' => $status]);
             $this->event($locked, $actor, 'classified', ['before' => $before, 'after' => $status, 'reason' => $reason]);

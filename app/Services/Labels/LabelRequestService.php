@@ -22,11 +22,15 @@ class LabelRequestService
         private readonly LpkJobReservationCalculator $lpkReservationCalculator,
         private readonly MasterModelMappingService $masterModelMappingService,
         private readonly RatingAssemblyMappingService $ratingAssemblyMappingService,
+        private readonly LostLabelReworkService $lostLabelReworks,
     ) {}
 
     public function createKiosk(array $data, string $requestKind = LabelRequest::KIND_STANDARD): LabelRequest
     {
+        $this->assertSupportedFolioMode($data);
+
         return DB::transaction(function () use ($data, $requestKind): LabelRequest {
+            $source = $this->sourceForRework($data);
             $serialItems = $this->normalizeRequestItems(
                 $data['serial_items'] ?? $data['serial_part_numbers'] ?? [],
             );
@@ -49,6 +53,9 @@ class LabelRequestService
             $data['request_kind'] = $requestKind === LabelRequest::KIND_LPK
                 ? LabelRequest::KIND_LPK
                 : LabelRequest::KIND_STANDARD;
+            if ($source) {
+                $data['job_status'] = 'RE';
+            }
 
             if ($data['request_kind'] !== LabelRequest::KIND_LPK || ! $data['include_shipping']) {
                 $shippingItems = collect();
@@ -74,7 +81,7 @@ class LabelRequestService
             $availability = $this->availabilityService->calculate($job);
             $requestedQuantity = (int) ($data['quantity_requested'] ?? 0);
 
-            if (($data['folio_mode'] ?? 'new') !== 'reprint_originals' && $requestedQuantity > $availability['available_quantity']) {
+            if (! in_array(($data['folio_mode'] ?? 'new'), LabelRequest::NON_RESERVING_FOLIO_MODES, true) && $requestedQuantity > $availability['available_quantity']) {
                 throw ValidationException::withMessages([
                     'quantity_requested' => "La cantidad solicitada supera la disponibilidad actual del Job ({$availability['available_quantity']}).",
                 ]);
@@ -85,7 +92,7 @@ class LabelRequestService
             foreach (['serial', 'rating'] as $type) {
                 $items = $type === 'serial' ? $serialItems : $ratingItems;
                 $items = $data['include_'.$type] ? $items->map(function (array $item, int $index) use ($job, $type, $data): array {
-                    $item['catalog_snapshot'] = $this->labelCatalog->resolve($job->assembly, $type, $item['part_number'], $item['catalog_mapping_id'] ?? null, $type.'_items.'.$index.'.catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals');
+                    $item['catalog_snapshot'] = $this->labelCatalog->resolve($job->assembly, $type, $item['part_number'], $item['catalog_mapping_id'] ?? null, $type.'_items.'.$index.'.catalog_mapping_id', in_array(($data['folio_mode'] ?? 'new'), LabelRequest::NON_RESERVING_FOLIO_MODES, true));
 
                     return $item;
                 }) : collect();
@@ -100,12 +107,12 @@ class LabelRequestService
             $folioContext = collect($context->all());
             foreach (['inner', 'shipping'] as $type) {
                 if ($data['include_'.$type]) {
-                    $context->push($this->labelCatalog->resolve($job->assembly, $type, (string) $data[$type.'_part_number'], $data[$type.'_catalog_mapping_id'] ?? null, $type.'_catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals'));
+                    $context->push($this->labelCatalog->resolve($job->assembly, $type, (string) $data[$type.'_part_number'], $data[$type.'_catalog_mapping_id'] ?? null, $type.'_catalog_mapping_id'));
                 }
                 unset($data[$type.'_catalog_mapping_id']);
             }
             $data['catalog_context'] = $context->mapWithKeys(fn ($snapshot, $index) => ['line_'.$index => $snapshot])->all();
-            $data['serial_standard'] = $this->labelCatalog->market($folioContext->isNotEmpty() ? $folioContext : $context, 'job_number');
+            $data['serial_standard'] = $this->labelCatalog->market($folioContext->isNotEmpty() ? $folioContext : $context, 'job_number') ?: $source?->serial_standard;
             $data['serial_part_number'] = $data['include_serial']
                 ? data_get($serialItems->first(), 'part_number')
                 : null;
@@ -167,18 +174,25 @@ class LabelRequestService
                 );
             }
 
+            if ($source) {
+                $this->lostLabelReworks->assertValid($labelRequest, $source);
+            }
+
             return $labelRequest->load(['line', 'shift', 'serials', 'ratings', 'shippingItems']);
         }, attempts: 3);
     }
 
     public function createKioskLpk(array $data): LabelRequest
     {
+        $this->assertSupportedFolioMode($data);
+
         return DB::transaction(function () use ($data): LabelRequest {
+            $source = $this->sourceForRework($data);
             $labelGroups = collect($data['lpk_label_groups'] ?? []);
             $shippingGroups = collect($data['lpk_shipping_groups'] ?? []);
             $reservedByJob = $this->lpkReservationCalculator->calculate($labelGroups);
             $jobNumbers = $this->lpkJobNumbers($labelGroups, $shippingGroups);
-            $jobs = $this->lockAndValidateLpkJobs($jobNumbers, ($data['folio_mode'] ?? 'new') === 'reprint_originals' ? collect() : $reservedByJob);
+            $jobs = $this->lockAndValidateLpkJobs($jobNumbers, in_array(($data['folio_mode'] ?? 'new'), LabelRequest::NON_RESERVING_FOLIO_MODES, true) ? collect() : $reservedByJob);
             $mappedModelsByAssembly = $this->masterModelMappingService
                 ->resolveAssemblyPackagingModels($jobs->pluck('assembly'));
             $labelGroups = $this->applyMappedModelsToLpkGroups(
@@ -216,7 +230,7 @@ class LabelRequestService
                 $groups = $groups->map(function (array $group, int $groupIndex) use ($jobs, $kind, $folioSnapshots, $data): array {
                     $type = $kind === 'shipping' ? 'shipping' : $group['label_type'];
                     $items = collect($group['items'])->map(function (array $item, int $index) use ($jobs, $kind, $group, $groupIndex, $type, $data): array {
-                        $item['catalog_snapshot'] = $this->labelCatalog->resolve($jobs->get($item['job_number'])?->assembly, $type, $group['part_number'], $item['catalog_mapping_id'] ?? null, 'lpk_'.$kind.'_groups.'.$groupIndex.'.items.'.$index.'.catalog_mapping_id', ($data['folio_mode'] ?? 'new') === 'reprint_originals');
+                        $item['catalog_snapshot'] = $this->labelCatalog->resolve($jobs->get($item['job_number'])?->assembly, $type, $group['part_number'], $item['catalog_mapping_id'] ?? null, 'lpk_'.$kind.'_groups.'.$groupIndex.'.items.'.$index.'.catalog_mapping_id', in_array(($data['folio_mode'] ?? 'new'), LabelRequest::NON_RESERVING_FOLIO_MODES, true));
 
                         return $item;
                     });
@@ -245,6 +259,7 @@ class LabelRequestService
                     $market = $this->labelCatalog->market($otherSnapshots, 'lpk_label_groups');
                 }
             }
+            $market ??= $source?->serial_standard;
             $context = [];
             $firstLabelGroup = $labelGroups->first();
             $firstShippingGroup = $shippingGroups->first();
@@ -259,6 +274,9 @@ class LabelRequestService
             $labelRequest = LabelRequest::query()->create([
                 'request_kind' => LabelRequest::KIND_LPK,
                 'folio_mode' => $data['folio_mode'] ?? 'new',
+                ...($source ? ['job_status' => 'RE'] : []),
+                'source_label_request_id' => $source?->id,
+                'rework_reason' => $source ? $data['rework_reason'] : null,
                 'request_date' => $data['request_date'],
                 'line_id' => $data['line_id'],
                 'shift_id' => $data['shift_id'],
@@ -333,6 +351,10 @@ class LabelRequestService
 
             $labelRequest->update(['catalog_context' => $context]);
 
+            if ($source) {
+                $this->lostLabelReworks->assertValid($labelRequest, $source);
+            }
+
             return $labelRequest->load([
                 'line',
                 'shift',
@@ -396,6 +418,10 @@ class LabelRequestService
 
     public function confirmDelivery(LabelRequest $labelRequest, ?int $userId): LabelRequest
     {
+        if (! in_array($labelRequest->folio_mode, array_keys(LabelRequest::FOLIO_MODES), true)) {
+            throw ValidationException::withMessages(['folio_mode' => 'Este tipo de trabajo ya no se puede procesar desde la aplicación.']);
+        }
+
         if (! $labelRequest->canConfirmDelivery()) {
             throw ValidationException::withMessages([
                 'status' => 'Solo una requisición lista para entregar puede confirmarse como entregada.',
@@ -464,6 +490,33 @@ class LabelRequestService
         }
 
         return $payload;
+    }
+
+    private function assertSupportedFolioMode(array $data): void
+    {
+        if (! in_array($data['folio_mode'] ?? 'new', array_keys(LabelRequest::FOLIO_MODES), true)) {
+            throw ValidationException::withMessages(['folio_mode' => 'Selecciona folios nuevos o retrabajo por faltantes con folios nuevos.']);
+        }
+    }
+
+    private function sourceForRework(array &$data): ?LabelRequest
+    {
+        if (($data['folio_mode'] ?? 'new') !== LabelRequest::FOLIO_MODE_LOST_REWORK) {
+            unset($data['source_label_request_id'], $data['source_label_request_reference'], $data['rework_reason']);
+
+            return null;
+        }
+
+        $source = LabelRequest::query()->whereKey($data['source_label_request_id'] ?? 0)->lockForUpdate()->first();
+        if (! $source || ! filled($data['rework_reason'] ?? null)) {
+            throw ValidationException::withMessages([
+                'source_label_request_id' => 'Indica la requisición original y el motivo del faltante.',
+            ]);
+        }
+
+        unset($data['source_label_request_reference']);
+
+        return $source;
     }
 
     private function valueOrOracleFallback(mixed $value, mixed $oracleValue): ?string

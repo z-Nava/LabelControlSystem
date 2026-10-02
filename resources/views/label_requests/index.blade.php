@@ -97,7 +97,7 @@
         <table class="w-full min-w-[1260px] table-fixed text-sm">
             <colgroup>
                 <col class="w-[92px]" />
-                <col class="w-[112px]" />
+                <col class="w-[160px]" />
                 <col class="w-[132px]" />
                 <col />
                 <col class="w-[150px]" />
@@ -108,7 +108,7 @@
             <thead class="bg-slate-50">
                 <tr class="border-b border-slate-200 text-left text-slate-500">
                     <th class="px-4 py-3">Requisición</th>
-                    <th class="px-4 py-3">Fecha</th>
+                    <th class="px-4 py-3">Fecha y hora (Torreón)</th>
                     <th class="px-4 py-3">Línea / Turno</th>
                     <th class="px-4 py-3">Job / Detalle</th>
                     <th class="px-4 py-3">Tipos</th>
@@ -126,7 +126,7 @@
                                 <span class="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">LPK</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-slate-600">{{ $row['labelRequest']->request_date?->format('Y-m-d') }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-slate-600">{{ $row['labelRequest']->created_at?->timezone('America/Monterrey')->format('d/m/Y H:i') }}</td>
                         <td class="px-4 py-3 text-slate-600">
                             <div class="font-medium text-slate-800">{{ $row['labelRequest']->line?->code ?: 'Sin línea' }}</div>
                             <div class="mt-0.5 text-xs">Turno: {{ $row['labelRequest']->shift?->code ?: '—' }}</div>
@@ -192,7 +192,8 @@
                         </td>
                         <td class="px-4 py-3 text-slate-700">{{ implode(' + ', $row['labelRequest']->requestedLabelTypes()) ?: '—' }}</td>
                         <td class="px-4 py-3">
-                            <div class="font-semibold">{{ $row['hasGroupedLpkDetails'] ? 'Reserva Jobs' : 'General' }}: {{ number_format($row['labelRequest']->quantity_requested) }}</div>
+                            <div class="font-semibold">{{ $row['labelRequest']->isLostLabelRework() ? 'Juegos faltantes' : ($row['hasGroupedLpkDetails'] ? 'Reserva Jobs' : 'General') }}: {{ number_format($row['labelRequest']->quantity_requested) }}</div>
+                            @if($row['labelRequest']->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $row['labelRequest']->source_label_request_id }}</div>@endif
                             @if($row['hasGroupedLpkDetails'])
                                 <div class="text-xs text-slate-500">Shipping: {{ $row['labelRequest']->lpkShippingGroups->count() }} grupo(s)</div>
                             @elseif($row['labelRequest']->include_shipping)

@@ -164,24 +164,6 @@
         <div class="p-4">{{ $ranges->links() }}</div>
     </section>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 class="font-bold">Reimpresiones con originales físicos</h2>
-        <p class="mt-1 text-sm text-slate-600">Reutilizan los folios originales, imprimen una copia adicional de evidencia y no avanzan el consecutivo.</p>
-        <div class="mt-4 overflow-x-auto"><table class="w-full text-left text-sm">
-            <thead><tr>@foreach(['Requisición', 'Tipo / NP', 'Origen', 'Periodo original', 'Folios reimpresos', 'Evidencia', 'Imprimió / Turno', 'Estado'] as $heading)<th class="p-2">{{ $heading }}</th>@endforeach</tr></thead>
-            <tbody class="divide-y">@forelse($reprints as $task)<tr>
-                <td class="p-2"><a class="text-blue-700 underline" href="{{ route('label_requests.show', $task->label_request_id) }}">#{{ $task->label_request_id }}</a></td>
-                <td class="p-2">{{ ucfirst($task->label_type) }} · {{ $task->part_number }}</td>
-                <td class="p-2">{{ $task->serial_range_id ? '#'.$task->serial_range_id : $task->original_reference }}</td>
-                <td class="p-2">{{ $task->serial_period_type ? \App\Support\SerialPeriods::describe($task->serial_period_type, $task->serial_period_number) : 'Periodo histórico' }} {{ $task->serial_period_year }}</td>
-                <td class="p-2">{{ $task->folio_start }} – {{ $task->folio_end }}</td>
-                <td class="p-2">1 copia · Folio {{ $task->evidence_folio }}</td>
-                <td class="p-2">{{ $task->printed_by_name ?? 'Pendiente' }} · {{ $task->printedShift?->code }}</td>
-                <td class="p-2">{{ ['pending'=>'Pendiente', 'completed'=>'Terminado', 'cancelled'=>'Cancelado'][$task->status] ?? $task->status }}</td>
-            </tr>@empty<tr><td colspan="8" class="p-4 text-slate-500">Sin reimpresiones.</td></tr>@endforelse</tbody>
-        </table></div>
-        {{ $reprints->links() }}
-    </section>
 </div>
 @endsection
 

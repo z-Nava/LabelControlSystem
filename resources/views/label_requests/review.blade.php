@@ -9,11 +9,16 @@
     <header class="rounded-2xl bg-white p-6 shadow-sm">
         <div class="text-sm font-semibold text-red-700">LABELROOM · REVISIÓN ADMINISTRATIVA</div>
         <h1 class="mt-1 text-2xl font-bold text-slate-950">Revisar requisición #{{ $labelRequest->id }}</h1>
-        <p class="mt-2 text-slate-600">{{ $labelRequest->line?->code }} · {{ $labelRequest->request_date->format('d/m/Y') }} · {{ \App\Models\LabelRequest::FOLIO_MODES[$labelRequest->folio_mode] }}</p>
+        <p class="mt-2 text-slate-600">{{ $labelRequest->line?->code }} · {{ $labelRequest->request_date->format('d/m/Y') }} · {{ $labelRequest->folioModeLabel() }}</p>
         <a href="{{ route('label_requests.show', $labelRequest) }}" class="mt-3 inline-block text-sm font-semibold text-blue-700 underline">Ver solicitud y datos de Oracle</a>
+        @if($labelRequest->isLostLabelRework())
+            <p class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Reposición por faltantes de la requisición #{{ $labelRequest->source_label_request_id }}. Motivo: {{ $labelRequest->rework_reason }}. Verifica el periodo actual antes de liberar; el sistema emitirá folios nuevos y conservará los rangos anteriores.</p>
+        @endif
     </header>
     @include('label_requests.partials.messages')
-    @if($labelRequest->released_at || !in_array($labelRequest->status, ['requested', 'in_progress']))
+    @if(!array_key_exists($labelRequest->folio_mode, \App\Models\LabelRequest::FOLIO_MODES))
+        <div class="rounded-xl bg-white p-6">Este tipo de trabajo ya no se procesa en la aplicación. Consulta sus datos históricos en el detalle.</div>
+    @elseif($labelRequest->released_at || !in_array($labelRequest->status, ['requested', 'in_progress']))
         <div class="rounded-xl bg-white p-6">Esta requisición ya fue liberada o cerrada. Consulta sus tareas y folios en el detalle.</div>
     @else
     <form method="POST" action="{{ isset($proposal) ? route('label_requests.release', $labelRequest) : route('label_requests.preview', $labelRequest) }}" class="space-y-5">
@@ -55,12 +60,6 @@
             </div>
             <p class="mt-3 text-sm text-slate-600">El año y periodo que elijas determinan el rango de esta requisición. El sistema busca el último folio del NP Rating en ese mismo periodo y suma las etiquetas solicitadas. Al abrir un periodo nuevo de un NP ya registrado, comienza en 1. La fecha de la requisición no cambia el periodo elegido.</p>
             <p class="mt-1 text-sm font-medium text-slate-700">Esta sección solo define el periodo: «Revisar propuesta» calcula el rango y «Liberar requisición» reserva los folios.</p>
-            @if($labelRequest->isOriginalReprint())
-                <p class="mt-3 text-sm text-amber-800">Cada rango conserva su periodo original y no avanza el consecutivo. Se imprime una copia adicional como evidencia.</p>
-                <label class="mt-3 flex items-center gap-2 text-sm font-semibold">
-                    <input type="checkbox" name="originals_received" value="1" required @checked($values['originals_received'] ?? false) /> Recibí físicamente las etiquetas originales.
-                </label>
-            @endif
             <label class="mt-4 block text-sm font-medium">Observaciones de la revisión
                 <textarea name="review_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">{{ $values['review_notes'] ?? '' }}</textarea>
             </label>
@@ -92,7 +91,11 @@
                 <article class="rounded-2xl border {{ $line['label_type'] === 'serial' ? 'border-blue-200' : ($line['label_type'] === 'rating' ? 'border-violet-200' : 'border-amber-200') }} bg-white p-5">
                     <div class="flex flex-wrap justify-between gap-3">
                         <div><h3 class="text-lg font-bold">{{ ucfirst($line['label_type']) }} · {{ $line['part_number'] }}</h3>
-                        <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p></div>
+                        <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p>
+                        @if($line['label_type'] === 'shipping' && filled($line['po_number']))
+                            <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">PO:</span> {{ $line['po_number'] }}</p>
+                        @endif
+                        </div>
                         <div class="text-right text-sm">Producción <strong class="text-lg">{{ number_format($line['quantity']) }}</strong><br>
                             Evidencia <strong>1</strong> · Total <strong>{{ number_format($line['quantity'] + 1) }}</strong>
                         </div>
@@ -118,26 +121,6 @@
                                     <span class="mt-1 block text-xs text-slate-600">Ensamble {{ $line['assembly_number'] }} → SKU {{ $line['folio_family'] }}.</span>
                                 @endif
                             </label>
-                            @if($labelRequest->isOriginalReprint())
-                                <label class="text-sm font-medium">Rango original registrado (opcional)
-                                    <input type="number" name="tasks[{{ $key }}][source_range_id]" list="originalRanges" value="{{ $taskInput['source_range_id'] ?? '' }}" min="1" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                                <label class="text-sm font-medium">Referencia de originales sin registro digital
-                                    <input name="tasks[{{ $key }}][original_reference]" value="{{ $taskInput['original_reference'] ?? '' }}" maxlength="255" placeholder="Requisición física / hoja de Excel" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                                <label class="text-sm font-medium">Año de los folios originales
-                                    <input type="number" name="tasks[{{ $key }}][original_year]" value="{{ $taskInput['original_year'] ?? $values['control_year'] ?? $defaultYear }}" min="2000" max="2100" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                                <label class="text-sm font-medium">{{ \App\Support\SerialPeriods::label($periodType) }} de los folios originales
-                                    <input type="number" name="tasks[{{ $key }}][original_period_number]" value="{{ $taskInput['original_period_number'] ?? ($periodType === 'month' ? $periodNumber : ($values['control_week'] ?? $defaultWeek)) }}" min="1" max="{{ \App\Support\SerialPeriods::maximum($periodType) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                                <label class="text-sm font-medium">Reimprimir del folio
-                                    <input type="number" name="tasks[{{ $key }}][folio_start]" value="{{ $taskInput['folio_start'] ?? '' }}" min="1" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                                <label class="text-sm font-medium">Hasta el folio
-                                    <input type="number" name="tasks[{{ $key }}][folio_end]" value="{{ $taskInput['folio_end'] ?? '' }}" min="1" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                                </label>
-                            @endif
                             <div class="text-sm font-medium">Folio que se conserva como evidencia
                                 <div class="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2">Primero del rango</div>
                             </div>
@@ -155,9 +138,6 @@
                 </article>
             @endforeach
         </section>
-        <datalist id="originalRanges">
-            @foreach($sources as $source)<option value="{{ $source->id }}">Req #{{ $source->label_request_id }} · {{ $source->period->label_part_number }} / {{ $source->period->serial_standard ?: 'Mercado histórico' }} · {{ $source->range_start }}–{{ $source->range_end }} · {{ $source->period->period_label }} {{ $source->period->year }}</option>@endforeach
-        </datalist>
         <footer class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5">
             @if(isset($proposal))
                 <button class="rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800">Liberar requisición y reservar folios</button>

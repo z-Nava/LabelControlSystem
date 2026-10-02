@@ -117,8 +117,14 @@
                                pattern="[A-Za-z0-9\-\/_\s]+"
                                readonly
                                aria-readonly="true"
-                               class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2 text-slate-700"
+                               aria-describedby="destinationWarning"
+                               @if($errors->has('destination')) aria-invalid="true" @endif
+                               class="mt-1 w-full rounded-xl border px-3 py-2 {{ $errors->has('destination') ? 'border-red-500 bg-red-50 text-red-900 ring-1 ring-red-500' : 'border-slate-300 bg-slate-100 text-slate-700' }}"
                                placeholder="Se tomará del Job Empaque">
+                        <p id="destinationWarning"
+                           class="mt-1 text-xs font-medium text-red-700 @unless($errors->has('destination')) hidden @endunless"
+                           role="alert"
+                           aria-live="polite">{{ $errors->first('destination') }}</p>
                     </div>
 
                     <div>

@@ -10,6 +10,12 @@ final class SerialPeriods
 
     public const MONTH = 'month';
 
+    private const MONTH_LETTERS = [
+        1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D',
+        5 => 'E', 6 => 'F', 7 => 'G', 8 => 'H',
+        9 => 'J', 10 => 'K', 11 => 'L', 12 => 'M',
+    ];
+
     /**
      * @return array<int, string>
      */
@@ -54,5 +60,14 @@ final class SerialPeriods
         ];
 
         return $months[$number] ?? 'Mes '.$number;
+    }
+
+    public static function monthLetterFor(string $market, ?string $periodType, ?int $number): ?string
+    {
+        if (! SerialStandards::isInternational($market) || $periodType !== self::MONTH || $number === null) {
+            return null;
+        }
+
+        return self::MONTH_LETTERS[$number] ?? null;
     }
 }

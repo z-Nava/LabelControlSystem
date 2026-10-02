@@ -11,7 +11,17 @@ class LabelRequest extends Model
 {
     public const KIND_STANDARD = 'standard';
 
-    public const FOLIO_MODES = ['new' => 'Folios nuevos', 'reprint_originals' => 'Reimpresión con originales físicos'];
+    public const FOLIO_MODE_REPRINT_ORIGINALS = 'reprint_originals';
+
+    public const FOLIO_MODE_LOST_REWORK = 'lost_rework';
+
+    // Keep the retired mode here so historical requests never consume Job availability.
+    public const NON_RESERVING_FOLIO_MODES = [self::FOLIO_MODE_REPRINT_ORIGINALS, self::FOLIO_MODE_LOST_REWORK];
+
+    public const FOLIO_MODES = [
+        'new' => 'Folios nuevos',
+        self::FOLIO_MODE_LOST_REWORK => 'Retrabajo por faltantes · folios nuevos',
+    ];
 
     public const JOB_STATUSES = ['P' => 'Pendiente', 'C' => 'Corriendo', 'RE' => 'Reetiquetado', 'OF' => 'Orden finalizada'];
 
@@ -55,6 +65,8 @@ class LabelRequest extends Model
         'catalog_context',
         'request_kind',
         'folio_mode',
+        'source_label_request_id',
+        'rework_reason',
         'job_status',
         'control_year',
         'control_week',
@@ -64,9 +76,6 @@ class LabelRequest extends Model
         'review_notes',
         'released_at',
         'released_by_user_id',
-        'originals_received_at',
-        'physical_signed_at',
-        'physical_signed_by_user_id',
         'request_date',
         'week',
         'line_id',
@@ -117,6 +126,7 @@ class LabelRequest extends Model
         'serial_period_number' => 'integer',
         'week' => 'integer',
         'line_id' => 'integer',
+        'source_label_request_id' => 'integer',
         'shift_id' => 'integer',
         'requested_by_user_id' => 'integer',
         'quantity_requested' => 'integer',
@@ -150,7 +160,28 @@ class LabelRequest extends Model
 
     public function isOriginalReprint(): bool
     {
-        return $this->folio_mode === 'reprint_originals';
+        return $this->folio_mode === self::FOLIO_MODE_REPRINT_ORIGINALS;
+    }
+
+    public function folioModeLabel(): string
+    {
+        return self::FOLIO_MODES[$this->folio_mode]
+            ?? ($this->isOriginalReprint() ? 'Reimpresión con originales físicos (histórica)' : 'Modo desconocido');
+    }
+
+    public function isLostLabelRework(): bool
+    {
+        return $this->folio_mode === self::FOLIO_MODE_LOST_REWORK;
+    }
+
+    public function sourceLabelRequest(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'source_label_request_id');
+    }
+
+    public function lostLabelReworks(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_label_request_id');
     }
 
     public function line(): BelongsTo

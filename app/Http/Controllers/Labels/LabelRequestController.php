@@ -8,6 +8,7 @@ use App\Models\LabelRequest;
 use App\Services\Labels\LabelRequestReadService;
 use App\Services\Labels\LabelRequestService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LabelRequestController extends Controller
@@ -24,9 +25,9 @@ class LabelRequestController extends Controller
         return view('label_requests.index', $result);
     }
 
-    public function show(int $id): View
+    public function show(Request $request, int $id): View
     {
-        return view('label_requests.show', $this->readService->buildShowViewData($id));
+        return view('label_requests.show', $this->readService->buildShowViewData($id, $request->user()));
     }
 
     public function requisitionSheet(LabelRequest $label_request): View

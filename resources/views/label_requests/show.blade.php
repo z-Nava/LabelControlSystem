@@ -10,6 +10,9 @@
                 @if($labelRequest->isLpk())
                     <span class="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">LPK</span>
                 @endif
+                @if($labelRequest->isLostLabelRework())
+                    <span class="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Reposición por faltantes</span>
+                @endif
                 <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold {{ $labelRequest->status_badge_classes }}">{{ $labelRequest->status_label }}</span>
             </div>
             <p class="mt-1 text-slate-600">{{ $labelRequest->line?->code }} · Turno {{ $labelRequest->shift?->code }} · {{ $labelRequest->request_date?->format('Y-m-d') }}</p>
@@ -20,6 +23,21 @@
 
     @if(session('success'))
         <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('success') }}</div>
+    @endif
+
+    @if($labelRequest->isLostLabelRework())
+        <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <div class="font-semibold">Retrabajo con folios nuevos · origen <a class="underline" href="{{ route('label_requests.show', $labelRequest->source_label_request_id) }}">requisición #{{ $labelRequest->source_label_request_id }}</a></div>
+            <div class="mt-1">Turno que reporta: {{ $labelRequest->shift?->code ?: '—' }}. Motivo: {{ $labelRequest->rework_reason }}</div>
+            <div class="mt-1">Los folios anteriores siguen registrados. Esta reposición usa el periodo autorizado al liberar la solicitud.</div>
+        </div>
+    @elseif($labelRequest->lostLabelReworks->isNotEmpty())
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <span class="font-semibold">Reposiciones vinculadas:</span>
+            @foreach($labelRequest->lostLabelReworks as $rework)
+                <a class="ml-2 text-blue-700 underline" href="{{ route('label_requests.show', $rework) }}">#{{ $rework->id }}</a>
+            @endforeach
+        </div>
     @endif
     @if(session('error'))
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>
@@ -45,7 +63,7 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div class="text-xs uppercase tracking-wide text-slate-500">Solicitud</div>
             <div class="mt-1 font-semibold">{{ implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'Sin tipo' }}</div>
-            <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general' }}: {{ number_format($labelRequest->quantity_requested) }}</div>
+            <div class="text-slate-700">{{ $labelRequest->isLostLabelRework() ? 'Juegos faltantes' : ($hasGroupedLpkDetails ? 'Reserva total por Jobs' : 'Cantidad general') }}: {{ number_format($labelRequest->quantity_requested) }}</div>
             <div class="text-slate-700">{{ $hasGroupedLpkDetails ? 'Grupos Shipping' : 'Cantidad Shipping' }}: {{ $hasGroupedLpkDetails ? $labelRequest->lpkShippingGroups->count() : ($labelRequest->include_shipping ? number_format($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested) : 'No requerida') }}</div>
             <div class="text-slate-700">
                 Mercado / periodo serial:
@@ -91,7 +109,12 @@
                     </div>
                 @endforeach
                 @foreach($labelRequest->lpkShippingGroups as $group)
-                    <div class="text-amber-800">Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)</div>
+                    <div class="text-amber-800">
+                        Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)
+                        @if(filled($group->po_number))
+                            · PO: {{ $group->po_number }}
+                        @endif
+                    </div>
                 @endforeach
             @else
                 @forelse($labelRequest->requestedRatingItems() as $item)
@@ -109,7 +132,12 @@
                 @endif
                 @if($labelRequest->include_shipping)
                     @forelse($labelRequest->requestedShippingItems() as $item)
-                        <div class="text-slate-700">NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                        <div class="text-slate-700">
+                            NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}
+                            @if(filled($labelRequest->po_number))
+                                · PO: {{ $labelRequest->po_number }}
+                            @endif
+                        </div>
                     @empty
                         <div class="text-slate-700">NP Shipping: Sin NP capturado</div>
                     @endforelse
@@ -285,6 +313,7 @@
     @endif
     <section class="mt-6 rounded-xl border border-slate-200 p-5">
         <h2 class="font-bold">Clasificación administrativa</h2>
+        @if(array_key_exists($labelRequest->folio_mode, \App\Models\LabelRequest::FOLIO_MODES))
         <form method="POST" action="{{ route('label_requests.classify', $labelRequest) }}" class="mt-3 flex flex-wrap items-end gap-3">
             @csrf
             <label class="text-sm">Status del trabajo
@@ -297,6 +326,7 @@
             <label class="flex-1 text-sm">Motivo del cambio<input name="reason" maxlength="1000" required class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" /></label>
             <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm">Guardar clasificación</button>
         </form>
+        @endif
         @if($labelRequest->review_notes)<p class="mt-3 whitespace-pre-line text-sm text-slate-600">{{ $labelRequest->review_notes }}</p>@endif
     </section>
     <div class="mt-6 rounded-xl border border-slate-200">
