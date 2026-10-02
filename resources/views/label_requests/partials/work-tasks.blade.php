@@ -1,23 +1,9 @@
-@php
-    $administration = app(\App\Services\Labels\LabelRoomAdministrationService::class);
-    $operators = $administration->operators();
-    $workShifts = \App\Models\Shift::where('active', true)->orderBy('code')->get();
-@endphp
 <section class="mt-6 space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div><h2 class="text-xl font-bold">Trabajo liberado</h2><p class="mt-1 text-sm text-slate-600">Liberó {{ $labelRequest->releasedBy?->name ?? 'LabelRoom' }} · {{ $labelRequest->released_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</p></div>
         <span class="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-800">{{ $labelRequest->folioModeLabel() }}</span>
     </div>
     @foreach($labelRequest->workTasks as $task)
-        @php
-            $monthLetter = in_array($task->label_type, ['serial', 'rating'], true) && $task->evidence_folio !== null
-                ? \App\Support\SerialPeriods::monthLetterFor(
-                    $labelRequest->serial_standard ?? '',
-                    $task->serial_period_type,
-                    $task->serial_period_number,
-                )
-                : null;
-        @endphp
         <article class="rounded-2xl border {{ $task->status === 'completed' ? 'border-emerald-300' : 'border-slate-200' }} bg-white p-5">
             <div class="flex flex-wrap justify-between gap-3">
                 <div><h3 class="text-lg font-bold">{{ ucfirst($task->label_type) }} · {{ $task->part_number }}</h3>
@@ -33,34 +19,34 @@
                 <div><dt class="text-slate-500">Evidencia</dt><dd class="mt-1 text-lg font-bold">{{ $task->evidence_quantity }}</dd></div>
                 <div><dt class="text-slate-500">Total por imprimir</dt><dd class="mt-1 text-lg font-bold">{{ number_format($task->quantity + $task->evidence_quantity) }}</dd></div>
                 <div><dt class="text-slate-500">Folios del / hasta</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? $task->folio_start.' – '.$task->folio_end : 'No aplica' }}</dd></div>
-                <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 flex flex-wrap items-center gap-2 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}@if($monthLetter)<span class="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Letra del mes: {{ $monthLetter }}</span>@endif</dd></div>
-                <div><dt class="text-slate-500">Mercado · Periodo</dt><dd class="mt-1 font-bold">{{ $task->folio_start !== null ? ($labelRequest->serial_standard ?: 'Mercado histórico').' · '.\App\Support\SerialPeriods::describe($task->serial_period_type ?: 'week', $task->serial_period_number ?: $task->control_week).' '.($task->serial_period_year ?: $task->control_year) : '—' }}@if($task->folio_start !== null)<br><span class="text-xs font-normal text-slate-500">Control: {{ $task->control_year }}/Sem. {{ $task->control_week }}</span>@endif</dd></div>
+                <div><dt class="text-slate-500">Folio de evidencia</dt><dd class="mt-1 flex flex-wrap items-center gap-2 font-bold">{{ $task->evidence_folio ?? 'No aplica' }}@if($workTaskMonthLetters[$task->id] ?? null)<span class="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">Letra del mes: {{ $workTaskMonthLetters[$task->id] }}</span>@endif</dd></div>
+                <div><dt class="text-slate-500">Mercado · Periodo</dt><dd class="mt-1 font-bold">{{ $workTaskPeriodLabels[$task->id] }}@if($task->folio_start !== null)<br><span class="text-xs font-normal text-slate-500">Control: {{ $task->control_year }}/Sem. {{ $task->control_week }}</span>@endif</dd></div>
             </dl>
             <p class="mt-4 text-sm text-slate-700">Operadora asignada: <strong>{{ $task->assignee?->name ?? 'Pendiente de asignar' }}</strong></p>
             @if($task->status === 'completed')
                 <p class="mt-4 text-sm text-emerald-800">Imprimió <strong>{{ $task->printed_by_name }}</strong> · Turno {{ $task->printedShift?->code }} · Fecha de trabajo {{ $task->work_date?->format('d/m/Y') }}.</p>
-            @elseif($task->status === 'pending' && $labelRequest->status === 'in_progress' && array_key_exists($labelRequest->folio_mode, \App\Models\LabelRequest::FOLIO_MODES))
-                @if($administration->canAssignTasks(auth()->user()))
+            @elseif($task->status === 'pending' && $labelRequest->status === 'in_progress' && $canProcessWorkTasks)
+                @if($canAssignWorkTasks)
                     <form method="POST" action="{{ route('label_requests.tasks.assign', [$labelRequest, $task]) }}" class="mt-4 flex flex-wrap items-end gap-2">
                         @csrf
                         <label class="min-w-64 text-sm">Asignar o reasignar
                             <select name="assigned_to_user_id" class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2">
                                 <option value="">Sin asignar</option>
-                                @foreach($operators as $operator)<option value="{{ $operator->id }}" @selected($task->assigned_to_user_id == $operator->id)>{{ $operator->name }}</option>@endforeach
+                                @foreach($workOperators as $operator)<option value="{{ $operator->id }}" @selected($task->assigned_to_user_id == $operator->id)>{{ $operator->name }}</option>@endforeach
                             </select>
                         </label>
                         <button class="rounded-lg border border-slate-300 px-3 py-2 text-sm">Guardar asignación</button>
                     </form>
                 @endif
-                @if($administration->canCompleteTask(auth()->user(), $task))
+                @if($canCompleteWorkTasks[$task->id] ?? false)
                     <form method="POST" action="{{ route('label_requests.tasks.complete', [$labelRequest, $task]) }}" class="mt-4 rounded-xl border border-slate-200 p-4">
                         @csrf
-                        <p class="mb-3 text-sm text-slate-700">Se registrará a <strong>{{ $task->assignee?->name }}</strong> como quien imprimió. @if(auth()->user()->isLabelRoomLeader()) Si imprimió otra persona, reasigna la tarea antes de confirmar. @endif</p>
+                        <p class="mb-3 text-sm text-slate-700">Se registrará a <strong>{{ $task->assignee?->name }}</strong> como quien imprimió. @if($isLabelRoomLeader) Si imprimió otra persona, reasigna la tarea antes de confirmar. @endif</p>
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="text-sm">Turno de impresión
                                 <select name="printed_shift_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
                                     <option value="">Selecciona un turno</option>
-                                    @foreach($workShifts as $shift)<option value="{{ $shift->id }}" @selected(auth()->user()->shift_id == $shift->id)>{{ $shift->code }} · {{ $shift->name }}</option>@endforeach
+                                    @foreach($workShifts as $shift)<option value="{{ $shift->id }}" @selected($selectedWorkShiftId == $shift->id)>{{ $shift->code }} · {{ $shift->name }}</option>@endforeach
                                 </select>
                             </label>
                             <label class="text-sm">Fecha operativa del turno
