@@ -128,7 +128,12 @@
                     <div class="text-slate-700">NP Serial: No requerido</div>
                 @endforelse
                 @if($labelRequest->include_inner)
-                    <div class="text-slate-700">NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }} · Modelo: {{ $labelRequest->inner_model ?: '—' }}</div>
+                    <div class="text-slate-700">
+                        NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }} · Modelo: {{ $labelRequest->inner_model ?: '—' }}
+                        @if(filled($labelRequest->po_number))
+                            · PO: {{ $labelRequest->po_number }}
+                        @endif
+                    </div>
                 @endif
                 @if($labelRequest->include_shipping)
                     @forelse($labelRequest->requestedShippingItems() as $item)

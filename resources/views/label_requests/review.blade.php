@@ -92,7 +92,7 @@
                     <div class="flex flex-wrap justify-between gap-3">
                         <div><h3 class="text-lg font-bold">{{ ucfirst($line['label_type']) }} · {{ $line['part_number'] }}</h3>
                         <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p>
-                        @if($line['label_type'] === 'shipping' && filled($line['po_number']))
+                        @if(in_array($line['label_type'], ['shipping', 'inner'], true) && filled($line['po_number']))
                             <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">PO:</span> {{ $line['po_number'] }}</p>
                         @endif
                         </div>
