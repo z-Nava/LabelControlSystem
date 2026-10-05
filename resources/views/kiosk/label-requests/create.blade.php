@@ -206,7 +206,7 @@
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                             <div>
                                 <div class="text-sm font-semibold text-slate-800">Rating <span class="text-red-600" aria-hidden="true">*</span></div>
-                                <p class="mt-1 text-xs text-slate-500">Agrega una fila por cada NP Rating distinto.</p>
+                                <p class="mt-1 text-xs text-slate-500">Selecciona el NP de Rating del catálogo; si hay varios, agrega una fila por cada NP requerido.</p>
                             </div>
                             <button id="addRatingPartNumber" type="button" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:bg-red-50">
                                 + Agregar rating

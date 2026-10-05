@@ -17,7 +17,7 @@ export function commonPart(options, type) {
 }
 
 // The hidden ID is only a selection hint. The server validates the Job, active mapping and NP.
-export function mountCatalogPicker({ container, partInput, idInput, type, limitToPart = false, onSelect = () => {} }) {
+export function mountCatalogPicker({ container, partInput, idInput, type, limitToPart = false, autofillSharedSerial = false, selectionLabel = '', onSelect = () => {} }) {
     let options = [];
     let optionsLoaded = false;
     let currentType = type;
@@ -25,10 +25,10 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
     wrapper.className = 'catalog-picker block min-w-0 sm:col-span-full md:col-span-full';
     const title = document.createElement('span');
     title.className = 'text-xs font-semibold text-slate-600';
-    title.textContent = 'Relación de etiquetas del empaque';
+    title.textContent = selectionLabel || 'Relación de etiquetas del empaque';
     const select = document.createElement('select');
     select.className = 'mt-1 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm';
-    select.setAttribute('aria-label', 'Rating y mercado de la etiqueta');
+    select.setAttribute('aria-label', selectionLabel || 'Rating y mercado de la etiqueta');
     const hint = document.createElement('span');
     hint.className = 'mt-1 block text-xs text-slate-600';
     wrapper.append(title, select, hint);
@@ -59,14 +59,19 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
             if (candidate && (partInput.value || autofill)) {
                 idInput.value = String(candidate.id);
                 if (!partInput.value && autofill) setPart(candidate[column()]);
-            } else if (!partInput.value && autofill && !['serial', 'rating'].includes(currentType)) {
+            } else if (!partInput.value && autofill && (!['serial', 'rating'].includes(currentType) || (autofillSharedSerial && currentType === 'serial'))) {
                 setPart(commonPart(options, currentType));
             }
         }
-        select.replaceChildren(new Option(options.length ? 'Selecciona Rating y mercado…' : 'Sin relación en catálogo · captura manual', ''));
+        select.replaceChildren(new Option(options.length
+            ? (selectionLabel ? `Selecciona ${selectionLabel}…` : 'Selecciona Rating y mercado…')
+            : 'Sin relación en catálogo · captura manual', ''));
         options.forEach((option) => {
             const part = option[column()] || 'NP pendiente de captura';
-            const choice = new Option('Rating ' + option.rating_part_number + ' · ' + option.market + ' · ' + currentType + ': ' + part, String(option.id));
+            const label = selectionLabel && currentType === 'rating'
+                ? part + ' · ' + option.market
+                : 'Rating ' + option.rating_part_number + ' · ' + option.market + ' · ' + currentType + ': ' + part;
+            const choice = new Option(label, String(option.id));
             choice.disabled = limitToPart && Boolean(partInput.value) && !compatible(option);
             select.add(choice);
         });
@@ -85,12 +90,18 @@ export function mountCatalogPicker({ container, partInput, idInput, type, limitT
             select.setCustomValidity(partInput.disabled ? '' : 'El NP no corresponde al empaque de este Job. Selecciona una relación compatible o usa otro grupo.');
             hint.textContent = 'El NP capturado no corresponde al catálogo de este Job.';
         } else {
-            hint.textContent = options.length ? 'Elige la relación para completar el NP. Los campos sin NP en el catálogo se capturan manualmente.' : 'Sin datos de catálogo para este Job. Puedes capturar el NP manualmente.';
+            hint.textContent = options.length
+                ? (selectionLabel ? `Selecciona ${selectionLabel} para completar el NP; también puedes capturarlo manualmente.` : 'Elige la relación para completar el NP. Los campos sin NP en el catálogo se capturan manualmente.')
+                : 'Sin datos de catálogo para este Job. Puedes capturar el NP manualmente.';
         }
     };
     const choose = (id) => {
         const row = options.find((option) => String(option.id) === String(id));
         idInput.value = row ? String(row.id) : '';
+        if (!row && partInput.dataset.catalogAuto === partInput.value) {
+            partInput.value = '';
+            delete partInput.dataset.catalogAuto;
+        }
         if (row) {
             if (!row[column()] && partInput.dataset.catalogAuto === partInput.value) {
                 partInput.value = '';
