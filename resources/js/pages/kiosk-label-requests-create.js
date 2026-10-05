@@ -173,13 +173,14 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 }
                 idInput.name = type + '_items[' + index + '][catalog_mapping_id]';
                 if (!catalogPickers.has(partInput)) {
-                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, onSelect: (option, previousId) => {
+                    const picker = mountCatalogPicker({ container: row, partInput, idInput, type, autofillSharedSerial: type === 'serial', selectionLabel: type === 'rating' ? 'NP de Rating' : '', onSelect: (option, previousId) => {
                         if (option) {
                             const counterpart = type === 'rating' ? 'serial' : 'rating';
                             if (inputs[counterpart].checked) {
                                 const candidates = counterpart === 'serial' ? serialPartNumberInputs() : ratingPartNumberInputs();
                                 const target = candidates.find((input) => previousId && catalogPickers.get(input)?.idInput.value === previousId)
-                                    || candidates.find((input) => !input.value);
+                                    || candidates.find((input) => !input.value)
+                                    || candidates.find((input) => !catalogPickers.get(input)?.idInput.value && normalize(input.value) === normalize(option[counterpart + '_part_number']));
                                 if (target) catalogPickers.get(target)?.choose(option.id);
                             }
                             ['inner', 'shipping'].forEach((other) => {
@@ -213,10 +214,35 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         configureCatalogFields();
         for (const picker of catalogPickers.values()) picker.setOptions(ratingCatalogOptions);
         syncConditionalFields();
+        linkSelectedSerialAndRating();
     }
 
     function updateRatingCatalogHint() {
         for (const picker of catalogPickers.values()) picker.refresh({ autofill: false });
+    }
+
+    function linkSelectedSerialAndRating() {
+        if (!inputs.serial.checked || !inputs.rating.checked) return;
+
+        const selectedRatings = ratingPartNumberInputs()
+            .map((input) => catalogPickers.get(input)?.selected())
+            .filter(Boolean);
+        serialPartNumberInputs().forEach((input) => {
+            const picker = catalogPickers.get(input);
+            if (!picker || picker.idInput.value || !input.value) return;
+            const match = selectedRatings.find((option) => normalize(option.serial_part_number) === normalize(input.value));
+            if (match) picker.choose(match.id);
+        });
+
+        const selectedSerials = serialPartNumberInputs()
+            .map((input) => catalogPickers.get(input)?.selected())
+            .filter(Boolean);
+        ratingPartNumberInputs().forEach((input) => {
+            const picker = catalogPickers.get(input);
+            if (!picker || picker.idInput.value || input.value) return;
+            const match = selectedSerials.find((option) => option.rating_part_number);
+            if (match) picker.choose(match.id);
+        });
     }
 
     function syncConditionalFields() {
@@ -547,7 +573,10 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         updateFormGuidance();
     });
 
-    serialPartNumbersContainer.addEventListener('input', updateFormGuidance);
+    serialPartNumbersContainer.addEventListener('input', (event) => {
+        if (event.target.closest('.catalog-picker')) return;
+        updateFormGuidance();
+    });
     serialPartNumbersContainer.addEventListener('click', (event) => {
         const removeButton = event.target.closest('.remove-serial-part-number');
 
@@ -576,11 +605,13 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         syncConditionalFields();
         updateRemoveRatingButtons();
         setModelInputState(row.querySelector('.mapped-model-input'), mappedModel);
-        row.querySelector('.rating-part-number-input')?.focus();
+        const partInput = row.querySelector('.rating-part-number-input');
+        (ratingCatalogOptions.length > 1 ? catalogPickers.get(partInput)?.select : partInput)?.focus();
         updateFormGuidance();
     });
 
-    ratingPartNumbersContainer.addEventListener('input', () => {
+    ratingPartNumbersContainer.addEventListener('input', (event) => {
+        if (event.target.closest('.catalog-picker')) return;
         updateRatingCatalogHint();
         updateFormGuidance();
     });
@@ -599,6 +630,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         input.addEventListener('change', () => {
             syncConditionalFields();
             for (const picker of catalogPickers.values()) picker.refresh();
+            linkSelectedSerialAndRating();
             updateFormGuidance();
         });
     });
