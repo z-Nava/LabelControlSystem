@@ -13,7 +13,6 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\MasterMetricsController;
-use App\Http\Controllers\Dashboard\PendingRequestCountController;
 use App\Http\Controllers\Dummies\DummyPrintController;
 use App\Http\Controllers\Dummies\DummyReprintController;
 use App\Http\Controllers\Dummies\DummyRequestController;
@@ -187,9 +186,6 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Label Room-only (operación)
     Route::middleware('role:label_room')->group(function () {
-        Route::get('/dashboard/pending-request-counts', PendingRequestCountController::class)
-            ->name('dashboard.pending_request_counts');
-
         Route::get('/label-room', function () {
             return 'Label Room Area';
         })->name('labelroom.home');
