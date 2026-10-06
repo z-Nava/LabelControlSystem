@@ -205,25 +205,7 @@ class LabelRequestService
                 $jobs,
                 $mappedModelsByAssembly,
             );
-            $shippingGroups = $shippingGroups->map(function (array $group) use ($jobs): array {
-                $firstJobNumber = data_get($group, 'items.0.job_number');
-                $firstJob = filled($firstJobNumber) ? $jobs->get($firstJobNumber) : null;
-
-                if (! $firstJob) {
-                    return $group;
-                }
-
-                $group['po_number'] = $this->valueOrOracleFallback(
-                    $group['po_number'] ?? null,
-                    $firstJob->ttl_cust_po,
-                );
-                $group['destination'] = $this->valueOrOracleFallback(
-                    $group['destination'] ?? null,
-                    $firstJob->ship_code,
-                );
-
-                return $group;
-            });
+            $shippingGroups = $this->prepareLpkShippingGroups($shippingGroups, $jobs);
 
             $folioSnapshots = collect();
             foreach (['label' => $labelGroups, 'shipping' => $shippingGroups] as $kind => $groups) {
@@ -265,6 +247,7 @@ class LabelRequestService
             $firstShippingGroup = $shippingGroups->first();
             $firstProductionItem = data_get($firstLabelGroup, 'items.0');
             $firstShippingItem = data_get($firstShippingGroup, 'items.0');
+            $allShippingItems = $shippingGroups->flatMap(fn (array $group) => $group['items']);
             $representativeJob = data_get($firstProductionItem, 'job_number')
                 ?: data_get($firstShippingItem, 'job_number');
             $serialGroup = $labelGroups->firstWhere('label_type', LabelRequestLpkLabelGroup::TYPE_SERIAL);
@@ -294,8 +277,8 @@ class LabelRequestService
                 'inner_model' => data_get($innerGroup, 'items.0.model'),
                 'shipping_part_number' => data_get($firstShippingGroup, 'part_number'),
                 'shipping_model' => data_get($firstShippingGroup, 'items.0.model'),
-                'po_number' => data_get($firstShippingGroup, 'po_number'),
-                'destination' => data_get($firstShippingGroup, 'destination'),
+                'po_number' => $this->commonShippingValue($allShippingItems, 'po_number'),
+                'destination' => $this->commonShippingValue($allShippingItems, 'destination'),
                 'folio_start' => null,
                 'folio_end' => null,
                 'include_serial' => $serialGroup !== null,
@@ -342,6 +325,8 @@ class LabelRequestService
                         ->map(fn (array $item, int $itemPosition): array => [
                             'job_number' => $item['job_number'],
                             'model' => $item['model'],
+                            'po_number' => $item['po_number'],
+                            'destination' => $item['destination'],
                             'position' => $itemPosition + 1,
                         ])
                         ->all(),
@@ -530,6 +515,32 @@ class LabelRequestService
         $fallback = strtoupper(trim((string) $oracleValue));
 
         return $fallback !== '' ? $fallback : null;
+    }
+
+    private function prepareLpkShippingGroups(Collection $groups, Collection $jobs): Collection
+    {
+        return $groups->map(function (array $group) use ($jobs): array {
+            $group['items'] = collect($group['items'])->map(function (array $item) use ($jobs): array {
+                $job = $jobs->get($item['job_number']);
+                $item['po_number'] = $this->valueOrOracleFallback($item['po_number'] ?? null, $job?->ttl_cust_po);
+                $item['destination'] = $this->valueOrOracleFallback($item['destination'] ?? null, $job?->ship_code);
+
+                return $item;
+            })->all();
+
+            $items = collect($group['items']);
+            $group['po_number'] = $this->commonShippingValue($items, 'po_number');
+            $group['destination'] = $this->commonShippingValue($items, 'destination');
+
+            return $group;
+        });
+    }
+
+    private function commonShippingValue(Collection $items, string $field): ?string
+    {
+        $values = $items->pluck($field)->unique();
+
+        return $values->count() === 1 ? $values->first() : null;
     }
 
     /**

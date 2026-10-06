@@ -146,6 +146,16 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         refreshGroupCatalog(group, false);
     }
 
+    function clearAutoShippingMetadata(jobInput) {
+        const item = jobInput.closest('.lpk-shipping-item');
+        if (!item) return;
+        ['po_number', 'destination'].forEach((name) => {
+            const input = field(item, name);
+            if (input.dataset.oracleAuto === normalize(input.value)) input.value = '';
+            delete input.dataset.oracleAuto;
+        });
+    }
+
     function reindexForm() {
         const labelGroups = Array.from(labelGroupsContainer.querySelectorAll('.lpk-label-group'));
         const shippingGroups = Array.from(shippingGroupsContainer.querySelectorAll('.lpk-shipping-group'));
@@ -170,13 +180,12 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
             ensureGroupHasItem(group, true);
             field(group, 'part_number').name = `lpk_shipping_groups[${groupIndex}][part_number]`;
             field(group, 'quantity').name = `lpk_shipping_groups[${groupIndex}][quantity]`;
-            field(group, 'po_number').name = `lpk_shipping_groups[${groupIndex}][po_number]`;
-            field(group, 'destination').name = `lpk_shipping_groups[${groupIndex}][destination]`;
-
             const items = Array.from(group.querySelectorAll('.lpk-shipping-item'));
             items.forEach((item, itemIndex) => {
                 field(item, 'job_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][job_number]`;
                 field(item, 'model').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][model]`;
+                field(item, 'po_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][po_number]`;
+                field(item, 'destination').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][destination]`;
                 field(item, 'catalog_mapping_id').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][catalog_mapping_id]`;
                 catalogPicker(field(item, 'job_number'));
                 item.querySelector('.remove-lpk-shipping-item')?.classList.toggle('hidden', items.length === 1);
@@ -347,11 +356,14 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
             refreshGroupCatalog(input.closest('.lpk-label-group, .lpk-shipping-group'));
 
             if (isShipping) {
-                const group = input.closest('.lpk-shipping-group');
-                const poInput = field(group, 'po_number');
-                const destinationInput = field(group, 'destination');
-                if (!poInput.value && data.ttl_cust_po) poInput.value = data.ttl_cust_po;
-                if (!destinationInput.value && data.ship_code) destinationInput.value = data.ship_code;
+                const item = input.closest('.lpk-shipping-item');
+                for (const [name, oracleValue] of [['po_number', data.ttl_cust_po], ['destination', data.ship_code]]) {
+                    const metadataInput = field(item, name);
+                    if (!metadataInput.value && oracleValue) {
+                        metadataInput.value = normalize(oracleValue);
+                        metadataInput.dataset.oracleAuto = normalize(oracleValue);
+                    }
+                }
             }
 
             validateQuantityForRow(input);
@@ -368,6 +380,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     function scheduleJobValidation(input, { clearModel = true } = {}) {
         clearTimeout(lookupTimers.get(input));
         input.dataset.lookupToken = String(++lookupSequence);
+        clearAutoShippingMetadata(input);
         if (clearModel) clearJobCatalog(input);
         input.setCustomValidity(input.value.trim() ? 'Espera a que termine la validación de Oracle.' : '');
         delete input.dataset.validatedJob;
@@ -468,6 +481,9 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
     form.addEventListener('input', (event) => {
         if (event.target.matches('.lpk-job-input')) scheduleJobValidation(event.target);
+        if (event.target.matches('.lpk-shipping-item [data-field="po_number"], .lpk-shipping-item [data-field="destination"]')) {
+            delete event.target.dataset.oracleAuto;
+        }
         if (event.target.matches('.lpk-item-quantity')) {
             validateQuantityForRow(event.target.closest('.lpk-label-item').querySelector('.lpk-job-input'));
         }

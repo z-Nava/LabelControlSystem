@@ -146,7 +146,7 @@
                     <td class="px-3 py-3">{{ $range->model ?? $range->labelRequest->model }}<br><span class="text-xs">{{ $range->job_number ?? $range->labelRequest->job_number }}</span></td>
                     <td class="px-3 py-3">{{ $range->labelRequest->request_date->format('d/m/Y') }}</td>
                     <td class="px-3 py-3">{{ $range->period->period_label }} {{ $range->period->year }}</td>
-                    <td class="px-3 py-3">{{ $range->labelRequest->control_year }} / Sem. {{ $range->labelRequest->control_week }}</td>
+                    <td class="px-3 py-3">{{ $range->tasks->first()?->control_year ?? $range->labelRequest->control_year ?? '—' }} / Sem. {{ $range->tasks->first()?->control_week ?? $range->labelRequest->control_week ?? '—' }}</td>
                     <td class="whitespace-nowrap px-3 py-3 font-bold">{{ $range->range_start }} – {{ $range->range_end }}</td>
                     <td class="px-3 py-3">{{ $range->evidence_folio ?? '—' }}</td>
                     @foreach(['serial', 'rating'] as $type)

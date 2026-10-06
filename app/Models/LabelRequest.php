@@ -543,6 +543,12 @@ class LabelRequest extends Model
                 'po_number' => $group->po_number,
                 'destination' => $group->destination,
                 'models_count' => $items->count(),
+                'shipping_items' => $items->map(fn ($item) => [
+                    'job_number' => $item->job_number,
+                    'model' => $item->model,
+                    'po_number' => $item->po_number ?? $group->po_number,
+                    'destination' => $item->destination ?? $group->destination,
+                ])->all(),
             ];
         }
 

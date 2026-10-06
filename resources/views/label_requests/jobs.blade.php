@@ -14,14 +14,14 @@
     </form>
     @include('label_requests.partials.messages')
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div class="overflow-x-auto"><table class="w-full min-w-[1400px] text-left text-sm">
-            <thead class="bg-slate-900 text-white"><tr>@foreach(['Req.', 'JOB', 'PO', 'Cantidad', 'Etiquetas Shipping', 'Tipos', 'Folios impresos', 'Modelo', 'Fecha', 'Status', 'Línea', 'Turno'] as $heading)<th class="px-3 py-4">{{ $heading }}</th>@endforeach</tr></thead>
+        <div class="overflow-x-auto"><table class="w-full min-w-[1500px] text-left text-sm">
+            <thead class="bg-slate-900 text-white"><tr>@foreach(['Req.', 'JOB', 'PO', 'Destino', 'Cantidad', 'Etiquetas Shipping', 'Tipos', 'Folios impresos', 'Modelo', 'Fecha', 'Status', 'Línea', 'Turno'] as $heading)<th class="px-3 py-4">{{ $heading }}</th>@endforeach</tr></thead>
             <tbody class="divide-y">@forelse($entries as $entry)<tr>
                 <td class="px-3 py-3"><a href="{{ route('label_requests.show', $entry->label_request_id) }}" class="font-semibold text-blue-700 underline">#{{ $entry->label_request_id }}</a>@if($entry->labelRequest->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $entry->labelRequest->source_label_request_id }}</div>@endif</td>
-                <td class="px-3 py-3 font-mono">{{ $entry->job_number }}</td><td class="px-3 py-3">{{ $entry->po_number ?? '—' }}</td>
+                <td class="px-3 py-3 font-mono">{{ $entry->job_number }}</td><td class="px-3 py-3">{{ $entry->po_number ?? '—' }}</td><td class="px-3 py-3">{{ $entry->destination ?? '—' }}</td>
                 <td class="px-3 py-3">{{ $entry->quantity !== null ? number_format($entry->quantity) : 'No aplica' }}@if($entry->labelRequest->isLostLabelRework())<div class="text-xs text-amber-800">Juegos repuestos</div>@endif</td>
                 <td class="px-3 py-3">{{ $entry->shipping_quantity !== null ? number_format($entry->shipping_quantity) : '—' }}
-                    @foreach($entry->shared_shipping ?? [] as $shared)<div class="mt-1 text-xs text-amber-800">{{ number_format($shared['quantity']) }} compartidas · Tarea #{{ $shared['task_id'] }}<br>{{ $shared['part_number'] }} · PO {{ $shared['po_number'] ?? '—' }}</div>@endforeach
+                    @foreach($entry->shared_shipping ?? [] as $shared)<div class="mt-1 text-xs text-amber-800">{{ number_format($shared['quantity']) }} compartidas · Tarea #{{ $shared['task_id'] }}<br>{{ $shared['part_number'] }} · PO {{ $shared['po_number'] ?? '—' }} · Destino {{ $shared['destination'] ?? '—' }}</div>@endforeach
                 </td>
                 <td class="px-3 py-3 font-semibold">{{ implode(' · ', $entrySummaries[$entry->id]['types']) ?: '—' }}</td>
                 <td class="px-3 py-3">
@@ -37,7 +37,7 @@
                 <td class="px-3 py-3">{{ $entry->model }}</td><td class="px-3 py-3">{{ $entry->work_date->format('d/m/Y') }}</td>
                 <td class="px-3 py-3"><span class="rounded-md bg-sky-100 px-2 py-1 font-bold text-sky-900" title="{{ $jobStatusOptions[$entry->labelRequest->job_status] ?? $entry->labelRequest->job_status }}">{{ $entry->labelRequest->job_status }}</span></td>
                 <td class="px-3 py-3">{{ $entry->line?->code }}</td><td class="px-3 py-3 font-semibold">{{ $entry->shift?->code }}</td>
-            </tr>@empty<tr><td colspan="12" class="p-10 text-center text-slate-500">Aún no hay trabajos terminados para estos filtros.</td></tr>@endforelse</tbody>
+            </tr>@empty<tr><td colspan="13" class="p-10 text-center text-slate-500">Aún no hay trabajos terminados para estos filtros.</td></tr>@endforelse</tbody>
         </table></div>
         <div class="p-4">{{ $entries->links() }}</div>
     </div>

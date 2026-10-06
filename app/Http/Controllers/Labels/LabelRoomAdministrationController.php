@@ -72,20 +72,32 @@ class LabelRoomAdministrationController extends Controller
         $defaultYear = $periodType === SerialPeriods::WEEK ? $today->isoWeekYear() : $today->year;
         $controlYear = (int) ($values['control_year'] ?? $defaultYear);
         $controlWeek = filled($values['control_week'] ?? null) ? (int) $values['control_week'] : null;
-        $periodYear = $controlYear;
-        $periodNumber = $periodType === SerialPeriods::WEEK ? $controlWeek : (int) ($values['serial_month'] ?? $today->month);
-        $ratingParts = $lines->pluck('rating_part_number')->filter()->unique();
+        $ratingPeriods = $lines->filter(fn ($line) => $line['requires_folios'])
+            ->pluck('rating_part_number')->filter()->map(fn ($rating) => strtoupper(trim($rating)))
+            ->unique()->map(function ($rating) use ($lines, $values, $market, $periodType, $controlYear, $controlWeek, $today) {
+                $key = LabelRoomAdministrationService::ratingPeriodKey($rating);
+                $year = (int) ($values['rating_periods'][$key]['year'] ?? $controlYear);
+                $number = (int) ($values['rating_periods'][$key]['number'] ?? ($periodType === SerialPeriods::WEEK ? $controlWeek : $today->month));
+
+                return [
+                    'rating' => $rating, 'key' => $key, 'year' => $year, 'number' => $number,
+                    'serial_parts' => $lines->filter(fn ($line) => $line['label_type'] === 'serial'
+                        && strtoupper(trim((string) $line['rating_part_number'])) === $rating)
+                        ->pluck('part_number')->unique()->values()->all(),
+                    'control' => $market && $number >= 1 && $number <= SerialPeriods::maximum($periodType)
+                        ? SerialPeriod::query()->where('label_part_number', $rating)
+                            ->where('serial_standard', $market)->where('period_type', $periodType)
+                            ->where('year', $year)->where('period_number', $number)->first()
+                        : null,
+                ];
+            })->values();
 
         return [
             'labelRequest' => $labelRequest->load(['line', 'shift', 'releasedBy']),
             'lines' => $lines, 'operators' => $this->service->operators(),
             'defaultYear' => $defaultYear, 'defaultWeek' => $today->isoWeek(), 'defaultMonth' => $today->month,
             'markets' => SerialStandards::all(), 'selectedMarket' => $market,
-            'periodType' => $periodType, 'periodYear' => $periodYear, 'periodNumber' => $periodNumber,
-            'availableControls' => SerialPeriod::query()->whereIn('label_part_number', $ratingParts)
-                ->when($market, fn ($query) => $query->where('serial_standard', $market), fn ($query) => $query->whereRaw('1 = 0'))
-                ->where('period_type', $periodType)->where('year', $periodYear)->where('period_number', $periodNumber)
-                ->orderBy('label_part_number')->get(),
+            'periodType' => $periodType, 'ratingPeriods' => $ratingPeriods,
         ];
     }
 
@@ -95,7 +107,9 @@ class LabelRoomAdministrationController extends Controller
             'serial_standard' => ['required', Rule::in(SerialStandards::all())],
             'control_year' => ['required', 'integer', 'between:2000,2100'],
             'control_week' => ['required', 'integer', 'between:1,53'],
-            'serial_month' => [Rule::requiredIf(fn () => $request->input('serial_standard') !== SerialStandards::UL), 'nullable', 'integer', 'between:1,12'],
+            'rating_periods' => ['nullable', 'array'],
+            'rating_periods.*.year' => ['required', 'integer', 'between:2000,2100'],
+            'rating_periods.*.number' => ['required', 'integer', 'between:1,53'],
             'job_status' => ['required', Rule::in(array_keys(LabelRequest::JOB_STATUSES))],
             'review_notes' => ['nullable', 'string', 'max:2000'],
             'plan_checked' => ['accepted'],
@@ -242,7 +256,7 @@ class LabelRoomAdministrationController extends Controller
             ->when($filters['line_id'] ?? null, fn ($q, $id) => $q->where('line_id', $id))
             ->when($filters['shift_id'] ?? null, fn ($q, $id) => $q->where('shift_id', $id))
             ->when($filters['job_status'] ?? null, fn ($q, $status) => $q->whereHas('labelRequest', fn ($q) => $q->where('job_status', $status)))
-            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q->where('job_number', 'like', "%{$term}%")->orWhere('po_number', 'like', "%{$term}%")->orWhere('model', 'like', "%{$term}%")))
+            ->when($filters['search'] ?? null, fn ($q, $term) => $q->where(fn ($q) => $q->where('job_number', 'like', "%{$term}%")->orWhere('po_number', 'like', "%{$term}%")->orWhere('destination', 'like', "%{$term}%")->orWhere('model', 'like', "%{$term}%")))
             ->orderByDesc('work_date')->orderByDesc('id')->paginate(40)->withQueryString();
 
         $entrySummaries = $entries->getCollection()

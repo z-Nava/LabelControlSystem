@@ -7,7 +7,11 @@
         @foreach($labelRequest->workTasks as $task)
             <tr class="border-b border-slate-200">
                 <td class="border-r">{{ ucfirst($task->label_type) }}<br>{{ $task->part_number }}</td>
-                <td class="border-r">{{ collect($task->jobs)->map(fn($job) => $job['job_number'].' / '.($job['model'] ?? ''))->implode('; ') }}</td>
+                <td class="border-r">
+                    @foreach($task->jobs as $job)
+                        <div>{{ $job['job_number'] }} / {{ $job['model'] ?? '—' }}@if($task->label_type === 'shipping')<br><span class="text-xs">PO {{ $job['po_number'] ?? $task->po_number ?? '—' }} · Destino {{ $job['destination'] ?? $task->destination ?? '—' }}</span>@endif</div>
+                    @endforeach
+                </td>
                 <td class="border-r">{{ $task->quantity }}</td><td class="border-r">{{ $task->evidence_quantity }}@if($task->evidence_folio)<br>Folio {{ $task->evidence_folio }}@endif</td>
                 <td class="border-r font-bold">{{ $task->quantity + $task->evidence_quantity }}</td>
                 <td class="border-r font-bold">{{ $task->folio_start !== null ? $task->folio_start.' – '.$task->folio_end : 'No aplica' }}</td>

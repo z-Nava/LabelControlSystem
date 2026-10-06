@@ -7,8 +7,14 @@
         <article class="rounded-2xl border {{ $task->status === 'completed' ? 'border-emerald-300' : 'border-slate-200' }} bg-white p-5">
             <div class="flex flex-wrap justify-between gap-3">
                 <div><h3 class="text-lg font-bold">{{ ucfirst($task->label_type) }} · {{ $task->part_number }}</h3>
-                    <p class="text-sm text-slate-600">{{ collect($task->jobs)->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? ''))->implode(' / ') }}</p>
-                    @if(in_array($task->label_type, ['shipping', 'inner'], true) && filled($task->po_number ?: $labelRequest->po_number))
+                    @if($task->label_type !== 'shipping')
+                        <p class="text-sm text-slate-600">{{ collect($task->jobs)->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? ''))->implode(' / ') }}</p>
+                    @endif
+                    @if($task->label_type === 'shipping')
+                        @foreach($task->jobs as $job)
+                            <p class="mt-1 text-sm text-slate-700">{{ $job['job_number'] }} · {{ $job['model'] ?? 'Sin modelo' }}: <span class="font-semibold">PO</span> {{ $job['po_number'] ?? $task->po_number ?? '—' }} · <span class="font-semibold">Destino</span> {{ $job['destination'] ?? $task->destination ?? '—' }}</p>
+                        @endforeach
+                    @elseif($task->label_type === 'inner' && filled($task->po_number ?: $labelRequest->po_number))
                         <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">PO:</span> {{ $task->po_number ?: $labelRequest->po_number }}</p>
                     @endif
                 </div>

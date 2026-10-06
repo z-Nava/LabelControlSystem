@@ -48,11 +48,11 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             'lpk_shipping_groups' => ['present', 'array', 'max:50'],
             'lpk_shipping_groups.*.part_number' => ['required', 'string', 'max:80'],
             'lpk_shipping_groups.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
-            'lpk_shipping_groups.*.po_number' => ['nullable', 'string', 'max:80'],
-            'lpk_shipping_groups.*.destination' => ['nullable', 'string', 'max:80'],
             'lpk_shipping_groups.*.items' => ['required', 'array', 'min:1', 'max:100'],
             'lpk_shipping_groups.*.items.*.job_number' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z\-]+$/'],
             'lpk_shipping_groups.*.items.*.model' => ['nullable', 'string', 'max:80'],
+            'lpk_shipping_groups.*.items.*.po_number' => ['nullable', 'string', 'max:80'],
+            'lpk_shipping_groups.*.items.*.destination' => ['nullable', 'string', 'max:80'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -90,11 +90,11 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             'lpk_shipping_groups' => 'grupos Shipping',
             'lpk_shipping_groups.*.part_number' => 'NP de Shipping',
             'lpk_shipping_groups.*.quantity' => 'cantidad de Shipping',
-            'lpk_shipping_groups.*.po_number' => 'PO de Shipping',
-            'lpk_shipping_groups.*.destination' => 'destino de Shipping',
             'lpk_shipping_groups.*.items' => 'modelos y Jobs de Shipping',
             'lpk_shipping_groups.*.items.*.job_number' => 'Job de Shipping',
             'lpk_shipping_groups.*.items.*.model' => 'modelo de Shipping',
+            'lpk_shipping_groups.*.items.*.po_number' => 'PO del Job de Shipping',
+            'lpk_shipping_groups.*.items.*.destination' => 'destino del Job de Shipping',
         ];
     }
 
@@ -284,7 +284,7 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
     }
 
     /**
-     * @return array<int, array{part_number: string, quantity: mixed, po_number: ?string, destination: ?string, items: array<int, array{job_number: string, model: ?string}>}>
+     * @return array<int, array{part_number: string, quantity: mixed, items: array<int, array{job_number: string, model: ?string, po_number: ?string, destination: ?string}>}>
      */
     private function normalizeShippingGroups(mixed $groups): array
     {
@@ -297,8 +297,6 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
             ->map(fn (array $group): array => [
                 'part_number' => strtoupper(trim((string) ($group['part_number'] ?? ''))),
                 'quantity' => $group['quantity'] ?? null,
-                'po_number' => $this->nullableUppercase($group['po_number'] ?? null),
-                'destination' => $this->nullableUppercase($group['destination'] ?? null),
                 'items' => $this->normalizeItems($group['items'] ?? [], includeQuantity: false),
             ])
             ->values()
@@ -325,6 +323,9 @@ class StoreKioskLpkLabelRequestRequest extends FormRequest
 
                 if ($includeQuantity) {
                     $normalized['quantity'] = $item['quantity'] ?? null;
+                } else {
+                    $normalized['po_number'] = $this->nullableUppercase($item['po_number'] ?? null);
+                    $normalized['destination'] = $this->nullableUppercase($item['destination'] ?? null);
                 }
 
                 return $normalized;

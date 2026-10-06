@@ -103,14 +103,14 @@
                         @if($group->label_type === 'rating')
                             <strong>NP Rating: {{ $group->part_number }}</strong>
                         @else
-                            <span>{{ $group->type_label }}: {{ $group->part_number }}</span>
+                            <strong>{{ $group->type_label }}: {{ $group->part_number }}</strong>
                         @endif
                         · {{ $group->items->count() }} modelo(s)/Job(s)
                     </div>
                 @endforeach
                 @foreach($labelRequest->lpkShippingGroups as $group)
                     <div class="text-amber-800">
-                        Shipping: {{ $group->part_number }} · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)
+                        <strong>Shipping: {{ $group->part_number }}</strong> · {{ number_format($group->quantity) }} etiqueta(s) · {{ $group->items->count() }} modelo(s)/Job(s)
                         @if(filled($group->po_number))
                             · PO: {{ $group->po_number }}
                         @endif
@@ -123,13 +123,13 @@
                     <div class="mt-1 text-slate-700">NP Rating: No requerido</div>
                 @endforelse
                 @forelse($labelRequest->requestedSerialItems() as $item)
-                    <div class="text-slate-700">NP Serial: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}</div>
+                    <div class="text-slate-700"><strong>NP Serial: {{ $item['part_number'] }}</strong> · Modelo: {{ $item['model'] ?: '—' }}</div>
                 @empty
                     <div class="text-slate-700">NP Serial: No requerido</div>
                 @endforelse
                 @if($labelRequest->include_inner)
                     <div class="text-slate-700">
-                        NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }} · Modelo: {{ $labelRequest->inner_model ?: '—' }}
+                        <strong>NP Inner: {{ $labelRequest->inner_part_number ?: 'Sin NP capturado' }}</strong> · Modelo: {{ $labelRequest->inner_model ?: '—' }}
                         @if(filled($labelRequest->po_number))
                             · PO: {{ $labelRequest->po_number }}
                         @endif
@@ -138,7 +138,7 @@
                 @if($labelRequest->include_shipping)
                     @forelse($labelRequest->requestedShippingItems() as $item)
                         <div class="text-slate-700">
-                            NP Shipping: {{ $item['part_number'] }} · Modelo: {{ $item['model'] ?: '—' }}
+                            <strong>NP Shipping: {{ $item['part_number'] }}</strong> · Modelo: {{ $item['model'] ?: '—' }}
                             @if(filled($labelRequest->po_number))
                                 · PO: {{ $labelRequest->po_number }}
                             @endif
@@ -253,10 +253,7 @@
                                             <div class="text-xs font-semibold uppercase tracking-wide text-amber-800">NP Shipping</div>
                                             <div class="mt-0.5 font-mono text-base font-bold text-slate-950">{{ $group->part_number }}</div>
                                         </div>
-                                        <div class="text-sm text-slate-700">
-                                            <span class="font-semibold">PO:</span> {{ $group->po_number ?: 'Sin PO' }}<br>
-                                            <span class="font-semibold">Destino:</span> {{ $group->destination ?: 'Sin destino' }}
-                                        </div>
+                                        <div class="text-sm text-slate-700">PO y Destino por Job/Modelo</div>
                                         <div class="rounded-xl bg-amber-600 px-4 py-2 text-center text-white">
                                             <div class="text-[10px] font-semibold uppercase tracking-wide">Cantidad total</div>
                                             <div class="text-xl font-black">{{ number_format($group->quantity) }}</div>
@@ -264,11 +261,13 @@
                                     </div>
                                     <div class="border-b border-amber-100 bg-white px-4 py-2 text-xs font-medium text-amber-800">Esta cantidad corresponde al grupo completo; no se multiplica por los modelos.</div>
                                     <div class="overflow-x-auto">
-                                        <table class="w-full min-w-[480px] text-sm">
+                                        <table class="w-full min-w-[760px] text-sm">
                                             <thead class="bg-white text-left text-xs uppercase text-slate-500">
                                                 <tr>
                                                     <th class="px-4 py-2.5">Job informativo</th>
                                                     <th class="px-4 py-2.5">Modelo</th>
+                                                    <th class="px-4 py-2.5">PO</th>
+                                                    <th class="px-4 py-2.5">Destino</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-slate-100">
@@ -276,6 +275,8 @@
                                                     <tr>
                                                         <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $item->job_number }}</td>
                                                         <td class="px-4 py-3 text-slate-700">{{ $item->model ?: 'Sin modelo' }}</td>
+                                                        <td class="px-4 py-3 text-slate-700">{{ $item->po_number ?? $group->po_number ?? 'Sin PO' }}</td>
+                                                        <td class="px-4 py-3 text-slate-700">{{ $item->destination ?? $group->destination ?? 'Sin destino' }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>

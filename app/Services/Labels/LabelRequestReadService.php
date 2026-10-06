@@ -47,7 +47,7 @@ class LabelRequestReadService
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
                 'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
-                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
@@ -83,7 +83,9 @@ class LabelRequestReadService
                             ->where('part_number', 'like', "%{$search}%")
                             ->orWhereHas('items', fn ($itemQuery) => $itemQuery
                                 ->where('job_number', 'like', "%{$search}%")
-                                ->orWhere('model', 'like', "%{$search}%")))
+                                ->orWhere('model', 'like', "%{$search}%")
+                                ->orWhere('po_number', 'like', "%{$search}%")
+                                ->orWhere('destination', 'like', "%{$search}%")))
                         ->orWhereHas('lpkShippingGroups', fn ($groupQuery) => $groupQuery
                             ->where('part_number', 'like', "%{$search}%")
                             ->orWhere('po_number', 'like', "%{$search}%")
@@ -234,7 +236,7 @@ class LabelRequestReadService
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
                 'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
-                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
             ->findOrFail($id);
     }
