@@ -108,16 +108,27 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         if (!catalogPickers.has(jobInput)) {
             const item = jobInput.closest('.lpk-label-item, .lpk-shipping-item');
             const group = jobInput.closest('.lpk-label-group, .lpk-shipping-group');
-            catalogPickers.set(jobInput, mountCatalogPicker({
-                container: item,
+            const picker = mountCatalogPicker({
+                container: item.querySelector('[data-relation-slot]') || item,
                 partInput: field(group, 'part_number'),
                 idInput: field(item, 'catalog_mapping_id'),
                 type: group.matches('.lpk-shipping-group') ? 'shipping' : field(group, 'label_type').value,
                 limitToPart: true,
                 onSelect: () => { refreshGroupCatalog(group, false); validateGroupUniqueness(); },
-            }));
+            });
+            picker.select.closest('.catalog-picker').classList.add('mt-3', 'border-t', 'border-slate-100', 'pt-3');
+            catalogPickers.set(jobInput, picker);
         }
         return catalogPickers.get(jobInput);
+    }
+
+    function syncSharedGroupFields(group) {
+        const partNumber = field(group, 'part_number')?.value || '';
+        group.querySelectorAll('[data-shared-part-display]').forEach((input) => { input.value = partNumber; });
+        if (group.matches('.lpk-shipping-group')) {
+            const quantity = field(group, 'quantity')?.value || '';
+            group.querySelectorAll('[data-shared-quantity-display]').forEach((input) => { input.value = quantity; });
+        }
     }
 
     function refreshGroupCatalog(group, autofill = true) {
@@ -126,6 +137,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
             if (jobCatalogs.has(input)) catalogPicker(input).setOptions(jobCatalogs.get(input), type, { autofill });
             else catalogPicker(input).refresh({ autofill: false });
         });
+        syncSharedGroupFields(group);
         const markets = new Set();
         for (const [input, picker] of catalogPickers) {
             if (!input.isConnected) { catalogPickers.delete(input); continue; }
@@ -162,11 +174,16 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
         labelGroups.forEach((group, groupIndex) => {
             ensureGroupHasItem(group, false);
+            const items = Array.from(group.querySelectorAll('.lpk-label-item'));
+            const partField = group.querySelector('[data-part-field]');
+            const firstPartSlot = items[0].querySelector('[data-part-slot]');
+            if (partField.parentElement !== firstPartSlot) firstPartSlot.prepend(partField);
+            partField.classList.remove('hidden');
             field(group, 'label_type').name = `lpk_label_groups[${groupIndex}][label_type]`;
             field(group, 'part_number').name = `lpk_label_groups[${groupIndex}][part_number]`;
 
-            const items = Array.from(group.querySelectorAll('.lpk-label-item'));
             items.forEach((item, itemIndex) => {
+                item.querySelector('[data-shared-part-hint]').classList.toggle('hidden', itemIndex === 0);
                 field(item, 'job_number').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][job_number]`;
                 field(item, 'model').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][model]`;
                 field(item, 'catalog_mapping_id').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][catalog_mapping_id]`;
@@ -174,14 +191,23 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 field(item, 'quantity').name = `lpk_label_groups[${groupIndex}][items][${itemIndex}][quantity]`;
                 item.querySelector('.remove-lpk-label-item')?.classList.toggle('hidden', items.length === 1);
             });
+            syncSharedGroupFields(group);
         });
 
         shippingGroups.forEach((group, groupIndex) => {
             ensureGroupHasItem(group, true);
+            const items = Array.from(group.querySelectorAll('.lpk-shipping-item'));
+            const sharedFields = group.querySelector('[data-shipping-shared-fields]');
+            const firstSharedSlot = items[0].querySelector('[data-shipping-shared-slot]');
+            if (sharedFields.parentElement !== firstSharedSlot) firstSharedSlot.prepend(sharedFields);
+            sharedFields.classList.remove('hidden');
+            sharedFields.classList.add('grid');
             field(group, 'part_number').name = `lpk_shipping_groups[${groupIndex}][part_number]`;
             field(group, 'quantity').name = `lpk_shipping_groups[${groupIndex}][quantity]`;
-            const items = Array.from(group.querySelectorAll('.lpk-shipping-item'));
             items.forEach((item, itemIndex) => {
+                const sharedHint = item.querySelector('[data-shipping-shared-hint]');
+                sharedHint.classList.toggle('hidden', itemIndex === 0);
+                sharedHint.classList.toggle('grid', itemIndex !== 0);
                 field(item, 'job_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][job_number]`;
                 field(item, 'model').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][model]`;
                 field(item, 'po_number').name = `lpk_shipping_groups[${groupIndex}][items][${itemIndex}][po_number]`;
@@ -190,6 +216,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
                 catalogPicker(field(item, 'job_number'));
                 item.querySelector('.remove-lpk-shipping-item')?.classList.toggle('hidden', items.length === 1);
             });
+            syncSharedGroupFields(group);
         });
 
         validateGroupUniqueness();
@@ -434,14 +461,14 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         ensureGroupHasItem(group, false);
         applyReworkTypeConstraints(reworkSourceTypes ? { label_types: reworkSourceTypes } : null);
         reindexForm();
-        field(group, 'part_number').focus();
+        field(group.querySelector('.lpk-label-item'), 'job_number').focus();
     });
 
     document.getElementById('addLpkShippingGroup').addEventListener('click', () => {
         const group = appendTemplate(shippingGroupTemplate, shippingGroupsContainer);
         ensureGroupHasItem(group, true);
         reindexForm();
-        field(group, 'part_number').focus();
+        field(group.querySelector('.lpk-shipping-item'), 'job_number').focus();
     });
 
     form.addEventListener('click', (event) => {
@@ -462,12 +489,28 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
             field(item, 'job_number').focus();
         } else if (removeLabelItem) {
             const group = removeLabelItem.closest('.lpk-label-group');
-            removeLabelItem.closest('.lpk-label-item').remove();
+            const item = removeLabelItem.closest('.lpk-label-item');
+            const partField = item.querySelector('[data-part-field]');
+            if (partField) {
+                const nextItem = [...group.querySelectorAll('.lpk-label-item')].find((row) => row !== item);
+                if (nextItem) nextItem.querySelector('[data-part-slot]').prepend(partField);
+                else group.append(partField);
+            }
+            catalogPickers.delete(field(item, 'job_number'));
+            item.remove();
             ensureGroupHasItem(group, false);
             reindexForm();
         } else if (removeShippingItem) {
             const group = removeShippingItem.closest('.lpk-shipping-group');
-            removeShippingItem.closest('.lpk-shipping-item').remove();
+            const item = removeShippingItem.closest('.lpk-shipping-item');
+            const sharedFields = item.querySelector('[data-shipping-shared-fields]');
+            if (sharedFields) {
+                const nextItem = [...group.querySelectorAll('.lpk-shipping-item')].find((row) => row !== item);
+                if (nextItem) nextItem.querySelector('[data-shipping-shared-slot]').prepend(sharedFields);
+                else group.append(sharedFields);
+            }
+            catalogPickers.delete(field(item, 'job_number'));
+            item.remove();
             ensureGroupHasItem(group, true);
             reindexForm();
         } else if (removeLabelGroup) {
@@ -486,6 +529,9 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         }
         if (event.target.matches('.lpk-item-quantity')) {
             validateQuantityForRow(event.target.closest('.lpk-label-item').querySelector('.lpk-job-input'));
+        }
+        if (event.target.matches('.lpk-shipping-group [data-field="quantity"]')) {
+            syncSharedGroupFields(event.target.closest('.lpk-shipping-group'));
         }
         if (event.target.matches('[data-field="part_number"]')) {
             const group = event.target.closest('.lpk-label-group, .lpk-shipping-group');

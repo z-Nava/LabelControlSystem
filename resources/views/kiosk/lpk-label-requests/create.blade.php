@@ -13,15 +13,15 @@
 <div class="space-y-6">
     @include('kiosk.partials.request-guide', [
         'title' => 'Crear requisición de etiquetas LPK',
-        'description' => 'Selecciona el tipo y captura los Jobs; el catálogo completará el NP y mostrará su Rating y mercado.',
+        'description' => 'Selecciona el tipo y captura primero el Job de producción; el catálogo completará el NP y mostrará su Rating y mercado.',
         'steps' => [
             ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, línea, turno y líder.'],
-            ['title' => 'Agrupa las etiquetas', 'description' => 'Crea un grupo por tipo y NP; no repitas el NP para agregar otro modelo.'],
+            ['title' => 'Agrupa las etiquetas', 'description' => 'Captura el Job de producción antes del NP; agrega otros Jobs al mismo grupo si usan la misma etiqueta.'],
             ['title' => 'Revisa y envía', 'description' => 'Valida todos los Jobs en Oracle antes de enviar a Label Room.'],
         ],
         'preparationItems' => [
             'El catálogo sugiere el NP al validar cada Job; los NP faltantes se capturan manualmente.',
-            'Modelo, Job y cantidad para Serial, Rating e Inner.',
+            'Job de producción, modelo, cantidad y NP para Serial, Rating e Inner.',
             'NP, cantidad, PO, destino y lista de Modelo/Job para cada Shipping.',
             'Shipping es información de requisición; el sistema no genera la etiqueta física Shipping.',
         ],
@@ -97,9 +97,9 @@
                 <div class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div class="text-base font-semibold text-slate-900">2) Serial, Rating e Inner</div>
-                        <div class="mt-1 max-w-3xl text-sm text-slate-500">Cada tarjeta representa un NP de etiqueta física. Dentro agrega todos los modelos y Jobs que utilizarán ese NP.</div>
+                        <div class="mt-1 max-w-3xl text-sm text-slate-500">Selecciona el tipo y captura primero el Job de producción. Después confirma el NP de la etiqueta que usarán los Jobs del grupo.</div>
                     </div>
-                    <button id="addLpkLabelGroup" type="button" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">+ Agregar NP</button>
+                    <button id="addLpkLabelGroup" type="button" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700">+ Agregar grupo</button>
                 </div>
 
                 <div class="border-b border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-900">
@@ -109,49 +109,55 @@
                 <div id="lpkLabelGroups" class="space-y-4 p-5">
                     @foreach($oldLabelGroups as $groupIndex => $group)
                         <article class="lpk-label-group rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end">
+                            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[160px_minmax(0,1fr)]">
+                                <div class="flex flex-wrap items-end justify-between gap-3 lg:block">
+                                    <div>
+                                        <label class="text-sm font-semibold text-slate-800">Tipo</label>
+                                        <select data-field="label_type" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
+                                            @foreach(['serial' => 'Serial', 'rating' => 'Rating', 'inner' => 'Inner'] as $value => $label)
+                                                <option value="{{ $value }}" @selected(($group['label_type'] ?? '') === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <button type="button" class="remove-lpk-label-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 lg:mt-3">Quitar grupo</button>
+                                </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-slate-800">Tipo</label>
-                                    <select data-field="label_type" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600">
-                                        @foreach(['serial' => 'Serial', 'rating' => 'Rating', 'inner' => 'Inner'] as $value => $label)
-                                            <option value="{{ $value }}" @selected(($group['label_type'] ?? '') === $value)>{{ $label }}</option>
+                                    <div data-items class="space-y-3">
+                                        @foreach(($group['items'] ?? []) as $item)
+                                            <div class="lpk-label-item rounded-xl border border-slate-200 bg-white p-3">
+                                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(150px,1.3fr)_minmax(150px,1.1fr)_minmax(140px,1fr)_90px_auto] xl:items-start">
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600">Job de producción</label>
+                                                        <input type="hidden" data-field="catalog_mapping_id" value="{{ $item['catalog_mapping_id'] ?? '' }}" /><input data-field="job_number" type="text" value="{{ $item['job_number'] ?? '' }}" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                                        <p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p>
+                                                    </div>
+                                                    <div data-part-slot>
+                                                        <div data-shared-part-hint class="hidden">
+                                                            <label class="text-xs font-semibold text-slate-600">NP de la etiqueta · compartido</label>
+                                                            <input data-shared-part-display type="text" readonly aria-label="NP compartido del grupo" placeholder="Pendiente de NP" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600">Modelo</label>
+                                                        <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                                        <p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-xs font-semibold text-slate-600">Cantidad</label>
+                                                        <input data-field="quantity" type="number" value="{{ $item['quantity'] ?? '' }}" min="1" max="100000" required placeholder="Cant." class="lpk-item-quantity w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
+                                                    </div>
+                                                    <button type="button" class="remove-lpk-label-item inline-flex min-h-11 items-center justify-center self-end rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+                                                </div>
+                                            </div>
                                         @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-sm font-semibold text-slate-800">NP de la etiqueta</label>
-                                    <input data-field="part_number" type="text" value="{{ $group['part_number'] ?? '' }}" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                </div>
-                                <button type="button" class="remove-lpk-label-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar NP</button>
-                            </div>
-
-                            <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-500 md:grid">
-                                    <span>Job</span><span>Modelo</span><span>Cantidad</span><span></span>
-                                </div>
-                                <div data-items class="divide-y divide-slate-200">
-                                    @foreach(($group['items'] ?? []) as $item)
-                                        <div class="lpk-label-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] md:items-start">
-                                            <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Job</label>
-                                                <input type="hidden" data-field="catalog_mapping_id" value="{{ $item['catalog_mapping_id'] ?? '' }}" /><input data-field="job_number" type="text" value="{{ $item['job_number'] ?? '' }}" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                                <p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p>
-                                            </div>
-                                            <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label>
-                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                                <p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
-                                            </div>
-                                            <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Cantidad</label>
-                                                <input data-field="quantity" type="number" value="{{ $item['quantity'] ?? '' }}" min="1" max="100000" required placeholder="Cant." class="lpk-item-quantity w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
-                                            </div>
-                                            <button type="button" class="remove-lpk-label-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
-                                        </div>
-                                    @endforeach
+                                    </div>
+                                    <button type="button" class="add-lpk-label-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">+ Agregar Job / Modelo</button>
                                 </div>
                             </div>
-                            <button type="button" class="add-lpk-label-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">+ Agregar Modelo / Job</button>
+                            <div data-part-field class="hidden">
+                                <label class="text-xs font-semibold text-slate-600">NP de la etiqueta</label>
+                                <input data-field="part_number" type="text" value="{{ $group['part_number'] ?? '' }}" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" />
+                            </div>
                         </article>
                     @endforeach
                 </div>
@@ -161,7 +167,7 @@
                 <div class="flex flex-col gap-3 border-b border-amber-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <div class="text-base font-semibold text-slate-900">3) Shipping LPK</div>
-                        <div class="mt-1 max-w-3xl text-sm text-slate-500">Cada tarjeta es un NP Shipping con una cantidad total. Captura o verifica la PO y el destino de cada Job y modelo por separado.</div>
+                        <div class="mt-1 max-w-3xl text-sm text-slate-500">Captura primero el Job, confirma el NP Shipping y la cantidad total del grupo. Verifica la PO y el destino de cada Job por separado.</div>
                     </div>
                     <button id="addLpkShippingGroup" type="button" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">+ Agregar Shipping</button>
                 </div>
@@ -173,43 +179,42 @@
                 <div id="lpkShippingGroups" class="space-y-4 p-5">
                     @foreach($oldShippingGroups as $group)
                         <article class="lpk-shipping-group rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
-                            <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
-                                <div>
-                                    <label class="text-sm font-semibold text-slate-800">NP Shipping</label>
-                                    <input data-field="part_number" type="text" value="{{ $group['part_number'] ?? '' }}" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
-                                </div>
-                                <div>
-                                    <label class="text-sm font-semibold text-slate-800">Cantidad total</label>
-                                    <input data-field="quantity" type="number" value="{{ $group['quantity'] ?? '' }}" min="1" max="100000" required placeholder="Ej: 12" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" />
-                                </div>
+                            <div class="flex justify-end">
                                 <button type="button" class="remove-lpk-shipping-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar Shipping</button>
                             </div>
-
-                            <div class="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white">
-                                <div class="hidden grid-cols-[minmax(150px,1.3fr)_minmax(130px,1fr)_minmax(110px,0.8fr)_minmax(130px,1fr)_auto] gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-semibold uppercase text-amber-800 md:grid">
-                                    <span>Job informativo</span><span>Modelo</span><span>PO</span><span>Destino</span><span></span>
-                                </div>
-                                <div data-items class="divide-y divide-amber-100">
-                                    @foreach(($group['items'] ?? []) as $item)
-                                        <div class="lpk-shipping-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(150px,1.3fr)_minmax(130px,1fr)_minmax(110px,0.8fr)_minmax(130px,1fr)_auto] md:items-start">
+                            <div data-items class="mt-3 space-y-3">
+                                @foreach(($group['items'] ?? []) as $item)
+                                    <div class="lpk-shipping-item rounded-xl border border-amber-200 bg-white p-3">
+                                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
                                             <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Job</label>
-                                                <input type="hidden" data-field="catalog_mapping_id" value="{{ $item['catalog_mapping_id'] ?? '' }}" /><input data-field="job_number" type="text" value="{{ $item['job_number'] ?? '' }}" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                                <label class="text-xs font-semibold text-slate-600">Job</label>
+                                                <input type="hidden" data-field="catalog_mapping_id" value="{{ $item['catalog_mapping_id'] ?? '' }}" /><input data-field="job_number" type="text" value="{{ $item['job_number'] ?? '' }}" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
                                                 <p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p>
                                             </div>
+                                            <div data-shipping-shared-slot class="md:col-span-2">
+                                                <div data-shipping-shared-hint class="hidden grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_130px]">
+                                                    <div><label class="text-xs font-semibold text-slate-600">NP Shipping · compartido</label><input data-shared-part-display type="text" readonly aria-label="NP Shipping compartido" placeholder="Pendiente de NP" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" /></div>
+                                                    <div><label class="text-xs font-semibold text-slate-600">Cantidad total</label><input data-shared-quantity-display type="text" readonly aria-label="Cantidad total compartida" placeholder="Pendiente" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" /></div>
+                                                </div>
+                                            </div>
                                             <div>
-                                                <label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label>
-                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
+                                                <label class="text-xs font-semibold text-slate-600">Modelo</label>
+                                                <input data-field="model" type="text" value="{{ $item['model'] ?? '' }}" maxlength="80" placeholder="Valida el Job" class="lpk-model-input mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" />
                                                 <p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p>
                                             </div>
-                                            <div><label class="text-xs font-semibold text-slate-500 md:hidden">PO</label><input data-field="po_number" type="text" value="{{ $item['po_number'] ?? '' }}" maxlength="80" placeholder="PO del Job" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-                                            <div><label class="text-xs font-semibold text-slate-500 md:hidden">Destino</label><input data-field="destination" type="text" value="{{ $item['destination'] ?? '' }}" maxlength="80" placeholder="Destino del Job" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-                                            <button type="button" class="remove-lpk-shipping-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+                                            <div><label class="text-xs font-semibold text-slate-600">PO</label><input data-field="po_number" type="text" value="{{ $item['po_number'] ?? '' }}" maxlength="80" placeholder="PO del Job" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+                                            <div><label class="text-xs font-semibold text-slate-600">Destino</label><input data-field="destination" type="text" value="{{ $item['destination'] ?? '' }}" maxlength="80" placeholder="Destino del Job" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
                                         </div>
-                                    @endforeach
-                                </div>
+                                        <div data-relation-slot></div>
+                                        <button type="button" class="remove-lpk-shipping-item mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar Job</button>
+                                    </div>
+                                @endforeach
                             </div>
-                            <button type="button" class="add-lpk-shipping-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50">+ Agregar Modelo / Job</button>
+                            <button type="button" class="add-lpk-shipping-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50">+ Agregar Job / Modelo</button>
+                            <div data-shipping-shared-fields class="hidden grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_130px]">
+                                <div><label class="text-xs font-semibold text-slate-600">NP Shipping</label><input data-field="part_number" type="text" value="{{ $group['part_number'] ?? '' }}" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+                                <div><label class="text-xs font-semibold text-slate-600">Cantidad total</label><input data-field="quantity" type="number" value="{{ $group['quantity'] ?? '' }}" min="1" max="100000" required placeholder="Ej: 12" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+                            </div>
                         </article>
                     @endforeach
                 </div>
@@ -243,45 +248,56 @@
 </div>
 
 <template id="lpkLabelItemTemplate">
-    <div class="lpk-label-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] md:items-start">
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Job</label><input type="hidden" data-field="catalog_mapping_id" /><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Cantidad</label><input data-field="quantity" type="number" min="1" max="100000" required placeholder="Cant." class="lpk-item-quantity w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
-        <button type="button" class="remove-lpk-label-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+    <div class="lpk-label-item rounded-xl border border-slate-200 bg-white p-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(150px,1.3fr)_minmax(150px,1.1fr)_minmax(140px,1fr)_90px_auto] xl:items-start">
+            <div><label class="text-xs font-semibold text-slate-600">Job de producción</label><input type="hidden" data-field="catalog_mapping_id" /><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
+            <div data-part-slot><div data-shared-part-hint class="hidden"><label class="text-xs font-semibold text-slate-600">NP de la etiqueta · compartido</label><input data-shared-part-display type="text" readonly aria-label="NP compartido del grupo" placeholder="Pendiente de NP" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" /></div></div>
+            <div><label class="text-xs font-semibold text-slate-600">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
+            <div><label class="text-xs font-semibold text-slate-600">Cantidad</label><input data-field="quantity" type="number" min="1" max="100000" required placeholder="Cant." class="lpk-item-quantity w-full rounded-xl border border-slate-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
+            <button type="button" class="remove-lpk-label-item inline-flex min-h-11 items-center justify-center self-end rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+        </div>
     </div>
 </template>
 
 <template id="lpkLabelGroupTemplate">
     <article class="lpk-label-group rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end">
-            <div><label class="text-sm font-semibold text-slate-800">Tipo</label><select data-field="label_type" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600"><option value="serial">Serial</option><option value="rating">Rating</option><option value="inner">Inner</option></select></div>
-            <div><label class="text-sm font-semibold text-slate-800">NP de la etiqueta</label><input data-field="part_number" type="text" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
-            <button type="button" class="remove-lpk-label-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar NP</button>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-[160px_minmax(0,1fr)]">
+            <div class="flex flex-wrap items-end justify-between gap-3 lg:block">
+                <div><label class="text-sm font-semibold text-slate-800">Tipo</label><select data-field="label_type" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600"><option value="serial">Serial</option><option value="rating">Rating</option><option value="inner">Inner</option></select></div>
+                <button type="button" class="remove-lpk-label-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 lg:mt-3">Quitar grupo</button>
+            </div>
+            <div>
+                <div data-items class="space-y-3"></div>
+                <button type="button" class="add-lpk-label-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">+ Agregar Job / Modelo</button>
+            </div>
         </div>
-        <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white"><div class="hidden grid-cols-[minmax(130px,0.8fr)_minmax(150px,1fr)_110px_auto] gap-2 border-b border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold uppercase text-slate-500 md:grid"><span>Job</span><span>Modelo</span><span>Cantidad</span><span></span></div><div data-items class="divide-y divide-slate-200"></div></div>
-        <button type="button" class="add-lpk-label-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white">+ Agregar Modelo / Job</button>
+        <div data-part-field class="hidden"><label class="text-xs font-semibold text-slate-600">NP de la etiqueta</label><input data-field="part_number" type="text" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-red-600" /></div>
     </article>
 </template>
 
 <template id="lpkShippingItemTemplate">
-    <div class="lpk-shipping-item grid grid-cols-1 gap-2 p-3 md:grid-cols-[minmax(150px,1.3fr)_minmax(130px,1fr)_minmax(110px,0.8fr)_minmax(130px,1fr)_auto] md:items-start">
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Job</label><input type="hidden" data-field="catalog_mapping_id" /><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">PO</label><input data-field="po_number" type="text" maxlength="80" placeholder="PO del Job" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-        <div><label class="text-xs font-semibold text-slate-500 md:hidden">Destino</label><input data-field="destination" type="text" maxlength="80" placeholder="Destino del Job" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-        <button type="button" class="remove-lpk-shipping-item inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar</button>
+    <div class="lpk-shipping-item rounded-xl border border-amber-200 bg-white p-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+            <div><label class="text-xs font-semibold text-slate-600">Job</label><input type="hidden" data-field="catalog_mapping_id" /><input data-field="job_number" type="text" maxlength="40" pattern="^[0-9A-Za-z\-]+$" required placeholder="Job" class="lpk-job-input mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-job-status class="mt-1 text-xs text-slate-500">Pendiente de validar.</p></div>
+            <div data-shipping-shared-slot class="md:col-span-2"><div data-shipping-shared-hint class="hidden grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_130px]"><div><label class="text-xs font-semibold text-slate-600">NP Shipping · compartido</label><input data-shared-part-display type="text" readonly aria-label="NP Shipping compartido" placeholder="Pendiente de NP" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" /></div><div><label class="text-xs font-semibold text-slate-600">Cantidad total</label><input data-shared-quantity-display type="text" readonly aria-label="Cantidad total compartida" placeholder="Pendiente" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-100 px-3 py-2.5 text-slate-700" /></div></div></div>
+            <div><label class="text-xs font-semibold text-slate-600">Modelo</label><input data-field="model" type="text" maxlength="80" placeholder="Valida el Job" class="lpk-model-input mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /><p data-model-status class="mt-1 text-xs text-slate-500">Se consultará en Master Model Mapping.</p></div>
+            <div><label class="text-xs font-semibold text-slate-600">PO</label><input data-field="po_number" type="text" maxlength="80" placeholder="PO del Job" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+            <div><label class="text-xs font-semibold text-slate-600">Destino</label><input data-field="destination" type="text" maxlength="80" placeholder="Destino del Job" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+        </div>
+        <div data-relation-slot></div>
+        <button type="button" class="remove-lpk-shipping-item mt-3 inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-3 text-sm text-slate-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700">Quitar Job</button>
     </div>
 </template>
 
 <template id="lpkShippingGroupTemplate">
     <article class="lpk-shipping-group rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-end">
-            <div><label class="text-sm font-semibold text-slate-800">NP Shipping</label><input data-field="part_number" type="text" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-            <div><label class="text-sm font-semibold text-slate-800">Cantidad total</label><input data-field="quantity" type="number" min="1" max="100000" required placeholder="Ej: 12" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
-            <button type="button" class="remove-lpk-shipping-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar Shipping</button>
+        <div class="flex justify-end"><button type="button" class="remove-lpk-shipping-group inline-flex min-h-11 items-center justify-center rounded-xl border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50">Quitar Shipping</button></div>
+        <div data-items class="mt-3 space-y-3"></div>
+        <button type="button" class="add-lpk-shipping-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50">+ Agregar Job / Modelo</button>
+        <div data-shipping-shared-fields class="hidden grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_130px]">
+            <div><label class="text-xs font-semibold text-slate-600">NP Shipping</label><input data-field="part_number" type="text" maxlength="80" required placeholder="Se completa al validar el Job" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 uppercase focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
+            <div><label class="text-xs font-semibold text-slate-600">Cantidad total</label><input data-field="quantity" type="number" min="1" max="100000" required placeholder="Ej: 12" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-600" /></div>
         </div>
-        <div class="mt-4 overflow-hidden rounded-xl border border-amber-200 bg-white"><div class="hidden grid-cols-[minmax(150px,1.3fr)_minmax(130px,1fr)_minmax(110px,0.8fr)_minmax(130px,1fr)_auto] gap-2 border-b border-amber-200 bg-amber-100/60 px-3 py-2 text-xs font-semibold uppercase text-amber-800 md:grid"><span>Job informativo</span><span>Modelo</span><span>PO</span><span>Destino</span><span></span></div><div data-items class="divide-y divide-amber-100"></div></div>
-        <button type="button" class="add-lpk-shipping-item mt-3 inline-flex min-h-10 items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50">+ Agregar Modelo / Job</button>
     </article>
 </template>
 @endsection
