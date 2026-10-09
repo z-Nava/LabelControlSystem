@@ -66,7 +66,7 @@
 
         <p class="mt-3 text-xs text-slate-400" role="note">
             <span class="font-semibold text-amber-200">Importante:</span>
-            esta pantalla no imprime ni entrega material; envía la requisición a Label Room para que sea atendida.
+            {{ $requestGuideNote ?? 'esta pantalla no imprime ni entrega material; envía la requisición a Label Room para que sea atendida.' }}
         </p>
     </div>
 </section>
