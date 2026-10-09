@@ -180,9 +180,9 @@ class KioskRequisitionPrintService
             'browserPrintUrl' => asset('vendor/zebra/BrowserPrint-3.1.250.min.js'),
             'defaultPrinterName' => config('kiosk.requisition_label.default_printer_name'),
             'labelSize' => sprintf(
-                '%d × %d cm',
-                ((int) config('kiosk.requisition_label.width_mm', 100)) / 10,
-                ((int) config('kiosk.requisition_label.height_mm', 100)) / 10,
+                '%d × %d mm',
+                (int) config('kiosk.requisition_label.width_mm', 102),
+                (int) config('kiosk.requisition_label.height_mm', 165),
             ),
         ];
     }
@@ -237,12 +237,36 @@ class KioskRequisitionPrintService
                 return ['status' => 'sending', 'job' => $printJob];
             }
 
-            $printJob->update([
+            $updates = [
                 'status' => KioskRequisitionPrintJob::STATUS_SENDING,
                 'attempts' => $printJob->attempts + 1,
                 'last_error' => null,
                 'dispatched_at' => now(),
-            ]);
+            ];
+
+            if (
+                ($request instanceof LabelRequest && $request->isLpk())
+                || str_contains($printJob->zpl, '^A0R')
+                || substr_count($printJob->zpl, '^XA') !== 1
+            ) {
+                $dpi = (int) config('kiosk.requisition_label.dpi', 203);
+
+                if ($request instanceof LabelRequest) {
+                    $request->loadMissing([
+                        'line', 'shift', 'serials', 'ratings', 'shippingItems',
+                        'lpkLabelGroups.items', 'lpkShippingGroups.items',
+                    ]);
+                    $updates['zpl'] = $this->labelZplBuilder->build($request, $dpi);
+                } elseif ($request instanceof MasterRequest) {
+                    $request->loadMissing(['line', 'shift', 'folios']);
+                    $updates['zpl'] = $this->masterZplBuilder->build($request, $dpi);
+                } else {
+                    $request->loadMissing(['line', 'shift']);
+                    $updates['zpl'] = $this->dummyZplBuilder->build($request, $dpi);
+                }
+            }
+
+            $printJob->update($updates);
 
             return ['status' => 'claimed', 'job' => $printJob->refresh()];
         });

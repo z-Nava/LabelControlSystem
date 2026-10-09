@@ -223,7 +223,7 @@ const initializeRequisitionPrint = () => {
                 throw new Error('El servidor no devolvió contenido ZPL para la etiqueta.');
             }
 
-            setStatus(`Enviando etiqueta ${config.labelSize || '10 × 10 cm'} a la impresora…`);
+            setStatus(`Enviando etiqueta ${config.labelSize || '102 × 165 mm'} a la impresora…`);
             await sendToPrinter(printer, claim.zpl);
             sentToPrinter = true;
             writeStorage(tokenStorageKey, {

@@ -11,88 +11,130 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
 {
     protected const BASE_DPI = 203;
 
-    protected const BASE_WIDTH_DOTS = 799;
+    // Portrait reading area on stock that feeds 102 mm wide by 165 mm long.
+    protected const LAYOUT_WIDTH_DOTS = 815;
 
-    protected const BASE_HEIGHT_DOTS = 799;
+    protected const LAYOUT_HEIGHT_DOTS = 1319;
 
     /**
-     * @return array{dpi: int, width: int, height: int, scale: float}
+     * @return array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}
      */
     protected function dimensions(int $dpi): array
     {
         $dpi = in_array($dpi, [203, 300], true) ? $dpi : self::BASE_DPI;
-        $width = LabelDimensions::millimetersToDots(100, $dpi) ?? self::BASE_WIDTH_DOTS;
-        $height = LabelDimensions::millimetersToDots(100, $dpi) ?? self::BASE_HEIGHT_DOTS;
+        $width = LabelDimensions::millimetersToDots((float) config('kiosk.requisition_label.width_mm', 102), $dpi) ?? self::LAYOUT_WIDTH_DOTS;
+        $height = LabelDimensions::millimetersToDots((float) config('kiosk.requisition_label.height_mm', 165), $dpi) ?? self::LAYOUT_HEIGHT_DOTS;
 
         return [
-            'dpi' => $dpi,
             'width' => $width,
             'height' => $height,
-            'scale' => min(
-                $width / self::BASE_WIDTH_DOTS,
-                $height / self::BASE_HEIGHT_DOTS,
-            ),
+            'x_scale' => $width / self::LAYOUT_WIDTH_DOTS,
+            'y_scale' => $height / self::LAYOUT_HEIGHT_DOTS,
+            'font_scale' => min($width / self::LAYOUT_WIDTH_DOTS, $height / self::LAYOUT_HEIGHT_DOTS),
         ];
     }
 
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     */
     protected function field(
         int $x,
         int $y,
         int $width,
         int $fontSize,
         string $value,
-        float $scale,
-        int $maxLines = 1,
+        array $dimensions,
         string $alignment = 'L',
     ): string {
-        $x = $this->scaled($x, $scale);
-        $y = $this->scaled($y, $scale);
-        $width = $this->scaled($width, $scale);
-        $fontSize = $this->scaled($fontSize, $scale);
+        $fontSize = $this->scaled($fontSize, $dimensions['font_scale']);
+        $physicalX = $this->scaled($x, $dimensions['x_scale']);
+        $physicalY = $this->scaled($y, $dimensions['y_scale']);
+        $fieldWidth = $this->scaled($width, $dimensions['x_scale']);
 
-        return "^FO{$x},{$y}^A0N,{$fontSize},{$fontSize}^FB{$width},{$maxLines},2,{$alignment},0^FH^FD{$this->escape($value)}^FS";
+        return "^FO{$physicalX},{$physicalY}^A0N,{$fontSize},{$fontSize}^FB{$fieldWidth},1,0,{$alignment},0^FH^FD{$this->escape($value)}^FS";
     }
 
-    protected function box(int $x, int $y, int $width, int $height, int $thickness, float $scale): string
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     */
+    protected function box(int $x, int $y, int $width, int $height, int $thickness, array $dimensions): string
     {
         return sprintf(
             '^FO%d,%d^GB%d,%d,%d^FS',
-            $this->scaled($x, $scale),
-            $this->scaled($y, $scale),
-            $this->scaled($width, $scale),
-            $this->scaled($height, $scale),
-            $this->scaled($thickness, $scale),
+            $this->scaled($x, $dimensions['x_scale']),
+            $this->scaled($y, $dimensions['y_scale']),
+            $this->scaled($width, $dimensions['x_scale']),
+            $this->scaled($height, $dimensions['y_scale']),
+            $this->scaled($thickness, $dimensions['font_scale']),
         );
     }
 
-    protected function line(int $x, int $y, int $width, int $thickness, float $scale): string
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     */
+    protected function line(int $x, int $y, int $width, int $thickness, array $dimensions): string
     {
-        return sprintf(
-            '^FO%d,%d^GB%d,%d,%d^FS',
-            $this->scaled($x, $scale),
-            $this->scaled($y, $scale),
-            $this->scaled($width, $scale),
-            $this->scaled($thickness, $scale),
-            $this->scaled($thickness, $scale),
-        );
+        return $this->box($x, $y, $width, $thickness, $thickness, $dimensions);
     }
 
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     */
     protected function qr(
         int $x,
         int $y,
         string $payload,
-        float $scale,
+        array $dimensions,
         int $baseMagnification = 4,
     ): string {
-        $magnification = max(2, min(10, (int) round($baseMagnification * $scale)));
+        $magnification = max(2, min(10, (int) round($baseMagnification * $dimensions['font_scale'])));
 
         return sprintf(
             '^FO%d,%d^BQN,2,%d^FH^FDLA,%s^FS',
-            $this->scaled($x, $scale),
-            $this->scaled($y, $scale),
+            $this->scaled($x, $dimensions['x_scale']),
+            $this->scaled($y, $dimensions['y_scale']),
             $magnification,
             $this->escape($payload),
         );
+    }
+
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     * @return array<int, string>
+     */
+    protected function startLabel(array $dimensions): array
+    {
+        return [
+            '^XA',
+            '^CI28',
+            "^PW{$dimensions['width']}",
+            "^LL{$dimensions['height']}",
+            '^LH0,0',
+            '^LS0',
+            '^MMT',
+            $this->box(12, 12, 791, 1295, 3, $dimensions),
+        ];
+    }
+
+    /**
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     * @return array<int, string>
+     */
+    protected function footer(array $dimensions): array
+    {
+        return [
+            $this->line(25, 1150, 765, 2, $dimensions),
+            $this->field(30, 1164, 105, 17, 'IMPRIMIO:', $dimensions),
+            $this->line(135, 1189, 235, 2, $dimensions),
+            $this->field(410, 1164, 95, 17, 'RECIBIO:', $dimensions),
+            $this->line(505, 1189, 270, 2, $dimensions),
+            $this->field(30, 1210, 145, 17, 'FOLIO INICIAL:', $dimensions),
+            $this->line(175, 1235, 190, 2, $dimensions),
+            $this->field(410, 1210, 140, 17, 'FOLIO FINAL:', $dimensions),
+            $this->line(550, 1235, 225, 2, $dimensions),
+            $this->field(30, 1260, 80, 17, 'TURNO:', $dimensions),
+            $this->line(110, 1285, 260, 2, $dimensions),
+        ];
     }
 
     protected function formatDate(

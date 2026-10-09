@@ -4,45 +4,102 @@ namespace App\Services\Kiosk;
 
 use App\Models\LabelRequest;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 
 class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBuilder
 {
+    private const VISIBLE_ROWS = 8;
+
     public function build(LabelRequest $labelRequest, int $dpi = self::BASE_DPI): string
     {
         $dimensions = $this->dimensions($dpi);
-        $widthDots = $dimensions['width'];
-        $heightDots = $dimensions['height'];
-        $scale = $dimensions['scale'];
+        $rows = $this->requestRows($labelRequest);
 
-        $lineName = trim(implode(' ', array_filter([
-            $labelRequest->line?->code,
-            $labelRequest->line?->name,
-        ]))) ?: 'SIN LINEA';
-        $types = implode(' + ', $labelRequest->requestedLabelTypes()) ?: 'SIN TIPO';
-        $serialDetails = $this->formatRequestItems($labelRequest->requestedSerialItems());
-        $ratingDetails = $this->formatRequestItems($labelRequest->requestedRatingItems());
-        $shippingItems = $labelRequest->requestedShippingItems();
-        $innerDetails = $labelRequest->include_inner
-            ? $this->formatRequestItems([[
-                'part_number' => (string) $labelRequest->inner_part_number,
-                'model' => filled($labelRequest->inner_model) ? (string) $labelRequest->inner_model : null,
-            ]])
-            : 'NO REQUERIDO';
-        $shippingDetails = $this->formatRequestItems($shippingItems ?: [[
-            'part_number' => (string) $labelRequest->shipping_part_number,
-            'model' => filled($labelRequest->shipping_model) ? (string) $labelRequest->shipping_model : null,
-        ]]);
-        $shippingQuantity = $labelRequest->include_shipping
-            ? (string) ($labelRequest->shipping_quantity ?? $labelRequest->quantity_requested)
-            : 'NO REQUERIDO';
-        $title = $labelRequest->isLpk()
-            ? 'REQUISICION DE ETIQUETAS LPK'
-            : 'REQUISICION DE ETIQUETAS';
-        $hasGroupedLpkDetails = $labelRequest->hasGroupedLpkDetails();
-        $modelLabel = $labelRequest->isLpk() ? 'ENSAMBLE FINAL' : 'MODELO';
-        $shippingLine = 'SHIPPING: '.$shippingQuantity.'  |  PO: '.($labelRequest->po_number ?: 'N/A');
-        $destinationLine = 'DESTINO: '.($labelRequest->destination ?: 'N/A');
+        if ($labelRequest->isLpk()) {
+            [$orderedRows, $visibleRows] = $this->lpkRows($rows);
+        } else {
+            $shippingRows = array_values(array_filter($rows, fn (array $row): bool => str_contains($row['type'], 'SHIPPING')));
+            $otherRows = array_values(array_filter($rows, fn (array $row): bool => ! str_contains($row['type'], 'SHIPPING')));
+            $orderedRows = [...$shippingRows, ...$otherRows];
+            $visibleRows = array_slice($orderedRows, 0, self::VISIBLE_ROWS);
+        }
+
+        return implode("\n", $this->page($labelRequest, $orderedRows, $visibleRows, $dimensions));
+    }
+
+    /**
+     * Keep at least one row of each requested LPK type visible. Fill the
+     * remaining space in Rating, Serial, Shipping, Inner order.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @return array{array<int, array<string, string>>, array<int, array<string, string>>}
+     */
+    private function lpkRows(array $rows): array
+    {
+        $groups = [
+            'RATING' => [],
+            'SERIAL' => [],
+            'SHIPPING' => [],
+            'INNER' => [],
+            'OTHER' => [],
+        ];
+
+        foreach ($rows as $row) {
+            $type = $row['type'];
+            $key = match (true) {
+                str_contains($type, 'RATING') => 'RATING',
+                str_contains($type, 'SERIAL') => 'SERIAL',
+                str_contains($type, 'SHIPPING') => 'SHIPPING',
+                str_contains($type, 'INNER') => 'INNER',
+                default => 'OTHER',
+            };
+            $groups[$key][] = $row;
+        }
+
+        $orderedRows = array_merge(...array_values($groups));
+        $visibleGroups = array_fill_keys(array_keys($groups), []);
+        $visibleCount = 0;
+
+        foreach ($groups as $key => $groupRows) {
+            if ($groupRows !== [] && $visibleCount < self::VISIBLE_ROWS) {
+                $visibleGroups[$key][] = array_shift($groups[$key]);
+                $visibleCount++;
+            }
+        }
+
+        foreach ($groups as $key => $groupRows) {
+            foreach ($groupRows as $row) {
+                if ($visibleCount >= self::VISIBLE_ROWS) {
+                    break 2;
+                }
+
+                $visibleGroups[$key][] = $row;
+                $visibleCount++;
+            }
+        }
+
+        return [$orderedRows, array_merge(...array_values($visibleGroups))];
+    }
+
+    /**
+     * @param  array<int, array{type: string, part_number: string, job: string, model: string, quantity: string, po: string, destination: string}>  $allRows
+     * @param  array<int, array{type: string, part_number: string, job: string, model: string, quantity: string, po: string, destination: string}>  $rows
+     * @param  array{width: int, height: int, x_scale: float, y_scale: float, font_scale: float}  $dimensions
+     * @return array<int, string>
+     */
+    private function page(LabelRequest $labelRequest, array $allRows, array $rows, array $dimensions): array
+    {
+        $jobs = collect($allRows)->pluck('job')->filter(fn (string $job): bool => $job !== 'N/A')->unique()->values();
+        $job = match ($jobs->count()) {
+            0 => $labelRequest->job_number ?: 'N/A',
+            1 => (string) $jobs->first(),
+            default => 'VARIAS JOBS (VER RENGLONES)',
+        };
+        $title = $labelRequest->isLpk() ? 'REQUISICION ETIQUETAS LPK' : 'REQUISICION DE ETIQUETAS';
+        $ratingRow = collect($allRows)->first(fn (array $row): bool => str_contains($row['type'], 'RATING') && $row['job'] !== 'N/A');
+        $qrPayload = $labelRequest->isLpk()
+            ? ($ratingRow['job'] ?? "LPK:{$labelRequest->id}")
+            : (string) ($labelRequest->job_number ?: $labelRequest->id);
+        $folio = sprintf('#%06d', (int) $labelRequest->id);
         $displayTimezone = $this->displayTimezone();
         $createdAt = $this->formatDate(
             $labelRequest->getRawOriginal('created_at'),
@@ -50,253 +107,132 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
             Carbon::now($displayTimezone)->format('d/m/Y H:i'),
             $displayTimezone,
         );
-        $folio = sprintf('#%06d', (int) $labelRequest->id);
-        $qrPayload = $hasGroupedLpkDetails
-            ? "LPK:{$labelRequest->id}"
-            : (string) $labelRequest->job_number;
+        $lineName = trim(implode(' ', array_filter([
+            $labelRequest->line?->code,
+            $labelRequest->line?->name,
+        ]))) ?: 'SIN LINEA';
+        $types = $labelRequest->isLpk()
+            ? implode(', ', array_unique(array_map(
+                fn (array $row): string => match (true) {
+                    str_contains($row['type'], 'SHIPPING') => 'Shipping LPK',
+                    str_contains($row['type'], 'RATING') => 'Rating',
+                    str_contains($row['type'], 'SERIAL') => 'Serial',
+                    str_contains($row['type'], 'INNER') => 'Inner',
+                    default => $row['type'],
+                },
+                $allRows,
+            )))
+            : implode(', ', $labelRequest->requestedLabelTypes());
+        $types = $types ?: 'VER RENGLONES';
+        $commonModel = $this->commonValue($allRows, 'model', (string) ($labelRequest->model ?: 'N/A'));
+        $commonPo = $this->commonValue($allRows, 'po', (string) ($labelRequest->po_number ?: 'N/A'));
+        $commonDestination = $this->commonValue($allRows, 'destination', (string) ($labelRequest->destination ?: 'N/A'));
+        $remaining = count($allRows) - count($rows);
 
-        $details = $hasGroupedLpkDetails
-            ? $this->groupedLpkFields($labelRequest, $lineName, $createdAt, $qrPayload, $scale)
-            : ($labelRequest->isLpk()
-            ? [
-                $this->field(38, 137, 720, 16, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, alignment: 'C'),
-                $this->field(38, 168, 720, 32, 'JOB: '.(string) $labelRequest->job_number, $scale),
-                $this->field(38, 208, 720, 22, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
-                $this->field(38, 259, 720, 17, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-                $this->field(38, 296, 720, 17, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
-                $this->field(38, 333, 720, 19, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types.' | INNER: '.$innerDetails, $scale, maxLines: 2),
-                $this->field(38, 374, 720, 16, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
-                $this->field(38, 410, 720, 16, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
-                $this->field(
-                    38,
-                    446,
-                    720,
-                    16,
-                    sprintf(
-                        'SHIPPING: %s | %d NP',
-                        $shippingQuantity,
-                        count($shippingItems),
-                    ),
-                    $scale,
-                ),
-                ...$this->lpkShippingItemFields($shippingItems, $scale),
-                $this->field(
-                    38,
-                    653,
-                    590,
-                    17,
-                    'PO: '.($labelRequest->po_number ?: 'N/A').' | DESTINO: '.($labelRequest->destination ?: 'N/A'),
-                    $scale,
-                    maxLines: 2,
-                ),
-                $this->field(38, 714, 95, 17, 'IMPRIMIO:', $scale),
-                $this->line(130, 734, 145, 2, $scale),
-                $this->field(300, 714, 90, 17, 'RECIBIO:', $scale),
-                $this->line(390, 734, 160, 2, $scale),
-                $this->field(38, 740, 130, 17, 'FOLIO INICIAL:', $scale),
-                $this->line(165, 760, 110, 2, $scale),
-                $this->field(300, 740, 125, 17, 'FOLIO FINAL:', $scale),
-                $this->line(425, 760, 125, 2, $scale),
-                $this->field(38, 763, 70, 17, 'TURNO:', $scale),
-                $this->line(105, 783, 170, 2, $scale),
-                $this->qr(650, 650, $qrPayload, $scale),
-            ]
-            : [
-                $this->field(38, 140, 720, 16, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, alignment: 'C'),
-                $this->field(38, 176, 720, 36, 'JOB: '.(string) $labelRequest->job_number, $scale),
-                $this->field(38, 220, 720, 27, $modelLabel.': '.($labelRequest->model ?: 'N/A'), $scale, maxLines: 2),
-                $this->field(38, 286, 720, 23, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 2),
-                $this->field(38, 332, 720, 23, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 2),
-                $this->field(38, 378, 720, 25, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested).'  |  TIPOS: '.$types, $scale, maxLines: 2),
-                $this->field(38, 423, 720, 18, 'SERIAL NP / MODELO: '.$serialDetails, $scale, maxLines: 2),
-                $this->field(38, 466, 720, 18, 'RATING NP / MODELO: '.$ratingDetails, $scale, maxLines: 2),
-                $this->field(38, 509, 720, 18, 'INNER NP / MODELO: '.$innerDetails, $scale),
-                $this->field(38, 542, 720, 18, $shippingLine.' | NP / MODELO: '.$shippingDetails, $scale, maxLines: 2),
-                $this->field(38, 595, 530, 18, $destinationLine, $scale),
-                $this->field(38, 710, 95, 17, 'IMPRIMIO:', $scale),
-                $this->line(130, 730, 145, 2, $scale),
-                $this->field(300, 710, 90, 17, 'RECIBIO:', $scale),
-                $this->line(390, 730, 160, 2, $scale),
-                $this->field(38, 738, 130, 17, 'FOLIO INICIAL:', $scale),
-                $this->line(165, 758, 110, 2, $scale),
-                $this->field(300, 738, 125, 17, 'FOLIO FINAL:', $scale),
-                $this->line(425, 758, 125, 2, $scale),
-                $this->field(38, 763, 70, 17, 'TURNO:', $scale),
-                $this->line(105, 783, 170, 2, $scale),
-                $this->qr(596, 606, $qrPayload, $scale),
-            ]);
+        $fields = [
+            ...$this->startLabel($dimensions),
+            $this->field(28, 27, 620, 31, $title, $dimensions),
+            $this->field(28, 67, 610, 37, $folio, $dimensions),
+            $this->qr(675, 24, $qrPayload, $dimensions, 3),
+            $this->field(28, 120, 750, 18, "REGISTRADA: {$createdAt}  |  LINEA: {$lineName}", $dimensions),
+            $this->line(25, 150, 765, 2, $dimensions),
+            $this->field(30, 164, 760, 25, "JOB: {$job}", $dimensions),
+            $this->field(30, 198, 440, 18, "MODELO: {$commonModel}", $dimensions),
+            $this->field(475, 198, 305, 18, 'CANTIDAD: '.number_format((int) $labelRequest->quantity_requested), $dimensions),
+            $this->field(30, 225, 375, 18, "PO: {$commonPo}", $dimensions),
+            $this->field(410, 225, 370, 18, "DESTINO: {$commonDestination}", $dimensions),
+            $this->field(30, 252, 375, 18, 'LIDER: '.($labelRequest->leader_name ?: 'N/A'), $dimensions),
+            $this->field(410, 252, 370, 18, 'SOLICITA: '.($labelRequest->requested_by_name ?: 'N/A'), $dimensions),
+            $this->field(30, 279, 375, 18, 'TRABAJO: '.$labelRequest->folioModeLabel(), $dimensions),
+            $this->field(410, 279, 370, 18, "TIPOS: {$types}", $dimensions),
+            $this->line(25, 307, 765, 2, $dimensions),
+        ];
 
-        return implode("\n", [
-            '^XA',
-            '^CI28',
-            "^PW{$widthDots}",
-            "^LL{$heightDots}",
-            '^LH0,0',
-            '^LS0',
-            '^MMT',
-            $this->box(12, 12, 775, 775, 3, $scale),
-            $this->field(28, 25, 742, $labelRequest->isLpk() ? 34 : 30, $title, $scale, alignment: 'C'),
-            $this->field(28, 65, 742, 52, $folio, $scale, alignment: 'C'),
-            $this->line(28, 124, 742, 3, $scale),
-            ...$details,
-            '^PQ1,0,1,N',
-            '^XZ',
-        ]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function groupedLpkFields(
-        LabelRequest $labelRequest,
-        string $lineName,
-        string $createdAt,
-        string $qrPayload,
-        float $scale,
-    ): array {
-        $summaryLines = $labelRequest->lpkLabelGroups
-            ->map(function ($group): string {
-                $jobs = $group->items->pluck('job_number')->unique()->implode(',');
-
-                return sprintf(
-                    '%s NP %s | %d REN. | JOB %s | MAX %s',
-                    strtoupper($group->type_label),
-                    $group->part_number,
-                    $group->items->count(),
-                    $jobs,
-                    number_format((int) $group->items->max('quantity')),
-                );
-            })
-            ->concat($labelRequest->lpkShippingGroups->map(function ($group): string {
-                return sprintf(
-                    'SHIPPING NP %s | %s ETIQ. | %d REN. | PO %s',
-                    $group->part_number,
-                    number_format((int) $group->quantity),
-                    $group->items->count(),
-                    $group->po_number ?: 'N/A',
-                );
-            }))
-            ->values();
-
-        $visibleLines = $summaryLines->take(9);
-
-        if ($summaryLines->count() > 9) {
-            $visibleLines = $summaryLines->take(8)->push(
-                sprintf('+%d GRUPOS ADICIONALES EN HOJA', $summaryLines->count() - 8),
-            );
+        foreach ($rows as $index => $row) {
+            $y = 315 + ($index * 100);
+            $fields[] = $this->box(25, $y, 765, 94, 2, $dimensions);
+            $fields[] = $this->field(36, $y + 7, 165, 19, $row['type'], $dimensions);
+            $fields[] = $this->field(205, $y + 7, 290, 19, 'NP: '.$row['part_number'], $dimensions);
+            $fields[] = $this->field(500, $y + 7, 275, 17, $row['quantity'], $dimensions);
+            $fields[] = $this->field(36, $y + 34, 740, 22, 'JOB: '.$row['job'], $dimensions);
+            $fields[] = $this->field(36, $y + 65, 265, 16, 'MODELO: '.$row['model'], $dimensions);
+            $fields[] = $this->field(305, $y + 65, 220, 16, 'PO: '.$row['po'], $dimensions);
+            $fields[] = $this->field(535, $y + 65, 240, 16, 'DESTINO: '.$row['destination'], $dimensions);
         }
 
-        [$groupFontSize, $groupStep, $groupMaxLines, $groupTextLimit] = match (true) {
-            $visibleLines->count() <= 4 => [24, 58, 2, 50],
-            $visibleLines->count() <= 6 => [21, 45, 2, 58],
-            default => [18, 32, 1, 68],
-        };
-
-        $groupFields = $visibleLines
-            ->map(fn (string $line, int $index): string => $this->field(
-                42,
-                316 + ($index * $groupStep),
-                710,
-                $groupFontSize,
-                sprintf('%d. %s', $index + 1, Str::limit($line, $groupTextLimit, '...')),
-                $scale,
-                maxLines: $groupMaxLines,
-            ))
-            ->all();
+        if ($remaining > 0) {
+            $fields[] = $this->field(30, 1121, 750, 17, "+{$remaining} RENGLONES MAS: CONSULTAR REQUISICION {$folio}", $dimensions);
+        }
 
         return [
-            $this->field(38, 137, 720, 18, "REGISTRADA: {$createdAt} | LINEA: {$lineName}", $scale, maxLines: 2, alignment: 'C'),
-            $this->field(38, 183, 720, 22, 'LIDER: '.(string) $labelRequest->leader_name, $scale, maxLines: 1),
-            $this->field(38, 222, 720, 22, 'SOLICITA: '.(string) $labelRequest->requested_by_name, $scale, maxLines: 1),
-            $this->field(
-                38,
-                260,
-                720,
-                20,
-                sprintf(
-                    'RESERVA JOBS: %s | GRUPOS PROD: %d | SHIPPING: %d',
-                    number_format((int) $labelRequest->quantity_requested),
-                    $labelRequest->lpkLabelGroups->count(),
-                    $labelRequest->lpkShippingGroups->count(),
-                ),
-                $scale,
-                maxLines: 2,
-            ),
-            ...$groupFields,
-            $this->field(38, 610, 590, 17, 'SHIPPING: JOBS/MODELOS INFORMATIVOS; NO RESERVA CANTIDAD', $scale),
-            $this->field(38, 676, 105, 19, 'IMPRIMIO:', $scale),
-            $this->line(130, 696, 145, 2, $scale),
-            $this->field(300, 676, 100, 19, 'RECIBIO:', $scale),
-            $this->line(390, 696, 160, 2, $scale),
-            $this->field(38, 710, 145, 19, 'FOLIO INICIAL:', $scale),
-            $this->line(165, 730, 110, 2, $scale),
-            $this->field(300, 710, 140, 19, 'FOLIO FINAL:', $scale),
-            $this->line(425, 730, 125, 2, $scale),
-            $this->field(38, 749, 80, 19, 'TURNO:', $scale),
-            $this->line(105, 769, 170, 2, $scale),
-            $this->qr(650, 650, $qrPayload, $scale),
+            ...$fields,
+            ...$this->footer($dimensions),
+            '^PQ1,0,1,N',
+            '^XZ',
         ];
     }
 
     /**
-     * @param  array<int, array{part_number: string, model: ?string}>  $shippingItems
-     * @return array<int, string>
+     * @return array<int, array{type: string, part_number: string, job: string, model: string, quantity: string, po: string, destination: string}>
      */
-    private function lpkShippingItemFields(array $shippingItems, float $scale): array
+    private function requestRows(LabelRequest $labelRequest): array
     {
-        if ($shippingItems === []) {
-            return [$this->field(48, 507, 700, 15, 'NO REQUERIDOS', $scale)];
+        $rows = [];
+
+        foreach ($labelRequest->requestedLabelLines() as $line) {
+            $shippingItems = $line['shipping_items'] ?? [];
+
+            if ($shippingItems !== []) {
+                foreach ($shippingItems as $item) {
+                    $rows[] = $this->row(
+                        $line,
+                        $labelRequest,
+                        $item,
+                        'TOTAL COMP. '.number_format((int) ($line['quantity'] ?? 0)),
+                    );
+                }
+
+                continue;
+            }
+
+            $rows[] = $this->row($line, $labelRequest);
         }
 
-        $visibleItems = array_slice($shippingItems, 0, 8);
-
-        if (count($shippingItems) > 8) {
-            $visibleItems = array_slice($shippingItems, 0, 7);
-            $visibleItems[] = [
-                'part_number' => sprintf('+%d ITEMS ADICIONALES', count($shippingItems) - 7),
-                'model' => null,
-            ];
-        }
-
-        return array_map(
-            fn (array $item, int $index): string => $this->field(
-                48,
-                507 + ($index * 18),
-                700,
-                15,
-                sprintf('%d. %s', $index + 1, Str::limit($this->formatRequestItem($item), 40, '...')),
-                $scale,
-            ),
-            $visibleItems,
-            array_keys($visibleItems),
-        );
+        return $rows;
     }
 
     /**
-     * @param  array<int, array{part_number: string, model: ?string}>  $items
+     * @param  array<string, mixed>  $line
+     * @param  array<string, mixed>  $item
+     * @return array{type: string, part_number: string, job: string, model: string, quantity: string, po: string, destination: string}
      */
-    private function formatRequestItems(array $items): string
+    private function row(array $line, LabelRequest $labelRequest, array $item = [], ?string $quantity = null): array
     {
-        $formatted = array_values(array_filter(array_map(
-            fn (array $item): string => $this->formatRequestItem($item),
-            $items,
-        )));
-
-        return $formatted !== [] ? implode(', ', $formatted) : 'NO REQUERIDO';
+        return [
+            'type' => strtoupper((string) ($line['type'] ?? 'ETIQUETA')),
+            'part_number' => $this->displayValue($line['part_number'] ?? null),
+            'job' => $this->displayValue($item['job_number'] ?? $line['job_number'] ?? $labelRequest->job_number),
+            'model' => $this->displayValue($item['model'] ?? $line['model'] ?? $labelRequest->model),
+            'quantity' => $quantity ?: 'CANT: '.number_format((int) ($line['quantity'] ?? 0)),
+            'po' => $this->displayValue($item['po_number'] ?? $line['po_number'] ?? $labelRequest->po_number),
+            'destination' => $this->displayValue($item['destination'] ?? $line['destination'] ?? $labelRequest->destination),
+        ];
     }
 
     /**
-     * @param  array{part_number: string, model: ?string}  $item
+     * @param  array<int, array<string, string>>  $rows
      */
-    private function formatRequestItem(array $item): string
+    private function commonValue(array $rows, string $key, string $fallback): string
     {
-        $partNumber = trim((string) ($item['part_number'] ?? ''));
-        $model = trim((string) ($item['model'] ?? ''));
+        $values = collect($rows)->pluck($key)->filter(fn (string $value): bool => $value !== 'N/A')->unique()->values();
 
-        if ($partNumber === '') {
-            return '';
-        }
+        return $values->count() === 1 ? (string) $values->first() : ($values->isEmpty() ? $fallback : 'VER RENGLONES');
+    }
 
-        return $model !== '' ? "{$partNumber} ({$model})" : $partNumber;
+    private function displayValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : 'N/A';
     }
 }
