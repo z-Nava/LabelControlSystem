@@ -45,7 +45,7 @@ class LabelRequestReadService
                 'ratings:id,label_request_id,part_number,model,position',
                 'shippingItems:id,label_request_id,item_reference,model,position',
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
-                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,po_number,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
                 'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
@@ -234,7 +234,7 @@ class LabelRequestReadService
                 'ratings:id,label_request_id,part_number,model,position',
                 'shippingItems:id,label_request_id,item_reference,model,position',
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
-                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,po_number,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
                 'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
@@ -270,7 +270,7 @@ class LabelRequestReadService
                 $task->id => $task->folio_start === null
                     ? '—'
                     : ($labelRequest->serial_standard ?: 'Mercado histórico').' · '
-                        .SerialPeriods::describe(
+                        .SerialPeriods::display(
                             $task->serial_period_type ?: 'week',
                             (int) ($task->serial_period_number ?: $task->control_week),
                         ).' '.($task->serial_period_year ?: $task->control_year),

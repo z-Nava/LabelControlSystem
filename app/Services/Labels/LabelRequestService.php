@@ -301,6 +301,7 @@ class LabelRequestService
                         ->map(fn (array $item, int $itemPosition): array => [
                             'job_number' => $item['job_number'],
                             'model' => $item['model'],
+                            'po_number' => $this->valueOrOracleFallback(null, $jobs->get($item['job_number'])?->ttl_cust_po),
                             'quantity' => (int) $item['quantity'],
                             'position' => $itemPosition + 1,
                         ])

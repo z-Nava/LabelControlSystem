@@ -136,6 +136,11 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         group.querySelectorAll('.lpk-job-input').forEach((input) => {
             if (jobCatalogs.has(input)) catalogPicker(input).setOptions(jobCatalogs.get(input), type, { autofill });
             else catalogPicker(input).refresh({ autofill: false });
+            const poDisplay = input.closest('.lpk-label-item, .lpk-shipping-item')?.querySelector('[data-job-po]');
+            if (poDisplay) {
+                poDisplay.hidden = !['inner', 'shipping'].includes(type) || !input.dataset.validatedJob;
+                poDisplay.textContent = 'PO de la Job (informativa): ' + (input.dataset.oraclePo || 'Sin PO en Oracle');
+            }
         });
         syncSharedGroupFields(group);
         const markets = new Set();
@@ -333,6 +338,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         input.value = jobNumber;
         delete input.dataset.validatedJob;
         delete input.dataset.availableQuantity;
+        delete input.dataset.oraclePo;
 
         if (!jobNumber) {
             clearJobCatalog(input);
@@ -370,6 +376,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
             input.dataset.validatedJob = normalize(data.job_number);
             input.dataset.availableQuantity = String(Number(data.available_quantity || 0));
+            input.dataset.oraclePo = normalize(data.ttl_cust_po);
             input.setCustomValidity('');
 
             const isShipping = Boolean(input.closest('.lpk-shipping-item'));
@@ -412,6 +419,9 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
         input.setCustomValidity(input.value.trim() ? 'Espera a que termine la validación de Oracle.' : '');
         delete input.dataset.validatedJob;
         delete input.dataset.availableQuantity;
+        delete input.dataset.oraclePo;
+        const poDisplay = input.closest('.lpk-label-item, .lpk-shipping-item')?.querySelector('[data-job-po]');
+        if (poDisplay) poDisplay.hidden = true;
         setStatus(input, input.value.trim() ? 'Esperando validación…' : 'Pendiente de validar.');
         setJobModelState(input, null, { clearManual: clearModel, status: 'pending' });
         lookupTimers.set(input, setTimeout(() => validateJob(input), 350));

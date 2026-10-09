@@ -68,7 +68,7 @@
             <div class="text-slate-700">
                 Mercado / periodo serial:
                 @if($labelRequest->serial_period_year !== null && $labelRequest->serial_period_number !== null)
-                    {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::describe($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
+                    {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::display($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
                 @elseif($labelRequest->released_at)
                     Ver detalle por etiqueta
                 @else
@@ -227,6 +227,7 @@
                                                 <tr>
                                                     <th class="px-4 py-2.5">Job</th>
                                                     <th class="px-4 py-2.5">Modelo</th>
+                                                    @if($workBlock['key'] === 'inner')<th class="px-4 py-2.5">PO de la Job (informativa)</th>@endif
                                                     <th class="px-4 py-2.5 text-right">Cantidad</th>
                                                 </tr>
                                             </thead>
@@ -235,6 +236,7 @@
                                                     <tr>
                                                         <td class="px-4 py-3 font-mono font-semibold text-slate-900">{{ $item->job_number }}</td>
                                                         <td class="px-4 py-3 text-slate-700">{{ $item->model ?: 'Sin modelo' }}</td>
+                                                        @if($workBlock['key'] === 'inner')<td class="px-4 py-3 text-slate-700">{{ $item->po_number ?: '—' }}</td>@endif
                                                         <td class="px-4 py-3 text-right text-base font-bold text-slate-950">{{ number_format($item->quantity) }}</td>
                                                     </tr>
                                                 @endforeach
@@ -296,6 +298,7 @@
                                     <div>
                                         <div class="text-xs font-semibold uppercase text-slate-500">Job</div>
                                         <div class="mt-1 font-mono font-semibold text-slate-900">{{ ($line['job_number'] ?? $labelRequest->job_number) ?: '—' }}</div>
+                                        @if(in_array($workBlock['key'], ['inner', 'shipping'], true))<div class="mt-1 text-xs text-slate-600">PO de la Job (informativa): {{ $labelRequest->po_number ?: '—' }}</div>@endif
                                     </div>
                                     <div>
                                         <div class="text-xs font-semibold uppercase text-slate-500">Modelo</div>

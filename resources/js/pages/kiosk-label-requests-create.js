@@ -62,6 +62,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     let jobLookupVersion = 0;
     let validatedJobNumber = '';
     let availableQuantity = null;
+    let oraclePo = '';
     let mappedModel = '';
     let ratingCatalogOptions = [];
 
@@ -427,6 +428,11 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     }
 
     function updateFormGuidance() {
+        const poInfo = validatedJobNumber === normalize(inputs.job.value)
+            ? (oraclePo || 'Sin PO en Oracle')
+            : 'Pendiente de validar el Job';
+        setText(byId('innerPoInfo'), poInfo);
+        setText(byId('shippingPoInfo'), poInfo);
         configureCatalogFields();
         updateRatingCatalogHint();
         updateTypeCards();
@@ -443,6 +449,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
     function clearJobResult(message = 'Pendiente de validar en Oracle.', { clearModels = false } = {}) {
         validatedJobNumber = '';
         availableQuantity = null;
+        oraclePo = '';
         inputs.assembly.value = '';
         inputs.quantity.removeAttribute('max');
         inputs.quantity.setCustomValidity('');
@@ -499,6 +506,7 @@ import { mountLostLabelReworkFields } from './utils/lost-label-rework';
 
             validatedJobNumber = normalize(data.job_number);
             availableQuantity = Number(data.available_quantity || 0);
+            oraclePo = normalize(data.ttl_cust_po);
             inputs.job.setCustomValidity('');
             inputs.assembly.value = data.assembly || '';
             inputs.po.value = data.ttl_cust_po || inputs.po.value;

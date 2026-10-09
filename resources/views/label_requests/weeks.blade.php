@@ -19,8 +19,12 @@
                 @foreach($markets as $market)<option value="{{ $market }}" @selected(($filters['serial_standard'] ?? '') === $market)>{{ $market }}</option>@endforeach
             </select>
         </label>
-        <label class="text-sm">Número de periodo
-            <input type="number" name="period_number" value="{{ $filters['period_number'] ?? '' }}" min="1" max="53" placeholder="Todos" class="mt-1 block w-36 rounded-lg border border-slate-300 px-3 py-2" />
+        <label class="text-sm">Periodo
+            <input id="filter-period-week" type="number" name="period_number" value="{{ $filters['period_number'] ?? '' }}" min="1" max="53" placeholder="Todas" class="mt-1 w-36 rounded-lg border border-slate-300 px-3 py-2" />
+            <select id="filter-period-month" name="period_number" disabled hidden class="mt-1 w-36 rounded-lg border border-slate-300 px-3 py-2">
+                <option value="">Todos</option>
+                @foreach(\App\Support\SerialPeriods::monthLetters() as $number => $letter)<option value="{{ $number }}" @selected(($filters['period_number'] ?? null) == $number)>{{ $letter }}</option>@endforeach
+            </select>
         </label>
         <label class="text-sm">NP Rating
             <input name="search" value="{{ $filters['search'] ?? '' }}" maxlength="100" class="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
@@ -83,8 +87,12 @@
                         <span class="mt-1 block text-xs font-normal text-slate-500">El año de la semana o mes que estás registrando.</span>
                     </label>
                     <label class="block text-sm font-medium text-slate-800"><span id="period-number-label">Semana o mes del último folio</span>
-                        <input id="period-number" type="number" name="period_number" value="{{ old('period_number') }}" min="1" max="53" required aria-describedby="period-number-help" class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100" />
-                        <span id="period-number-help" class="mt-1 block text-xs font-normal text-slate-500">UL: semana 1–53. EMEA, ANZ y APJ: mes 1–12.</span>
+                        <input id="period-number" type="number" name="period_number" value="{{ old('period_number') }}" min="1" max="53" required aria-describedby="period-number-help" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+                        <select id="period-month" name="period_number" disabled hidden required aria-describedby="period-number-help" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            <option value="">Selecciona la letra del mes</option>
+                            @foreach(\App\Support\SerialPeriods::monthLetters() as $number => $letter)<option value="{{ $number }}" @selected(old('period_number') == $number)>{{ $letter }}</option>@endforeach
+                        </select>
+                        <span id="period-number-help" class="mt-1 block text-xs font-normal text-slate-500">UL: semana 1–53. EMEA, ANZ y APJ: letra del mes (A–H, J–M).</span>
                     </label>
                     <label class="block text-sm font-medium text-slate-800">Último folio usado en ese periodo
                         <input id="period-last-folio" type="number" name="last_serial_number" value="{{ old('last_serial_number') }}" min="0" max="4294967294" required class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100" />
@@ -173,7 +181,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const part = document.getElementById('period-part');
     const market = document.getElementById('period-market');
     const year = document.getElementById('period-year');
-    const period = document.getElementById('period-number');
+    const periodWeek = document.getElementById('period-number');
+    const periodMonth = document.getElementById('period-month');
+    const filterMarket = document.querySelector('select[name="serial_standard"]');
+    const filterWeek = document.getElementById('filter-period-week');
+    const filterMonth = document.getElementById('filter-period-month');
     const lastFolio = document.getElementById('period-last-folio');
     const operationalWeek = document.getElementById('period-operational-week');
     const marketHint = document.getElementById('period-market-hint');
@@ -182,17 +194,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewHeading = document.getElementById('period-preview-heading');
     const previewCopy = document.getElementById('period-preview-copy');
     const ratingOptions = Array.from(document.querySelectorAll('#rating-part-options option'));
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthLetters = {{ \Illuminate\Support\Js::from(array_values(\App\Support\SerialPeriods::monthLetters())) }};
     const numberFormat = new Intl.NumberFormat('es-MX');
 
     function updateGuide() {
         const selectedMarket = market.value;
         const isWeek = selectedMarket === 'UL';
-        period.max = selectedMarket && !isWeek ? '12' : '53';
-        periodLabel.textContent = isWeek ? 'Semana del último folio en Excel' : (selectedMarket ? 'Mes del último folio en Excel' : 'Semana o mes del último folio');
+        const isMonth = Boolean(selectedMarket && !isWeek);
+        periodWeek.hidden = isMonth;
+        periodWeek.disabled = isMonth;
+        periodMonth.hidden = !isMonth;
+        periodMonth.disabled = !isMonth;
+        periodLabel.textContent = isWeek ? 'Semana del último folio en Excel' : (selectedMarket ? 'Letra del mes del último folio en Excel' : 'Semana o mes del último folio');
         periodHelp.textContent = isWeek
             ? 'Escribe la semana ISO del folio (1–53), no la semana de la nueva requisición.'
-            : (selectedMarket ? 'Escribe el mes del folio (1–12), no la semana operativa.' : 'UL: semana 1–53. EMEA, ANZ y APJ: mes 1–12.');
+            : (selectedMarket ? 'Selecciona la letra del mes del folio; se omite la I.' : 'UL: semana 1–53. EMEA, ANZ y APJ: letra del mes.');
 
         const selectedPart = part.value.trim().toUpperCase();
         const catalogOption = ratingOptions.find(option => option.value.toUpperCase() === selectedPart);
@@ -209,17 +225,18 @@ document.addEventListener('DOMContentLoaded', () => {
             marketHint.className = 'mt-1 block text-xs font-normal text-slate-500';
         }
 
+        const period = isMonth ? periodMonth : periodWeek;
         const periodNumber = Number(period.value);
         const lastNumber = Number(lastFolio.value);
         if (!selectedMarket || !selectedPart || !year.value || !period.value || !lastFolio.value
-            || !Number.isInteger(periodNumber) || periodNumber < 1 || periodNumber > Number(period.max)
+            || !Number.isInteger(periodNumber) || periodNumber < 1 || periodNumber > (isMonth ? 12 : 53)
             || !Number.isInteger(lastNumber) || lastNumber < 0) {
             previewHeading.textContent = 'Vista previa del control';
             previewCopy.textContent = 'Selecciona el mercado y captura el periodo y último folio para revisar lo que guardarás.';
             return;
         }
 
-        const serialPeriod = isWeek ? 'semana ' + periodNumber : months[periodNumber - 1];
+        const serialPeriod = isWeek ? 'semana ' + periodNumber : monthLetters[periodNumber - 1];
         const nextNumber = numberFormat.format(lastNumber + 1);
         const operationalReference = operationalWeek.value ? ' La semana operativa inicial ' + operationalWeek.value + ' es solo una referencia.' : '';
         previewHeading.textContent = selectedPart + ' · ' + selectedMarket + ' · ' + serialPeriod + ' de ' + year.value;
@@ -228,8 +245,17 @@ document.addEventListener('DOMContentLoaded', () => {
             + '. Ese número no se traslada al periodo siguiente.' + operationalReference;
     }
 
-    [part, year, period, lastFolio, operationalWeek].forEach(input => input.addEventListener('input', updateGuide));
+    [part, year, periodWeek, periodMonth, lastFolio, operationalWeek].forEach(input => input.addEventListener('input', updateGuide));
     market.addEventListener('change', updateGuide);
+    function updateFilterPeriod() {
+        const monthly = filterMarket.value !== '' && filterMarket.value !== 'UL';
+        filterWeek.hidden = monthly;
+        filterWeek.disabled = monthly;
+        filterMonth.hidden = !monthly;
+        filterMonth.disabled = !monthly;
+    }
+    filterMarket.addEventListener('change', updateFilterPeriod);
+    updateFilterPeriod();
     updateGuide();
 });
 </script>

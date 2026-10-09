@@ -305,6 +305,10 @@ class LabelRoomAdministrationController extends Controller
             ->values()
             ->all();
 
-        return ['ranges' => $ranges, 'types' => $types];
+        $printWeeks = $tasks->sortBy('work_date')->map(fn (LabelWorkTask $task) => $task->work_date
+            ? $task->work_date->isoWeekYear().' / Sem. '.$task->work_date->isoWeek()
+            : null)->filter()->unique()->values()->all();
+
+        return ['ranges' => $ranges, 'types' => $types, 'print_weeks' => $printWeeks];
     }
 }

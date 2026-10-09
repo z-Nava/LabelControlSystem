@@ -62,6 +62,19 @@ final class SerialPeriods
         return $months[$number] ?? 'Mes '.$number;
     }
 
+    /** @return array<int, string> */
+    public static function monthLetters(): array
+    {
+        return self::MONTH_LETTERS;
+    }
+
+    public static function display(string $type, int $number): string
+    {
+        return $type === self::MONTH
+            ? (self::MONTH_LETTERS[$number] ?? 'Mes '.$number)
+            : self::describe($type, $number);
+    }
+
     public static function monthLetterFor(string $market, ?string $periodType, ?int $number): ?string
     {
         if (! SerialStandards::isInternational($market) || $periodType !== self::MONTH || $number === null) {

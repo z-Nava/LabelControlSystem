@@ -224,7 +224,7 @@
                 <div class="field-label">Mercado / periodo serial</div>
                 <div class="field-value">
                     @if($labelRequest->serial_period_year !== null && $labelRequest->serial_period_number !== null)
-                        {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::describe($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
+                        {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::display($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
                     @elseif($labelRequest->released_at)
                         Ver detalle por etiqueta
                     @else

@@ -450,6 +450,7 @@ class LabelRequest extends Model
                 'type' => 'Inner',
                 'part_number' => $this->inner_part_number,
                 'model' => $this->inner_model,
+                'po_number' => $this->po_number,
                 'quantity' => (int) $this->quantity_requested,
             ];
         }
@@ -462,6 +463,8 @@ class LabelRequest extends Model
                     'type' => 'Shipping',
                     'part_number' => $this->shipping_part_number,
                     'model' => $this->shipping_model,
+                    'po_number' => $this->po_number,
+                    'destination' => $this->destination,
                     'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
                 ];
             } else {
@@ -470,6 +473,8 @@ class LabelRequest extends Model
                         'type' => $this->isLpk() ? 'Shipping LPK' : 'Shipping',
                         'part_number' => $item['part_number'],
                         'model' => $item['model'],
+                        'po_number' => $this->po_number,
+                        'destination' => $this->destination,
                         'quantity' => (int) ($this->shipping_quantity ?? $this->quantity_requested),
                     ];
                 }
@@ -526,6 +531,7 @@ class LabelRequest extends Model
                     'part_number' => $group->part_number,
                     'model' => $item->model,
                     'job_number' => $item->job_number,
+                    'po_number' => $item->po_number,
                     'quantity' => (int) $item->quantity,
                 ];
             }
