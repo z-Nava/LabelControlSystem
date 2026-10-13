@@ -19,6 +19,7 @@ use App\Http\Controllers\Dummies\DummyRequestController;
 use App\Http\Controllers\Kiosk\KioskDashboardController;
 use App\Http\Controllers\Kiosk\KioskDummyRequestController;
 use App\Http\Controllers\Kiosk\KioskLabelRequestController;
+use App\Http\Controllers\Kiosk\KioskMasterActionRequestController;
 use App\Http\Controllers\Kiosk\KioskMasterRequestController;
 use App\Http\Controllers\Kiosk\KioskOracleJobController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelRoomAdministrationController;
 use App\Http\Controllers\Masters\ManualMasterRequestController;
+use App\Http\Controllers\Masters\MasterActionRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Masters\MasterRequestController;
@@ -59,6 +61,12 @@ Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(funct
     Route::get('/master-requests/lookup-job', [KioskMasterRequestController::class, 'lookup'])->name('master_requests.lookup_job');
     Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
     Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
+    Route::get('/master-action-requests', [KioskMasterActionRequestController::class, 'index'])->name('master_action_requests.index');
+    Route::get('/master-action-requests/create', [KioskMasterActionRequestController::class, 'create'])->name('master_action_requests.create');
+    Route::post('/master-action-requests', [KioskMasterActionRequestController::class, 'store'])->name('master_action_requests.store');
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimMasterAction'])->name('master_action_requests.requisition_label.claim');
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmMasterAction'])->name('master_action_requests.requisition_label.confirm');
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMasterAction'])->name('master_action_requests.requisition_label.fail');
     Route::post('/master-requests/{master_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimMaster'])->name('master_requests.requisition_label.claim');
     Route::post('/master-requests/{master_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmMaster'])->name('master_requests.requisition_label.confirm');
     Route::post('/master-requests/{master_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMaster'])->name('master_requests.requisition_label.fail');
@@ -191,6 +199,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         })->name('labelroom.home');
 
         Route::middleware('module_access:master')->group(function () {
+            Route::get('/master-action-requests', [MasterActionRequestController::class, 'index'])->name('master_action_requests.index');
+            Route::get('/master-action-requests/{master_action_request}/rework', [MasterActionRequestController::class, 'createRework'])->name('master_action_requests.rework.create');
+            Route::post('/master-action-requests/{master_action_request}/rework', [MasterActionRequestController::class, 'storeRework'])->name('master_action_requests.rework.store');
+            Route::get('/master-action-requests/{master_action_request}', [MasterActionRequestController::class, 'show'])->name('master_action_requests.show');
+            Route::post('/master-action-requests/{master_action_request}/approve', [MasterActionRequestController::class, 'approve'])->name('master_action_requests.approve');
+            Route::post('/master-action-requests/{master_action_request}/reject', [MasterActionRequestController::class, 'reject'])->name('master_action_requests.reject');
             Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
             Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
             Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
@@ -203,6 +217,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
             Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
             Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
+            Route::post('/master-requests/{master_request}/print-pending', [MasterPrintController::class, 'printPending'])->name('master_requests.print.pending');
             Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
             Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
             Route::get('/master-reprints/{master_request}/rework', [MasterReworkController::class, 'create'])->name('master_reworks.create');

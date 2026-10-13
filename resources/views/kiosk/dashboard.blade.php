@@ -26,7 +26,7 @@
         <section id="kiosk-requisition-print" class="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Comprobante de requisición</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">{{ $requisitionPrintConfig['receiptTitle'] }}</p>
                     <h2 class="mt-1 text-xl font-semibold text-slate-950">
                         Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · {{ $requisitionPrintConfig['requestName'] }} #{{ $requisitionPrintConfig['requestId'] }}
                     </h2>
@@ -139,6 +139,7 @@
             <div class="mt-auto pt-5 font-semibold text-blue-600 group-hover:text-blue-500">Consultar Job →</div>
         </a>
     </div>
+
 </div>
 @endsection
 

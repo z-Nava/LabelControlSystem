@@ -35,6 +35,7 @@ class KioskMasterRequestController extends Controller
         $kioskUser = $request->attributes->get('kiosk_user');
         $data['requested_by_user_id'] = $kioskUser->id;
         $data['requested_by_name'] = $kioskUser->name;
+        $data['shift_id'] = $kioskUser->shift_id;
 
         $masterRequest = DB::transaction(function () use ($data, $kioskUser) {
             $masterRequest = $this->service->create($data, MasterRequest::SOURCE_KIOSK);

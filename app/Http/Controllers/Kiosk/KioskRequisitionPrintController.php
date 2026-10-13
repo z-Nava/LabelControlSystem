@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DummyRequest;
 use App\Models\KioskRequisitionPrintJob;
 use App\Models\LabelRequest;
+use App\Models\MasterActionRequest;
 use App\Models\MasterRequest;
 use App\Models\User;
 use App\Services\Kiosk\KioskRequisitionPrintService;
@@ -39,6 +40,17 @@ class KioskRequisitionPrintController extends Controller
 
         return $this->claimResponse($this->printService->claimMaster(
             $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+        ));
+    }
+
+    public function claimMasterAction(Request $request, MasterActionRequest $master_action_request): JsonResponse
+    {
+        $data = $request->validate(['token' => ['required', 'uuid']]);
+
+        return $this->claimResponse($this->printService->claimMasterAction(
+            $master_action_request,
             $this->kioskUser($request),
             $data['token'],
         ));
@@ -114,6 +126,21 @@ class KioskRequisitionPrintController extends Controller
         ));
     }
 
+    public function confirmMasterAction(Request $request, MasterActionRequest $master_action_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->confirmResponse($this->printService->confirmMasterAction(
+            $master_action_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
     public function confirmDummy(Request $request, DummyRequest $dummy_request): JsonResponse
     {
         $data = $request->validate([
@@ -166,6 +193,23 @@ class KioskRequisitionPrintController extends Controller
 
         return $this->failResponse($this->printService->failMaster(
             $master_request,
+            $this->kioskUser($request),
+            $data['token'],
+            $data['error'],
+            $data['printer_name'] ?? null,
+        ));
+    }
+
+    public function failMasterAction(Request $request, MasterActionRequest $master_action_request): JsonResponse
+    {
+        $data = $request->validate([
+            'token' => ['required', 'uuid'],
+            'error' => ['required', 'string', 'max:1000'],
+            'printer_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return $this->failResponse($this->printService->failMasterAction(
+            $master_action_request,
             $this->kioskUser($request),
             $data['token'],
             $data['error'],

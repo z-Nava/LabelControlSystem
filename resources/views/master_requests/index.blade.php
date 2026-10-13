@@ -10,6 +10,7 @@
 
         <div class="flex items-center gap-2">
             <a href="{{ route('dashboard') }}" class="rounded-xl border px-4 py-2 text-sm hover:bg-slate-50">Dashboard</a>
+            <a href="{{ route('master_action_requests.index') }}" class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">Solicitudes de Kiosk</a>
             <a href="{{ route('master_requests.create') }}" class="rounded-xl bg-red-600 text-white px-4 py-2 text-sm font-semibold hover:bg-red-500 transition">Nueva requisición</a>
         </div>
     </div>
@@ -107,6 +108,12 @@
                                     <span class="inline-flex cursor-not-allowed rounded-lg bg-slate-200 px-3 py-1.5 text-slate-500" title="La requisición está cancelada.">
                                         Impresión bloqueada
                                     </span>
+                                @elseif($mr->isFromKiosk() && $printed < $total)
+                                    <form method="POST" action="{{ route('master_requests.print.pending', $mr) }}">
+                                        @csrf
+                                        <button class="rounded-lg bg-red-600 px-3 py-1.5 text-white hover:bg-red-500">Imprimir</button>
+                                    </form>
+                                    <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg border px-3 py-1.5 hover:bg-slate-50">Seleccionar folios</a>
                                 @else
                                     <a href="{{ route('master_requests.print.create', $mr->id) }}" class="rounded-lg bg-red-600 text-white px-3 py-1.5 hover:bg-red-500">Imprimir</a>
                                 @endif

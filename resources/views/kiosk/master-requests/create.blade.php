@@ -23,6 +23,20 @@
 
     @include('kiosk.partials.form-errors')
 
+    <section class="mx-auto max-w-7xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="font-semibold text-slate-900">¿Necesitas hojas Master de una requisición anterior?</h2>
+                <p class="mt-1 text-sm text-slate-600">Selecciona los folios y envía la solicitud a Label Room para revisión. Kiosk imprimirá el comprobante al enviarla.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('kiosk.master_action_requests.create', ['type' => 'rework']) }}" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">Solicitar retrabajo</a>
+                <a href="{{ route('kiosk.master_action_requests.create', ['type' => 'reprint']) }}" class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-500">Solicitar reimpresión</a>
+                <a href="{{ route('kiosk.master_action_requests.index') }}" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50">Mis solicitudes</a>
+            </div>
+        </div>
+    </section>
+
     <form id="masterRequestCreate"
           data-lookup-url="{{ route('kiosk.master_requests.lookup_job') }}"
           data-request-source="kiosk"

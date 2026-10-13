@@ -52,12 +52,22 @@
         <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
             <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Acción principal</div>
             <h2 class="mt-1 text-base font-semibold text-slate-900">Impresión inicial</h2>
-            <p class="mt-1 text-sm text-slate-600">Genera un lote y continúa en la pantalla de impresión.</p>
+            <p class="mt-1 text-sm text-slate-600">{{ $mr->isFromKiosk() && $pendingFolios > 0 ? 'Abre la impresión de los folios pendientes en un paso.' : 'Genera un lote y continúa en la pantalla de impresión.' }}</p>
 
             @if($mr->isCancelled())
                 <div class="mt-4 rounded-xl border border-red-200 bg-white px-4 py-3 text-center text-sm font-medium text-red-700">
                     Impresión bloqueada: requisición cancelada
                 </div>
+            @elseif($mr->isFromKiosk() && $pendingFolios > 0)
+                <form method="POST" action="{{ route('master_requests.print.pending', $mr) }}" class="mt-4">
+                    @csrf
+                    <button class="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500">
+                        Imprimir
+                    </button>
+                </form>
+                <a href="{{ route('master_requests.print.create', $mr->id) }}" class="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Seleccionar folios
+                </a>
             @else
                 <a href="{{ route('master_requests.print.create', $mr->id) }}"
                     id="create-batch-print"
