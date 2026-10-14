@@ -22,31 +22,7 @@
         </div>
     @endif
 
-    @if($requisitionPrintConfig)
-        <section id="kiosk-requisition-print" class="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">{{ $requisitionPrintConfig['receiptTitle'] }}</p>
-                    <h2 class="mt-1 text-xl font-semibold text-slate-950">
-                        Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · {{ $requisitionPrintConfig['requestName'] }} #{{ $requisitionPrintConfig['requestId'] }}
-                    </h2>
-                    <p id="kiosk-requisition-print-status" class="mt-2 text-sm font-semibold text-slate-700">
-                        Preparando impresión automática…
-                    </p>
-                    <p class="mt-1 text-xs text-slate-600">
-                        Impresora: <span id="kiosk-requisition-printer">Buscando dispositivo Zebra…</span>
-                    </p>
-                </div>
-                <button id="kiosk-requisition-print-retry"
-                        type="button"
-                        class="hidden min-h-12 rounded-xl bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
-                    Reintentar impresión
-                </button>
-            </div>
-        </section>
-
-        <script id="kiosk-requisition-print-config" type="application/json">{!! json_encode($requisitionPrintConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
-    @endif
+    @include('kiosk.partials.requisition-print', ['requisitionPrintConfig' => $requisitionPrintConfig])
 
     <section class="overflow-hidden rounded-3xl bg-slate-900 text-white shadow-lg">
         <div class="flex flex-col gap-5 px-6 py-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
@@ -73,7 +49,7 @@
         </div>
     </section>
 
-    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
         <a href="{{ route('kiosk.master_requests.create') }}" class="group flex min-h-64 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-red-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600" aria-hidden="true">
                 <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -137,6 +113,19 @@
             <h2 class="mt-2 text-2xl font-semibold text-slate-900">Consultar Job en Oracle</h2>
             <p class="mt-2 leading-6 text-slate-600">Información de un Job cargada actualmente en el sistema.</p>
             <div class="mt-auto pt-5 font-semibold text-blue-600 group-hover:text-blue-500">Consultar Job →</div>
+        </a>
+
+        <a href="{{ route('kiosk.receipts.index') }}" class="group flex min-h-64 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-amber-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700" aria-hidden="true">
+                <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 3.75h12v16.5l-3-1.75-3 1.75-3-1.75-3 1.75V3.75Z" />
+                    <path stroke-linecap="round" d="M9 8h6M9 11.5h6M9 15h4" />
+                </svg>
+            </div>
+            <div class="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">Comprobantes</div>
+            <h2 class="mt-2 text-2xl font-semibold text-slate-900">Mis comprobantes</h2>
+            <p class="mt-2 leading-6 text-slate-600">Consulta e imprime el comprobante físico de tus solicitudes.</p>
+            <div class="mt-auto pt-5 font-semibold text-amber-700 group-hover:text-amber-600">Ver comprobantes →</div>
         </a>
     </div>
 

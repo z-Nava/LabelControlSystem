@@ -40,14 +40,22 @@
                     <span class="rounded-full px-3 py-1 text-sm font-semibold {{ $statusClasses }}">{{ $status }}</span>
                 </div>
                 <div class="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-3">
-                    <div><span class="block text-xs uppercase text-slate-500">Solicitada</span>{{ $action->created_at?->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }}</div>
+                    <div><span class="block text-xs uppercase text-slate-500">Solicitada</span>{{ $action->created_at?->timezone(config('kiosk.display_timezone'))->format('d/m/Y H:i') }}</div>
                     <div><span class="block text-xs uppercase text-slate-500">Folios originales</span>{{ $action->selectedFolios->take(8)->map(fn ($folio) => 'F'.$folio->folio_number)->implode(', ') ?: 'Ninguno' }}@if($action->selectedFolios->count() > 8) y {{ $action->selectedFolios->count() - 8 }} más @endif</div>
                     <div><span class="block text-xs uppercase text-slate-500">{{ $action->action_type === 'reprint' ? 'Copias por folio' : 'Folios adicionales' }}</span>{{ $action->action_type === 'reprint' ? $action->copies : $action->additional_folios_count }}</div>
                 </div>
+                @if($action->action_type === 'rework' && $action->proposed_rework)
+                    <p class="mt-3 text-sm text-slate-700">
+                        <strong>Cantidades preparadas:</strong> {{ $action->proposed_rework['std_pack_qty'] ?? '—' }} pzas por folio
+                        @if(! empty($action->proposed_rework['partial_folio']))
+                            · F{{ $action->proposed_rework['partial_folio'] }}: {{ $action->proposed_rework['partial_qty'] ?? '—' }} pzas
+                        @endif
+                    </p>
+                @endif
                 @if($action->status === 'rejected' && $action->review_notes)
                     <p class="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900"><strong>Motivo del rechazo:</strong> {{ $action->review_notes }}</p>
                 @elseif($action->status === 'approved')
-                    <p class="mt-4 text-sm text-emerald-800">Label Room confirmó la solicitud{{ $action->reviewed_at ? ' el '.$action->reviewed_at->timezone(config('app.display_timezone'))->format('d/m/Y H:i') : '' }}.</p>
+                    <p class="mt-4 text-sm text-emerald-800">Label Room confirmó la solicitud{{ $action->reviewed_at ? ' el '.$action->reviewed_at->timezone(config('kiosk.display_timezone'))->format('d/m/Y H:i') : '' }}.</p>
                 @else
                     <p class="mt-4 text-sm text-amber-800">Esperando revisión de Label Room.</p>
                 @endif

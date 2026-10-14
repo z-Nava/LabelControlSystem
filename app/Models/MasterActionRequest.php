@@ -25,6 +25,7 @@ class MasterActionRequest extends Model
         'copies',
         'additional_folios_count',
         'reason',
+        'proposed_rework',
         'requested_by_user_id',
         'requested_by_name',
         'reviewed_by_user_id',
@@ -39,6 +40,7 @@ class MasterActionRequest extends Model
         'copies' => 'integer',
         'additional_folios_count' => 'integer',
         'reviewed_at' => 'datetime',
+        'proposed_rework' => 'array',
     ];
 
     public function masterRequest(): BelongsTo

@@ -43,6 +43,7 @@ class MasterActionRequestController extends Controller
     {
         $action = $master_action_request->load([
             'masterRequest.line',
+            'masterRequest.folios',
             'selectedFolios',
             'resultingMasterRequest.folios',
             'resultingPrintBatch',
@@ -54,15 +55,22 @@ class MasterActionRequestController extends Controller
     public function approve(Request $request, MasterActionRequest $master_action_request): RedirectResponse
     {
         if ($master_action_request->action_type === MasterActionRequest::TYPE_REWORK) {
-            return redirect()->route(
-                $master_action_request->isPending()
-                    ? 'master_action_requests.rework.create'
-                    : 'master_action_requests.show',
-                $master_action_request,
-            );
+            if (! $master_action_request->isPending()) {
+                return redirect()->route('master_action_requests.show', $master_action_request);
+            }
+
+            if ($master_action_request->proposed_rework === null) {
+                return redirect()->route('master_action_requests.rework.create', $master_action_request);
+            }
         }
 
         $action = $this->service->approve($master_action_request, $request->user());
+
+        if ($action->action_type === MasterActionRequest::TYPE_REWORK) {
+            return redirect()
+                ->route('master_reworks.show', $action->resulting_master_request_id)
+                ->with('success', "Retrabajo #{$action->id} validado. Revisa los folios antes de imprimir.");
+        }
 
         return redirect()
             ->route('master_action_requests.show', $action)
@@ -73,7 +81,8 @@ class MasterActionRequestController extends Controller
     {
         abort_unless(
             $master_action_request->action_type === MasterActionRequest::TYPE_REWORK
-                && $master_action_request->isPending(),
+                && $master_action_request->isPending()
+                && $master_action_request->proposed_rework === null,
             404,
         );
 
@@ -89,7 +98,11 @@ class MasterActionRequestController extends Controller
         StoreMasterReworkRequest $request,
         MasterActionRequest $master_action_request,
     ): RedirectResponse {
-        abort_unless($master_action_request->action_type === MasterActionRequest::TYPE_REWORK, 404);
+        abort_unless(
+            $master_action_request->action_type === MasterActionRequest::TYPE_REWORK
+                && $master_action_request->proposed_rework === null,
+            404,
+        );
 
         $action = $this->service->approve(
             $master_action_request,

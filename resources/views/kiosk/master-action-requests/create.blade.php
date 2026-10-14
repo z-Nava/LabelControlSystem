@@ -3,11 +3,11 @@
 @section('content')
 <div class="space-y-6">
     @include('kiosk.partials.request-guide', [
-        'title' => $type === 'rework' ? 'Solicitar Retrabajo Master' : 'Solicitar Reimpresión Master',
-        'description' => 'Busca la requisición Master original y selecciona los folios que necesita producción. Kiosk imprimirá un comprobante y Label Room revisará la solicitud antes de imprimir.',
+        'title' => $type === 'rework' ? 'Preparar Retrabajo Master' : 'Solicitar Reimpresión Master',
+        'description' => $type === 'rework' ? 'Busca la requisición Master original y prepara los datos, folios y cantidades del retrabajo. Label Room lo validará e imprimirá.' : 'Busca la requisición Master original y selecciona los folios que necesita producción. Kiosk imprimirá un comprobante y Label Room revisará la solicitud antes de imprimir.',
         'steps' => [
             ['title' => 'Busca la requisición', 'description' => 'Usa el número de requisición o un Job.'],
-            ['title' => 'Elige los folios', 'description' => 'Para retrabajo, marca folios existentes, pide folios adicionales o ambas cosas.'],
+            ['title' => $type === 'rework' ? 'Prepara el retrabajo' : 'Elige los folios', 'description' => $type === 'rework' ? 'Ajusta Jobs, modelo, folios y piezas.' : 'Marca los folios que necesitan copias.'],
             ['title' => 'Explica el motivo', 'description' => 'Indica por qué se necesita el retrabajo o la reimpresión.'],
             ['title' => 'Envía a revisión', 'description' => 'Label Room confirmará o rechazará la solicitud.'],
         ],

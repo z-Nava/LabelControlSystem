@@ -177,7 +177,8 @@ class KioskRequisitionPrintService
             }
         }
 
-        return $query->oldest('created_at')->oldest('id')->first();
+        // Una visita normal al tablero no debe activar solicitudes antiguas.
+        return null;
     }
 
     /**
@@ -226,6 +227,40 @@ class KioskRequisitionPrintService
                 (int) config('kiosk.requisition_label.height_mm', 165),
             ),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function receiptPayload(KioskRequisitionPrintJob $printJob, bool $autoStart): array
+    {
+        return [
+            ...$this->clientPayload($printJob),
+            'mode' => $printJob->status === KioskRequisitionPrintJob::STATUS_PRINTED ? 'reprint' : 'initial',
+            'autoStart' => $autoStart,
+            'reprintAttemptToken' => (string) Str::uuid(),
+            'reprintUrl' => route('kiosk.receipts.reprint', $printJob),
+            'confirmReprintUrl' => route('kiosk.receipts.confirm_reprint', $printJob),
+        ];
+    }
+
+    public function zplForReprint(KioskRequisitionPrintJob $printJob): string
+    {
+        if (str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::JOB_QR_MARKER)) {
+            return $printJob->zpl;
+        }
+
+        $dpi = (int) config('kiosk.requisition_label.dpi', 203);
+
+        if ($printJob->master_action_request_id !== null) {
+            return $this->masterZplBuilder->buildAction($printJob->masterActionRequest()->firstOrFail(), $dpi);
+        }
+
+        if ($printJob->master_request_id !== null) {
+            return $this->masterZplBuilder->build($printJob->masterRequest()->firstOrFail(), $dpi);
+        }
+
+        return $printJob->zpl;
     }
 
     /**
@@ -292,12 +327,20 @@ class KioskRequisitionPrintService
                 'last_error' => null,
                 'dispatched_at' => now(),
             ];
+            $isDetailedMasterActionLabel = $request instanceof MasterActionRequest
+                && (str_contains($printJob->zpl, 'COMPROBANTE RETRABAJO MASTER')
+                    || str_contains($printJob->zpl, 'COMPROBANTE REIMPRESION MASTER'));
+            $needsJobQrUpdate = ($request instanceof MasterRequest || $request instanceof MasterActionRequest)
+                && ! str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::JOB_QR_MARKER);
 
             if (
+                $needsJobQrUpdate
+                ||
                 ($request instanceof LabelRequest && $request->isLpk())
                 || ($request instanceof MasterRequest && str_contains($printJob->zpl, 'FOLIO INICIAL:'))
                 || str_contains($printJob->zpl, '^A0R')
-                || substr_count($printJob->zpl, '^XA') !== 1
+                || ($request instanceof MasterActionRequest && ! $isDetailedMasterActionLabel)
+                || (substr_count($printJob->zpl, '^XA') !== 1 && ! $isDetailedMasterActionLabel)
             ) {
                 $dpi = (int) config('kiosk.requisition_label.dpi', 203);
 

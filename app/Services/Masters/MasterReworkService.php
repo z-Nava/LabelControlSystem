@@ -243,6 +243,66 @@ class MasterReworkService
         });
     }
 
+    /** Validate the production quantities before Kiosk sends a prepared rework for review. */
+    public function validateProposal(MasterRequest $baseRequest, array $data): void
+    {
+        $this->ensureCanBeReworked($baseRequest);
+        $baseRequest->loadMissing('folios');
+
+        $this->productionContextService->resolveFromJobs([
+            ...$data,
+            'local' => null,
+            'subinventory' => null,
+        ]);
+
+        $assemblyJob = ! empty($data['job_assembly'])
+            ? $this->oracleJobService->findByJobNumber($data['job_assembly'])
+            : null;
+        $packagingJob = ! empty($data['job_packaging'])
+            ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
+            : null;
+        $selected = collect($data['selected_folio_numbers'] ?? [])->map(fn ($number): int => (int) $number);
+        $originalNumbers = $baseRequest->folios->pluck('folio_number')->map(fn ($number): int => (int) $number);
+        $additionalCount = (int) $data['additional_folios_count'];
+        if ($selected->diff($originalNumbers)->isNotEmpty() || $selected->unique()->count() !== $selected->count()) {
+            throw ValidationException::withMessages([
+                'selected_folio_numbers' => 'Selecciona folios que pertenezcan a la requisición original.',
+            ]);
+        }
+
+        if ($selected->isEmpty() && $additionalCount === 0) {
+            throw ValidationException::withMessages([
+                'selected_folio_numbers' => 'Selecciona al menos un folio original o agrega un folio nuevo.',
+            ]);
+        }
+
+        $added = $additionalCount > 0
+            ? range((int) $originalNumbers->max() + 1, (int) $originalNumbers->max() + $additionalCount)
+            : [];
+        $partialFolio = isset($data['partial_folio']) ? (int) $data['partial_folio'] : null;
+        if ($partialFolio !== null && ! $selected->merge($added)->contains($partialFolio)) {
+            throw ValidationException::withMessages([
+                'partial_folio' => 'El folio parcial debe formar parte del retrabajo.',
+            ]);
+        }
+
+        $quantities = $selected->merge($added)->mapWithKeys(
+            fn (int $number): array => [
+                $number => $number === $partialFolio
+                    ? (isset($data['partial_qty']) ? (int) $data['partial_qty'] : null)
+                    : (isset($data['std_pack_qty']) ? (int) $data['std_pack_qty'] : null),
+            ]
+        );
+
+        $this->folioValidationService->validateRevision(
+            data: $data,
+            assemblyJob: $assemblyJob,
+            packagingJob: $packagingJob,
+            requestedFolios: $quantities,
+            rootRequestId: $baseRequest->parent_master_request_id ?: $baseRequest->id,
+        );
+    }
+
     public function findRevisionForSummary(MasterRequest $revision): MasterRequest
     {
         if (! $revision->isRework()) {

@@ -168,12 +168,12 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
 
         if ($container->bound('config')) {
             return (string) $container->make('config')->get(
-                'app.display_timezone',
-                'America/Mexico_City',
+                'kiosk.display_timezone',
+                'America/Monterrey',
             );
         }
 
-        return 'America/Mexico_City';
+        return 'America/Monterrey';
     }
 
     private function scaled(int $value, float $scale): int

@@ -49,7 +49,7 @@ class KioskDummyRequestController extends Controller
                 'type' => 'Requisición Dummy QR',
                 'request_kind' => 'dummy',
                 'request_id' => $dummyRequest->id,
-                'created_at' => now()->format('d/m/Y H:i'),
+                'created_at' => now(config('kiosk.display_timezone'))->format('d/m/Y H:i'),
             ]);
     }
 

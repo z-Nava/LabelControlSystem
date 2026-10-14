@@ -23,7 +23,10 @@ const initializeRequisitionPrint = () => {
     const statusBox = document.getElementById('kiosk-requisition-print-status');
     const printerBox = document.getElementById('kiosk-requisition-printer');
     const retryButton = document.getElementById('kiosk-requisition-print-retry');
-    const tokenStorageKey = `kiosk_requisition_print_${config.token}`;
+    const isReprint = config.mode === 'reprint';
+    const tokenStorageKey = isReprint
+        ? `kiosk_requisition_reprint_${config.token}`
+        : `kiosk_requisition_print_${config.token}`;
     const printerStorageKey = 'kiosk_requisition_preferred_printer';
     let running = false;
 
@@ -158,14 +161,17 @@ const initializeRequisitionPrint = () => {
         );
     });
 
-    const confirmSentPrint = async (printerName) => {
+    const confirmSentPrint = async (printerName, labelCount = 1, attemptToken = null) => {
         setStatus('La etiqueta fue enviada; confirmando el registro de impresión…');
-        const result = await postJson(config.confirmUrl, {
+        const result = await postJson(isReprint ? config.confirmReprintUrl : config.confirmUrl, {
             token: config.token,
             printer_name: printerName || null,
+            ...(isReprint ? { attempt_token: attemptToken } : {}),
         });
         removeStorage(tokenStorageKey);
-        setStatus(result.message || 'Etiqueta de requisición impresa correctamente.', 'success');
+        setStatus(labelCount > 1
+            ? `Comprobante enviado: ${labelCount} etiquetas. Entrégalas juntas a Label Room.`
+            : (result.message || 'Comprobante enviado correctamente.'), 'success');
         retryButton.classList.add('hidden');
         root.classList.remove('border-amber-200', 'bg-amber-50');
         root.classList.add('border-emerald-200', 'bg-emerald-50');
@@ -198,7 +204,7 @@ const initializeRequisitionPrint = () => {
 
             if (previousSend?.state === 'sent') {
                 printerBox.textContent = previousSend.printerName || 'Impresora Zebra';
-                await confirmSentPrint(previousSend.printerName || null);
+                await confirmSentPrint(previousSend.printerName || null, previousSend.labelCount || 1, previousSend.attemptToken || config.reprintAttemptToken);
                 return;
             }
 
@@ -207,8 +213,8 @@ const initializeRequisitionPrint = () => {
             printer = await resolvePrinter(browserPrint);
             printerBox.textContent = `${printer.name || 'Impresora Zebra'} (${printer.connection || 'local'})`;
 
-            setStatus('Preparando la etiqueta de requisición…');
-            const claim = await postJson(config.claimUrl, { token: config.token });
+            setStatus('Preparando el comprobante…');
+            const claim = await postJson(isReprint ? config.reprintUrl : config.claimUrl, { token: config.token });
 
             if (claim.status === 'printed') {
                 removeStorage(tokenStorageKey);
@@ -223,19 +229,24 @@ const initializeRequisitionPrint = () => {
                 throw new Error('El servidor no devolvió contenido ZPL para la etiqueta.');
             }
 
-            setStatus(`Enviando etiqueta ${config.labelSize || '102 × 165 mm'} a la impresora…`);
+            const labelCount = (claim.zpl.match(/\^XA/g) || []).length;
+            setStatus(labelCount > 1
+                ? `Enviando ${labelCount} etiquetas del mismo comprobante a la impresora…`
+                : `Enviando etiqueta ${config.labelSize || '102 × 165 mm'} a la impresora…`);
             await sendToPrinter(printer, claim.zpl);
             sentToPrinter = true;
             writeStorage(tokenStorageKey, {
                 state: 'sent',
                 printerName: printer.name || null,
+                labelCount,
+                ...(isReprint ? { attemptToken: config.reprintAttemptToken } : {}),
                 sentAt: new Date().toISOString(),
             });
-            await confirmSentPrint(printer.name || null);
+            await confirmSentPrint(printer.name || null, labelCount, config.reprintAttemptToken);
         } catch (error) {
             const message = describeError(error);
 
-            if (printClaimed && !sentToPrinter) {
+            if (printClaimed && !sentToPrinter && !isReprint) {
                 removeStorage(tokenStorageKey);
                 await reportFailure(message, printer?.name || null);
             }
@@ -243,10 +254,10 @@ const initializeRequisitionPrint = () => {
             setStatus(
                 sentToPrinter
                     ? `La etiqueta fue enviada, pero falta confirmar en el sistema: ${message}`
-                    : `${message} La requisición permanece guardada.`,
+                    : `${message} ${isReprint ? 'El comprobante permanece disponible.' : 'La requisición permanece guardada.'}`,
                 error?.status === 409 ? 'warning' : 'error',
             );
-            retryButton.textContent = sentToPrinter ? 'Confirmar envío' : 'Reintentar impresión';
+            retryButton.textContent = sentToPrinter ? 'Confirmar envío' : (isReprint ? 'Reintentar reimpresión' : 'Reintentar impresión');
             retryButton.classList.remove('hidden');
         } finally {
             running = false;
@@ -256,7 +267,9 @@ const initializeRequisitionPrint = () => {
     };
 
     retryButton.addEventListener('click', () => void print());
-    window.setTimeout(() => void print(), 100);
+    if (config.autoStart) {
+        window.setTimeout(() => void print(), 100);
+    }
 };
 
 initializeRequisitionPrint();

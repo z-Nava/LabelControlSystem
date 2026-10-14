@@ -46,13 +46,55 @@
         </div>
     </section>
 
+    @if($action->action_type === 'rework' && $action->proposed_rework)
+        @php
+            $proposal = $action->proposed_rework;
+            $selectedNumbers = collect($proposal['selected_folio_numbers'] ?? [])->map(fn ($number) => (int) $number);
+            $maxOriginal = (int) $action->masterRequest->folios->max('folio_number');
+            $addedNumbers = ($proposal['additional_folios_count'] ?? 0) > 0
+                ? range($maxOriginal + 1, $maxOriginal + (int) $proposal['additional_folios_count'])
+                : [];
+            $folioNumbers = $selectedNumbers->merge($addedNumbers)->sort()->values();
+            $proposalLine = \App\Models\ProductionLine::find($proposal['line_id']);
+        @endphp
+        <section class="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+            <h2 class="font-semibold text-blue-950">Retrabajo preparado por Kiosk</h2>
+            <p class="mt-1 text-sm text-blue-900">Valida los datos y las cantidades antes de confirmar. La impresión estará disponible después.</p>
+            <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div><dt class="text-blue-700">Job Ensamble</dt><dd class="font-semibold">{{ ($proposal['job_assembly'] ?? null) ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Job Empaque</dt><dd class="font-semibold">{{ ($proposal['job_packaging'] ?? null) ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Tipo</dt><dd class="font-semibold">{{ \App\Models\MasterModelMapping::labelForType($proposal['request_type']) }}</dd></div>
+                <div><dt class="text-blue-700">Línea final</dt><dd class="font-semibold">{{ $proposalLine?->code ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Local / Subinventory</dt><dd class="font-semibold">{{ ($proposal['local'] ?? null) ?: '—' }} / {{ ($proposal['subinventory'] ?? null) ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Modelo</dt><dd class="font-semibold">{{ ($proposal['model'] ?? null) ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Custom PO / Destino</dt><dd class="font-semibold">{{ ($proposal['po_number'] ?? null) ?: '—' }} / {{ ($proposal['destination'] ?? null) ?: '—' }}</dd></div>
+                <div><dt class="text-blue-700">Std pack</dt><dd class="font-semibold">{{ ($proposal['std_pack_qty'] ?? null) ?: '—' }} pzas</dd></div>
+            </dl>
+            <div class="mt-4 text-sm font-semibold text-blue-950">Folios y cantidades propuestos</div>
+            <div class="mt-2 flex flex-wrap gap-2">
+                @foreach($folioNumbers as $number)
+                    <span class="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm">F{{ $number }} · {{ (int) ($proposal['partial_folio'] ?? 0) === $number ? ($proposal['partial_qty'] ?? '—') : ($proposal['std_pack_qty'] ?? '—') }} pzas{{ in_array($number, $addedNumbers, true) ? ' · nuevo' : '' }}</span>
+                @endforeach
+            </div>
+            @if(! empty($proposal['notes']))<p class="mt-4 whitespace-pre-wrap text-sm text-blue-900"><strong>Notas:</strong> {{ $proposal['notes'] }}</p>@endif
+        </section>
+    @endif
+
     @if($action->isPending())
         <section class="grid gap-5 lg:grid-cols-2">
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
                 <h2 class="font-semibold text-emerald-950">Confirmar solicitud</h2>
                 @if($action->action_type === 'rework')
-                    <p class="mt-2 text-sm text-emerald-900">Revisa y ajusta Jobs, modelo y piezas por folio. La revisión se creará al guardar el formulario; después podrás imprimirla.</p>
-                    <a href="{{ route('master_action_requests.rework.create', $action) }}" class="mt-5 inline-flex w-full justify-center rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-600">Preparar retrabajo y cantidades</a>
+                    @if($action->proposed_rework)
+                        <p class="mt-2 text-sm text-emerald-900">Confirma el retrabajo preparado por Kiosk. Se volverán a validar las cantidades antes de crear la revisión.</p>
+                        <form method="POST" action="{{ route('master_action_requests.approve', $action) }}" class="mt-5">
+                            @csrf
+                            <button class="w-full rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-600">Validar retrabajo y crear revisión</button>
+                        </form>
+                    @else
+                        <p class="mt-2 text-sm text-emerald-900">Revisa y ajusta Jobs, modelo y piezas por folio. La revisión se creará al guardar el formulario; después podrás imprimirla.</p>
+                        <a href="{{ route('master_action_requests.rework.create', $action) }}" class="mt-5 inline-flex w-full justify-center rounded-xl bg-emerald-700 px-4 py-3 font-semibold text-white hover:bg-emerald-600">Preparar retrabajo y cantidades</a>
+                    @endif
                 @else
                     <p class="mt-2 text-sm text-emerald-900">Se creará un lote de reimpresión con estos folios y copias. La impresión se hará desde Label Room.</p>
                     <form method="POST" action="{{ route('master_action_requests.approve', $action) }}" class="mt-5">

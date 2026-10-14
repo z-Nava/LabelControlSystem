@@ -83,6 +83,34 @@ class MasterActionRequestService
         });
     }
 
+    public function submitPreparedRework(MasterRequest $source, array $data, User $requester): MasterActionRequest
+    {
+        return DB::transaction(function () use ($source, $data, $requester): MasterActionRequest {
+            $source = MasterRequest::query()->lockForUpdate()->findOrFail($source->id);
+            $this->ensureSourceAvailable($source, MasterActionRequest::TYPE_REWORK);
+            $this->reworkService->validateProposal($source, $data);
+
+            $selectedNumbers = collect($data['selected_folio_numbers'] ?? [])
+                ->map(fn ($number): int => (int) $number);
+            $folioIds = $source->folios()
+                ->whereIn('folio_number', $selectedNumbers)
+                ->pluck('id')
+                ->all();
+
+            $action = $this->submit([
+                'action_type' => MasterActionRequest::TYPE_REWORK,
+                'master_request_id' => $source->id,
+                'folio_ids' => $folioIds,
+                'additional_folios_count' => $data['additional_folios_count'],
+                'reason' => $data['rework_reason'],
+            ], $requester);
+            $action->proposed_rework = $data;
+            $action->save();
+
+            return $action;
+        });
+    }
+
     public function approve(MasterActionRequest $action, User $reviewer, ?array $revisionData = null): MasterActionRequest
     {
         return DB::transaction(function () use ($action, $reviewer, $revisionData): MasterActionRequest {
@@ -104,6 +132,8 @@ class MasterActionRequestService
             );
 
             if ($action->action_type === MasterActionRequest::TYPE_REWORK) {
+                $revisionData ??= $action->proposed_rework;
+
                 if ($revisionData === null) {
                     throw ValidationException::withMessages([
                         'status' => 'Revisa los datos y las cantidades del retrabajo antes de confirmarlo.',

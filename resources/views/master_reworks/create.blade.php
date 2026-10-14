@@ -1,8 +1,9 @@
-@extends('layouts.app', ['title' => 'Retrabajar requisición Master'])
+@extends(($kioskMode ?? false) ? 'layouts.kiosk' : 'layouts.app', ['title' => 'Retrabajar requisición Master'])
 
 @section('content')
 @php
     $action = $action ?? null;
+    $kioskMode = $kioskMode ?? false;
     $requestedNumbers = $action?->selectedFolios->pluck('folio_number')->all();
     $initialNumbers = $requestedNumbers ?? $masterRequest->folios->pluck('folio_number')->all();
     $selectedFolios = collect(old('folio_selection_submitted') ? old('selected_folio_numbers', []) : $initialNumbers)
@@ -13,10 +14,10 @@
 <div class="rounded-2xl bg-white p-6 shadow">
     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900">{{ $action ? 'Preparar retrabajo solicitado desde Kiosk #'.$action->id : 'Retrabajar requisición Master #'.$masterRequest->id }}</h1>
-            <p class="mt-1 text-slate-600">Ajusta los datos y las piezas por folio antes de confirmar. La requisición y sus impresiones anteriores permanecerán intactas.</p>
+            <h1 class="text-2xl font-semibold text-slate-900">{{ $kioskMode ? 'Preparar retrabajo Master #'.$masterRequest->id : ($action ? 'Preparar retrabajo solicitado desde Kiosk #'.$action->id : 'Retrabajar requisición Master #'.$masterRequest->id) }}</h1>
+            <p class="mt-1 text-slate-600">{{ $kioskMode ? 'Ajusta los datos y las piezas por folio. Label Room validará el retrabajo y después imprimirá los folios.' : 'Ajusta los datos y las piezas por folio antes de confirmar. La requisición y sus impresiones anteriores permanecerán intactas.' }}</p>
         </div>
-        <a href="{{ $action ? route('master_action_requests.show', $action) : route('master_reprints.search', ['job' => $masterRequest->job_assembly ?: $masterRequest->job_packaging]) }}"
+        <a href="{{ $kioskMode ? route('kiosk.master_action_requests.create', ['type' => 'rework', 'q' => $masterRequest->job_assembly ?: $masterRequest->job_packaging]) : ($action ? route('master_action_requests.show', $action) : route('master_reprints.search', ['job' => $masterRequest->job_assembly ?: $masterRequest->job_packaging])) }}"
            class="rounded-xl border px-4 py-2 text-center text-sm hover:bg-slate-50">Volver</a>
     </div>
 
@@ -50,15 +51,16 @@
     </section>
 
     <form id="masterReworkForm"
-          data-lookup-url="{{ route('oracle.lookup_job') }}"
+          data-lookup-url="{{ $kioskMode ? route('kiosk.master_requests.lookup_job') : route('oracle.lookup_job') }}"
+          data-kiosk-mode="{{ $kioskMode ? '1' : '0' }}"
           data-original-max-folio="{{ $masterRequest->folios->max('folio_number') }}"
           data-ort-type="{{ $ortAssemblyConfig['type'] }}"
           data-ort-local="{{ $ortAssemblyConfig['default_local'] }}"
           data-ort-subinventory="{{ $ortAssemblyConfig['default_subinventory'] }}"
-          data-preserve-final-values="{{ $errors->any() ? '1' : '0' }}"
+          data-preserve-final-values="{{ $errors->any() || $kioskMode ? '1' : '0' }}"
           class="mt-5 space-y-5"
           method="POST"
-          action="{{ $action ? route('master_action_requests.rework.store', $action) : route('master_reworks.store', $masterRequest) }}">
+          action="{{ $kioskMode ? route('kiosk.master_action_requests.rework.store', $masterRequest) : ($action ? route('master_action_requests.rework.store', $action) : route('master_reworks.store', $masterRequest)) }}">
         @csrf
         <input type="hidden" name="folio_selection_submitted" value="1">
 
@@ -121,7 +123,7 @@
         <section class="rounded-2xl border">
             <div class="border-b px-4 py-3">
                 <h2 class="font-semibold text-slate-900">2) Contexto resuelto y valor final</h2>
-                <p class="text-xs text-slate-500">Oracle propone los valores; Label Room puede ajustar los campos finales cuando sea necesario.</p>
+                <p class="text-xs text-slate-500">Oracle propone los valores; confirma los campos finales del retrabajo.</p>
             </div>
             <div class="p-4">
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -259,9 +261,9 @@
         </section>
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <a href="{{ $action ? route('master_action_requests.show', $action) : route('master_reprints.search') }}" class="rounded-xl border px-5 py-3 text-center text-sm hover:bg-slate-50">Cancelar</a>
+            <a href="{{ $kioskMode ? route('kiosk.master_action_requests.create', ['type' => 'rework']) : ($action ? route('master_action_requests.show', $action) : route('master_reprints.search')) }}" class="rounded-xl border px-5 py-3 text-center text-sm hover:bg-slate-50">Cancelar</a>
             <button type="submit" class="rounded-xl bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-500">
-                {{ $action ? 'Confirmar retrabajo y ver resumen' : 'Guardar revisión y ver resumen' }}
+                {{ $kioskMode ? 'Enviar retrabajo a Label Room' : ($action ? 'Confirmar retrabajo y ver resumen' : 'Guardar revisión y ver resumen') }}
             </button>
         </div>
     </form>

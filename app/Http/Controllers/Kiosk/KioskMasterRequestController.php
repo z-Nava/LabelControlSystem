@@ -51,7 +51,7 @@ class KioskMasterRequestController extends Controller
                 'type' => 'Requisición Master',
                 'request_kind' => 'master',
                 'request_id' => $masterRequest->id,
-                'created_at' => now()->format('d/m/Y H:i'),
+                'created_at' => now(config('kiosk.display_timezone'))->format('d/m/Y H:i'),
             ]);
     }
 

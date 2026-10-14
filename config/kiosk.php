@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'display_timezone' => 'America/Monterrey',
+
     'requisition_label' => [
         'width_mm' => 102,
         'height_mm' => 165,

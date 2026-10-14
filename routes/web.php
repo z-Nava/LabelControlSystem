@@ -23,6 +23,8 @@ use App\Http\Controllers\Kiosk\KioskMasterActionRequestController;
 use App\Http\Controllers\Kiosk\KioskMasterRequestController;
 use App\Http\Controllers\Kiosk\KioskOracleJobController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
+use App\Http\Controllers\Kiosk\KioskReceiptHistoryController;
+use App\Http\Controllers\Kiosk\KioskReceiptReprintController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelRoomAdministrationController;
@@ -57,12 +59,16 @@ Route::post('/kiosk/logout', [KioskSessionController::class, 'destroy'])->name('
 
 Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('/', KioskDashboardController::class)->name('dashboard');
+    Route::get('/receipts', KioskReceiptHistoryController::class)->name('receipts.index');
+    Route::post('/receipts/{printJob}/reprint', [KioskReceiptReprintController::class, 'reprint'])->name('receipts.reprint');
+    Route::post('/receipts/{printJob}/confirm-reprint', [KioskReceiptReprintController::class, 'confirm'])->name('receipts.confirm_reprint');
 
     Route::get('/master-requests/lookup-job', [KioskMasterRequestController::class, 'lookup'])->name('master_requests.lookup_job');
     Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
     Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
     Route::get('/master-action-requests', [KioskMasterActionRequestController::class, 'index'])->name('master_action_requests.index');
     Route::get('/master-action-requests/create', [KioskMasterActionRequestController::class, 'create'])->name('master_action_requests.create');
+    Route::post('/master-action-requests/rework/{master_request}', [KioskMasterActionRequestController::class, 'storeRework'])->name('master_action_requests.rework.store');
     Route::post('/master-action-requests', [KioskMasterActionRequestController::class, 'store'])->name('master_action_requests.store');
     Route::post('/master-action-requests/{master_action_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimMasterAction'])->name('master_action_requests.requisition_label.claim');
     Route::post('/master-action-requests/{master_action_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmMasterAction'])->name('master_action_requests.requisition_label.confirm');

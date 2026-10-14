@@ -249,7 +249,7 @@ const initializeMasterRework = () => {
 
     const refreshFolioPreview = () => {
         const folios = finalFolioNumbers();
-        elements.folioSummary.textContent = `${folios.all.length} folio(s) en la revisión`;
+        elements.folioSummary.textContent = `${folios.all.length} folio(s) en el retrabajo`;
         elements.newFoliosPreview.textContent = folios.added.length
             ? `Nuevos folios consecutivos: ${folios.added.map((folio) => `F${String(folio).padStart(2, '0')}`).join(', ')}`
             : 'No se agregarán folios nuevos.';
@@ -315,12 +315,13 @@ const initializeMasterRework = () => {
             return;
         }
 
+        const kioskMode = form.dataset.kioskMode === '1';
         const result = await Swal.fire({
-            title: '¿Guardar revisión Master?',
-            html: `Se guardarán <b>${folios.all.length}</b> folio(s).<br><br>Motivo:<br><span class="text-sm">${escapeHtml(elements.reason.value)}</span>`,
+            title: kioskMode ? '¿Enviar retrabajo a Label Room?' : '¿Guardar revisión Master?',
+            html: `${kioskMode ? 'Se enviarán' : 'Se guardarán'} <b>${folios.all.length}</b> folio(s).<br><br>Motivo:<br><span class="text-sm">${escapeHtml(elements.reason.value)}</span>`,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'Sí, guardar revisión',
+            confirmButtonText: kioskMode ? 'Sí, enviar retrabajo' : 'Sí, guardar revisión',
             cancelButtonText: 'Revisar datos',
             reverseButtons: true,
         });
