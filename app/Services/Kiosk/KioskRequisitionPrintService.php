@@ -246,7 +246,7 @@ class KioskRequisitionPrintService
 
     public function zplForReprint(KioskRequisitionPrintJob $printJob): string
     {
-        if (str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::JOB_QR_MARKER)) {
+        if (str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::RECEIPT_LAYOUT_MARKER)) {
             return $printJob->zpl;
         }
 
@@ -330,11 +330,11 @@ class KioskRequisitionPrintService
             $isDetailedMasterActionLabel = $request instanceof MasterActionRequest
                 && (str_contains($printJob->zpl, 'COMPROBANTE RETRABAJO MASTER')
                     || str_contains($printJob->zpl, 'COMPROBANTE REIMPRESION MASTER'));
-            $needsJobQrUpdate = ($request instanceof MasterRequest || $request instanceof MasterActionRequest)
-                && ! str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::JOB_QR_MARKER);
+            $needsMasterReceiptUpdate = ($request instanceof MasterRequest || $request instanceof MasterActionRequest)
+                && ! str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::RECEIPT_LAYOUT_MARKER);
 
             if (
-                $needsJobQrUpdate
+                $needsMasterReceiptUpdate
                 ||
                 ($request instanceof LabelRequest && $request->isLpk())
                 || ($request instanceof MasterRequest && str_contains($printJob->zpl, 'FOLIO INICIAL:'))

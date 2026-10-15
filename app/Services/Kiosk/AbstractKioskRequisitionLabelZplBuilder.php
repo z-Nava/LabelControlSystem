@@ -51,7 +51,12 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
         $physicalY = $this->scaled($y, $dimensions['y_scale']);
         $fieldWidth = $this->scaled($width, $dimensions['x_scale']);
 
-        return "^FO{$physicalX},{$physicalY}^A0N,{$fontSize},{$fontSize}^FB{$fieldWidth},1,0,{$alignment},0^FH^FD{$this->escape($value)}^FS";
+        $content = $this->escape($value);
+        if ($alignment === 'C') {
+            $content .= '\\&';
+        }
+
+        return "^FO{$physicalX},{$physicalY}^A0N,{$fontSize},{$fontSize}^FB{$fieldWidth},1,0,{$alignment},0^FH^FD{$content}^FS";
     }
 
     /**
