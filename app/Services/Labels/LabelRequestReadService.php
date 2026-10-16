@@ -84,15 +84,16 @@ class LabelRequestReadService
                             ->orWhereHas('items', fn ($itemQuery) => $itemQuery
                                 ->where('job_number', 'like', "%{$search}%")
                                 ->orWhere('model', 'like', "%{$search}%")
-                                ->orWhere('po_number', 'like', "%{$search}%")
-                                ->orWhere('destination', 'like', "%{$search}%")))
+                                ->orWhere('po_number', 'like', "%{$search}%")))
                         ->orWhereHas('lpkShippingGroups', fn ($groupQuery) => $groupQuery
                             ->where('part_number', 'like', "%{$search}%")
                             ->orWhere('po_number', 'like', "%{$search}%")
                             ->orWhere('destination', 'like', "%{$search}%")
                             ->orWhereHas('items', fn ($itemQuery) => $itemQuery
                                 ->where('job_number', 'like', "%{$search}%")
-                                ->orWhere('model', 'like', "%{$search}%")))
+                                ->orWhere('model', 'like', "%{$search}%")
+                                ->orWhere('po_number', 'like', "%{$search}%")
+                                ->orWhere('destination', 'like', "%{$search}%")))
                         ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
                             $labelSkuQuery->select('label_part_number')

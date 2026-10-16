@@ -450,6 +450,8 @@ class KioskMasterRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabe
             : 'NO REQUERIDO';
         $jobAssembly = (string) ($masterRequest->job_assembly ?: 'N/A');
         $jobPackaging = (string) ($masterRequest->job_packaging ?: 'N/A');
+        $po = trim((string) $masterRequest->po_number);
+        $detailWidth = $po !== '' ? 585 : 750;
         $folio = sprintf('#%06d', (int) $masterRequest->id);
         $shift = $masterRequest->shift?->code
             ?: $masterRequest->requestedBy?->shift?->code
@@ -469,10 +471,14 @@ class KioskMasterRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabe
             $this->field(30, 329, 555, $this->jobTextSize($jobPackaging), $jobPackaging, $dimensions),
             $this->line(25, 407, 765, 2, $dimensions),
             ...$this->masterJobQrFields($masterRequest->job_assembly, $masterRequest->job_packaging, $dimensions),
-            $this->field(30, 430, 750, 21, 'PO:', $dimensions),
-            $this->field(30, 461, 750, 27, (string) ($masterRequest->po_number ?: 'N/A'), $dimensions),
-            $this->field(30, 505, 750, 21, 'DESTINO:', $dimensions),
-            $this->field(30, 536, 750, 26, (string) ($masterRequest->destination ?: 'N/A'), $dimensions),
+            $this->field(30, 430, $detailWidth, 21, 'PO:', $dimensions),
+            $this->field(30, 461, $detailWidth, 27, $po !== '' ? $po : 'N/A', $dimensions),
+            $this->field(30, 505, $detailWidth, 21, 'DESTINO:', $dimensions),
+            $this->field(30, 536, $detailWidth, 26, (string) ($masterRequest->destination ?: 'N/A'), $dimensions),
+            ...($po !== '' ? [
+                $this->field(625, 418, 165, 14, 'QR PO', $dimensions, 'C'),
+                $this->qr(635, 438, $po, $dimensions, 3),
+            ] : []),
             $this->line(25, 582, 765, 2, $dimensions),
 
             $this->field(30, 607, 750, 21, 'TIPO: '.MasterModelMapping::labelForType((string) $masterRequest->request_type), $dimensions),
