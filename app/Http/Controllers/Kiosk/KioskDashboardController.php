@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Kiosk;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Kiosk\KioskOptionService;
 use App\Services\Kiosk\KioskRequisitionPrintService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class KioskDashboardController extends Controller
 {
     public function __construct(
         private readonly KioskRequisitionPrintService $printService,
+        private readonly KioskOptionService $options,
     ) {}
 
     public function __invoke(Request $request): View|RedirectResponse
@@ -46,7 +48,16 @@ class KioskDashboardController extends Controller
             $preferredMasterActionRequestId ?: null,
         );
 
+        $kioskOptions = [];
+        foreach ($this->options->all() as $option => $status) {
+            $kioskOptions[$option] = [
+                'available' => $status === KioskOptionService::AVAILABLE,
+                'statusLabel' => KioskOptionService::STATUSES[$status],
+            ];
+        }
+
         return view('kiosk.dashboard', [
+            'kioskOptions' => $kioskOptions,
             'requisitionPrintConfig' => $printJob
                 ? $this->printService->receiptPayload($printJob, true)
                 : null,

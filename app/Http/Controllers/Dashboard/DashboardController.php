@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function __invoke(
         Request $request,
         PendingRequestCountService $countService,
-        MasterPrintMetricsService $masterPrintMetricsService
+        MasterPrintMetricsService $masterPrintMetricsService,
     ): View {
         $user = $request->user();
 

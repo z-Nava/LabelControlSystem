@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureKioskOptionAvailable;
 use App\Http\Middleware\EnsureKioskSession;
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => EnsureUserIsActive::class,
             'kiosk.session' => EnsureKioskSession::class,
+            'kiosk.option' => EnsureKioskOptionAvailable::class,
             'role' => RequireRole::class,
             'role_any' => RoleAny::class,
             'module_access' => EnsureModuleAccess::class,
