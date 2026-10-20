@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DummyQrTemplateController;
+use App\Http\Controllers\Admin\KioskOptionController;
 use App\Http\Controllers\Admin\LabelSkuController;
 use App\Http\Controllers\Admin\MasterAssemblyClassificationRuleController;
 use App\Http\Controllers\Admin\MasterModelMappingController;
@@ -19,13 +20,17 @@ use App\Http\Controllers\Dummies\DummyRequestController;
 use App\Http\Controllers\Kiosk\KioskDashboardController;
 use App\Http\Controllers\Kiosk\KioskDummyRequestController;
 use App\Http\Controllers\Kiosk\KioskLabelRequestController;
+use App\Http\Controllers\Kiosk\KioskMasterActionRequestController;
 use App\Http\Controllers\Kiosk\KioskMasterRequestController;
 use App\Http\Controllers\Kiosk\KioskOracleJobController;
+use App\Http\Controllers\Kiosk\KioskReceiptHistoryController;
+use App\Http\Controllers\Kiosk\KioskReceiptReprintController;
 use App\Http\Controllers\Kiosk\KioskRequisitionPrintController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\Labels\LabelRequestController;
 use App\Http\Controllers\Labels\LabelRoomAdministrationController;
 use App\Http\Controllers\Masters\ManualMasterRequestController;
+use App\Http\Controllers\Masters\MasterActionRequestController;
 use App\Http\Controllers\Masters\MasterPrintController;
 use App\Http\Controllers\Masters\MasterReprintController;
 use App\Http\Controllers\Masters\MasterRequestController;
@@ -55,35 +60,57 @@ Route::post('/kiosk/logout', [KioskSessionController::class, 'destroy'])->name('
 
 Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(function () {
     Route::get('/', KioskDashboardController::class)->name('dashboard');
+    Route::middleware('kiosk.option:receipts')->group(function () {
+        Route::get('/receipts', KioskReceiptHistoryController::class)->name('receipts.index');
+        Route::post('/receipts/{printJob}/reprint', [KioskReceiptReprintController::class, 'reprint'])->name('receipts.reprint');
+    });
+    Route::post('/receipts/{printJob}/confirm-reprint', [KioskReceiptReprintController::class, 'confirm'])->name('receipts.confirm_reprint');
 
-    Route::get('/master-requests/lookup-job', [KioskMasterRequestController::class, 'lookup'])->name('master_requests.lookup_job');
-    Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
-    Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
+    Route::middleware('kiosk.option:master')->group(function () {
+        Route::get('/master-requests/lookup-job', [KioskMasterRequestController::class, 'lookup'])->name('master_requests.lookup_job');
+        Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
+        Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
+        Route::get('/master-action-requests', [KioskMasterActionRequestController::class, 'index'])->name('master_action_requests.index');
+        Route::get('/master-action-requests/create', [KioskMasterActionRequestController::class, 'create'])->name('master_action_requests.create');
+        Route::post('/master-action-requests/rework/{master_request}', [KioskMasterActionRequestController::class, 'storeRework'])->name('master_action_requests.rework.store');
+        Route::post('/master-action-requests', [KioskMasterActionRequestController::class, 'store'])->name('master_action_requests.store');
+    });
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimMasterAction'])->name('master_action_requests.requisition_label.claim');
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmMasterAction'])->name('master_action_requests.requisition_label.confirm');
+    Route::post('/master-action-requests/{master_action_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMasterAction'])->name('master_action_requests.requisition_label.fail');
     Route::post('/master-requests/{master_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimMaster'])->name('master_requests.requisition_label.claim');
     Route::post('/master-requests/{master_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmMaster'])->name('master_requests.requisition_label.confirm');
     Route::post('/master-requests/{master_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failMaster'])->name('master_requests.requisition_label.fail');
 
-    Route::get('/label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
-    Route::get('/label-requests/lookup-rework-source', [KioskLabelRequestController::class, 'lookupReworkSource'])->name('label_requests.lookup_rework_source');
-    Route::get('/label-requests/create', [KioskLabelRequestController::class, 'createStandard'])->name('label_requests.create');
-    Route::post('/label-requests', [KioskLabelRequestController::class, 'storeStandard'])->name('label_requests.store');
+    Route::middleware('kiosk.option:labels')->group(function () {
+        Route::get('/label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('label_requests.lookup_job');
+        Route::get('/label-requests/lookup-rework-source', [KioskLabelRequestController::class, 'lookupReworkSource'])->name('label_requests.lookup_rework_source');
+        Route::get('/label-requests/create', [KioskLabelRequestController::class, 'createStandard'])->name('label_requests.create');
+        Route::post('/label-requests', [KioskLabelRequestController::class, 'storeStandard'])->name('label_requests.store');
+    });
     Route::post('/label-requests/{label_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claim'])->name('label_requests.requisition_label.claim');
     Route::post('/label-requests/{label_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirm'])->name('label_requests.requisition_label.confirm');
     Route::post('/label-requests/{label_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'fail'])->name('label_requests.requisition_label.fail');
 
-    Route::get('/lpk-label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('lpk_label_requests.lookup_job');
-    Route::get('/lpk-label-requests/create', [KioskLabelRequestController::class, 'createLpk'])->name('lpk_label_requests.create');
-    Route::post('/lpk-label-requests', [KioskLabelRequestController::class, 'storeLpk'])->name('lpk_label_requests.store');
+    Route::middleware('kiosk.option:lpk')->group(function () {
+        Route::get('/lpk-label-requests/lookup-job', [KioskLabelRequestController::class, 'lookup'])->name('lpk_label_requests.lookup_job');
+        Route::get('/lpk-label-requests/create', [KioskLabelRequestController::class, 'createLpk'])->name('lpk_label_requests.create');
+        Route::post('/lpk-label-requests', [KioskLabelRequestController::class, 'storeLpk'])->name('lpk_label_requests.store');
+    });
 
-    Route::get('/dummy-requests/lookup-job', [KioskDummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
-    Route::get('/dummy-requests/create', [KioskDummyRequestController::class, 'create'])->name('dummy_requests.create');
-    Route::post('/dummy-requests', [KioskDummyRequestController::class, 'store'])->name('dummy_requests.store');
+    Route::middleware('kiosk.option:dummy')->group(function () {
+        Route::get('/dummy-requests/lookup-job', [KioskDummyRequestController::class, 'lookup'])->name('dummy_requests.lookup_job');
+        Route::get('/dummy-requests/create', [KioskDummyRequestController::class, 'create'])->name('dummy_requests.create');
+        Route::post('/dummy-requests', [KioskDummyRequestController::class, 'store'])->name('dummy_requests.store');
+    });
     Route::post('/dummy-requests/{dummy_request}/requisition-label/claim', [KioskRequisitionPrintController::class, 'claimDummy'])->name('dummy_requests.requisition_label.claim');
     Route::post('/dummy-requests/{dummy_request}/requisition-label/confirm', [KioskRequisitionPrintController::class, 'confirmDummy'])->name('dummy_requests.requisition_label.confirm');
     Route::post('/dummy-requests/{dummy_request}/requisition-label/fail', [KioskRequisitionPrintController::class, 'failDummy'])->name('dummy_requests.requisition_label.fail');
 
-    Route::get('/oracle-jobs', [KioskOracleJobController::class, 'index'])->name('oracle_jobs.index');
-    Route::get('/oracle-jobs/lookup', [KioskOracleJobController::class, 'lookup'])->name('oracle_jobs.lookup');
+    Route::middleware('kiosk.option:oracle')->group(function () {
+        Route::get('/oracle-jobs', [KioskOracleJobController::class, 'index'])->name('oracle_jobs.index');
+        Route::get('/oracle-jobs/lookup', [KioskOracleJobController::class, 'lookup'])->name('oracle_jobs.lookup');
+    });
 });
 
 Route::middleware(['auth', 'active'])->group(function () {
@@ -93,6 +120,8 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Admin-only
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/kiosk-options', [KioskOptionController::class, 'index'])->name('admin.kiosk_options.index');
+        Route::put('/kiosk-options/{option}', [KioskOptionController::class, 'update'])->name('admin.kiosk_options.update');
         Route::get('/master-metrics', MasterMetricsController::class)->name('admin.master_metrics.index');
 
         Route::get('/admin', function () {
@@ -191,6 +220,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         })->name('labelroom.home');
 
         Route::middleware('module_access:master')->group(function () {
+            Route::get('/master-action-requests', [MasterActionRequestController::class, 'index'])->name('master_action_requests.index');
+            Route::get('/master-action-requests/{master_action_request}/rework', [MasterActionRequestController::class, 'createRework'])->name('master_action_requests.rework.create');
+            Route::post('/master-action-requests/{master_action_request}/rework', [MasterActionRequestController::class, 'storeRework'])->name('master_action_requests.rework.store');
+            Route::get('/master-action-requests/{master_action_request}', [MasterActionRequestController::class, 'show'])->name('master_action_requests.show');
+            Route::post('/master-action-requests/{master_action_request}/approve', [MasterActionRequestController::class, 'approve'])->name('master_action_requests.approve');
+            Route::post('/master-action-requests/{master_action_request}/reject', [MasterActionRequestController::class, 'reject'])->name('master_action_requests.reject');
             Route::get('/master-requests', [MasterRequestController::class, 'index'])->name('master_requests.index');
             Route::get('/master-requests/create', [MasterRequestController::class, 'create'])->name('master_requests.create');
             Route::post('/master-requests', [MasterRequestController::class, 'store'])->name('master_requests.store');
@@ -203,6 +238,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
             Route::get('/master-requests/{master_request}/print', [MasterPrintController::class, 'create'])->name('master_requests.print.create');
             Route::post('/master-requests/{master_request}/print', [MasterPrintController::class, 'store'])->name('master_requests.print.store');
+            Route::post('/master-requests/{master_request}/print-pending', [MasterPrintController::class, 'printPending'])->name('master_requests.print.pending');
             Route::get('/master-requests/{master_request}/reprints', [MasterReprintController::class, 'index'])->name('master_requests.reprints.index');
             Route::get('/master-reprints', [MasterReprintController::class, 'search'])->name('master_reprints.search');
             Route::get('/master-reprints/{master_request}/rework', [MasterReworkController::class, 'create'])->name('master_reworks.create');

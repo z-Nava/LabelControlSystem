@@ -15,13 +15,13 @@ export function initializeMasterPrintConfirmation({
     let promptOpen = false;
     let printing = false;
 
-    function returnToMasterCreate() {
+    function returnAfterPrint() {
         const returnUrl = controls.dataset.returnUrl;
 
         if (!returnUrl) return;
 
         // Print views normally open in a new tab. Closing it brings the operator
-        // back to the creation form that is already open in the previous tab.
+        // back to the page that opened the print view.
         windowObject.close();
 
         // A directly opened print view may not be script-closable.
@@ -88,7 +88,7 @@ export function initializeMasterPrintConfirmation({
                 status.classList.add('text-green-700');
                 confirmButton.hidden = true;
                 retryButton.hidden = true;
-                returnToMasterCreate();
+                returnAfterPrint();
             } else {
                 status.textContent = 'Pendiente de confirmar. Puedes reintentar cuando estés listo.';
             }

@@ -15,6 +15,11 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <a href="{{ route('admin.kiosk_options.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
+                        <div class="font-semibold">Opciones de Kiosk</div>
+                        <div class="text-sm text-slate-600 mt-1">Activa o bloquea cada opción visible en el Kiosk de Producción.</div>
+                    </a>
+
                     <a href="{{ route('users.index') }}" class="rounded-2xl border p-5 hover:shadow transition">
                         <div class="font-semibold">Usuarios</div>
                         <div class="text-sm text-slate-600 mt-1">Altas, bajas, roles, estado activo.</div>
@@ -24,8 +29,6 @@
                         <div class="font-semibold">Production Lines</div>
                         <div class="text-sm text-slate-600 mt-1">Catálogo de líneas (MXC007, MXMR003...).</div>
                     </a>
-
-                    
                 </div>
             </section>
 

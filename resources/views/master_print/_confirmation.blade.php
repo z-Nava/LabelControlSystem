@@ -20,7 +20,7 @@
     <div id="master-print-confirmation"
          class="master-print-controls flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-lg"
          data-confirm-url="{{ route('master_print_batches.confirm', $batch) }}"
-         data-return-url="{{ route('master_requests.create') }}"
+         data-return-url="{{ $mr->isFromKiosk() ? route('master_requests.index') : route('master_requests.create') }}"
          data-csrf-token="{{ csrf_token() }}"
          data-confirmed="{{ $batch->isConfirmed() ? '1' : '0' }}">
         <div>

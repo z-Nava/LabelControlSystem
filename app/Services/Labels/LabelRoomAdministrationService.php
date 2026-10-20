@@ -45,6 +45,11 @@ class LabelRoomAdministrationService
             && ($this->canAssignTasks($actor) || (int) $task->assigned_to_user_id === $actor->id);
     }
 
+    public static function ratingPeriodKey(string $rating): string
+    {
+        return hash('sha256', strtoupper(trim($rating)));
+    }
+
     private function assertOperator(int $id): User
     {
         $user = User::with('roles')->find($id);
@@ -84,10 +89,6 @@ class LabelRoomAdministrationService
 
         $market = strtoupper(trim((string) $data['serial_standard']));
         $periodType = SerialPeriods::forMarket($market);
-        $releasePeriodYear = (int) $data['control_year'];
-        $releasePeriodNumber = $periodType === SerialPeriods::WEEK
-            ? (int) $data['control_week']
-            : (int) $data['serial_month'];
         $bundles = [];
         $tasks = [];
         $nextByPeriod = [];
@@ -141,6 +142,17 @@ class LabelRoomAdministrationService
                 $task['folio_family'] = $family;
                 $task['rating_part_number'] = $rating;
 
+                $periodInput = $data['rating_periods'][self::ratingPeriodKey($rating)] ?? null;
+                if (! is_array($periodInput) || ! isset($periodInput['year'], $periodInput['number'])) {
+                    throw ValidationException::withMessages(['rating_periods' => "Selecciona el periodo de folios para el NP Rating {$rating}."]);
+                }
+                $releasePeriodYear = (int) $periodInput['year'];
+                $releasePeriodNumber = (int) $periodInput['number'];
+                if ($releasePeriodYear < 2000 || $releasePeriodYear > 2100
+                    || $releasePeriodNumber < 1 || $releasePeriodNumber > SerialPeriods::maximum($periodType)) {
+                    throw ValidationException::withMessages(['rating_periods' => "El periodo de folios para el NP Rating {$rating} no es válido."]);
+                }
+
                 if (! isset($bundles[$bundleKey])) {
                     $periodKey = json_encode([$rating, $market, $periodType, $releasePeriodYear, $releasePeriodNumber]);
                     $start = $nextByPeriod[$periodKey] ?? $this->folios->nextNumber(
@@ -164,8 +176,8 @@ class LabelRoomAdministrationService
                         'period_type' => $periodType,
                         'period_year' => $releasePeriodYear,
                         'period_number' => $releasePeriodNumber,
-                        'operational_year' => (int) $data['control_year'],
-                        'operational_week' => (int) $data['control_week'],
+                        'operational_year' => $periodType === SerialPeriods::WEEK ? $releasePeriodYear : (int) $data['control_year'],
+                        'operational_week' => $periodType === SerialPeriods::WEEK ? $releasePeriodNumber : (int) $data['control_week'],
                         'family' => $family,
                         'market' => $market,
                         'rating' => $rating,
@@ -204,7 +216,7 @@ class LabelRoomAdministrationService
             $data['serial_standard'],
             (int) $data['control_year'],
             (int) $data['control_week'],
-            $data['serial_month'] ?? null,
+            $data['rating_periods'] ?? null,
             $data['job_status'],
             $data['review_notes'] ?? null,
         ]), (string) config('app.key'));
@@ -285,15 +297,20 @@ class LabelRoomAdministrationService
             }
 
             $onlyBundle = count($proposal['bundles']) === 1 ? reset($proposal['bundles']) : null;
+            $periods = collect($proposal['bundles'])->map(fn ($bundle) => [
+                $bundle['period_type'], $bundle['period_year'], $bundle['period_number'],
+            ])->unique(fn ($period) => json_encode($period));
+            $sharedPeriod = $periods->count() === 1 ? collect($proposal['bundles'])->first() : null;
+            $weeklyControl = SerialPeriods::forMarket($data['serial_standard']) === SerialPeriods::WEEK;
             $locked->update([
                 'serial_standard' => $data['serial_standard'],
                 'job_status' => $data['job_status'],
                 'review_notes' => $data['review_notes'] ?? null,
-                'control_year' => $data['control_year'],
-                'control_week' => $data['control_week'],
-                'serial_period_type' => $onlyBundle['period_type'] ?? null,
-                'serial_period_year' => $onlyBundle['period_year'] ?? null,
-                'serial_period_number' => $onlyBundle['period_number'] ?? null,
+                'control_year' => $weeklyControl && $periods->isNotEmpty() ? ($sharedPeriod['period_year'] ?? null) : $data['control_year'],
+                'control_week' => $weeklyControl && $periods->isNotEmpty() ? ($sharedPeriod['period_number'] ?? null) : $data['control_week'],
+                'serial_period_type' => $sharedPeriod['period_type'] ?? null,
+                'serial_period_year' => $sharedPeriod['period_year'] ?? null,
+                'serial_period_number' => $sharedPeriod['period_number'] ?? null,
                 'folio_start' => $onlyBundle['range_start'] ?? null,
                 'folio_end' => $onlyBundle['range_end'] ?? null,
                 'released_at' => now(),
@@ -385,19 +402,25 @@ class LabelRoomAdministrationService
         foreach ($request->workTasks()->get() as $task) {
             foreach ($task->jobs as $job) {
                 $key = json_encode([$job['job_number'], $job['model'] ?? '']);
+                $jobPo = ($job['po_number'] ?? null) ?: ($task->po_number ?: $request->po_number);
+                $jobDestination = ($job['destination'] ?? null) ?: ($task->destination ?: $request->destination);
                 $row = $rows[$key] ?? [
                     'job_number' => $job['job_number'], 'model' => $job['model'] ?? '',
-                    'po_number' => $task->po_number ?: $request->po_number,
+                    'po_number' => $jobPo, 'destination' => $jobDestination,
                     'quantity' => null, 'shipping_quantity' => null, 'shared_shipping' => [],
                 ];
                 if ($task->label_type !== 'shipping') {
                     $row['quantity'] = max($row['quantity'] ?? 0, $task->quantity);
                 } elseif (count($task->jobs) === 1) {
                     $row['shipping_quantity'] = ($row['shipping_quantity'] ?? 0) + $task->quantity;
-                    $row['po_number'] = $task->po_number ?: $row['po_number'];
+                    $row['po_number'] = $jobPo ?: $row['po_number'];
+                    $row['destination'] = $jobDestination ?: $row['destination'];
                 } else {
                     $row['shared_shipping'][] = ['task_id' => $task->id, 'part_number' => $task->part_number,
-                        'quantity' => $task->quantity, 'po_number' => $task->po_number, 'jobs' => array_column($task->jobs, 'job_number')];
+                        'quantity' => $task->quantity, 'po_number' => $jobPo,
+                        'destination' => $jobDestination, 'jobs' => array_column($task->jobs, 'job_number')];
+                    $row['po_number'] = $jobPo ?: $row['po_number'];
+                    $row['destination'] = $jobDestination ?: $row['destination'];
                 }
                 $rows[$key] = $row;
             }

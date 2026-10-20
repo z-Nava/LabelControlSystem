@@ -19,6 +19,7 @@ class KioskRequisitionPrintJob extends Model
         'token',
         'label_request_id',
         'master_request_id',
+        'master_action_request_id',
         'dummy_request_id',
         'requested_by_user_id',
         'status',
@@ -33,6 +34,7 @@ class KioskRequisitionPrintJob extends Model
     protected $casts = [
         'label_request_id' => 'integer',
         'master_request_id' => 'integer',
+        'master_action_request_id' => 'integer',
         'dummy_request_id' => 'integer',
         'requested_by_user_id' => 'integer',
         'attempts' => 'integer',
@@ -52,6 +54,11 @@ class KioskRequisitionPrintJob extends Model
     public function masterRequest(): BelongsTo
     {
         return $this->belongsTo(MasterRequest::class);
+    }
+
+    public function masterActionRequest(): BelongsTo
+    {
+        return $this->belongsTo(MasterActionRequest::class);
     }
 
     public function dummyRequest(): BelongsTo

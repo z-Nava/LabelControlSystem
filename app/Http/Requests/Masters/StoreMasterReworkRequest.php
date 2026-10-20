@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Masters;
 
+use App\Models\MasterActionRequest;
 use App\Models\MasterModelMapping;
 use App\Models\MasterRequest;
 use App\Services\Oracle\OracleJobService;
@@ -97,6 +98,11 @@ class StoreMasterReworkRequest extends FormRequest
                 }
 
                 $masterRequest = $this->route('master_request');
+                $action = $this->route('master_action_request');
+
+                if ($action instanceof MasterActionRequest) {
+                    $masterRequest = $action->masterRequest;
+                }
 
                 if (! $masterRequest instanceof MasterRequest) {
                     return;

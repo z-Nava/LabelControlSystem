@@ -7,6 +7,7 @@ use App\Http\Requests\Masters\StoreMasterPrintBatchRequest;
 use App\Models\MasterPrintBatch;
 use App\Models\MasterRequest;
 use App\Services\Masters\MasterPrintService;
+use App\Services\Masters\MasterRequestPrintWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ use Illuminate\View\View;
 
 class MasterPrintController extends Controller
 {
-    public function __construct(private readonly MasterPrintService $service) {}
+    public function __construct(
+        private readonly MasterPrintService $service,
+        private readonly MasterRequestPrintWorkflowService $printWorkflowService,
+    ) {}
 
     public function create(MasterRequest $master_request): RedirectResponse|View
     {
@@ -73,6 +77,17 @@ class MasterPrintController extends Controller
             ->route('master_requests.print.create', $master_request)
             ->with('success', "Batch creado (#{$batch->id}). Listo para imprimir.")
             ->with('batch_id', $batch->id);
+    }
+
+    public function printPending(MasterRequest $master_request): RedirectResponse
+    {
+        $batch = $this->printWorkflowService->startPendingKioskPrint(
+            masterRequest: $master_request,
+            userId: auth()->id(),
+            userName: (string) auth()->user()?->name,
+        );
+
+        return redirect()->route('master_print_batches.print', $batch);
     }
 
     public function print(MasterPrintBatch $batch): RedirectResponse|View

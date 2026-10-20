@@ -237,6 +237,7 @@
                     <div id="innerFields" class="rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
                         <div class="text-sm font-semibold text-slate-800">Inner <span class="text-red-600" aria-hidden="true">*</span></div>
                         <p class="mt-1 text-xs text-slate-500">Captura el NP; el modelo es opcional y puede completarse al validar el Job.</p>
+                        <p class="mt-1 text-xs font-semibold text-sky-800">PO de la Job (informativa): <span id="innerPoInfo">Pendiente de validar el Job</span></p>
                         <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             <input type="hidden" id="innerCatalogId" name="inner_catalog_mapping_id" value="{{ old('inner_catalog_mapping_id') }}" />
                             <input id="innerPartNumber" type="text" name="inner_part_number" value="{{ old('inner_part_number') }}" maxlength="80" placeholder="NP de Inner" autocomplete="off" spellcheck="false" class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-600" />
@@ -247,6 +248,7 @@
                     <div id="shippingFields" class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                         <div class="text-sm font-semibold text-slate-800">Shipping <span class="text-red-600" aria-hidden="true">*</span></div>
                         <p class="mt-1 text-xs text-slate-500">Captura el NP y la cantidad de etiquetas Shipping que necesita producción.</p>
+                        <p class="mt-1 text-xs font-semibold text-amber-800">PO de la Job (informativa): <span id="shippingPoInfo">Pendiente de validar el Job</span></p>
                         <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div>
                                 <label for="shippingPartNumber" class="text-sm font-semibold text-slate-700">NP de Shipping <span class="text-red-600" aria-hidden="true">*</span></label>

@@ -31,7 +31,9 @@ class MasterRequestService
         }
 
         $data['request_date'] = null;
-        $data['shift_id'] = null;
+        $data['shift_id'] = $requestSource === MasterRequest::SOURCE_KIOSK
+            ? ($data['shift_id'] ?? null)
+            : null;
         $data['leader_name'] = null;
         unset($data['line_id']);
 

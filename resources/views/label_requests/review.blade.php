@@ -25,7 +25,7 @@
         @csrf
         @if(isset($proposalSignature))<input type="hidden" name="proposal_signature" value="{{ $proposalSignature }}" />@endif
         <section class="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 class="text-lg font-bold">1. Elegir el periodo de folios y validar la requisición</h2>
+            <h2 class="text-lg font-bold">1. Validar la requisición y elegir los periodos</h2>
             <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <label class="text-sm font-medium">Mercado de serialización
                     <select id="release-market" name="serial_standard" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
@@ -36,19 +36,11 @@
                     </select>
                     <span class="mt-1 block text-xs text-slate-500">Si el catálogo no lo resolvió, confírmalo aquí antes de liberar.</span>
                 </label>
-                <label class="text-sm font-medium">Año del periodo de folios
+                <label id="release-operational-year-field" class="text-sm font-medium">Año operativo
                     <input type="number" name="control_year" min="2000" max="2100" value="{{ $values['control_year'] ?? $defaultYear }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
-                <label class="text-sm font-medium"><span id="release-week-label">Semana UL para estos folios</span>
-                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? '' }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
-                    <span id="release-week-help" class="mt-1 block text-xs font-normal text-slate-500">El consecutivo continúa dentro de la semana que elijas.</span>
-                </label>
-                <label id="release-month-field" class="text-sm font-medium">Mes de folios EMEA / ANZ / APJ
-                    <select id="release-month" name="serial_month" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-                        @for($month = 1; $month <= 12; $month++)
-                            <option value="{{ $month }}" @selected((int) ($values['serial_month'] ?? $defaultMonth) === $month)>{{ \App\Support\SerialPeriods::describe('month', $month) }}</option>
-                        @endfor
-                    </select>
+                <label id="release-operational-week-field" class="text-sm font-medium">Semana operativa
+                    <input type="number" name="control_week" min="1" max="53" value="{{ $values['control_week'] ?? $defaultWeek }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
                 </label>
                 <label class="text-sm font-medium">Clasificación del trabajo
                     <select name="job_status" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
@@ -58,8 +50,8 @@
                     </select>
                 </label>
             </div>
-            <p class="mt-3 text-sm text-slate-600">El año y periodo que elijas determinan el rango de esta requisición. El sistema busca el último folio del NP Rating en ese mismo periodo y suma las etiquetas solicitadas. Al abrir un periodo nuevo de un NP ya registrado, comienza en 1. La fecha de la requisición no cambia el periodo elegido.</p>
-            <p class="mt-1 text-sm font-medium text-slate-700">Esta sección solo define el periodo: «Revisar propuesta» calcula el rango y «Liberar requisición» reserva los folios.</p>
+            <p class="mt-3 text-sm text-slate-600">Elige el periodo de cada NP Rating abajo. Serial usará el periodo y rango de su Rating correspondiente. Cada Rating continúa desde su último folio en el periodo elegido.</p>
+            <p class="mt-1 text-sm font-medium text-slate-700">«Revisar propuesta» calcula los rangos y «Liberar requisición» reserva los folios.</p>
             <label class="mt-4 block text-sm font-medium">Observaciones de la revisión
                 <textarea name="review_notes" maxlength="2000" rows="2" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">{{ $values['review_notes'] ?? '' }}</textarea>
             </label>
@@ -74,15 +66,31 @@
                 <p class="mt-1 text-sm text-slate-600">Cada renglón mantiene su cantidad de producción. Serial y Rating del mismo producto comparten folios. La evidencia se conserva por cada tarea física.</p>
                 <a href="{{ route('label_requests.weeks') }}" target="_blank" rel="noopener" class="text-sm font-semibold text-blue-700 underline">Inicializar o consultar el último folio del Excel</a>
             </div>
-            <div class="rounded-xl border border-blue-200 bg-white p-4 text-sm">
-                <h3 class="font-bold">Controles registrados · {{ $selectedMarket ?: 'Mercado pendiente' }} · {{ $periodNumber ? \App\Support\SerialPeriods::describe($periodType, $periodNumber) : 'Semana pendiente' }} {{ $periodYear }}</h3>
-                <p class="mt-1 text-slate-600">El consecutivo se controla por NP Rating, mercado y periodo. El ensamble y el SKU se conservan como referencia operativa.</p>
-                @forelse($availableControls as $control)
-                    <p class="mt-2">NP Rating <strong>{{ $control->label_part_number }}</strong> · Mercado <strong>{{ $control->serial_standard }}</strong> · Último reservado <strong>{{ number_format($control->last_serial_number) }}</strong></p>
-                @empty
-                    <p class="mt-2 text-slate-600">No hay un control registrado para estas etiquetas y este periodo.</p>
-                @endforelse
-            </div>
+            @foreach($ratingPeriods as $ratingPeriod)
+                <div class="rounded-xl border border-blue-200 bg-white p-4 text-sm">
+                    <h3 class="font-bold">NP Rating {{ $ratingPeriod['rating'] }} · Periodo de folios</h3>
+                    @if($ratingPeriod['serial_parts'])
+                        <p class="mt-1 text-slate-600">Serial vinculadas: {{ implode(', ', $ratingPeriod['serial_parts']) }}. Usarán este mismo periodo y rango.</p>
+                    @endif
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label class="font-medium">Año del Rating
+                            <input type="number" name="rating_periods[{{ $ratingPeriod['key'] }}][year]" min="2000" max="2100" value="{{ $ratingPeriod['year'] }}" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                        </label>
+                        <label class="font-medium"><span class="rating-period-label">{{ $periodType === 'week' ? 'Semana del Rating' : 'Letra del mes del Rating' }}</span>
+                            <input type="number" name="rating_periods[{{ $ratingPeriod['key'] }}][number]" min="1" max="53" value="{{ $ratingPeriod['number'] ?: '' }}" required @disabled($periodType === 'month') @if($periodType === 'month') hidden @endif class="rating-period-week mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                            <select name="rating_periods[{{ $ratingPeriod['key'] }}][number]" required @disabled($periodType !== 'month') @if($periodType !== 'month') hidden @endif class="rating-period-month mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                                <option value="">Selecciona la letra del mes</option>
+                                @foreach(\App\Support\SerialPeriods::monthLetters() as $number => $letter)<option value="{{ $number }}" @selected($ratingPeriod['number'] == $number)>{{ $letter }}</option>@endforeach
+                            </select>
+                        </label>
+                    </div>
+                    @if($ratingPeriod['control'])
+                        <p class="mt-2 text-slate-600">{{ $selectedMarket }} · {{ \App\Support\SerialPeriods::display($periodType, $ratingPeriod['number']) }} {{ $ratingPeriod['year'] }} · Último reservado <strong>{{ number_format($ratingPeriod['control']->last_serial_number) }}</strong></p>
+                    @else
+                        <p class="mt-2 text-slate-600">No hay un control registrado para este Rating y periodo. Revisa el control de periodos antes de liberar.</p>
+                    @endif
+                </div>
+            @endforeach
             @foreach($lines as $key => $line)
                 @php
                     $taskInput = $values['tasks'][$key] ?? [];
@@ -91,9 +99,13 @@
                 <article class="rounded-2xl border {{ $line['label_type'] === 'serial' ? 'border-blue-200' : ($line['label_type'] === 'rating' ? 'border-violet-200' : 'border-amber-200') }} bg-white p-5">
                     <div class="flex flex-wrap justify-between gap-3">
                         <div><h3 class="text-lg font-bold">{{ ucfirst($line['label_type']) }} · {{ $line['part_number'] }}</h3>
-                        <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo'))->implode(' / ') }}</p>
-                        @if($line['label_type'] === 'shipping' && filled($line['po_number']))
-                            <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">PO:</span> {{ $line['po_number'] }}</p>
+                        @if($line['label_type'] !== 'shipping')
+                            <p class="mt-1 text-sm text-slate-600">{{ collect($line['jobs'])->map(fn($job) => $job['job_number'].' · '.($job['model'] ?? 'Sin modelo').($line['label_type'] === 'inner' ? ' · PO: '.($job['po_number'] ?? $line['po_number'] ?? '—') : ''))->implode(' / ') }}</p>
+                        @endif
+                        @if($line['label_type'] === 'shipping')
+                            @foreach($line['jobs'] as $job)
+                                <p class="mt-1 text-sm text-slate-700"><span class="font-semibold">JOB:</span> {{ $job['job_number'] }} <span class="font-semibold">MODELO:</span> {{ $job['model'] ?? 'Sin modelo' }} <span class="font-semibold">PO:</span> {{ $job['po_number'] ?? $line['po_number'] ?? '—' }} <span class="font-semibold">DESTINO:</span> {{ $job['destination'] ?? $line['destination'] ?? '—' }}</p>
+                            @endforeach
                         @endif
                         </div>
                         <div class="text-right text-sm">Producción <strong class="text-lg">{{ number_format($line['quantity']) }}</strong><br>
@@ -131,7 +143,7 @@
                             <label class="text-sm">Folios del<input readonly value="{{ $planned['folio_start'] }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-bold" /></label>
                             <label class="text-sm">Hasta<input readonly value="{{ $planned['folio_end'] }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-bold" /></label>
                             <div class="text-sm">Evidencia<div class="mt-2 font-bold">{{ $planned['evidence_folio'] ?? 'Sin pieza adicional' }}</div></div>
-                            <div class="text-sm">Periodo serial<div class="mt-2 font-bold">{{ \App\Support\SerialPeriods::describe($planned['serial_period_type'], $planned['serial_period_number']) }} {{ $planned['serial_period_year'] }}</div><div class="text-xs text-slate-500">Control operativo: {{ $planned['control_year'] }} / semana {{ $planned['control_week'] }}</div></div>
+                            <div class="text-sm">Periodo serial<div class="mt-2 font-bold">{{ \App\Support\SerialPeriods::display($planned['serial_period_type'], $planned['serial_period_number']) }} {{ $planned['serial_period_year'] }}</div><div class="text-xs text-slate-500">Control operativo: {{ $planned['control_year'] }} / semana {{ $planned['control_week'] }}</div></div>
                         </div>
                         <input type="hidden" name="tasks[{{ $key }}][expected_start]" value="{{ $planned['folio_start'] }}" />
                     @endif
@@ -156,20 +168,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const market = document.getElementById('release-market');
-    const monthField = document.getElementById('release-month-field');
-    const month = document.getElementById('release-month');
-    const weekLabel = document.getElementById('release-week-label');
-    const weekHelp = document.getElementById('release-week-help');
+    const operationalYear = document.getElementById('release-operational-year-field');
+    const operationalWeek = document.getElementById('release-operational-week-field');
 
     function updatePeriodFields() {
         const monthly = market.value !== '' && market.value !== 'UL';
-        monthField.hidden = !monthly;
-        month.disabled = !monthly;
-        month.required = monthly;
-        weekLabel.textContent = monthly ? 'Semana operativa (solo referencia)' : 'Semana UL para estos folios';
-        weekHelp.textContent = monthly
-            ? 'Para este mercado, el consecutivo se controla por el mes elegido.'
-            : 'El consecutivo continúa dentro de la semana que elijas.';
+        operationalYear.hidden = !monthly;
+        operationalWeek.hidden = !monthly;
+        document.querySelectorAll('.rating-period-label').forEach((label) => {
+            label.textContent = monthly ? 'Letra del mes del Rating' : 'Semana del Rating';
+        });
+        document.querySelectorAll('.rating-period-week').forEach((input) => { input.hidden = monthly; input.disabled = monthly; });
+        document.querySelectorAll('.rating-period-month').forEach((input) => { input.hidden = !monthly; input.disabled = !monthly; });
     }
 
     market.addEventListener('change', updatePeriodFields);

@@ -45,9 +45,9 @@ class LabelRequestReadService
                 'ratings:id,label_request_id,part_number,model,position',
                 'shippingItems:id,label_request_id,item_reference,model,position',
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
-                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,po_number,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
-                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
             ->when($validated['date_from'], fn ($query, $value) => $query->whereDate('request_date', '>=', $value))
             ->when($validated['date_to'], fn ($query, $value) => $query->whereDate('request_date', '<=', $value))
@@ -83,14 +83,17 @@ class LabelRequestReadService
                             ->where('part_number', 'like', "%{$search}%")
                             ->orWhereHas('items', fn ($itemQuery) => $itemQuery
                                 ->where('job_number', 'like', "%{$search}%")
-                                ->orWhere('model', 'like', "%{$search}%")))
+                                ->orWhere('model', 'like', "%{$search}%")
+                                ->orWhere('po_number', 'like', "%{$search}%")))
                         ->orWhereHas('lpkShippingGroups', fn ($groupQuery) => $groupQuery
                             ->where('part_number', 'like', "%{$search}%")
                             ->orWhere('po_number', 'like', "%{$search}%")
                             ->orWhere('destination', 'like', "%{$search}%")
                             ->orWhereHas('items', fn ($itemQuery) => $itemQuery
                                 ->where('job_number', 'like', "%{$search}%")
-                                ->orWhere('model', 'like', "%{$search}%")))
+                                ->orWhere('model', 'like', "%{$search}%")
+                                ->orWhere('po_number', 'like', "%{$search}%")
+                                ->orWhere('destination', 'like', "%{$search}%")))
                         ->orWhere('job_number', 'like', "%{$search}%")
                         ->orWhereIn('label_part_number', function ($labelSkuQuery) use ($search) {
                             $labelSkuQuery->select('label_part_number')
@@ -232,9 +235,9 @@ class LabelRequestReadService
                 'ratings:id,label_request_id,part_number,model,position',
                 'shippingItems:id,label_request_id,item_reference,model,position',
                 'lpkLabelGroups:id,label_request_id,label_type,part_number,position',
-                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,quantity,position',
+                'lpkLabelGroups.items:id,label_request_lpk_label_group_id,job_number,model,po_number,quantity,position',
                 'lpkShippingGroups:id,label_request_id,part_number,quantity,po_number,destination,position',
-                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,position',
+                'lpkShippingGroups.items:id,label_request_lpk_shipping_group_id,job_number,model,po_number,destination,position',
             ])
             ->findOrFail($id);
     }
@@ -268,7 +271,7 @@ class LabelRequestReadService
                 $task->id => $task->folio_start === null
                     ? '—'
                     : ($labelRequest->serial_standard ?: 'Mercado histórico').' · '
-                        .SerialPeriods::describe(
+                        .SerialPeriods::display(
                             $task->serial_period_type ?: 'week',
                             (int) ($task->serial_period_number ?: $task->control_week),
                         ).' '.($task->serial_period_year ?: $task->control_year),

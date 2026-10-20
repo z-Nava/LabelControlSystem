@@ -1,21 +1,34 @@
-@extends('layouts.app', ['title' => 'Retrabajar requisición Master'])
+@extends(($kioskMode ?? false) ? 'layouts.kiosk' : 'layouts.app', ['title' => 'Retrabajar requisición Master'])
 
 @section('content')
 @php
-    $selectedFolios = collect(old('selected_folio_numbers', $masterRequest->folios->pluck('folio_number')->all()))
+    $action = $action ?? null;
+    $kioskMode = $kioskMode ?? false;
+    $requestedNumbers = $action?->selectedFolios->pluck('folio_number')->all();
+    $initialNumbers = $requestedNumbers ?? $masterRequest->folios->pluck('folio_number')->all();
+    $selectedFolios = collect(old('folio_selection_submitted') ? old('selected_folio_numbers', []) : $initialNumbers)
         ->map(fn ($folio) => (int) $folio);
-    $originalPartial = $masterRequest->folios->firstWhere('is_partial', true);
+    $originalPartial = $action ? null : $masterRequest->folios->firstWhere('is_partial', true);
 @endphp
 
 <div class="rounded-2xl bg-white p-6 shadow">
     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900">Retrabajar requisición Master #{{ $masterRequest->id }}</h1>
-            <p class="mt-1 text-slate-600">Se guardará una revisión nueva. La requisición y sus impresiones anteriores permanecerán intactas.</p>
+            <h1 class="text-2xl font-semibold text-slate-900">{{ $kioskMode ? 'Preparar retrabajo Master #'.$masterRequest->id : ($action ? 'Preparar retrabajo solicitado desde Kiosk #'.$action->id : 'Retrabajar requisición Master #'.$masterRequest->id) }}</h1>
+            <p class="mt-1 text-slate-600">{{ $kioskMode ? 'Ajusta los datos y las piezas por folio. Label Room validará el retrabajo y después imprimirá los folios.' : 'Ajusta los datos y las piezas por folio antes de confirmar. La requisición y sus impresiones anteriores permanecerán intactas.' }}</p>
         </div>
-        <a href="{{ route('master_reprints.search', ['job' => $masterRequest->job_assembly ?: $masterRequest->job_packaging]) }}"
+        <a href="{{ $kioskMode ? route('kiosk.master_action_requests.create', ['type' => 'rework', 'q' => $masterRequest->job_assembly ?: $masterRequest->job_packaging]) : ($action ? route('master_action_requests.show', $action) : route('master_reprints.search', ['job' => $masterRequest->job_assembly ?: $masterRequest->job_packaging])) }}"
            class="rounded-xl border px-4 py-2 text-center text-sm hover:bg-slate-50">Volver</a>
     </div>
+
+    @if($action)
+        <section class="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+            <p><strong>Solicitó:</strong> {{ $action->requested_by_name }} · <strong>Requisición origen:</strong> #{{ $masterRequest->id }}</p>
+            <p class="mt-2"><strong>Motivo:</strong> {{ $action->reason }}</p>
+            <p class="mt-2"><strong>Folios originales solicitados:</strong> {{ collect($requestedNumbers)->map(fn ($number) => 'F'.$number)->join(', ') ?: 'Ninguno' }} · <strong>Folios adicionales solicitados:</strong> {{ $action->additional_folios_count }}</p>
+            <p class="mt-2">Puedes ajustar todos los datos del retrabajo antes de confirmar. La solicitud original de Kiosk se conserva para consulta.</p>
+        </section>
+    @endif
 
     @if($errors->any())
         <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -38,16 +51,18 @@
     </section>
 
     <form id="masterReworkForm"
-          data-lookup-url="{{ route('oracle.lookup_job') }}"
+          data-lookup-url="{{ $kioskMode ? route('kiosk.master_requests.lookup_job') : route('oracle.lookup_job') }}"
+          data-kiosk-mode="{{ $kioskMode ? '1' : '0' }}"
           data-original-max-folio="{{ $masterRequest->folios->max('folio_number') }}"
           data-ort-type="{{ $ortAssemblyConfig['type'] }}"
           data-ort-local="{{ $ortAssemblyConfig['default_local'] }}"
           data-ort-subinventory="{{ $ortAssemblyConfig['default_subinventory'] }}"
-          data-preserve-final-values="{{ $errors->any() ? '1' : '0' }}"
+          data-preserve-final-values="{{ $errors->any() || $kioskMode ? '1' : '0' }}"
           class="mt-5 space-y-5"
           method="POST"
-          action="{{ route('master_reworks.store', $masterRequest) }}">
+          action="{{ $kioskMode ? route('kiosk.master_action_requests.rework.store', $masterRequest) : ($action ? route('master_action_requests.rework.store', $action) : route('master_reworks.store', $masterRequest)) }}">
         @csrf
+        <input type="hidden" name="folio_selection_submitted" value="1">
 
         <section class="rounded-2xl border">
             <div class="border-b px-4 py-3">
@@ -108,7 +123,7 @@
         <section class="rounded-2xl border">
             <div class="border-b px-4 py-3">
                 <h2 class="font-semibold text-slate-900">2) Contexto resuelto y valor final</h2>
-                <p class="text-xs text-slate-500">Oracle propone los valores; Label Room puede ajustar los campos finales cuando sea necesario.</p>
+                <p class="text-xs text-slate-500">Oracle propone los valores; confirma los campos finales del retrabajo.</p>
             </div>
             <div class="p-4">
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -165,16 +180,29 @@
                     <div id="folioSummary" class="ml-auto text-sm font-medium text-slate-700"></div>
                 </div>
 
-                <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+                <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                     @foreach($masterRequest->folios as $folio)
-                        <label class="flex cursor-pointer items-center gap-2 rounded-xl border p-3 hover:bg-slate-50">
+                        @php
+                            $folioQuantity = $folio->qty_for_folio !== null
+                                ? number_format((int) $folio->qty_for_folio).' pzas'
+                                : 'Cantidad no registrada';
+                        @endphp
+                        <label class="flex cursor-pointer items-start gap-2 rounded-xl border p-3 hover:bg-slate-50">
                             <input type="checkbox" name="selected_folio_numbers[]" value="{{ $folio->folio_number }}"
                                    data-folio-number="{{ $folio->folio_number }}"
                                    data-is-partial="{{ $folio->is_partial ? '1' : '0' }}"
-                                   class="original-folio rounded border-slate-300"
+                                   class="original-folio mt-0.5 shrink-0 rounded border-slate-300"
                                    @checked($selectedFolios->contains((int) $folio->folio_number))>
-                            <span class="font-semibold">F{{ str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT) }}</span>
-                            @if($folio->is_partial)<span class="text-xs text-purple-700">Parcial</span>@endif
+                            <span class="min-w-0 text-sm">
+                                <strong class="block">F{{ str_pad((string) $folio->folio_number, 2, '0', STR_PAD_LEFT) }}</strong>
+                                @if($masterRequest->request_type === \App\Models\MasterModelMapping::TYPE_ASSEMBLY_PACKAGING)
+                                    <span class="block text-slate-700">Ensamble: {{ $folioQuantity }}</span>
+                                    <span class="block text-slate-700">Empaque: {{ $folioQuantity }}</span>
+                                @else
+                                    <span class="block text-slate-700">Cantidad: {{ $folioQuantity }}</span>
+                                @endif
+                                @if($folio->is_partial)<span class="block text-xs text-purple-700">Parcial</span>@endif
+                            </span>
                         </label>
                     @endforeach
                 </div>
@@ -183,7 +211,7 @@
                     <div>
                         <label for="additionalFolios" class="text-sm text-slate-600">Folios nuevos a agregar</label>
                         <input id="additionalFolios" name="additional_folios_count" type="number" min="0" max="500"
-                               value="{{ old('additional_folios_count', 0) }}"
+                               value="{{ old('additional_folios_count', $action?->additional_folios_count ?? 0) }}"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" required>
                     </div>
                     <div>
@@ -204,6 +232,9 @@
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2">
                     </div>
                 </div>
+                @if($action)
+                    <p class="mt-3 text-sm text-blue-900">La cantidad parcial original no se copia automáticamente. Si todos los folios llevarán la misma cantidad, escribe esa cantidad en Std pack y deja vacíos los campos de folio parcial.</p>
+                @endif
                 <div id="newFoliosPreview" class="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600"></div>
             </div>
         </section>
@@ -212,7 +243,7 @@
             <label for="reworkReason" class="text-sm font-medium text-slate-700">Motivo del retrabajo</label>
             <textarea id="reworkReason" name="rework_reason" rows="3" maxlength="500" required
                       class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-red-600"
-                      placeholder="Describe por qué se modifica la requisición...">{{ old('rework_reason') }}</textarea>
+                      placeholder="Describe por qué se modifica la requisición...">{{ old('rework_reason', $action?->reason) }}</textarea>
 
             @if(filled($masterRequest->notes))
                 <details class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -230,9 +261,9 @@
         </section>
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <a href="{{ route('master_reprints.search') }}" class="rounded-xl border px-5 py-3 text-center text-sm hover:bg-slate-50">Cancelar</a>
+            <a href="{{ $kioskMode ? route('kiosk.master_action_requests.create', ['type' => 'rework']) : ($action ? route('master_action_requests.show', $action) : route('master_reprints.search')) }}" class="rounded-xl border px-5 py-3 text-center text-sm hover:bg-slate-50">Cancelar</a>
             <button type="submit" class="rounded-xl bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-500">
-                Guardar revisión y ver resumen
+                {{ $kioskMode ? 'Enviar retrabajo a Label Room' : ($action ? 'Confirmar retrabajo y ver resumen' : 'Guardar revisión y ver resumen') }}
             </button>
         </div>
     </form>

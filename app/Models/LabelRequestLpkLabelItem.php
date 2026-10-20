@@ -10,6 +10,7 @@ class LabelRequestLpkLabelItem extends Model
     protected $fillable = [
         'job_number',
         'model',
+        'po_number',
         'quantity',
         'position',
     ];

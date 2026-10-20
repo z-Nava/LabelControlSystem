@@ -224,7 +224,7 @@
                 <div class="field-label">Mercado / periodo serial</div>
                 <div class="field-value">
                     @if($labelRequest->serial_period_year !== null && $labelRequest->serial_period_number !== null)
-                        {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::describe($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
+                        {{ $labelRequest->serial_standard ?: 'Mercado histórico' }} · {{ \App\Support\SerialPeriods::display($labelRequest->serial_period_type ?: 'week', $labelRequest->serial_period_number) }} {{ $labelRequest->serial_period_year }}
                     @elseif($labelRequest->released_at)
                         Ver detalle por etiqueta
                     @else
@@ -330,7 +330,15 @@
                             <td class="border-r border-slate-300 px-4 py-2 font-mono">{{ $line['part_number'] ?: 'No aplica' }}</td>
                             <td class="border-r border-slate-300 px-4 py-2">{{ ($line['job_number'] ?? $labelRequest->job_number) ?: '—' }}</td>
                             <td class="border-r border-slate-300 px-4 py-2">{{ $line['model'] ?: '—' }}</td>
-                            <td class="border-r border-slate-300 px-4 py-2">{{ collect([$line['po_number'] ?? null, $line['destination'] ?? null])->filter()->implode(' / ') ?: '—' }}</td>
+                            <td class="border-r border-slate-300 px-4 py-2">
+                                @if(!empty($line['shipping_items']))
+                                    @foreach($line['shipping_items'] as $shippingItem)
+                                        <div>{{ $shippingItem['job_number'] }}{{ $shippingItem['model'] ? ' · '.$shippingItem['model'] : '' }}: PO {{ $shippingItem['po_number'] ?: '—' }} / {{ $shippingItem['destination'] ?: '—' }}</div>
+                                    @endforeach
+                                @else
+                                    {{ collect([$line['po_number'] ?? null, $line['destination'] ?? null])->filter()->implode(' / ') ?: '—' }}
+                                @endif
+                            </td>
                             <td class="px-4 py-2 text-right font-bold">{{ number_format($line['quantity']) }}</td>
                         </tr>
                     @endforeach

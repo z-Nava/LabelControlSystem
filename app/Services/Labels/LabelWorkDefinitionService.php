@@ -23,12 +23,17 @@ class LabelWorkDefinitionService
             foreach ($request->lpkLabelGroups as $group) {
                 foreach ($group->items as $item) {
                     $lines->push($this->line('item_'.$item->id, $group->label_type, $group->part_number,
-                        [['job_number' => $item->job_number, 'model' => $item->model]], $item->quantity));
+                        [['job_number' => $item->job_number, 'model' => $item->model, 'po_number' => $item->po_number]],
+                        $item->quantity, $item->po_number));
                 }
             }
             foreach ($request->lpkShippingGroups as $group) {
                 $lines->push($this->line('shipping_'.$group->id, 'shipping', $group->part_number,
-                    $group->items->map(fn ($item) => ['job_number' => $item->job_number, 'model' => $item->model])->all(),
+                    $group->items->map(fn ($item) => [
+                        'job_number' => $item->job_number, 'model' => $item->model,
+                        'po_number' => $item->po_number ?? $group->po_number,
+                        'destination' => $item->destination ?? $group->destination,
+                    ])->all(),
                     $group->quantity, $group->po_number, $group->destination));
             }
         } else {

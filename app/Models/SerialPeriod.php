@@ -34,6 +34,6 @@ class SerialPeriod extends Model
             return 'Control histórico · Semana '.$this->week;
         }
 
-        return SerialPeriods::describe($this->period_type, (int) $this->period_number);
+        return SerialPeriods::display($this->period_type, (int) $this->period_number);
     }
 }

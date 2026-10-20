@@ -200,7 +200,7 @@
                                 <div class="text-xs text-slate-500">Shipping: {{ number_format($row['labelRequest']->shipping_quantity ?? $row['labelRequest']->quantity_requested) }}</div>
                             @endif
                             <div class="text-xs text-slate-500">
-                                {{ $row['labelRequest']->folio_start !== null ? $row['labelRequest']->folio_start.' – '.$row['labelRequest']->folio_end : 'Sin folios' }}
+                                {{ $row['labelRequest']->folio_start !== null ? $row['labelRequest']->folio_start.' – '.$row['labelRequest']->folio_end : ($row['labelRequest']->released_at ? 'Ver folios por Rating' : 'Folios pendientes') }}
                             </div>
                         </td>
                         <td class="px-4 py-3">

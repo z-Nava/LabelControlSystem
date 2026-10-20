@@ -11,10 +11,6 @@ class KioskDummyRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabel
     public function build(DummyRequest $dummyRequest, int $dpi = self::BASE_DPI): string
     {
         $dimensions = $this->dimensions($dpi);
-        $widthDots = $dimensions['width'];
-        $heightDots = $dimensions['height'];
-        $scale = $dimensions['scale'];
-
         $lineName = trim(implode(' ', array_filter([
             $dummyRequest->line?->code,
             $dummyRequest->line?->name,
@@ -37,36 +33,28 @@ class KioskDummyRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabel
         $qrPayload = (string) ($dummyRequest->job_number ?: $dummyRequest->id);
 
         return implode("\n", [
-            '^XA',
-            '^CI28',
-            "^PW{$widthDots}",
-            "^LL{$heightDots}",
-            '^LH0,0',
-            '^LS0',
-            '^MMT',
-            $this->box(12, 12, 775, 775, 3, $scale),
-            $this->field(28, 25, 742, 31, 'REQUISICION DUMMY QR', $scale, alignment: 'C'),
-            $this->field(28, 65, 742, 52, $folio, $scale, alignment: 'C'),
-            $this->line(28, 124, 742, 3, $scale),
-            $this->field(38, 140, 720, 16, "REGISTRADA: {$createdAt} | SEMANA: {$dummyRequest->week} | LINEA: {$lineName}", $scale, alignment: 'C'),
-            $this->field(38, 178, 720, 27, 'TIPO: '.$dummyRequest->requestTypeTitle(), $scale),
-            $this->field(38, 220, 720, 34, 'JOB: '.(string) $dummyRequest->job_number, $scale),
-            $this->field(38, 270, 720, 27, 'FG: '.(string) $dummyRequest->fg_code, $scale, maxLines: 2),
-            $this->field(38, 322, 720, 25, 'CANTIDAD: '.number_format((int) $dummyRequest->quantity_requested), $scale),
-            $this->field(38, 364, 720, 23, "CONSECUTIVOS: {$rangeFrom} AL {$rangeTo}", $scale, maxLines: 2),
-            $this->field(38, 414, 720, 22, "TURNO: {$shiftName}", $scale, maxLines: 2),
-            $this->field(38, 462, 720, 22, 'LIDER: '.(string) $dummyRequest->leader_name, $scale, maxLines: 2),
-            $this->field(38, 508, 720, 22, 'SOLICITA: '.(string) $dummyRequest->requested_by_name, $scale, maxLines: 2),
-            $this->field(38, 554, 530, 20, "NOTAS: {$notes}", $scale, maxLines: 3),
-            $this->field(38, 710, 95, 17, 'IMPRIMIO:', $scale),
-            $this->line(130, 730, 145, 2, $scale),
-            $this->field(300, 710, 90, 17, 'RECIBIO:', $scale),
-            $this->line(390, 730, 160, 2, $scale),
-            $this->field(38, 742, 130, 17, 'CANT. ENTREGADA:', $scale),
-            $this->line(165, 762, 110, 2, $scale),
-            $this->field(300, 742, 125, 17, 'HORA ENTREGA:', $scale),
-            $this->line(425, 762, 125, 2, $scale),
-            $this->qr(596, 606, $qrPayload, $scale),
+            ...$this->startLabel($dimensions),
+            $this->field(28, 27, 620, 31, 'REQUISICION DUMMY QR', $dimensions),
+            $this->field(28, 67, 610, 37, $folio, $dimensions),
+            $this->qr(675, 24, $qrPayload, $dimensions, 3),
+            $this->field(28, 120, 750, 18, "REGISTRADA: {$createdAt}  |  SEMANA: {$dummyRequest->week}  |  LINEA: {$lineName}", $dimensions),
+            $this->line(25, 150, 765, 2, $dimensions),
+
+            $this->field(30, 175, 750, 21, 'TIPO:', $dimensions),
+            $this->field(30, 209, 750, 27, $dummyRequest->requestTypeTitle(), $dimensions),
+            $this->field(30, 270, 750, 21, 'JOB:', $dimensions),
+            $this->field(30, 304, 750, 28, (string) $dummyRequest->job_number, $dimensions),
+            $this->field(30, 365, 750, 21, 'FG:', $dimensions),
+            $this->field(30, 399, 750, 27, (string) $dummyRequest->fg_code, $dimensions),
+            $this->line(25, 460, 765, 2, $dimensions),
+
+            $this->field(30, 486, 365, 22, 'CANTIDAD: '.number_format((int) $dummyRequest->quantity_requested), $dimensions),
+            $this->field(405, 486, 375, 22, "TURNO: {$shiftName}", $dimensions),
+            $this->field(30, 546, 750, 23, "CONSECUTIVOS: {$rangeFrom} AL {$rangeTo}", $dimensions),
+            $this->field(30, 606, 365, 21, 'LIDER: '.($dummyRequest->leader_name ?: 'N/A'), $dimensions),
+            $this->field(405, 606, 375, 21, 'SOLICITA: '.($dummyRequest->requested_by_name ?: 'N/A'), $dimensions),
+            $this->field(30, 666, 750, 20, "NOTAS: {$notes}", $dimensions),
+            ...$this->footer($dimensions),
             '^PQ1,0,1,N',
             '^XZ',
         ]);
