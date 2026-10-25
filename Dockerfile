@@ -19,7 +19,8 @@ RUN npm run build
 # =========================================================
 # 2) PHP para Laravel
 # =========================================================
-FROM php:8.2-cli-bookworm AS app
+FROM php:8.2.35-cli-bookworm AS app
+RUN php -v
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
