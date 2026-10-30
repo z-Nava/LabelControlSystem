@@ -44,7 +44,9 @@ class StoreManualMasterRequestRequest extends FormRequest
                 'different:job_assembly',
                 $this->validOracleJobFor('packaging'),
             ],
-            'request_type' => ['required', Rule::in(MasterModelMapping::REQUEST_TYPES)],
+            'request_type' => ['required', Rule::in($this->filled('job_assembly') && $this->filled('job_packaging')
+                ? [MasterModelMapping::TYPE_ASSEMBLY_PACKAGING]
+                : MasterModelMapping::REQUEST_TYPES)],
             'oracle_line' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9\-._\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'po_number' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
@@ -59,6 +61,15 @@ class StoreManualMasterRequestRequest extends FormRequest
             'kind' => ['required', Rule::in(['new', 'reposition'])],
             'manual_reason' => ['required', 'string', 'min:3', 'max:1000', 'not_regex:'.self::NO_HTML_PATTERN],
             'notes' => ['nullable', 'string', 'max:1000', 'not_regex:'.self::NO_HTML_PATTERN],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'request_type.in' => $this->filled('job_assembly') && $this->filled('job_packaging')
+                ? 'Cuando capturas Job Ensamble y Job Empaque, el tipo debe ser HOJA MASTER ENSAMBLE - EMPAQUE.'
+                : 'El tipo de hoja Master seleccionado no es válido.',
         ];
     }
 

@@ -101,6 +101,26 @@ class OracleJobService
             ->first();
     }
 
+    /** @return list<string> */
+    public function destinationsForPo(string $poNumber): array
+    {
+        $poNumber = strtoupper(trim($poNumber));
+
+        if ($poNumber === '') {
+            return [];
+        }
+
+        return OracleJob::query()
+            ->whereRaw('UPPER(TRIM(ttl_cust_po)) = ?', [$poNumber])
+            ->whereNotNull('ship_code')
+            ->whereRaw("TRIM(ship_code) <> ''")
+            ->selectRaw('UPPER(TRIM(ship_code)) AS destination')
+            ->distinct()
+            ->orderBy('destination')
+            ->pluck('destination')
+            ->all();
+    }
+
     public function isAssemblyJob(OracleJob $job): bool
     {
         return $this->matchesClassificationRule($job, 'allows_assembly');

@@ -243,7 +243,28 @@ function validLookupForRole(lookup, role) {
             : `${foliosFrom} al ${foliosTo}`;
     };
 
+    const syncRequestTypeToJobs = () => {
+        const hasBothJobs = Boolean(fields.jobAssembly.value.trim() && fields.jobPackaging.value.trim());
+
+        Array.from(fields.requestType.options).forEach((option) => {
+            if (option.value) {
+                option.disabled = hasBothJobs && option.value !== ASSEMBLY_PACKAGING;
+                option.hidden = option.disabled;
+            }
+        });
+
+        if (hasBothJobs && requestType() !== ASSEMBLY_PACKAGING) {
+            fields.requestType.value = ASSEMBLY_PACKAGING;
+            fields.oracleLine.value = '';
+            fields.modelDisplay.value = '';
+            modelWasManuallyEdited = false;
+            fields.localInput.value = '';
+            fields.subinventoryInput.value = '';
+        }
+    };
+
     const updatePage = () => {
+        syncRequestTypeToJobs();
         fields.jobAssembly.required = requestType() !== ASSEMBLY_PACKAGING;
         fields.jobPackaging.required = requestType() === ASSEMBLY_PACKAGING;
         applySuggestions();

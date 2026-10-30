@@ -71,6 +71,7 @@ Route::middleware('kiosk.session')->prefix('kiosk')->name('kiosk.')->group(funct
         Route::get('/master-requests/create', [KioskMasterRequestController::class, 'create'])->name('master_requests.create');
         Route::post('/master-requests', [KioskMasterRequestController::class, 'store'])->name('master_requests.store');
         Route::get('/master-action-requests', [KioskMasterActionRequestController::class, 'index'])->name('master_action_requests.index');
+        Route::get('/master-action-requests/po-destinations', [KioskMasterActionRequestController::class, 'lookupPoDestinations'])->name('master_action_requests.po_destinations');
         Route::get('/master-action-requests/create', [KioskMasterActionRequestController::class, 'create'])->name('master_action_requests.create');
         Route::post('/master-action-requests/rework/{master_request}', [KioskMasterActionRequestController::class, 'storeRework'])->name('master_action_requests.rework.store');
         Route::post('/master-action-requests', [KioskMasterActionRequestController::class, 'store'])->name('master_action_requests.store');

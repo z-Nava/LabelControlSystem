@@ -43,6 +43,9 @@ const initializeMasterRework = () => {
         model: document.getElementById('modelInput'),
         poNumber: document.getElementById('poNumber'),
         destination: document.getElementById('destination'),
+        poDestinationSuggestion: document.getElementById('poDestinationSuggestion'),
+        poDestinationMessage: document.getElementById('poDestinationMessage'),
+        poDestinationChoices: document.getElementById('poDestinationChoices'),
         resolvedLine: document.getElementById('resolvedLine'),
         resolvedLocal: document.getElementById('resolvedLocal'),
         resolvedSubinventory: document.getElementById('resolvedSubinventory'),
@@ -58,6 +61,120 @@ const initializeMasterRework = () => {
     const originalMaximum = Number.parseInt(form.dataset.originalMaxFolio || '0', 10);
     const ortType = form.dataset.ortType || 'ort_assembly';
     const preserveFinalValues = form.dataset.preserveFinalValues === '1';
+    const originalPo = normalize(form.dataset.originalPo);
+    const originalDestination = normalize(form.dataset.originalDestination);
+    let poLookupSequence = 0;
+    let poLookupPromise = Promise.resolve();
+    let resolvedPo = originalPo;
+    let knownDestinations = null;
+    let enteredPo = normalize(elements.poNumber.value);
+    let poLookupTimer = null;
+
+    const cancelPoLookupTimer = () => {
+        if (poLookupTimer !== null) {
+            window.clearTimeout(poLookupTimer);
+            poLookupTimer = null;
+        }
+    };
+
+    const validatePoDestination = () => {
+        if (!elements.poDestinationSuggestion) return;
+
+        const po = normalize(elements.poNumber.value);
+        const destination = normalize(elements.destination.value);
+        if (po === originalPo && destination === originalDestination) {
+            elements.destination.setCustomValidity('');
+            return;
+        }
+
+        const message = po && !destination
+            ? 'Captura o selecciona el destino correspondiente a la PO.'
+            : po && knownDestinations?.length && !knownDestinations.includes(destination)
+                ? 'Selecciona un destino encontrado para esta PO en Oracle.'
+                : '';
+        elements.destination.setCustomValidity(message);
+    };
+
+    const showPoDestinationMessage = (message, destinations = []) => {
+        const panel = elements.poDestinationSuggestion;
+        if (!panel) return;
+
+        panel.classList.toggle('hidden', !message);
+        elements.poDestinationMessage.textContent = message;
+        elements.poDestinationChoices.replaceChildren();
+
+        destinations.forEach((destination) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'rounded-lg border border-blue-300 bg-white px-3 py-2 font-semibold text-blue-900 hover:bg-blue-100';
+            button.textContent = `Usar ${destination}`;
+            button.addEventListener('click', () => {
+                elements.destination.value = destination;
+                validatePoDestination();
+                elements.destination.focus();
+            });
+            elements.poDestinationChoices.append(button);
+        });
+
+        elements.poDestinationChoices.classList.toggle('hidden', destinations.length === 0);
+    };
+
+    const lookupPoDestinations = (autoFillUnique = false) => {
+        if (!form.dataset.poDestinationsUrl) return Promise.resolve();
+
+        cancelPoLookupTimer();
+        const po = normalize(elements.poNumber.value);
+        const sequence = ++poLookupSequence;
+        enteredPo = po;
+        knownDestinations = null;
+        resolvedPo = '';
+
+        if (!po) {
+            showPoDestinationMessage('');
+            validatePoDestination();
+            return Promise.resolve();
+        }
+
+        showPoDestinationMessage('Buscando destinos para esta PO en Oracle…');
+        const url = new URL(form.dataset.poDestinationsUrl, window.location.origin);
+        url.searchParams.set('po_number', po);
+
+        poLookupPromise = fetch(url, { headers: { Accept: 'application/json' } })
+            .then((response) => {
+                if (!response.ok) throw new Error(`PO lookup failed with status ${response.status}`);
+                return response.json();
+            })
+            .then((payload) => {
+                if (sequence !== poLookupSequence || normalize(elements.poNumber.value) !== po) return;
+
+                const destinations = Array.isArray(payload.destinations) ? payload.destinations : [];
+                knownDestinations = destinations;
+                resolvedPo = po;
+
+                if (destinations.length === 0) {
+                    showPoDestinationMessage('No se encontró un destino para esta PO en Oracle. Captura el destino manualmente.');
+                } else if (destinations.length === 1) {
+                    if (autoFillUnique && !normalize(elements.destination.value)) {
+                        elements.destination.value = destinations[0];
+                    }
+                    showPoDestinationMessage(
+                        `Destino encontrado para esta PO: ${destinations[0]}.`,
+                        destinations,
+                    );
+                } else {
+                    showPoDestinationMessage('Esta PO tiene varios destinos en Oracle. Selecciona el que corresponde al retrabajo.', destinations);
+                }
+
+                validatePoDestination();
+            })
+            .catch(() => {
+                if (sequence !== poLookupSequence) return;
+                showPoDestinationMessage('No se pudieron consultar los destinos de Oracle. Revisa la PO e intenta de nuevo.');
+                validatePoDestination();
+            });
+
+        return poLookupPromise;
+    };
 
     const lookupJob = async (jobNumber, role, counterpartJobNumber = '') => {
         const url = new URL(form.dataset.lookupUrl, window.location.origin);
@@ -267,13 +384,48 @@ const initializeMasterRework = () => {
             await performLookup(role);
             filterRequestTypes();
             applyResolution(true, role === 'packaging');
+            if (role === 'packaging') await lookupPoDestinations();
         });
     });
 
     elements.requestType.addEventListener('change', () => applyResolution(true));
-    [elements.poNumber, elements.destination].forEach((input) => input.addEventListener('change', () => {
-        input.value = normalize(input.value);
-    }));
+    if (form.dataset.poDestinationsUrl) {
+        elements.poNumber.addEventListener('input', () => {
+            const po = normalize(elements.poNumber.value);
+            if (po === enteredPo) return;
+            enteredPo = po;
+            cancelPoLookupTimer();
+            ++poLookupSequence;
+            knownDestinations = null;
+            resolvedPo = '';
+            elements.destination.value = '';
+            showPoDestinationMessage(po ? 'Buscando destinos para esta PO en Oracle…' : '');
+            validatePoDestination();
+            if (po) {
+                poLookupTimer = window.setTimeout(() => lookupPoDestinations(true), 350);
+            }
+        });
+        elements.poNumber.addEventListener('change', () => {
+            elements.poNumber.value = normalize(elements.poNumber.value);
+            if (poLookupTimer !== null) lookupPoDestinations(true);
+        });
+        elements.destination.addEventListener('input', validatePoDestination);
+        elements.destination.addEventListener('change', () => {
+            elements.destination.value = normalize(elements.destination.value);
+            validatePoDestination();
+            if (
+                normalize(elements.poNumber.value) === originalPo
+                && normalize(elements.destination.value) !== originalDestination
+                && knownDestinations === null
+            ) {
+                lookupPoDestinations();
+            }
+        });
+    } else {
+        [elements.poNumber, elements.destination].forEach((input) => input.addEventListener('change', () => {
+            input.value = normalize(input.value);
+        }));
+    }
     elements.finalLine.addEventListener('change', () => {
         const inventory = inventorySuggestion();
         elements.resolvedLocal.textContent = inventory.local || '—';
@@ -307,6 +459,19 @@ const initializeMasterRework = () => {
         event.preventDefault();
         refreshFolioPreview();
 
+        if (form.dataset.poDestinationsUrl) {
+            cancelPoLookupTimer();
+            const po = normalize(elements.poNumber.value);
+            const destination = normalize(elements.destination.value);
+            const pairChanged = po !== originalPo || destination !== originalDestination;
+            if (pairChanged && (po !== resolvedPo || knownDestinations === null)) {
+                await lookupPoDestinations(true);
+            } else {
+                await poLookupPromise;
+            }
+            validatePoDestination();
+        }
+
         if (!form.reportValidity()) return;
 
         const folios = finalFolioNumbers();
@@ -334,6 +499,14 @@ const initializeMasterRework = () => {
         filterRequestTypes();
         if (initialType && isTypeAvailable(initialType)) elements.requestType.value = initialType;
         applyResolution(false, !preserveFinalValues);
+        if (
+            normalize(elements.poNumber.value) !== originalPo
+            || normalize(elements.destination.value) !== originalDestination
+        ) {
+            lookupPoDestinations();
+        } else {
+            validatePoDestination();
+        }
     });
     refreshFolioPreview();
 };
