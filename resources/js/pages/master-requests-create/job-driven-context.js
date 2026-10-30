@@ -101,8 +101,10 @@ function filterRequestTypes(fields, jobLookups) {
     const typeOptions = Array.from(select.options).filter((option) => option.value !== '');
     const previousValue = select.value;
     const initialValue = select.dataset.initialValue || '';
+    const hasBothJobs = Boolean(normalize(fields.jobAssembly?.value) && normalize(fields.jobPackaging?.value));
     const availableOptions = typeOptions.filter((option) => {
-        const available = isRequestTypeAvailable(option.value, jobLookups);
+        const available = (!hasBothJobs || option.value === ASSEMBLY_PACKAGING_TYPE)
+            && isRequestTypeAvailable(option.value, jobLookups);
 
         option.hidden = !available;
         option.disabled = !available;
@@ -114,7 +116,10 @@ function filterRequestTypes(fields, jobLookups) {
         select.value = '';
     }
 
-    if (initialValue && availableOptions.some((option) => option.value === initialValue)) {
+    if (hasBothJobs && availableOptions.some((option) => option.value === ASSEMBLY_PACKAGING_TYPE)) {
+        select.value = ASSEMBLY_PACKAGING_TYPE;
+        select.dataset.initialValue = '';
+    } else if (initialValue && availableOptions.some((option) => option.value === initialValue)) {
         select.value = initialValue;
         select.dataset.initialValue = '';
     } else if (availableOptions.length === 1 && select.value === '') {

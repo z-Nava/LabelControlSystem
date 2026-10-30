@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\Kiosk\KioskRequisitionPrintService;
 use App\Services\Masters\MasterActionRequestService;
 use App\Services\Masters\MasterReworkService;
+use App\Services\Oracle\OracleJobService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +64,19 @@ class KioskMasterActionRequestController extends Controller
             'query' => $query,
             'sources' => $query !== '' ? $this->service->searchSources($query, $type) : null,
             'source' => $source,
+        ]);
+    }
+
+    public function lookupPoDestinations(Request $request, OracleJobService $oracleJobs): JsonResponse
+    {
+        $data = $request->validate([
+            'po_number' => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/'],
+        ]);
+        $poNumber = strtoupper(trim($data['po_number']));
+
+        return response()->json([
+            'po_number' => $poNumber,
+            'destinations' => $oracleJobs->destinationsForPo($poNumber),
         ]);
     }
 

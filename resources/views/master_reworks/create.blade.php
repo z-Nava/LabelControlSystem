@@ -52,6 +52,9 @@
 
     <form id="masterReworkForm"
           data-lookup-url="{{ $kioskMode ? route('kiosk.master_requests.lookup_job') : route('oracle.lookup_job') }}"
+          data-po-destinations-url="{{ $kioskMode ? route('kiosk.master_action_requests.po_destinations') : '' }}"
+          data-original-po="{{ $masterRequest->po_number }}"
+          data-original-destination="{{ $masterRequest->destination }}"
           data-kiosk-mode="{{ $kioskMode ? '1' : '0' }}"
           data-original-max-folio="{{ $masterRequest->folios->max('folio_number') }}"
           data-ort-type="{{ $ortAssemblyConfig['type'] }}"
@@ -116,7 +119,20 @@
                            maxlength="80" pattern="[A-Za-z0-9,\-\/_\s]+" autocomplete="off"
                            class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 focus:ring-2 focus:ring-red-600">
                 </div>
-                <p class="text-xs text-slate-500 md:col-span-2">Oracle propone estos valores desde el Job Empaque; puedes ajustarlos para esta revisión.</p>
+                <p class="text-xs text-slate-500 md:col-span-2">
+                    Oracle propone estos valores desde el Job Empaque.
+                    @if($kioskMode)
+                        Los destinos se buscarán automáticamente mientras escribes otra PO; si hay varios, selecciona el correcto.
+                    @else
+                        Puedes ajustarlos para esta revisión.
+                    @endif
+                </p>
+                @if($kioskMode)
+                    <div id="poDestinationSuggestion" class="hidden rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950 md:col-span-2" role="status" aria-live="polite">
+                        <p id="poDestinationMessage"></p>
+                        <div id="poDestinationChoices" class="mt-2 flex flex-wrap gap-2"></div>
+                    </div>
+                @endif
             </div>
         </section>
 

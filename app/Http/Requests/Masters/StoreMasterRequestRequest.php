@@ -114,11 +114,22 @@ class StoreMasterRequestRequest extends FormRequest
 
             'request_type' => [
                 'required',
-                Rule::in(MasterModelMapping::REQUEST_TYPES),
+                Rule::in($this->filled('job_assembly') && $this->filled('job_packaging')
+                    ? [MasterModelMapping::TYPE_ASSEMBLY_PACKAGING]
+                    : MasterModelMapping::REQUEST_TYPES),
             ],
             'kind' => ['required', 'in:new,reposition'],
 
             'notes' => ['nullable', 'string', 'max:1000', 'not_regex:'.self::NO_HTML_PATTERN],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'request_type.in' => $this->filled('job_assembly') && $this->filled('job_packaging')
+                ? 'Cuando capturas Job Ensamble y Job Empaque, el tipo debe ser HOJA MASTER ENSAMBLE - EMPAQUE.'
+                : 'El tipo de hoja Master seleccionado no es válido.',
         ];
     }
 
