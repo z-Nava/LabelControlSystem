@@ -85,7 +85,6 @@ class StoreKioskMasterRequestRequest extends FormRequest
                     }
                 },
             ],
-            'destination' => ['nullable', 'string', 'max:80', 'regex:/^[A-Za-z0-9\-\/_\s]+$/', 'not_regex:'.self::NO_HTML_PATTERN],
             'local' => [
                 'nullable',
                 'string',
@@ -142,7 +141,6 @@ class StoreKioskMasterRequestRequest extends FormRequest
             'po_number' => $this->cleanInput($this->input('po_number', '')),
             'job_assembly' => $jobAssembly !== null ? strtoupper($jobAssembly) : null,
             'job_packaging' => $jobPackaging !== null ? strtoupper($jobPackaging) : null,
-            'destination' => $this->cleanInput($this->input('destination', '')),
             'local' => $local !== null ? strtoupper($local) : null,
             'subinventory' => $subinventory !== null ? strtoupper($subinventory) : null,
             'notes' => $this->cleanInput($this->input('notes', '')),

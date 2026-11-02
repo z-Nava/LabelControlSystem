@@ -128,12 +128,9 @@
                     </div>
 
                     <div>
-                        <label for="destination" class="text-sm font-semibold text-slate-700">Destino <span class="font-normal text-slate-500">(Ship Code)</span></label>
+                        <label for="destination" class="text-sm font-semibold text-slate-700">Destino <span class="font-normal text-slate-500">(Ship Code / Ship To)</span></label>
                         <input id="destination"
-                               name="destination"
-                               value="{{ old('destination') }}"
                                maxlength="80"
-                               pattern="[A-Za-z0-9\-\/_\s]+"
                                readonly
                                aria-readonly="true"
                                aria-describedby="destinationWarning"

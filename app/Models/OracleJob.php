@@ -6,6 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class OracleJob extends Model
 {
+    public function shippingDestination(): ?string
+    {
+        foreach ([$this->ship_code, $this->ship_to] as $value) {
+            $destination = strtoupper(trim((string) $value));
+
+            if ($destination !== '') {
+                return $destination;
+            }
+        }
+
+        return null;
+    }
+
     protected $fillable = [
         'job_number',
         'line',

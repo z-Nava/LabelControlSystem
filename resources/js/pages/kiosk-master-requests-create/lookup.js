@@ -37,7 +37,7 @@ async function lookupJob(lookupUrl, jobNumber, role, counterpartJobNumber = '') 
 
 function updatePackagingFields(fields, data = null, destinationWarning = '') {
     if (fields.destination) {
-        fields.destination.value = data?.ship_code || '';
+        fields.destination.value = data?.destination || '';
         fields.destination.classList.toggle('border-slate-300', !destinationWarning);
         fields.destination.classList.toggle('bg-slate-100', !destinationWarning);
         fields.destination.classList.toggle('text-slate-700', !destinationWarning);
@@ -197,11 +197,19 @@ function validateLookupByRole(inputElement, data, role) {
         };
     }
 
-    if (role === 'packaging' && !String(data.ship_code || '').trim()) {
+    if (role === 'packaging' && !String(data.destination || '').trim()) {
         return {
             type: 'ok',
             message: `NP: ${data.assembly || '-'} | ${data.part_description || ''}`,
-            destinationWarning: `El Job Empaque ${data.job_number || ''} no tiene Destino (Ship Code) registrado en Oracle.`,
+            destinationWarning: `El Job Empaque ${data.job_number || ''} no tiene Destino (Ship Code ni Ship To) registrado en Oracle.`,
+        };
+    }
+
+    if (role === 'packaging' && String(data.destination).length > 80) {
+        return {
+            type: 'ok',
+            message: `NP: ${data.assembly || '-'} | ${data.part_description || ''}`,
+            destinationWarning: `El Ship To del Job Empaque ${data.job_number || ''} excede los 80 caracteres permitidos. Corrígelo en Oracle.`,
         };
     }
 
