@@ -154,7 +154,7 @@ class MasterReworkService
             );
 
             $resolvedPoNumber = $this->normalizeNullable($packagingJob?->ttl_cust_po);
-            $resolvedDestination = $this->normalizeNullable($packagingJob?->ship_code);
+            $resolvedDestination = $packagingJob?->shippingDestination();
             $finalPoNumber = $this->normalizeNullable($data['po_number'] ?? null);
             $finalDestination = $this->normalizeNullable($data['destination'] ?? null);
             $originalValues = $this->originalValues($baseRequest);

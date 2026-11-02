@@ -110,11 +110,12 @@ class OracleJobService
             return [];
         }
 
+        $destination = "COALESCE(NULLIF(TRIM(ship_code), ''), NULLIF(TRIM(ship_to), ''))";
+
         return OracleJob::query()
             ->whereRaw('UPPER(TRIM(ttl_cust_po)) = ?', [$poNumber])
-            ->whereNotNull('ship_code')
-            ->whereRaw("TRIM(ship_code) <> ''")
-            ->selectRaw('UPPER(TRIM(ship_code)) AS destination')
+            ->whereRaw("{$destination} IS NOT NULL")
+            ->selectRaw("UPPER({$destination}) AS destination")
             ->distinct()
             ->orderBy('destination')
             ->pluck('destination')
@@ -189,6 +190,7 @@ class OracleJobService
             'part_description' => $job->part_description,
             'ttl_cust_po' => $job->ttl_cust_po,
             'ship_code' => $job->ship_code,
+            'destination' => $job->shippingDestination(),
             'bom_revision' => $job->bom_revision,
             'valid_for_assembly' => $this->isAssemblyJob($job),
             'valid_for_packaging' => $this->isPackagingJob($job),

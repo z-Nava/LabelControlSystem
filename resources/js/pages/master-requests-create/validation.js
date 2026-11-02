@@ -1,7 +1,7 @@
 import { clearCustomValidity, getFieldValue } from './dom';
 
-const CLEAR_ON_INPUT_FIELDS = ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty', 'po_number', 'destination', 'notes'];
-const RESET_BEFORE_VALIDATION_FIELDS = ['folios_to', 'partial_folio', 'partial_qty', 'po_number', 'destination', 'notes'];
+const CLEAR_ON_INPUT_FIELDS = ['job_assembly', 'job_packaging', 'folios_to', 'partial_folio', 'partial_qty', 'po_number', 'notes'];
+const RESET_BEFORE_VALIDATION_FIELDS = ['folios_to', 'partial_folio', 'partial_qty', 'po_number', 'notes'];
 const NO_HTML_PATTERN = /<[^>]*>/;
 const SAFE_TEXT_PATTERN = /^[A-Za-z0-9\-/_\s.]+$/;
 const SAFE_JOB_PATTERN = /^[0-9A-Za-z-]+$/;
@@ -25,7 +25,6 @@ export function validateBeforeSubmit(form) {
     const assemblyValue = getFieldValue(form, 'job_assembly');
     const packagingValue = getFieldValue(form, 'job_packaging');
     const poNumber = getFieldValue(form, 'po_number');
-    const destination = getFieldValue(form, 'destination');
     const notes = getFieldValue(form, 'notes');
 
     const assemblyInput = form.elements.namedItem('job_assembly');
@@ -82,11 +81,6 @@ export function validateBeforeSubmit(form) {
 
     if (poNumber && (NO_HTML_PATTERN.test(poNumber) || !SAFE_TEXT_PATTERN.test(poNumber))) {
         form.elements.namedItem('po_number')?.setCustomValidity('El campo Custom PO tiene caracteres inválidos.');
-        return false;
-    }
-
-    if (destination && (NO_HTML_PATTERN.test(destination) || !SAFE_TEXT_PATTERN.test(destination))) {
-        form.elements.namedItem('destination')?.setCustomValidity('El destino contiene caracteres inválidos.');
         return false;
     }
 

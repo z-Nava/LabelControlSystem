@@ -350,11 +350,23 @@ function evaluateContext(fields, jobLookups, availableRequestTypes) {
     if (
         packagingNumber
         && isValidRoleLookup(packagingLookup, 'packaging')
-        && !normalize(packagingLookup.ship_code)
+        && !normalize(packagingLookup.destination)
     ) {
         return {
             status: 'invalid',
-            message: `El Job Empaque ${packagingLookup.job_number || packagingNumber} no tiene Destino (Ship Code) registrado en Oracle. No se puede enviar la requisición.`,
+            message: `El Job Empaque ${packagingLookup.job_number || packagingNumber} no tiene Destino (Ship Code ni Ship To) registrado en Oracle. No se puede enviar la requisición.`,
+            suppressInlineStatus: true,
+        };
+    }
+
+    if (
+        packagingNumber
+        && isValidRoleLookup(packagingLookup, 'packaging')
+        && normalize(packagingLookup.destination).length > 80
+    ) {
+        return {
+            status: 'invalid',
+            message: `El Ship To del Job Empaque ${packagingLookup.job_number || packagingNumber} excede los 80 caracteres permitidos. Corrígelo en Oracle antes de enviar la requisición.`,
             suppressInlineStatus: true,
         };
     }

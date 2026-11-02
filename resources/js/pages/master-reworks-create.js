@@ -320,7 +320,7 @@ const initializeMasterRework = () => {
 
         if (overwritePackagingValues) {
             elements.poNumber.value = normalize(state.packaging?.found ? state.packaging.ttl_cust_po : '');
-            elements.destination.value = normalize(state.packaging?.found ? state.packaging.ship_code : '');
+            elements.destination.value = normalize(state.packaging?.found ? state.packaging.destination : '');
         }
 
         if (!requestType) {
@@ -499,6 +499,13 @@ const initializeMasterRework = () => {
         filterRequestTypes();
         if (initialType && isTypeAvailable(initialType)) elements.requestType.value = initialType;
         applyResolution(false, !preserveFinalValues);
+        if (
+            !normalize(elements.destination.value)
+            && state.packaging?.found
+            && normalize(elements.poNumber.value) === normalize(state.packaging.ttl_cust_po)
+        ) {
+            elements.destination.value = normalize(state.packaging.destination);
+        }
         if (
             normalize(elements.poNumber.value) !== originalPo
             || normalize(elements.destination.value) !== originalDestination

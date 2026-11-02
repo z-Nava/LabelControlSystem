@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class MasterRequestService
 {
+    private const DESTINATION_MAX_LENGTH = 80;
+
     public function __construct(
         private readonly OracleJobService $oracleJobService,
         private readonly MasterRequestProductionContextService $productionContextService,
@@ -67,11 +69,23 @@ class MasterRequestService
                 ? $this->oracleJobService->findByJobNumber($data['job_packaging'])
                 : null;
 
-            if ($packagingOracleJob && $this->normalizeNullable($packagingOracleJob->ship_code) === null) {
+            $packagingDestination = $packagingOracleJob?->shippingDestination();
+
+            if ($packagingOracleJob && $packagingDestination === null) {
                 throw ValidationException::withMessages([
                     'destination' => sprintf(
-                        'El Job Empaque %s no tiene Destino (Ship Code) registrado en Oracle. No se puede enviar la requisición.',
+                        'El Job Empaque %s no tiene Destino (Ship Code ni Ship To) registrado en Oracle. No se puede enviar la requisición.',
                         $this->normalize($packagingOracleJob->job_number),
+                    ),
+                ]);
+            }
+
+            if ($packagingDestination !== null && mb_strlen($packagingDestination) > self::DESTINATION_MAX_LENGTH) {
+                throw ValidationException::withMessages([
+                    'destination' => sprintf(
+                        'El destino del Job Empaque %s excede los %d caracteres permitidos. Corrige Ship To en Oracle antes de enviar la requisición.',
+                        $this->normalize($packagingOracleJob->job_number),
+                        self::DESTINATION_MAX_LENGTH,
                     ),
                 ]);
             }
@@ -85,7 +99,7 @@ class MasterRequestService
             // PO and destination belong to the packaging Job. Never trust values
             // submitted by the browser or fall back to the assembly Job.
             $data['po_number'] = $this->normalizeNullable($packagingOracleJob?->ttl_cust_po);
-            $data['destination'] = $this->normalizeNullable($packagingOracleJob?->ship_code);
+            $data['destination'] = $packagingDestination;
             $data['model'] = $this->normalizeNullable(
                 $this->masterModelMappingService->resolveModelFromJobs(
                     (string) ($data['request_type'] ?? ''),
