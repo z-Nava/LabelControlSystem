@@ -7,9 +7,7 @@ use Illuminate\Support\Carbon;
 
 class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBuilder
 {
-    public const LPK_LAYOUT_MARKER = '^FX KIOSK_LPK_BY_TYPE_V1^FS';
-
-    private const LAYOUT_MARKER = '^FX KIOSK_LABELS_BY_TYPE_V1^FS';
+    private const LAYOUT_MARKER = '^FX KIOSK_LABELS_BY_TYPE_V2^FS';
 
     private const LINE_HEIGHT = 25;
 
@@ -45,7 +43,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
         $metadata = $this->columnLines([
             ["REGISTRADA: {$createdAt}", "LÍNEA: {$lineName}"],
             ['LÍDER: '.($labelRequest->leader_name ?: 'N/A'), 'SOLICITA: '.($labelRequest->requested_by_name ?: 'N/A')],
-            ['TRABAJO: '.$labelRequest->folioModeLabel(), 'CANT. REQUISICIÓN: '.number_format((int) $labelRequest->quantity_requested)],
+            ['TRABAJO: '.$labelRequest->folioModeLabel(), ''],
         ]);
 
         return $this->pagesByType($rows, $header, $metadata, $dimensions);
@@ -53,7 +51,7 @@ class KioskRequisitionLabelZplBuilder extends AbstractKioskRequisitionLabelZplBu
 
     public function hasCurrentLayout(string $zpl): bool
     {
-        return str_contains($zpl, self::LAYOUT_MARKER) || str_contains($zpl, self::LPK_LAYOUT_MARKER);
+        return str_contains($zpl, self::LAYOUT_MARKER);
     }
 
     private function pagesByType(array $rows, array $header, array $metadata, array $dimensions): string
