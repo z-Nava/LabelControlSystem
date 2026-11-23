@@ -29,25 +29,24 @@ class KioskRequisitionPrintService
             return $existingJob;
         }
 
-        $labelRequest->loadMissing([
-            'line',
-            'shift',
-            'serials',
-            'ratings',
-            'shippingItems',
-            'lpkLabelGroups.items',
-            'lpkShippingGroups.items',
-        ]);
-        $dpi = (int) config('kiosk.requisition_label.dpi', 203);
-
         return KioskRequisitionPrintJob::query()->create([
             'token' => (string) Str::uuid(),
             'label_request_id' => $labelRequest->id,
             'requested_by_user_id' => $user->id,
             'status' => KioskRequisitionPrintJob::STATUS_PENDING,
             'attempts' => 0,
-            'zpl' => $this->labelZplBuilder->build($labelRequest, $dpi),
+            'zpl' => $this->labelReceiptZpl($labelRequest),
         ]);
+    }
+
+    private function labelReceiptZpl(LabelRequest $request): string
+    {
+        $request->loadMissing([
+            'line', 'shift', 'serials', 'ratings', 'shippingItems',
+            'lpkLabelGroups.items', 'lpkShippingGroups.items',
+        ]);
+
+        return $this->labelZplBuilder->build($request, (int) config('kiosk.requisition_label.dpi', 203));
     }
 
     public function prepareMaster(MasterRequest $masterRequest, User $user): KioskRequisitionPrintJob
@@ -246,6 +245,14 @@ class KioskRequisitionPrintService
 
     public function zplForReprint(KioskRequisitionPrintJob $printJob): string
     {
+        if ($printJob->label_request_id !== null) {
+            if (! $this->labelZplBuilder->hasCurrentLayout($printJob->zpl) && $printJob->labelRequest) {
+                return $this->labelReceiptZpl($printJob->labelRequest);
+            }
+
+            return $printJob->zpl;
+        }
+
         if (str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::RECEIPT_LAYOUT_MARKER)) {
             return $printJob->zpl;
         }
@@ -332,24 +339,20 @@ class KioskRequisitionPrintService
                     || str_contains($printJob->zpl, 'COMPROBANTE REIMPRESION MASTER'));
             $needsMasterReceiptUpdate = ($request instanceof MasterRequest || $request instanceof MasterActionRequest)
                 && ! str_contains($printJob->zpl, KioskMasterRequisitionLabelZplBuilder::RECEIPT_LAYOUT_MARKER);
+            $isLabelRequest = $request instanceof LabelRequest;
 
             if (
                 $needsMasterReceiptUpdate
-                ||
-                ($request instanceof LabelRequest && $request->isLpk())
+                || ($isLabelRequest && ! $this->labelZplBuilder->hasCurrentLayout($printJob->zpl))
                 || ($request instanceof MasterRequest && str_contains($printJob->zpl, 'FOLIO INICIAL:'))
                 || str_contains($printJob->zpl, '^A0R')
                 || ($request instanceof MasterActionRequest && ! $isDetailedMasterActionLabel)
-                || (substr_count($printJob->zpl, '^XA') !== 1 && ! $isDetailedMasterActionLabel)
+                || (! $isLabelRequest && ! $isDetailedMasterActionLabel && substr_count($printJob->zpl, '^XA') !== 1)
             ) {
                 $dpi = (int) config('kiosk.requisition_label.dpi', 203);
 
                 if ($request instanceof LabelRequest) {
-                    $request->loadMissing([
-                        'line', 'shift', 'serials', 'ratings', 'shippingItems',
-                        'lpkLabelGroups.items', 'lpkShippingGroups.items',
-                    ]);
-                    $updates['zpl'] = $this->labelZplBuilder->build($request, $dpi);
+                    $updates['zpl'] = $this->labelReceiptZpl($request);
                 } elseif ($request instanceof MasterRequest) {
                     $request->loadMissing(['line', 'shift', 'requestedBy.shift', 'folios']);
                     $updates['zpl'] = $this->masterZplBuilder->build($request, $dpi);
