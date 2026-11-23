@@ -235,7 +235,8 @@
 
         <aside class="h-fit rounded-2xl border border-slate-200 bg-slate-900 p-5 text-white shadow-sm xl:sticky xl:top-5">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">Resumen LPK</p>
-            <h2 class="mt-2 text-xl font-semibold">Una tarjeta = una etiqueta física</h2>
+            <h2 class="mt-2 text-xl font-semibold">Comprobantes por tipo de etiqueta</h2>
+            <p class="mt-2 text-sm text-slate-300">Cada tipo solicitado tiene su propio comprobante. Si sus renglones ocupan varias etiquetas, se numeran con el mismo folio de requisición.</p>
             <dl class="mt-5 space-y-4 text-sm">
                 <div><dt class="text-slate-400">Operación</dt><dd id="lpkPreviewOperation" class="mt-1 font-medium">Pendiente</dd></div>
                 <div><dt class="text-slate-400">Grupos Serial / Rating / Inner</dt><dd id="lpkPreviewLabelGroups" class="mt-1 font-medium">1 grupo</dd></div>

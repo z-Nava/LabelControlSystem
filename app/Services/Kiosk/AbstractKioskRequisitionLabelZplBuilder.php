@@ -142,6 +142,44 @@ abstract class AbstractKioskRequisitionLabelZplBuilder
         ];
     }
 
+    /** @return array<int, string> */
+    protected function wrapText(string $value, int $limit): array
+    {
+        $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
+        if ($value === '') {
+            return [];
+        }
+
+        $lines = [];
+        $current = '';
+        foreach (explode(' ', $value) as $word) {
+            while (mb_strlen($word) > $limit) {
+                if ($current !== '') {
+                    $lines[] = $current;
+                    $current = '';
+                }
+                $lines[] = mb_substr($word, 0, $limit);
+                $word = mb_substr($word, $limit);
+            }
+            if ($word === '') {
+                continue;
+            }
+            if ($current === '') {
+                $current = $word;
+            } elseif (mb_strlen($current) + 1 + mb_strlen($word) <= $limit) {
+                $current .= ' '.$word;
+            } else {
+                $lines[] = $current;
+                $current = $word;
+            }
+        }
+        if ($current !== '') {
+            $lines[] = $current;
+        }
+
+        return $lines;
+    }
+
     protected function formatDate(
         mixed $value,
         string $format,

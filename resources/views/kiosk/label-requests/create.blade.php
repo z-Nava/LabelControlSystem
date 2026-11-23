@@ -9,7 +9,7 @@
             ['title' => 'Identifica la operación', 'description' => 'Confirma fecha, línea, turno y líder.'],
             ['title' => 'Valida el Job', 'description' => 'Espera la confirmación de Oracle y revisa la disponibilidad.'],
             ['title' => 'Indica las etiquetas', 'description' => 'Selecciona los tipos y captura solamente sus NP.'],
-            ['title' => 'Confirma y envía', 'description' => 'Revisa la confirmación final antes de crear la requisición.'],
+            ['title' => 'Confirma y envía', 'description' => 'Al confirmar, el kiosco imprime un comprobante por tipo solicitado. Si un tipo ocupa varias etiquetas, salen numeradas con el mismo folio.'],
         ],
     ])
 
