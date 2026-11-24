@@ -136,18 +136,19 @@
                                 <div class="font-semibold text-slate-900">{{ $row['lpkProductionJobs']->count() }} Job(s) de producción</div>
                                 <div class="mt-0.5 text-xs text-slate-500">{{ $row['lpkProductionJobs']->take(3)->implode(', ') ?: 'Sólo Shipping' }}@if($row['lpkProductionJobs']->count() > 3) · +{{ $row['lpkProductionJobs']->count() - 3 }}@endif</div>
 
-                                @foreach($row['labelRequest']->lpkLabelGroups->take(3) as $group)
-                                    <div class="mt-1 text-xs text-slate-600"><span class="font-semibold">{{ $group->type_label }} {{ $group->part_number }}:</span> {{ $group->items->count() }} renglón(es)</div>
+                                @foreach($row['labelRequest']->lpkLabelGroups as $group)
+                                    <div class="mt-1 text-xs text-slate-600">
+                                        <span class="font-semibold">{{ $group->type_label }} {{ $group->part_number }}:</span>
+                                        @include('label_requests.partials.lpk-group-models', ['items' => $group->items])
+                                    </div>
                                 @endforeach
-                                @if($row['labelRequest']->lpkLabelGroups->count() > 3)
-                                    <div class="mt-1 text-xs text-slate-500">+{{ $row['labelRequest']->lpkLabelGroups->count() - 3 }} grupo(s) adicional(es)</div>
-                                @endif
-                                @foreach($row['labelRequest']->lpkShippingGroups->take(2) as $group)
-                                    <div class="mt-1 text-xs text-amber-700"><span class="font-semibold text-amber-800">Shipping {{ $group->part_number }}:</span> {{ number_format($group->quantity) }} etiqueta(s), {{ $group->items->count() }} modelo(s)</div>
+                                @foreach($row['labelRequest']->lpkShippingGroups as $group)
+                                    <div class="mt-1 text-xs text-amber-700">
+                                        <span class="font-semibold text-amber-800">Shipping {{ $group->part_number }}:</span>
+                                        @include('label_requests.partials.lpk-group-models', ['items' => $group->items])
+                                        · {{ number_format($group->quantity) }} {{ $group->quantity === 1 ? 'etiqueta' : 'etiquetas' }}
+                                    </div>
                                 @endforeach
-                                @if($row['labelRequest']->lpkShippingGroups->count() > 2)
-                                    <div class="mt-1 text-xs text-amber-700">+{{ $row['labelRequest']->lpkShippingGroups->count() - 2 }} Shipping adicional(es)</div>
-                                @endif
                             @else
                                 <div class="font-semibold text-slate-900">{{ $row['labelRequest']->job_number ?: 'Sin Job' }}</div>
                                 <div class="mt-0.5 text-xs text-slate-500">Modelo general: {{ $row['labelRequest']->model ?: 'Sin modelo' }}</div>
