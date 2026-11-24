@@ -60,8 +60,6 @@
                     'Descripción' => $job->part_description,
                     'Línea / local' => $job->line,
                     'Cantidad del Job' => $job->job_qty,
-                    'Cantidad completada' => $job->qty_completed,
-                    'Cantidad restante' => $job->quantity_remainder,
                     'Custom PO' => $job->ttl_cust_po,
                     'Destino' => $job->ship_code,
                     'Revisión BOM' => $job->bom_revision,
