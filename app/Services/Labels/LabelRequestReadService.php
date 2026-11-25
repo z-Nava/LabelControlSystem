@@ -14,12 +14,8 @@ use Illuminate\Support\Facades\DB;
 class LabelRequestReadService
 {
     private const INDEX_STATUS_OPTIONS = [
-        'active' => 'Pendientes (todas)',
-        LabelRequest::STATUS_REQUESTED => 'Pendiente',
-        LabelRequest::STATUS_IN_PROGRESS => 'En preparación',
-        LabelRequest::STATUS_READY_FOR_DELIVERY => 'Lista para entregar',
-        LabelRequest::STATUS_COMPLETED => 'Entregada',
-        LabelRequest::STATUS_CANCELLED => 'Cancelada',
+        'active' => 'Activas (todas)',
+        ...LabelRequest::STATUS_LABELS,
         'all' => 'Todas',
     ];
 
@@ -37,7 +33,7 @@ class LabelRequestReadService
             'sku_np' => trim((string) ($filters['sku_np'] ?? '')),
         ];
 
-        $labelRequests = LabelRequest::query()
+        $query = LabelRequest::query()
             ->with([
                 'line:id,name,code',
                 'shift:id,name,code',
@@ -54,11 +50,6 @@ class LabelRequestReadService
             ->when($validated['line_id'], fn ($query, $value) => $query->where('line_id', $value))
             ->when($validated['shift_id'], fn ($query, $value) => $query->where('shift_id', $value))
             ->when($validated['request_kind'], fn ($query, $value) => $query->where('request_kind', $value))
-            ->when($validated['status'] === 'active', fn ($query) => $query->open())
-            ->when(
-                ! in_array($validated['status'], ['active', 'all'], true),
-                fn ($query) => $query->where('status', $validated['status'])
-            )
             ->when($validated['sku_np'] !== '', function ($query) use ($validated) {
                 $search = $validated['sku_np'];
 
@@ -103,14 +94,28 @@ class LabelRequestReadService
                 });
             })
             ->orderBy('created_at')
-            ->orderBy('id')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->orderBy('id');
+
+        $showActiveBoard = $validated['status'] === 'active';
+        $statuses = $showActiveBoard ? LabelRequest::OPEN_STATUSES : [$validated['status']];
+        $columns = [];
+        foreach ($statuses as $status) {
+            $columnQuery = clone $query;
+            if ($status !== 'all') {
+                $columnQuery->where('status', $status);
+            }
+
+            $columns[$status] = $columnQuery
+                ->paginate($perPage, ['*'], $showActiveBoard ? $status.'_page' : 'page')
+                ->withQueryString()
+                ->fragment('requests-'.$status)
+                ->through(fn (LabelRequest $labelRequest): array => $this->buildIndexRow($labelRequest));
+        }
 
         return [
-            'labelRequests' => $labelRequests,
-            'labelRequestRows' => $labelRequests->getCollection()
-                ->map(fn (LabelRequest $labelRequest): array => $this->buildIndexRow($labelRequest)),
+            'columns' => $columns,
+            'showActiveBoard' => $showActiveBoard,
+            'totalResults' => array_sum(array_map(fn ($column) => $column->total(), $columns)),
             'filters' => $validated,
             'statusOptions' => self::INDEX_STATUS_OPTIONS,
             'lines' => ProductionLine::query()->where('active', true)->orderBy('name')->get(['id', 'name', 'code', 'line_type']),
@@ -125,7 +130,6 @@ class LabelRequestReadService
      *     ratingPartNumbers: array<int, string>,
      *     innerItem: ?string,
      *     shippingItems: array<int, string>,
-     *     shippingItemSummary: string,
      *     hasGroupedLpkDetails: bool,
      *     lpkProductionJobs: Collection<int, string>
      * }
@@ -149,9 +153,6 @@ class LabelRequestReadService
                 ? collect([$labelRequest->inner_part_number, $labelRequest->inner_model])->filter()->implode(' · ')
                 : null,
             'shippingItems' => $shippingItems,
-            'shippingItemSummary' => $shippingItems !== []
-                ? implode(', ', array_slice($shippingItems, 0, 2))
-                : 'Sin NP capturado',
             'hasGroupedLpkDetails' => $hasGroupedLpkDetails,
             'lpkProductionJobs' => $hasGroupedLpkDetails
                 ? $labelRequest->lpkLabelGroups->flatMap->items->pluck('job_number')->unique()->values()

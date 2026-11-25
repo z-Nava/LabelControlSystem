@@ -1,11 +1,11 @@
 @extends('layouts.app', ['title' => 'Requisiciones de Etiquetas', 'mainClass' => 'max-w-[1600px]'])
 
 @section('content')
-<div class="rounded-2xl bg-white p-6 shadow">
+<div class="rounded-2xl bg-white p-4 shadow sm:p-6">
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900">Requisiciones de etiquetas pendientes</h1>
-            <p class="mt-1 text-slate-600">La vista inicia con requisiciones Pendientes, En preparación y Listas para entregar. Usa los filtros para consultar el historial.</p>
+            <h1 class="text-2xl font-semibold text-slate-900">Requisiciones de etiquetas</h1>
+            <p class="mt-1 text-slate-600">Usa el filtro de estatus para consultar las requisiciones entregadas o canceladas.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -27,7 +27,7 @@
                 <p class="text-xs text-slate-500">Combina los campos para acotar las requisiciones mostradas.</p>
             </div>
             <div class="text-xs font-medium text-slate-500">
-                {{ number_format($labelRequests->total()) }} {{ $labelRequests->total() === 1 ? 'resultado' : 'resultados' }}
+                {{ number_format($totalResults) }} {{ $totalResults === 1 ? 'resultado' : 'resultados' }}
             </div>
         </div>
 
@@ -93,134 +93,37 @@
         </div>
     </form>
 
-    <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200">
-        <table class="w-full min-w-[1260px] table-fixed text-sm">
-            <colgroup>
-                <col class="w-[92px]" />
-                <col class="w-[160px]" />
-                <col class="w-[132px]" />
-                <col />
-                <col class="w-[150px]" />
-                <col class="w-[155px]" />
-                <col class="w-[150px]" />
-                <col class="w-[180px]" />
-            </colgroup>
-            <thead class="bg-slate-50">
-                <tr class="border-b border-slate-200 text-left text-slate-500">
-                    <th class="px-4 py-3">Requisición</th>
-                    <th class="px-4 py-3">Fecha y hora (Torreón)</th>
-                    <th class="px-4 py-3">Línea / Turno</th>
-                    <th class="px-4 py-3">Job / Detalle</th>
-                    <th class="px-4 py-3">Tipos</th>
-                    <th class="px-4 py-3">Cantidad / Folios</th>
-                    <th class="px-4 py-3">Estatus</th>
-                    <th class="sticky right-0 z-10 border-l border-slate-200 bg-slate-50 px-4 py-3">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                @forelse($labelRequestRows as $row)
-                    <tr class="group align-top hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold">
-                            <div>#{{ $row['labelRequest']->id }}</div>
-                            @if($row['labelRequest']->isLpk())
-                                <span class="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">LPK</span>
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-slate-600">{{ $row['labelRequest']->created_at?->timezone('America/Monterrey')->format('d/m/Y H:i') }}</td>
-                        <td class="px-4 py-3 text-slate-600">
-                            <div class="font-medium text-slate-800">{{ $row['labelRequest']->line?->code ?: 'Sin línea' }}</div>
-                            <div class="mt-0.5 text-xs">Turno: {{ $row['labelRequest']->shift?->code ?: '—' }}</div>
-                        </td>
-                        <td class="px-4 py-3 break-words">
-                            @if($row['hasGroupedLpkDetails'])
-                                <div class="font-semibold text-slate-900">{{ $row['lpkProductionJobs']->count() }} Job(s) de producción</div>
-                                <div class="mt-0.5 text-xs text-slate-500">{{ $row['lpkProductionJobs']->take(3)->implode(', ') ?: 'Sólo Shipping' }}@if($row['lpkProductionJobs']->count() > 3) · +{{ $row['lpkProductionJobs']->count() - 3 }}@endif</div>
+    <div @class(['mt-6 grid gap-4', 'lg:grid-cols-3' => $showActiveBoard])>
+        @foreach($columns as $status => $requests)
+            <section id="requests-{{ $status }}" aria-labelledby="heading-{{ $status }}" class="min-w-0 rounded-xl border border-slate-200 bg-slate-50">
+                <header class="flex items-center gap-2.5 border-b border-slate-200 px-4 py-3">
+                    <span aria-hidden="true" @class(['size-2.5 shrink-0 rounded-full', match ($status) {
+                        \App\Models\LabelRequest::STATUS_REQUESTED => 'bg-sky-500',
+                        \App\Models\LabelRequest::STATUS_IN_PROGRESS => 'bg-violet-500',
+                        \App\Models\LabelRequest::STATUS_READY_FOR_DELIVERY => 'bg-amber-500',
+                        \App\Models\LabelRequest::STATUS_COMPLETED => 'bg-emerald-500',
+                        \App\Models\LabelRequest::STATUS_CANCELLED => 'bg-red-500',
+                        default => 'bg-slate-500',
+                    }])></span>
+                    <h2 id="heading-{{ $status }}" class="font-semibold text-slate-900">{{ $statusOptions[$status] }}</h2>
+                    <span class="ml-auto rounded-full border border-slate-200 bg-white px-2.5 py-0.5 text-sm font-semibold tabular-nums text-slate-700">{{ number_format($requests->total()) }}</span>
+                </header>
 
-                                @foreach($row['labelRequest']->lpkLabelGroups as $group)
-                                    <div class="mt-1 text-xs text-slate-600">
-                                        <span class="font-semibold">{{ $group->type_label }} {{ $group->part_number }}:</span>
-                                        @include('label_requests.partials.lpk-group-models', ['items' => $group->items])
-                                    </div>
-                                @endforeach
-                                @foreach($row['labelRequest']->lpkShippingGroups as $group)
-                                    <div class="mt-1 text-xs text-amber-700">
-                                        <span class="font-semibold text-amber-800">Shipping {{ $group->part_number }}:</span>
-                                        @include('label_requests.partials.lpk-group-models', ['items' => $group->items])
-                                        · {{ number_format($group->quantity) }} {{ $group->quantity === 1 ? 'etiqueta' : 'etiquetas' }}
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="font-semibold text-slate-900">{{ $row['labelRequest']->job_number ?: 'Sin Job' }}</div>
-                                <div class="mt-0.5 text-xs text-slate-500">Modelo general: {{ $row['labelRequest']->model ?: 'Sin modelo' }}</div>
+                <div @class(['grid items-start gap-3 p-3', 'md:grid-cols-2 xl:grid-cols-3' => ! $showActiveBoard])>
+                    @forelse($requests as $row)
+                        @include('label_requests.partials.request-card', ['labelRequest' => $row['labelRequest']])
+                    @empty
+                        <p class="col-span-full rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No hay requisiciones con los filtros seleccionados.</p>
+                    @endforelse
+                </div>
 
-                            @if($row['labelRequest']->include_serial && $row['serialPartNumbers'] !== [])
-                                <div class="mt-2 text-xs text-slate-600" title="{{ implode(', ', $row['serialPartNumbers']) }}">
-                                    <span class="font-semibold text-slate-700">Serial NP / modelo:</span>
-                                    {{ implode(', ', array_slice($row['serialPartNumbers'], 0, 2)) }}
-                                    @if(count($row['serialPartNumbers']) > 2)
-                                        <span class="ml-1 inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">+{{ count($row['serialPartNumbers']) - 2 }}</span>
-                                    @endif
-                                </div>
-                            @endif
-
-                            @if($row['labelRequest']->include_rating && $row['ratingPartNumbers'] !== [])
-                                <div class="mt-1 text-xs text-slate-600" title="{{ implode(', ', $row['ratingPartNumbers']) }}">
-                                    <span class="font-semibold text-slate-700">Rating NP / modelo:</span>
-                                    {{ implode(', ', array_slice($row['ratingPartNumbers'], 0, 2)) }}
-                                    @if(count($row['ratingPartNumbers']) > 2)
-                                        <span class="ml-1 inline-flex rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600">+{{ count($row['ratingPartNumbers']) - 2 }}</span>
-                                    @endif
-                                </div>
-                            @endif
-
-                            @if($row['labelRequest']->include_inner)
-                                <div class="mt-1 text-xs text-slate-600" title="{{ $row['innerItem'] ?: 'Sin NP capturado' }}">
-                                    <span class="font-semibold text-slate-700">Inner NP / modelo:</span>
-                                    {{ $row['innerItem'] ?: 'Sin NP capturado' }}
-                                </div>
-                            @endif
-
-                            @if($row['labelRequest']->include_shipping)
-                                <div class="mt-1 text-xs text-amber-700" title="{{ $row['shippingItems'] !== [] ? implode(', ', $row['shippingItems']) : $row['shippingItemSummary'] }}">
-                                    <span class="font-semibold text-amber-800">Shipping NP / modelo:</span>
-                                    {{ $row['shippingItemSummary'] }}
-                                    @if(count($row['shippingItems']) > 2)
-                                        <span class="ml-1 inline-flex rounded-full bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">+{{ count($row['shippingItems']) - 2 }}</span>
-                                    @endif
-                                </div>
-                            @endif
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 text-slate-700">{{ implode(' + ', $row['labelRequest']->requestedLabelTypes()) ?: '—' }}</td>
-                        <td class="px-4 py-3">
-                            <div class="font-semibold">{{ $row['labelRequest']->isLostLabelRework() ? 'Juegos faltantes' : ($row['hasGroupedLpkDetails'] ? 'Reserva Jobs' : 'General') }}: {{ number_format($row['labelRequest']->quantity_requested) }}</div>
-                            @if($row['labelRequest']->isLostLabelRework())<div class="text-xs font-semibold text-amber-800">Reposición · origen #{{ $row['labelRequest']->source_label_request_id }}</div>@endif
-                            @if($row['hasGroupedLpkDetails'])
-                                <div class="text-xs text-slate-500">Shipping: {{ $row['labelRequest']->lpkShippingGroups->count() }} grupo(s)</div>
-                            @elseif($row['labelRequest']->include_shipping)
-                                <div class="text-xs text-slate-500">Shipping: {{ number_format($row['labelRequest']->shipping_quantity ?? $row['labelRequest']->quantity_requested) }}</div>
-                            @endif
-                            <div class="text-xs text-slate-500">
-                                {{ $row['labelRequest']->folio_start !== null ? $row['labelRequest']->folio_start.' – '.$row['labelRequest']->folio_end : ($row['labelRequest']->released_at ? 'Ver folios por Rating' : 'Folios pendientes') }}
-                            </div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="inline-flex rounded-full border px-2 py-1 text-xs font-semibold {{ $row['labelRequest']->status_badge_classes }}">{{ $row['labelRequest']->status_label }}</span>
-                        </td>
-                        <td class="sticky right-0 z-10 border-l border-slate-200 bg-white px-4 py-3 group-hover:bg-slate-50">
-                            <a href="{{ route('label_requests.show', $row['labelRequest']) }}" class="mb-2 inline-flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Ver detalle</a>
-                            @include('label_requests.partials.workflow-actions', ['labelRequest' => $row['labelRequest'], 'compact' => true])
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-slate-500">No hay requisiciones con los filtros seleccionados.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                @if($requests->hasPages())
+                    <div class="border-t border-slate-200 p-3">
+                        {{ $requests->links($showActiveBoard ? 'pagination::simple-tailwind' : 'pagination::tailwind') }}
+                    </div>
+                @endif
+            </section>
+        @endforeach
     </div>
-
-    <div class="mt-4">{{ $labelRequests->links() }}</div>
 </div>
 @endsection
