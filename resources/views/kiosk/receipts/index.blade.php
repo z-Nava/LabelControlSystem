@@ -13,7 +13,17 @@
         </div>
     </section>
 
-    @include('kiosk.partials.requisition-print', ['requisitionPrintConfig' => $requisitionPrintConfig])
+    @if($requisitionPrintConfig)
+        @component('kiosk.partials.requisition-print', ['requisitionPrintConfig' => $requisitionPrintConfig])
+            <div class="my-1 flex flex-wrap gap-x-5 text-sm text-slate-800">
+                @forelse($selectedJobDetails as $label => $numbers)
+                    <p class="min-w-0 break-words">{{ $label }} <strong>{{ $numbers }}</strong></p>
+                @empty
+                    <p>Sin job registrado.</p>
+                @endforelse
+            </div>
+        @endcomponent
+    @endif
 
     <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 class="text-xl font-semibold text-slate-900">Comprobantes recientes</h2>
@@ -26,12 +36,19 @@
             <div class="mt-4 divide-y divide-slate-100">
                 @foreach($receiptHistory as $item)
                     <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
+                        <div class="min-w-0">
                             <p class="font-semibold text-slate-900">{{ $item['name'] }} #{{ $item['requestId'] }}</p>
+                            <div class="my-1 flex flex-wrap gap-x-5 text-sm text-slate-800">
+                                @forelse($item['jobDetails'] as $label => $numbers)
+                                    <p class="min-w-0 break-words">{{ $label }} <strong>{{ $numbers }}</strong></p>
+                                @empty
+                                    <p>Sin job registrado.</p>
+                                @endforelse
+                            </div>
                             <p class="text-sm text-slate-600">{{ $item['createdAt'] }} · {{ match($item['status']) { 'printed' => 'Impresión confirmada', 'failed' => 'Impresión fallida', 'sending' => 'En proceso', default => 'Pendiente de impresión' } }}</p>
                         </div>
-                        <a href="{{ route('kiosk.receipts.index', ['receipt_job' => $item['id']]) }}"
-                           class="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:border-amber-600 hover:text-amber-700">
+                        <a href="{{ route('kiosk.receipts.index', ['receipt_job' => $item['id'], 'receipts_page' => $receiptPages->currentPage()]) }}"
+                           class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:border-amber-600 hover:text-amber-700">
                             {{ $item['status'] === 'printed' ? 'Reimprimir comprobante' : 'Imprimir comprobante' }}
                         </a>
                     </div>

@@ -1,11 +1,12 @@
 @if($requisitionPrintConfig)
     <section id="kiosk-requisition-print" class="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">{{ $requisitionPrintConfig['receiptTitle'] }}</p>
                 <h2 class="mt-1 text-xl font-semibold text-slate-950">
                     Etiqueta {{ $requisitionPrintConfig['labelSize'] }} · {{ $requisitionPrintConfig['requestName'] }} #{{ $requisitionPrintConfig['requestId'] }}
                 </h2>
+                {{ $slot ?? '' }}
                 <p id="kiosk-requisition-print-status" class="mt-2 text-sm font-semibold text-slate-700">
                     {{ $requisitionPrintConfig['autoStart'] ? 'Preparando impresión automática…' : 'Comprobante seleccionado. Imprímelo cuando la impresora esté lista.' }}
                 </p>
@@ -15,7 +16,7 @@
             </div>
             <button id="kiosk-requisition-print-retry"
                     type="button"
-                    class="{{ $requisitionPrintConfig['autoStart'] ? 'hidden ' : '' }}min-h-12 rounded-xl bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
+                    class="{{ $requisitionPrintConfig['autoStart'] ? 'hidden ' : '' }}min-h-12 shrink-0 rounded-xl bg-amber-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2">
                 {{ $requisitionPrintConfig['mode'] === 'reprint' ? 'Reimprimir comprobante' : 'Imprimir comprobante' }}
             </button>
         </div>
